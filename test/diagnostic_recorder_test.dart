@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/diagnostics/diagnostic_event.dart';
 import 'package:yahagi_kancolle_browser/src/diagnostics/diagnostic_recorder.dart';
