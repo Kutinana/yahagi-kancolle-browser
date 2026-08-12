@@ -42,6 +42,7 @@ import app.yahagi.kancollebrowser.capture.ScreenshotCaptureAttempt
 import app.yahagi.kancollebrowser.capture.ScreenshotCapturePolicy
 import app.yahagi.kancollebrowser.capture.ScreenshotDestination
 import app.yahagi.kancollebrowser.capture.ScreenshotViewCandidate
+import app.yahagi.kancollebrowser.diagnostics.DiagnosticPlatformHandler
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -94,6 +95,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         const val GAME_SCREENSHOT_CHANNEL = "app.yahagi.kancollebrowser/game_screenshot"
         const val GAME_FRAME_RATE_CHANNEL = "app.yahagi.kancollebrowser/game_frame_rate"
         const val BATTLE_DAMAGE_ALERT_CHANNEL = "app.yahagi.kancollebrowser/battle_damage_alert"
+        const val DIAGNOSTICS_CHANNEL = "app.yahagi.kancollebrowser/diagnostics"
         const val SCREENSHOT_PERMISSION_REQUEST = 2406
     }
 
@@ -196,6 +198,11 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DIAGNOSTICS_CHANNEL,
+        ).setMethodCallHandler(DiagnosticPlatformHandler(applicationContext))
 
         val captureChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
