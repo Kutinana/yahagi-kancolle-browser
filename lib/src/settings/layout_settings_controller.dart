@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../theme/app_fonts.dart';
 import 'header_resource_settings.dart';
 import 'layout_settings_store.dart';
 
@@ -41,8 +42,8 @@ class LayoutSettingsController extends ChangeNotifier {
     final fontFamily = await store.loadFontFamily();
     final localeCode = await store.loadLocaleCode();
     final fontLocaleCode = localeCode ?? systemLocaleCode ?? 'zh';
-    final regionalFont = _fontForLocale(fontLocaleCode);
-    if (fontFamily != null && fontFamily != regionalFont) {
+    final regionalFont = AppFonts.forLocale(fontLocaleCode);
+    if (fontFamily != regionalFont) {
       await store.saveFontFamily(regionalFont);
     }
     final controller = LayoutSettingsController._(
@@ -56,7 +57,7 @@ class LayoutSettingsController extends ChangeNotifier {
       dashboardCardOrder,
       dashboardCardCollapsed,
       dashboardCardHidden,
-      fontFamily == null ? null : regionalFont,
+      regionalFont,
       localeCode,
       fontLocaleCode,
     );
@@ -121,7 +122,7 @@ class LayoutSettingsController extends ChangeNotifier {
   List<String> _dashboardCardOrder;
   List<String> _dashboardCardCollapsed;
   List<String> _dashboardCardHidden;
-  String? _fontFamily;
+  String _fontFamily;
   String? _localeCode;
   String _fontLocaleCode;
   List<String>? _headerResourceOrder;
@@ -140,18 +141,15 @@ class LayoutSettingsController extends ChangeNotifier {
   List<String> get dashboardCardOrder => _dashboardCardOrder;
   List<String> get dashboardCardCollapsed => _dashboardCardCollapsed;
   List<String> get dashboardCardHidden => _dashboardCardHidden;
-  String? get fontFamily => _fontFamily;
+  String get fontFamily => _fontFamily;
   String? get localeCode => _localeCode;
   List<String> get headerResourceOrder =>
       List<String>.unmodifiable(_headerResourceOrder ?? allHeaderResourceIds);
   List<String> get visibleHeaderResourceIds => List<String>.unmodifiable(
     _visibleHeaderResourceIds ?? defaultVisibleHeaderResourceIds,
   );
-  List<String> get fontFamilyFallback => switch (_fontLocaleCode) {
-    'ja' => const <String>['HarmonyOS_Sans_TC', 'HarmonyOS_Sans_SC'],
-    'zh_Hant' => const <String>['NotoSansJP', 'HarmonyOS_Sans_SC'],
-    _ => const <String>['HarmonyOS_Sans_TC', 'NotoSansJP'],
-  };
+  List<String> get fontFamilyFallback =>
+      AppFonts.fallbackForLocale(_fontLocaleCode);
 
   Future<void> setGameAreaRatio(double ratio) async {
     if (_gameAreaRatio == ratio) {
@@ -304,7 +302,8 @@ class LayoutSettingsController extends ChangeNotifier {
     await _store.saveDashboardCardOrder(_dashboardCardOrder);
   }
 
-  Future<void> setFontFamily(String? fontFamily) async {
+  Future<void> setFontFamily(String? _) async {
+    final fontFamily = AppFonts.forLocale(_fontLocaleCode);
     if (_fontFamily == fontFamily) {
       return;
     }
@@ -319,7 +318,7 @@ class LayoutSettingsController extends ChangeNotifier {
     }
     _localeCode = localeCode;
     _fontLocaleCode = localeCode ?? 'zh';
-    _fontFamily = _fontForLocale(_fontLocaleCode);
+    _fontFamily = AppFonts.forLocale(_fontLocaleCode);
     notifyListeners();
     await _store.saveLocaleCode(localeCode);
     await _store.saveFontFamily(_fontFamily);
@@ -336,9 +335,3 @@ List<String> reorderDashboardCards(
   reordered.insert(newIndex.clamp(0, reordered.length), item);
   return reordered;
 }
-
-String _fontForLocale(String localeCode) => switch (localeCode) {
-  'ja' => 'NotoSansJP',
-  'zh_Hant' => 'HarmonyOS_Sans_TC',
-  _ => 'HarmonyOS_Sans_SC',
-};

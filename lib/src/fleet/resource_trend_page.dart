@@ -396,7 +396,6 @@ class _ResourceTrendPageState extends State<ResourceTrendPage> {
                               color: isVisible ? Colors.white : Colors.white54,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'monospace',
                             ),
                           ),
                         ),
@@ -417,7 +416,6 @@ class _ResourceTrendPageState extends State<ResourceTrendPage> {
                                 color: isVisible ? trendColor : Colors.grey,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                fontFamily: 'monospace',
                               ),
                             ),
                           ),
@@ -771,7 +769,6 @@ class _ResourceTrendPageState extends State<ResourceTrendPage> {
               TextStyle(
                 color: spot.bar.color ?? Colors.white,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
               ),
             ),
         ],

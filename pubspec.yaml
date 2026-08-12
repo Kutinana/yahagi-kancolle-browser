@@ -149,10 +149,6 @@ flutter:
     - family: HarmonyOS_Sans
       fonts:
         - asset: assets/fonts/HarmonyOS_Sans.ttf
-    - family: NotoSansJP
-      fonts:
-        - asset: assets/fonts/NotoSansJP-wght.ttf
-
 flutter_icons:
   android: true
   ios: false

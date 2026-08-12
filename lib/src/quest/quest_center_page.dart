@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
+import '../widgets/filter_controls.dart';
 import 'quest_catalog.dart';
 import 'quest_catalog_controller.dart';
 
@@ -155,7 +156,7 @@ class QuestHeaderControls extends StatelessWidget {
           QuestModeTabs(mode: mode, onChanged: onModeChanged),
           if (mode == QuestCenterMode.all) ...[
             const SizedBox(width: 6),
-            _QuestHeaderIconButton(
+            HeaderFilterIconButton(
               key: const Key('quest-search-button'),
               icon: Icons.search,
               active: filters.hasSearch,
@@ -163,7 +164,7 @@ class QuestHeaderControls extends StatelessWidget {
               onPressed: () => _showQuestSearch(context, filters),
             ),
             const SizedBox(width: 4),
-            _QuestHeaderIconButton(
+            HeaderFilterIconButton(
               key: const Key('quest-filter-button'),
               icon: Icons.filter_alt_outlined,
               active: filters.hasFilters,
@@ -175,43 +176,6 @@ class QuestHeaderControls extends StatelessWidget {
       ),
     );
   }
-}
-
-class _QuestHeaderIconButton extends StatelessWidget {
-  const _QuestHeaderIconButton({
-    super.key,
-    required this.icon,
-    required this.active,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final bool active;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 34,
-    height: 34,
-    child: IconButton(
-      padding: EdgeInsets.zero,
-      tooltip: tooltip,
-      onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: active
-            ? const Color(0xff8a6628)
-            : const Color(0xff0b202d),
-        side: const BorderSide(color: Color(0xff315064)),
-      ),
-      icon: Icon(
-        icon,
-        size: 18,
-        color: active ? const Color(0xffffdc88) : const Color(0xff9fb3bf),
-      ),
-    ),
-  );
 }
 
 Future<void> _showQuestSearch(
@@ -338,14 +302,14 @@ class _QuestFilterSheet extends StatelessWidget {
             Wrap(
               runSpacing: 5,
               children: [
-                _FilterChip(
+                CompactFilterChip(
                   key: const Key('quest-filter-category-all'),
                   label: l10n.allTypes,
                   selected: filters.category == null,
                   onTap: () => filters.setCategory(null),
                 ),
                 for (final item in categories)
-                  _FilterChip(
+                  CompactFilterChip(
                     key: Key('quest-filter-category-${item.$1}'),
                     label: item.$2,
                     selected: filters.category == item.$1,
@@ -359,14 +323,14 @@ class _QuestFilterSheet extends StatelessWidget {
             Wrap(
               runSpacing: 5,
               children: [
-                _FilterChip(
+                CompactFilterChip(
                   key: const Key('quest-filter-period-all'),
                   label: l10n.allPeriods,
                   selected: filters.period == null,
                   onTap: () => filters.setPeriod(null),
                 ),
                 for (final item in periods)
-                  _FilterChip(
+                  CompactFilterChip(
                     key: Key('quest-filter-period-${item.$1}'),
                     label: item.$2,
                     selected: filters.period == item.$1,
@@ -379,20 +343,20 @@ class _QuestFilterSheet extends StatelessWidget {
             const SizedBox(height: 5),
             Wrap(
               children: [
-                _FilterChip(
+                CompactFilterChip(
                   key: const Key('quest-filter-unlock-all'),
                   label: l10n.allStatuses,
                   selected: filters.unlockState == null,
                   onTap: () => filters.setUnlockState(null),
                 ),
-                _FilterChip(
+                CompactFilterChip(
                   key: const Key('quest-filter-unlock-unlocked'),
                   label: l10n.questUnlocked,
                   selected: filters.unlockState == QuestUnlockState.unlocked,
                   onTap: () =>
                       filters.setUnlockState(QuestUnlockState.unlocked),
                 ),
-                _FilterChip(
+                CompactFilterChip(
                   key: const Key('quest-filter-unlock-locked'),
                   label: l10n.questLocked,
                   selected: filters.unlockState == QuestUnlockState.locked,
@@ -741,43 +705,6 @@ class _QuestListPanel extends StatelessWidget {
   );
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    super.key,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(right: 5, bottom: 3),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(5),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xff287e6a) : const Color(0xffd3dae0),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : const Color(0xff24333c),
-            fontSize: 10.5,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
 class _QuestCard extends StatelessWidget {
   const _QuestCard({
     required this.entry,
@@ -899,11 +826,7 @@ class _QuestDetail extends StatelessWidget {
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
     return DefaultTextStyle.merge(
-      style: const TextStyle(
-        color: Colors.white,
-        fontFamily: 'HarmonyOS_Sans_SC',
-        fontFamilyFallback: <String>['HarmonyOS_Sans_TC', 'NotoSansJP'],
-      ),
+      style: const TextStyle(color: Colors.white),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

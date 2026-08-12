@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
@@ -11,14 +12,24 @@ void main() {
 
       await controller.setLocaleCode('zh');
       expect(controller.fontFamily, 'HarmonyOS_Sans_SC');
-      expect(controller.fontFamilyFallback, contains('NotoSansJP'));
+      expect(
+        controller.fontFamilyFallback,
+        everyElement(startsWith('HarmonyOS_')),
+      );
 
       await controller.setLocaleCode('zh_Hant');
       expect(controller.fontFamily, 'HarmonyOS_Sans_TC');
+      expect(
+        controller.fontFamilyFallback,
+        everyElement(startsWith('HarmonyOS_')),
+      );
 
       await controller.setLocaleCode('ja');
-      expect(controller.fontFamily, 'NotoSansJP');
-      expect(controller.fontFamilyFallback.first, 'HarmonyOS_Sans_TC');
+      expect(controller.fontFamily, 'HarmonyOS_Sans_SC');
+      expect(
+        controller.fontFamilyFallback,
+        everyElement(startsWith('HarmonyOS_')),
+      );
     },
   );
 
@@ -31,9 +42,31 @@ void main() {
 
       final controller = await LayoutSettingsController.load(store);
 
-      expect(controller.fontFamily, 'NotoSansJP');
+      expect(controller.fontFamily, 'HarmonyOS_Sans_SC');
+      expect(store.fontFamily, 'HarmonyOS_Sans_SC');
     },
   );
+
+  test('uses HarmonyOS even when no font preference was saved', () async {
+    final store = _MemoryLayoutStore();
+
+    final controller = await LayoutSettingsController.load(
+      store,
+      systemLocaleCode: 'ja',
+    );
+
+    expect(controller.fontFamily, 'HarmonyOS_Sans_SC');
+    expect(store.fontFamily, 'HarmonyOS_Sans_SC');
+  });
+
+  test('does not persist a system-font escape hatch', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = SharedPreferencesLayoutSettingsStore();
+
+    await store.saveFontFamily(null);
+
+    expect(await store.loadFontFamily(), 'HarmonyOS_Sans_SC');
+  });
 }
 
 final class _MemoryLayoutStore implements LayoutSettingsStore {

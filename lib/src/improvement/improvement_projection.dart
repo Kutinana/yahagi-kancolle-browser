@@ -1,0 +1,139 @@
+import '../game_state/game_state.dart';
+import '../inventory/owned_inventory_projection.dart';
+import 'improvement_dataset.dart';
+
+enum ImprovementEvolutionFilter { all, evolvable, notEvolvable }
+
+const int improvementAllWeekdays = 0;
+
+class ImprovementPlannerRow {
+  const ImprovementPlannerRow({
+    required this.entry,
+    required this.secretaryLabels,
+    required this.upgradeRoutes,
+  });
+
+  final ImprovementEntry entry;
+  final List<String> secretaryLabels;
+  final List<ImprovementUpgradeRoute> upgradeRoutes;
+}
+
+class ImprovementUpgradeRoute {
+  const ImprovementUpgradeRoute({
+    required this.upgrade,
+    required this.secretaryLabels,
+  });
+
+  final ImprovementUpgrade upgrade;
+  final List<String> secretaryLabels;
+}
+
+int jstWeekday(DateTime instant) =>
+    instant.toUtc().add(const Duration(hours: 9)).weekday;
+
+List<ImprovementPlannerRow> projectImprovementRows(
+  ImprovementDataset dataset, {
+  required int weekday,
+  Map<int, MasterSlotItem> equipmentMasters = const <int, MasterSlotItem>{},
+  String query = '',
+  EquipmentInventoryCategory equipmentCategory = EquipmentInventoryCategory.all,
+  Set<int> favoriteEquipmentIds = const <int>{},
+  bool favoritesOnly = false,
+  ImprovementEvolutionFilter evolutionFilter = ImprovementEvolutionFilter.all,
+}) {
+  final rows = <ImprovementPlannerRow>[];
+  final normalizedQuery = query.trim().toLowerCase();
+  final allWeekdays = weekday == improvementAllWeekdays;
+  for (final entry in dataset.entries) {
+    final master = equipmentMasters[entry.equipmentId];
+    if (normalizedQuery.isNotEmpty &&
+        !(master?.name.toLowerCase().contains(normalizedQuery) ?? false)) {
+      continue;
+    }
+    if (equipmentCategory != EquipmentInventoryCategory.all &&
+        (master == null ||
+            equipmentInventoryCategoryFor(master) != equipmentCategory)) {
+      continue;
+    }
+    if (favoritesOnly && !favoriteEquipmentIds.contains(entry.equipmentId)) {
+      continue;
+    }
+    final dayArrangements = entry.arrangements
+        .where(
+          (arrangement) => allWeekdays
+              ? arrangement.weekdays.isNotEmpty
+              : arrangement.weekdays.contains(weekday),
+        )
+        .toList(growable: false);
+    final labels = _secretaryLabels(
+      dayArrangements,
+      includeWeekdays: allWeekdays,
+    );
+    if (labels.isNotEmpty) {
+      final routes = <ImprovementUpgradeRoute>[];
+      for (final upgrade in entry.upgrades) {
+        final routeArrangements = <ImprovementArrangement>[
+          for (final arrangement in dayArrangements)
+            if (upgrade.routeKind == null ||
+                arrangement.routeKind == null ||
+                arrangement.routeKind == upgrade.routeKind)
+              arrangement,
+        ];
+        final routeSecretaries = _secretaryLabels(
+          routeArrangements,
+          includeWeekdays: allWeekdays,
+        );
+        if (routeSecretaries.isNotEmpty) {
+          routes.add(
+            ImprovementUpgradeRoute(
+              upgrade: upgrade,
+              secretaryLabels: List<String>.unmodifiable(routeSecretaries),
+            ),
+          );
+        }
+      }
+      final evolvableToday = routes.isNotEmpty;
+      if (evolutionFilter == ImprovementEvolutionFilter.evolvable &&
+          !evolvableToday) {
+        continue;
+      }
+      if (evolutionFilter == ImprovementEvolutionFilter.notEvolvable &&
+          evolvableToday) {
+        continue;
+      }
+      rows.add(
+        ImprovementPlannerRow(
+          entry: entry,
+          secretaryLabels: List.unmodifiable(labels),
+          upgradeRoutes: List.unmodifiable(routes),
+        ),
+      );
+    }
+  }
+  return List.unmodifiable(rows);
+}
+
+List<String> _secretaryLabels(
+  Iterable<ImprovementArrangement> arrangements, {
+  required bool includeWeekdays,
+}) {
+  final weekdaysBySecretary = <String, Set<int>>{};
+  for (final arrangement in arrangements) {
+    weekdaysBySecretary
+        .putIfAbsent(arrangement.secretaryLabel, () => <int>{})
+        .addAll(arrangement.weekdays);
+  }
+  return <String>[
+    for (final entry in weekdaysBySecretary.entries)
+      if (includeWeekdays)
+        '${entry.key}（${_weekdayLabels(entry.value).join('、')}）'
+      else
+        entry.key,
+  ];
+}
+
+List<String> _weekdayLabels(Set<int> weekdays) {
+  const labels = <String>['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  final sorted = weekdays.where((day) => day >= 1 && day <= 7).toList()..sort();
+  return <String>[for (final day in sorted) labels[day - 1]];
+}

@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme/app_fonts.dart';
 import 'header_resource_settings.dart';
 
 abstract class LayoutSettingsStore {
@@ -252,19 +253,22 @@ class SharedPreferencesLayoutSettingsStore
   @override
   Future<String?> loadFontFamily() async {
     final prefs = await SharedPreferences.getInstance();
-    // Default to HarmonyOS_Sans_SC, but if they specifically want system font, they might set it to empty string or 'system'.
-    // We'll use 'system' for system font, and 'HarmonyOS_Sans_SC' for the custom one.
     if (!prefs.containsKey(_keyFontFamily)) {
-      return 'HarmonyOS_Sans_SC';
+      return AppFonts.simplifiedChinese;
     }
     final value = prefs.getString(_keyFontFamily);
-    return value == 'system' ? null : value;
+    return value == null || value == 'system'
+        ? AppFonts.simplifiedChinese
+        : value;
   }
 
   @override
   Future<void> saveFontFamily(String? fontFamily) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyFontFamily, fontFamily ?? 'system');
+    await prefs.setString(
+      _keyFontFamily,
+      fontFamily ?? AppFonts.simplifiedChinese,
+    );
   }
 
   static const _keyLocaleCode = 'layout_locale_code';

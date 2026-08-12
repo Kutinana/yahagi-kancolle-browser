@@ -116,11 +116,20 @@ final class LogbookEventRecorder {
           data.keys
               .where((key) => RegExp(r'^api_get_item\d+$').hasMatch(key))
               .toList(growable: false)
-            ..sort();
-      for (var index = 0; index < numberedKeys.length; index++) {
+            ..sort((left, right) {
+              final leftSlot = int.parse(left.substring('api_get_item'.length));
+              final rightSlot = int.parse(
+                right.substring('api_get_item'.length),
+              );
+              return leftSlot.compareTo(rightSlot);
+            });
+      for (final key in numberedKeys) {
+        final slotIndex = int.parse(key.substring('api_get_item'.length)) - 1;
         collect(
-          data[numberedKeys[index]],
-          fallbackId: index < flags.length ? flags[index] : 0,
+          data[key],
+          fallbackId: slotIndex >= 0 && slotIndex < flags.length
+              ? flags[slotIndex]
+              : 0,
         );
       }
     }

@@ -1,0 +1,1113 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
+import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/resource_trend_page.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
+import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart';
+import 'package:yahagi_kancolle_browser/src/logbook/logbook_database.dart';
+import 'package:yahagi_kancolle_browser/src/logbook/logbook_page.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/frozen_data_table.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('sortie status keeps official labels and marks legacy values', () {
+    expect(sortieStatusLabel('普通战斗'), '普通战斗');
+    expect(sortieStatusLabel(' 路线选择 '), '路线选择');
+    expect(sortieStatusLabel(1), '旧版记录');
+    expect(sortieStatusLabel(6), '旧版记录');
+    expect(sortieStatusLabel('1'), '旧版记录');
+    expect(sortieStatusLabel(null), '旧版记录');
+    expect(sortieStatusLabel(''), '旧版记录');
+  });
+
+  testWidgets('top switcher exposes six separate Poi categories', (
+    tester,
+  ) async {
+    var selected = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) => LogbookSegmented(
+            selectedIndex: selected,
+            onChanged: (value) => setState(() => selected = value),
+          ),
+        ),
+      ),
+    );
+
+    for (final label in ['出击', '远征', '建造', '开发', '除籍', '资源']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('本次出击'), findsNothing);
+    expect(find.text('历史战果'), findsNothing);
+  });
+
+  testWidgets('horizontal table gestures cannot switch logbook categories', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(740, 360);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(mapAreaId: 2, mapInfoNo: 3, node: 5),
+          rank: BattleRank.s,
+        ),
+        completedAt: DateTime.utc(2026, 8, 11, 13, 15),
+      ),
+      mapName: '东部奥廖尔海',
+    );
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tabs = tester.widget<TabBarView>(find.byType(TabBarView));
+    expect(tabs.physics, isA<NeverScrollableScrollPhysics>());
+
+    final horizontal = find.byKey(
+      const Key('logbook-sortie-horizontal-scroll'),
+    );
+    final scrollable = find.descendant(
+      of: horizontal,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.right,
+      ),
+    );
+    final before = tester.state<ScrollableState>(scrollable).position.pixels;
+    final timeBefore = tester.getRect(find.text('08-11 22:15')).left;
+    final mapBefore = tester.getRect(find.text('东部奥廖尔海 (2-3)')).left;
+    final nodeBefore = tester.getRect(find.text('节点')).left;
+    await tester.drag(horizontal, const Offset(-240, 0));
+    await tester.pumpAndSettle();
+    final after = tester.state<ScrollableState>(scrollable).position.pixels;
+    expect(after, greaterThan(before));
+    expect(tester.getRect(find.text('08-11 22:15')).left, lessThan(timeBefore));
+    expect(tester.getRect(find.text('东部奥廖尔海 (2-3)')).left, mapBefore);
+    expect(tester.getRect(find.text('节点')).left, lessThan(nodeBefore));
+    expect(find.byKey(const Key('logbook-table-sortie')), findsOneWidget);
+  });
+
+  testWidgets('empty categories keep the Poi table headers visible', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(740, 360);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(
+            battleController: controller,
+            database: database,
+            selectedTabIndex: 1,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('logbook-table-expedition')), findsOneWidget);
+    expect(find.text('时间'), findsOneWidget);
+    expect(find.text('远征'), findsOneWidget);
+    expect(find.text('结果'), findsOneWidget);
+    expect(find.text('暂无记录'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('full logbook header fits the five approved mobile demo sizes', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    const sizes = <Size>[
+      Size(1280, 680),
+      Size(1024, 600),
+      Size(800, 1100),
+      Size(844, 390),
+      Size(740, 360),
+    ];
+
+    for (final size in sizes) {
+      tester.view.physicalSize = size;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topRight,
+              child: SizedBox(
+                width: size.width - 178,
+                height: 54,
+                child: WorkspaceContextHeader(
+                  workspaceIndex: 6,
+                  state: GameState.empty,
+                  selectedFleetId: 1,
+                  logbookTabIndex: 0,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull, reason: 'size: $size');
+      final switcher = tester.getRect(
+        find.byKey(const Key('logbook-segmented')),
+      );
+      expect(switcher.left, greaterThanOrEqualTo(0), reason: 'size: $size');
+      expect(
+        switcher.right,
+        lessThanOrEqualTo(size.width),
+        reason: 'size: $size',
+      );
+    }
+  });
+
+  testWidgets('expedition table matches owned equipment density and styling', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(740, 360);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertExpeditionResult(
+      expeditionId: 38,
+      name: '东京急行（弐）',
+      result: 2,
+      materials: const [0, 0, 300, 420],
+      item1Id: 1,
+      item1Name: '高速修复材',
+      item1Count: 1,
+      item2Id: 10,
+      item2Name: '家具箱（小）',
+      item2Count: 1,
+      rewardItems: const <Map<String, Object?>>[
+        {'id': 1, 'name': '高速修复材', 'count': 1},
+        {'id': 10, 'name': '家具箱（小）', 'count': 1},
+        {'id': 2, 'name': '高速建造材', 'count': 2},
+      ],
+      timestamp: DateTime.utc(2026, 8, 11, 13, 5).millisecondsSinceEpoch,
+    );
+    await database.insertExpeditionResult(
+      expeditionId: 120,
+      name: '错误的远征名',
+      result: 1,
+      materials: const [45, 0, 45, 0],
+      item1Id: 3,
+      item1Name: '错误的道具名',
+      item1Count: 2,
+      timestamp: DateTime.utc(2026, 8, 11, 13, 6).millisecondsSinceEpoch,
+    );
+    await database.insertExpeditionResult(
+      expeditionId: 0,
+      name: '南西方面航空偵察作戦',
+      result: 2,
+      materials: const [0, 0, 36, 54],
+      timestamp: DateTime.utc(2026, 8, 11, 13, 7).millisecondsSinceEpoch,
+    );
+    const state = GameState(
+      masterMissions: {
+        120: MasterMission(
+          id: 120,
+          name: '练习航海及警戒任务',
+          duration: Duration(minutes: 30),
+          displayNumber: 'C1',
+        ),
+        110: MasterMission(
+          id: 110,
+          name: '南西方面航空偵察作戦',
+          duration: Duration(minutes: 35),
+          displayNumber: 'B1',
+        ),
+      },
+    );
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(
+            battleController: controller,
+            database: database,
+            selectedTabIndex: 1,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('38 · 东京急行（弐）'), findsOneWidget);
+    expect(find.text('C1 · 练习航海及警戒任务'), findsOneWidget);
+    expect(find.text('B1 · 南西方面航空偵察作戦'), findsOneWidget);
+    expect(find.text('大成功'), findsNWidgets(2));
+    expect(find.textContaining('高速修复材'), findsNothing);
+    expect(find.textContaining('家具箱（小）'), findsNothing);
+    expect(find.textContaining('高速建造材'), findsNothing);
+    expect(find.textContaining('开发资材'), findsNothing);
+    expect(find.textContaining('X1'), findsWidgets);
+    expect(find.textContaining('X2'), findsWidgets);
+    expect(
+      find.byKey(const Key('logbook-expedition-reward-icon-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('logbook-expedition-reward-icon-10')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('logbook-expedition-reward-icon-2')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('logbook-expedition-reward-icon-3')),
+      findsOneWidget,
+    );
+
+    expect(find.byKey(const Key('logbook-resource-icon-fuel')), findsOneWidget);
+
+    final table = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('logbook-table-expedition')),
+    );
+    expect(table.frozenColumnWidths, const <double>[205]);
+    expect(table.scrollableColumnWidths.first, lessThanOrEqualTo(96));
+    expect(table.scrollableColumnWidths.sublist(2, 6), const <double>[
+      70,
+      70,
+      70,
+      70,
+    ]);
+    expect(table.rowHeights, everyElement(FrozenDataTable.minimumRowHeight));
+    expect(table.scrollableColumnWidths.last, greaterThanOrEqualTo(120));
+
+    final horizontal = find.byKey(
+      const Key('logbook-expedition-horizontal-scroll'),
+    );
+    final horizontalScrollable = find.descendant(
+      of: horizontal,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.right,
+      ),
+    );
+    expect(
+      tester
+          .state<ScrollableState>(horizontalScrollable)
+          .position
+          .maxScrollExtent,
+      greaterThan(0),
+    );
+
+    final expeditionBefore = tester.getRect(find.text('B1 · 南西方面航空偵察作戦')).left;
+    final timeBefore = tester.getRect(find.text('08-11 22:07')).left;
+    await tester.drag(
+      find.byKey(const Key('logbook-expedition-horizontal-scroll')),
+      const Offset(-180, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.text('B1 · 南西方面航空偵察作戦')).left, expeditionBefore);
+    expect(tester.getRect(find.text('08-11 22:07')).left, lessThan(timeBefore));
+    final filter = find.byKey(const Key('logbook-filter-button'));
+    expect(tester.getSize(filter), const Size.square(34));
+    final resultText = tester.widget<Text>(find.text('大成功').first);
+    expect(resultText.style?.fontSize, 12);
+    expect(resultText.style?.color, const Color(0xffffc857));
+  });
+
+  testWidgets('construction development and retirement use approved columns', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertConstructionRecord(
+      timestamp: 1,
+      constructionType: '普通建造',
+      shipId: 1,
+      shipName: '雪风',
+      shipType: '驱逐舰',
+      fuel: 30,
+      ammo: 30,
+      steel: 30,
+      bauxite: 30,
+      developmentMaterial: 1,
+      secretaryName: '矢矧改二乙 Lv.132',
+    );
+    await database.insertDevelopmentRecord(
+      timestamp: 2,
+      success: false,
+      equipmentId: null,
+      equipmentName: '—',
+      equipmentType: '—',
+      equipmentIconId: -1,
+      fuel: 10,
+      ammo: 20,
+      steel: 30,
+      bauxite: 40,
+      secretaryName: '矢矧改二乙 Lv.132',
+    );
+    await database.insertRetirementRecord(
+      timestamp: 3,
+      type: '改修',
+      shipType: '驱逐舰',
+      shipName: '深雪',
+      level: 1,
+    );
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    Future<void> pumpTab(int index) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LogbookPage(
+              battleController: controller,
+              database: database,
+              selectedTabIndex: index,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpTab(2);
+    final constructionTable = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('logbook-table-construction')),
+    );
+    expect(constructionTable.frozenColumnWidths, hasLength(1));
+    final constructionShipBefore = tester.getRect(find.text('舰娘')).left;
+    final constructionTimeBefore = tester.getRect(find.text('时间')).left;
+    await tester.drag(
+      find.byKey(const Key('logbook-construction-horizontal-scroll')),
+      const Offset(-180, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.text('舰娘')).left, constructionShipBefore);
+    expect(
+      tester.getRect(find.text('时间')).left,
+      lessThan(constructionTimeBefore),
+    );
+    expect(find.text('开发资材'), findsOneWidget);
+    expect(find.text('空闲槽'), findsNothing);
+    expect(find.text('司令部等级'), findsNothing);
+    expect(
+      find.byKey(const Key('logbook-resource-icon-developmentMaterial')),
+      findsOneWidget,
+    );
+
+    await pumpTab(3);
+    final developmentTable = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('logbook-table-development')),
+    );
+    expect(developmentTable.frozenColumnWidths, hasLength(1));
+    final equipmentBefore = tester.getRect(find.text('开发装备')).left;
+    final typeBefore = tester.getRect(find.text('装备类型')).left;
+    final developmentTimeBefore = tester.getRect(find.text('时间')).left;
+    await tester.drag(
+      find.byKey(const Key('logbook-development-horizontal-scroll')),
+      const Offset(-180, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.text('开发装备')).left, equipmentBefore);
+    expect(tester.getRect(find.text('装备类型')).left, lessThan(typeBefore));
+    expect(
+      tester.getRect(find.text('时间')).left,
+      lessThan(developmentTimeBefore),
+    );
+    expect(find.text('失败'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('失败')).style?.color,
+      const Color(0xffff6464),
+    );
+    expect(find.text('司令部等级'), findsNothing);
+
+    await pumpTab(4);
+    expect(find.text('改修'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('改修')).style?.color,
+      const Color(0xff67bce9),
+    );
+    final retirementTable = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('logbook-table-retirement')),
+    );
+    expect(retirementTable.frozenColumnWidths, isEmpty);
+    expect(retirementTable.scrollableColumnWidths, hasLength(4));
+    expect(
+      retirementTable.frozenColumnWidths.fold<double>(0, (a, b) => a + b) +
+          retirementTable.scrollableColumnWidths.fold<double>(
+            0,
+            (a, b) => a + b,
+          ),
+      greaterThanOrEqualTo(1000),
+    );
+  });
+
+  testWidgets('sortie uses named map and capsule rank styling', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(mapAreaId: 2, mapInfoNo: 3, node: 5),
+          rank: BattleRank.s,
+          friendMain: [
+            BattleShipSnapshot(
+              masterId: 1,
+              name: '矢矧改二乙',
+              side: BattleSide.friend,
+              fleetRole: BattleFleetRole.main,
+              position: 0,
+              initialHp: 54,
+              maxHp: 54,
+              currentHp: 54,
+            ),
+          ],
+          friendEscort: [
+            BattleShipSnapshot(
+              masterId: 2,
+              name: '能代改二',
+              side: BattleSide.friend,
+              fleetRole: BattleFleetRole.escort,
+              position: 0,
+              initialHp: 53,
+              maxHp: 53,
+              currentHp: 53,
+            ),
+          ],
+          mvpPositions: [0, 6],
+        ),
+        completedAt: DateTime(2026, 8, 11, 22, 15),
+      ),
+    );
+    const mapState = GameState(
+      masterMapInfos: <int, MasterMapInfo>{
+        203: MasterMapInfo(id: 23, mapAreaId: 2, mapNo: 3, name: '东部奥廖尔海'),
+      },
+    );
+    final controller = BattleController(gameState: () => mapState);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('东部奥廖尔海 (2-3)'), findsOneWidget);
+    final rank = find.byKey(const Key('logbook-rank-S'));
+    expect(rank, findsOneWidget);
+    expect(tester.getSize(rank), const Size(32, 22));
+    final decoration = tester.widget<DecoratedBox>(rank).decoration;
+    expect(decoration, isA<BoxDecoration>());
+    expect((decoration as BoxDecoration).color, const Color(0xff2c2015));
+    for (final header in ['旗舰', '二队旗舰', 'MVP', '二队 MVP']) {
+      expect(find.text(header), findsOneWidget);
+    }
+    expect(find.text('矢矧改二乙'), findsNWidgets(2));
+    expect(find.text('能代改二'), findsNWidgets(2));
+    final table = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('logbook-table-sortie')),
+    );
+    expect(table.frozenColumnWidths, hasLength(1));
+    expect(table.scrollableColumnWidths, hasLength(10));
+    expect(
+      table.frozenColumnWidths.reduce((a, b) => a + b) +
+          table.scrollableColumnWidths.reduce((a, b) => a + b),
+      greaterThanOrEqualTo(1376),
+    );
+  });
+
+  testWidgets('logbook keeps only the filter icon button', (tester) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final filter = find.byKey(const Key('logbook-filter-button'));
+    expect(find.byKey(const Key('logbook-search-button')), findsNothing);
+    expect(find.byKey(const Key('logbook-search-field')), findsNothing);
+    expect(filter, findsOneWidget);
+    expect(tester.getSize(filter), const Size.square(34));
+    expect(
+      find.descendant(
+        of: filter,
+        matching: find.byIcon(Icons.filter_alt_outlined),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('sortie shows Poi map difficulty and route or boss node labels', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final rawDatabase = await database.database;
+    for (final entry in const <(int, int)>[(3, 4), (4, 5)]) {
+      await database.insertBattleRecord(
+        BattleRecord(
+          battle: LiveBattle(
+            context: BattleContext(
+              mapAreaId: 62,
+              mapInfoNo: 2,
+              node: entry.$1,
+              eventId: entry.$2,
+            ),
+            rank: BattleRank.s,
+          ),
+          completedAt: DateTime(2026, 8, 11, 22, entry.$1),
+        ),
+      );
+    }
+    await rawDatabase.update('battle_logs', const <String, Object?>{
+      'map_difficulty': 3,
+    });
+    const mapState = GameState(
+      masterMapInfos: <int, MasterMapInfo>{
+        6202: MasterMapInfo(
+          id: 622,
+          mapAreaId: 62,
+          mapNo: 2,
+          name: '南沙諸島沖/オルモック沖/サンベルナルジノ海峡沖',
+        ),
+      },
+    );
+    final controller = BattleController(gameState: () => mapState);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('南沙諸島沖/オルモッ… (62-2 乙)'), findsNWidgets(2));
+    expect(find.text('C·道中'), findsOneWidget);
+    expect(find.text('D·Boss'), findsOneWidget);
+  });
+
+  testWidgets('filter button opens the approved two-column filter panel', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 740);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('logbook-filter-panel')), findsOneWidget);
+    expect(find.text('筛选出击记录'), findsOneWidget);
+    for (final field in ['date', 'map', 'status', 'rank']) {
+      expect(find.byKey(Key('logbook-filter-field-$field')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('logbook-filter-reset')), findsOneWidget);
+    expect(find.byKey(const Key('logbook-filter-apply')), findsOneWidget);
+    expect(find.byType(PopupMenuItem<String>), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sortie filter options match recorded statuses and all ranks', (
+    tester,
+  ) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    for (final context in const <BattleContext>[
+      BattleContext(mapAreaId: 2, mapInfoNo: 3, node: 3, eventId: 2),
+      BattleContext(
+        mapAreaId: 2,
+        mapInfoNo: 3,
+        node: 4,
+        eventId: 6,
+        eventKind: 2,
+      ),
+    ]) {
+      await database.insertBattleRecord(
+        BattleRecord(
+          battle: LiveBattle(context: context, rank: BattleRank.ss),
+          completedAt: DateTime(2026, 8, 11, 22, context.node),
+        ),
+      );
+    }
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+
+    List<String?> optionsFor(String field) {
+      final dropdown = tester.widget<DropdownButton<String>>(
+        find.descendant(
+          of: find.byKey(Key('logbook-filter-field-$field')),
+          matching: find.byType(DropdownButton<String>),
+        ),
+      );
+      return dropdown.items!.map((item) => item.value).toList();
+    }
+
+    expect(
+      optionsFor('status'),
+      unorderedEquals(<String>['全部状态', '资源获得', '路线选择']),
+    );
+    expect(optionsFor('rank'), <String>[
+      '全部评价',
+      'SS',
+      'S',
+      'A',
+      'B',
+      'C',
+      'D',
+      'E',
+    ]);
+  });
+
+  testWidgets('legacy numeric sortie status is never exposed as advance', (
+    tester,
+  ) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final db = await database.database;
+    await db.insert('battle_logs', <String, Object?>{
+      'timestamp': DateTime(2026, 8, 13, 12).millisecondsSinceEpoch,
+      'map_area': 1,
+      'map_no': 1,
+      'node': 1,
+      'node_type': 1,
+      'rank': 's',
+      'drop_ship_id': null,
+      'enemy_fleet_name': '—',
+      'friend_fleet_state': '6/6',
+      'enemy_fleet_state': '0/6',
+    });
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+
+    final dropdown = tester.widget<DropdownButton<String>>(
+      find.descendant(
+        of: find.byKey(const Key('logbook-filter-field-status')),
+        matching: find.byType(DropdownButton<String>),
+      ),
+    );
+    final options = dropdown.items!.map((item) => item.value).toList();
+    expect(options, contains('旧版记录'));
+    expect(options, isNot(contains('进击')));
+  });
+
+  testWidgets('retirement filter omits the ship-name field', (tester) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(
+            battleController: controller,
+            database: database,
+            selectedTabIndex: 4,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+
+    for (final field in ['date', 'type', 'shipType']) {
+      expect(find.byKey(Key('logbook-filter-field-$field')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('logbook-filter-field-ship')), findsNothing);
+  });
+
+  testWidgets('sortie keeps historical map and resolved node labels', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(
+            mapAreaId: 62,
+            mapInfoNo: 2,
+            node: 55,
+            eventId: 4,
+            nodeDisplayLabel: 'Y',
+          ),
+          rank: BattleRank.s,
+        ),
+        completedAt: DateTime(2026, 8, 11, 22, 5),
+      ),
+      mapDifficulty: 3,
+      mapName: '南沙諸島沖/オルモック沖/サンベルナルジノ海峡沖',
+      nodeLabel: 'Y',
+    );
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('南沙諸島沖/オルモッ… (62-2 乙)'), findsOneWidget);
+    expect(find.text('Y·道中'), findsOneWidget);
+    expect(find.text('BC·道中'), findsNothing);
+  });
+
+  testWidgets('construction filter panel uses construction-specific fields', (
+    tester,
+  ) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(
+            battleController: controller,
+            database: database,
+            selectedTabIndex: 2,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('筛选建造记录'), findsOneWidget);
+    for (final field in ['date', 'constructionType', 'shipType', 'secretary']) {
+      expect(find.byKey(Key('logbook-filter-field-$field')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('logbook-filter-field-status')), findsNothing);
+  });
+
+  testWidgets('filter choices stay pending until the user applies them', (
+    tester,
+  ) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final entry in [('普通建造', '雪风'), ('大型建造', '大和')]) {
+      await database.insertConstructionRecord(
+        timestamp: now,
+        constructionType: entry.$1,
+        shipId: 1,
+        shipName: entry.$2,
+        shipType: '驱逐舰',
+        fuel: 30,
+        ammo: 30,
+        steel: 30,
+        bauxite: 30,
+        developmentMaterial: 1,
+        secretaryName: '矢矧改二乙',
+      );
+    }
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(
+            battleController: controller,
+            database: database,
+            selectedTabIndex: 2,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+    final typeField = find.byKey(
+      const Key('logbook-filter-field-constructionType'),
+    );
+    await tester.tap(
+      find.descendant(
+        of: typeField,
+        matching: find.byType(DropdownButton<String>),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('大型建造').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('雪风'), findsOneWidget);
+    expect(find.text('大和'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('logbook-filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('雪风'), findsNothing);
+    expect(find.text('大和'), findsOneWidget);
+  });
+
+  testWidgets(
+    'construction table refreshes immediately after database insert',
+    (tester) async {
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+      final controller = BattleController(gameState: () => GameState.empty);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LogbookPage(
+              battleController: controller,
+              database: database,
+              selectedTabIndex: 2,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('雪风'), findsNothing);
+
+      await database.insertConstructionRecord(
+        timestamp: 1,
+        constructionType: '普通建造',
+        shipId: 1,
+        shipName: '雪风',
+        shipType: '驱逐舰',
+        fuel: 30,
+        ammo: 30,
+        steel: 30,
+        bauxite: 30,
+        developmentMaterial: 1,
+        secretaryName: '矢矧改二乙',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('雪风'), findsOneWidget);
+    },
+  );
+
+  testWidgets('construction result replaces the visible pending row', (
+    tester,
+  ) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertConstructionRecord(
+      dockId: 2,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      constructionType: '普通建造',
+      shipId: null,
+      shipName: '建造中',
+      shipType: '—',
+      fuel: 30,
+      ammo: 30,
+      steel: 30,
+      bauxite: 30,
+      developmentMaterial: 1,
+      secretaryName: '矢矧改二乙',
+    );
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(
+            battleController: controller,
+            database: database,
+            selectedTabIndex: 2,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('建造中'), findsOneWidget);
+
+    await database.updateConstructionResult(
+      dockId: 2,
+      shipId: 1,
+      shipName: '雪风',
+      shipType: '驱逐舰',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('建造中'), findsNothing);
+    expect(find.text('雪风'), findsOneWidget);
+  });
+
+  testWidgets('resource category keeps the existing resource trend page', (
+    tester,
+  ) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(
+            battleController: controller,
+            database: database,
+            selectedTabIndex: 5,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(ResourceTrendPage), findsOneWidget);
+    expect(find.byKey(const Key('logbook-filter-button')), findsNothing);
+  });
+
+  testWidgets('loads the next database batch near the table bottom', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(844, 390);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    for (var index = 0; index < 55; index++) {
+      await database.insertDevelopmentRecord(
+        timestamp: index,
+        success: true,
+        equipmentId: index,
+        equipmentName: '装备$index',
+        equipmentType: '主炮',
+        equipmentIconId: 1,
+        fuel: 10,
+        ammo: 10,
+        steel: 10,
+        bauxite: 10,
+        secretaryName: '矢矧改二乙',
+      );
+    }
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(
+            battleController: controller,
+            database: database,
+            selectedTabIndex: 3,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FrozenDataTable>(
+            find.byKey(const Key('logbook-table-development')),
+          )
+          .rowHeights,
+      hasLength(50),
+    );
+
+    await tester.drag(
+      find.byKey(const Key('logbook-development-body-scroll')),
+      const Offset(0, -5000),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<FrozenDataTable>(
+            find.byKey(const Key('logbook-table-development')),
+          )
+          .rowHeights,
+      hasLength(55),
+    );
+  });
+}

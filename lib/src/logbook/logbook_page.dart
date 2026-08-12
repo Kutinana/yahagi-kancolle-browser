@@ -7,6 +7,7 @@ import '../fleet/equipment_type_icon.dart';
 import '../fleet/header_resource_catalog.dart';
 import '../fleet/resource_trend_page.dart';
 import '../game_state/game_state.dart';
+import '../widgets/filter_controls.dart';
 import '../widgets/frozen_data_table.dart';
 import 'expedition_log_catalog.dart';
 import 'logbook_database.dart';
@@ -23,8 +24,6 @@ enum _LogbookCategory {
   const _LogbookCategory(this.label);
   final String label;
 }
-
-const double _logbookControlHeight = 28;
 
 class LogbookPage extends StatefulWidget {
   const LogbookPage({
@@ -231,8 +230,6 @@ class _LogbookTablePage extends StatefulWidget {
 
 class _LogbookTablePageState extends State<_LogbookTablePage> {
   static const _batchSize = 50;
-  final _searchController = TextEditingController();
-  final _searchFocusNode = FocusNode();
   final _filterButtonAnchor = GlobalKey();
   final List<Map<String, dynamic>> _records = [];
   bool _loading = false;
@@ -262,8 +259,6 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
   @override
   void dispose() {
     _changeSignal(widget).removeListener(_refreshLatest);
-    _searchController.dispose();
-    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -350,25 +345,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       };
 
   List<Map<String, dynamic>> get _visibleRecords {
-    final query = _searchController.text.trim().toLowerCase();
-    return _records
-        .where((record) {
-          final searchableValues = <Object?>[...record.values];
-          if (widget.category == _LogbookCategory.expedition) {
-            searchableValues.addAll([
-              _expeditionLabel(record),
-              for (final reward in _expeditionRewards(record)) reward.name,
-            ]);
-          }
-          if (query.isNotEmpty &&
-              !searchableValues.any(
-                (value) => value.toString().toLowerCase().contains(query),
-              )) {
-            return false;
-          }
-          return _matchesFilter(record);
-        })
-        .toList(growable: false);
+    return _records.where(_matchesFilter).toList(growable: false);
   }
 
   bool _matchesFilter(Map<String, dynamic> record) {
@@ -602,7 +579,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       child: Column(
         children: [
           SizedBox(
-            height: 32,
+            height: 34,
             child: Row(
               children: [
                 Expanded(
@@ -617,54 +594,16 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
                     ),
                   ),
                 ),
-                SizedBox(
-                  width: 210,
-                  height: _logbookControlHeight,
-                  child: AnimatedBuilder(
-                    animation: _searchFocusNode,
-                    builder: (context, child) => DecoratedBox(
-                      key: const Key('logbook-search-capsule'),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _searchFocusNode.hasFocus
-                              ? const Color(0xffb7832a)
-                              : const Color(0xff315064),
-                        ),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: child,
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      focusNode: _searchFocusNode,
-                      onChanged: (_) => setState(() {}),
-                      textAlignVertical: TextAlignVertical.center,
-                      style: const TextStyle(
-                        color: Color(0xffd7e3e9),
-                        fontSize: 12,
-                      ),
-                      decoration: InputDecoration(
-                        isCollapsed: true,
-                        contentPadding: const EdgeInsets.fromLTRB(10, 5, 10, 0),
-                        hintText: _searchHint,
-                        hintStyle: const TextStyle(
-                          color: Color(0xff667f8d),
-                          fontSize: 11,
-                        ),
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
                 KeyedSubtree(
                   key: _filterButtonAnchor,
-                  child: _LogbookFilterButton(
+                  child: HeaderFilterIconButton(
                     key: const Key('logbook-filter-button'),
+                    icon: Icons.filter_alt_outlined,
                     active: _filters.entries.any(
                       (entry) => _filterDefaults[entry.key] != entry.value,
                     ),
-                    onTap: _showFilter,
+                    tooltip: '筛选${widget.category.label}记录',
+                    onPressed: _showFilter,
                   ),
                 ),
               ],
@@ -707,15 +646,6 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       ),
     );
   }
-
-  String get _searchHint => switch (widget.category) {
-    _LogbookCategory.sortie => '搜索海域、敌舰队、掉落…',
-    _LogbookCategory.expedition => '搜索远征、道具…',
-    _LogbookCategory.construction => '搜索舰娘、舰种、秘书舰…',
-    _LogbookCategory.development => '搜索装备、类型、秘书舰…',
-    _LogbookCategory.retirement => '搜索舰娘、舰种…',
-    _LogbookCategory.resource => '搜索…',
-  };
 
   Widget _buildTable(List<Map<String, dynamic>> rows) {
     return LayoutBuilder(
@@ -788,6 +718,34 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       }
       return _TableSpec(
         widths: widths,
+        headers: spec.headers,
+        cells: spec.cells,
+      );
+    }
+    if (widget.category == _LogbookCategory.expedition) {
+      final spec = _tableSpec;
+      const frozenWidth = 205.0;
+      const timeWidth = 92.0;
+      const resultWidth = 64.0;
+      const resourceWidth = 70.0;
+      const minimumRewardWidth = 120.0;
+      const fixedScrollableWidth = timeWidth + resultWidth + resourceWidth * 4;
+      final scrollableViewportWidth = (availableWidth - frozenWidth).clamp(
+        0.0,
+        double.infinity,
+      );
+      final rewardWidth = (scrollableViewportWidth - fixedScrollableWidth)
+          .clamp(minimumRewardWidth, double.infinity);
+      return _TableSpec(
+        widths: [
+          timeWidth,
+          resultWidth,
+          resourceWidth,
+          resourceWidth,
+          resourceWidth,
+          resourceWidth,
+          rewardWidth,
+        ],
         headers: spec.headers,
         cells: spec.cells,
       );
@@ -1013,48 +971,6 @@ class _TableSpec {
   final List<double> widths;
   final List<Widget> headers;
   final List<Widget> Function(Map<String, dynamic>) cells;
-}
-
-class _LogbookFilterButton extends StatelessWidget {
-  const _LogbookFilterButton({
-    super.key,
-    required this.active,
-    required this.onTap,
-  });
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 68,
-    height: _logbookControlHeight,
-    child: Material(
-      color: active ? const Color(0xff60491f) : const Color(0xff102936),
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: active ? const Color(0xffb7832a) : const Color(0xff315064),
-        ),
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Center(
-            child: Text(
-              '筛选',
-              style: TextStyle(
-                color: Color(0xffa8bac4),
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 class _HeaderCell extends StatelessWidget {

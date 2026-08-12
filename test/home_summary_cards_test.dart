@@ -793,6 +793,10 @@ void main() {
     int? openedQuestId;
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData(
+          fontFamily: 'HarmonyOS_Sans_SC',
+          fontFamilyFallback: const <String>['HarmonyOS_Sans_TC'],
+        ),
         home: Scaffold(
           body: PinnedQuestsSummary(
             controller: controller,
@@ -805,6 +809,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final questTitleFinder = find.text('测试任务');
+    final questTitle = tester.widget<Text>(questTitleFinder);
+    final effectiveStyle = DefaultTextStyle.of(
+      tester.element(questTitleFinder),
+    ).style.merge(questTitle.style);
+    expect(effectiveStyle.fontFamily, 'HarmonyOS_Sans_SC');
+    expect(effectiveStyle.fontFamilyFallback, const <String>[
+      'HarmonyOS_Sans_TC',
+    ]);
     await tester.tap(find.text('测试任务'));
     expect(openedQuestId, 101);
   });

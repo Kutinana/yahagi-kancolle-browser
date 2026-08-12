@@ -12,6 +12,7 @@ import 'package:yahagi_kancolle_browser/src/quest/quest_catalog_controller.dart'
 import 'package:yahagi_kancolle_browser/src/quest/quest_catalog_dataset.dart';
 import 'package:yahagi_kancolle_browser/src/quest/quest_catalog_update_service.dart';
 import 'package:yahagi_kancolle_browser/src/quest/quest_store.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/filter_controls.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
@@ -299,6 +300,10 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: ThemeData(
+            fontFamily: 'HarmonyOS_Sans_SC',
+            fontFamilyFallback: const <String>['HarmonyOS_Sans_TC'],
+          ),
           home: QuestCenterPage(
             controller: controller,
             initialQuestId: 201,
@@ -311,6 +316,7 @@ void main() {
 
       expect(find.byKey(const Key('quest-search-button')), findsOneWidget);
       expect(find.byKey(const Key('quest-filter-button')), findsOneWidget);
+      expect(find.byType(HeaderFilterIconButton), findsNWidgets(2));
       expect(find.byKey(const Key('quest-search-field')), findsNothing);
       await tester.tap(find.byKey(const Key('quest-search-button')));
       await tester.pumpAndSettle();
