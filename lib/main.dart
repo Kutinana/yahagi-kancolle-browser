@@ -264,7 +264,10 @@ Future<void> main() async {
       p.join(applicationSupportDirectory.path, 'diagnostics'),
     ),
   );
-  final diagnosticRecorder = DiagnosticRecorder(sink: diagnosticStorage);
+  final diagnosticRecorder = DiagnosticRecorder(
+    sink: diagnosticStorage,
+    enabled: false,
+  );
   const diagnosticPlatform = MethodChannelDiagnosticPlatformPort();
   final diagnosticApiObserver = DiagnosticGameApiObserver(
     recorder: diagnosticRecorder,
