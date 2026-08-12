@@ -162,6 +162,13 @@ class LogbookDatabase extends ChangeNotifier {
   ValueListenable<int> changesFor(LogbookChangeCategory category) =>
       _changeSignals[category]!;
 
+  Future<int> diagnosticFileSizeBytes() async {
+    final current = _database;
+    if (current == null || current.path == inMemoryDatabasePath) return 0;
+    final file = File(current.path);
+    return await file.exists() ? file.length() : 0;
+  }
+
   void _notifyChange(LogbookChangeCategory category) {
     final signal = _changeSignals[category]!;
     signal.value += 1;

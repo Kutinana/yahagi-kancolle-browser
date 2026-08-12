@@ -9,6 +9,59 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get diagnosticLoggingSection => 'クライアント診断ログ';
+
+  @override
+  String get diagnosticLoggingTitle => 'クライアント診断ログを記録';
+
+  @override
+  String get diagnosticLoggingDesc =>
+      '性能とエラーの概要のみを記録し、アカウント、パスワード、ログイン情報は含みません';
+
+  @override
+  String get diagnosticPrivacyTitle => 'プライバシー保護診断';
+
+  @override
+  String get diagnosticPrivacyDesc =>
+      'エクスポート前に内容を再検査します。アカウント、パスワード、Cookie、トークン、通信本文、チャット、スクリーンショットは記録せず、自動送信もしません。';
+
+  @override
+  String get diagnosticStatusEnabled => '記録中';
+
+  @override
+  String get diagnosticStatusDisabled => '記録停止中';
+
+  @override
+  String diagnosticStorageUsage(String size) {
+    return 'ローカルログ使用量：$size';
+  }
+
+  @override
+  String get exportDiagnosticFile => '診断ファイルを書き出す';
+
+  @override
+  String get clearDiagnosticData => '診断ログを削除';
+
+  @override
+  String get diagnosticExportConfirmTitle => '診断ファイルを書き出しますか？';
+
+  @override
+  String get diagnosticExportConfirmDesc =>
+      '1つの JSON ファイルを作成し、システムの共有画面を開きます。ファイルにはクライアント性能、エラー概要、匿名の端末実行情報のみが含まれます。送信先をご確認ください。';
+
+  @override
+  String get diagnosticExportAction => '書き出す';
+
+  @override
+  String get diagnosticClearConfirmTitle => '診断ログを削除しますか？';
+
+  @override
+  String get diagnosticClearConfirmDesc => '端末上の診断ログを完全に削除します。';
+
+  @override
+  String get diagnosticExportFailed => '診断ファイルの書き出しに失敗しました';
+
+  @override
   String get appTitle => 'ヤハギ';
 
   @override

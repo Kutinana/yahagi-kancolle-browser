@@ -9,6 +9,58 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get diagnosticLoggingSection => '客户端诊断日志';
+
+  @override
+  String get diagnosticLoggingTitle => '记录客户端诊断日志';
+
+  @override
+  String get diagnosticLoggingDesc => '仅记录性能和错误摘要，不包含账号、密码或登录凭据';
+
+  @override
+  String get diagnosticPrivacyTitle => '隐私安全诊断';
+
+  @override
+  String get diagnosticPrivacyDesc =>
+      '导出前会再次检查内容。日志不记录账号、密码、Cookie、令牌、请求正文、响应正文、聊天内容或截图，也不会自动上传。';
+
+  @override
+  String get diagnosticStatusEnabled => '正在记录';
+
+  @override
+  String get diagnosticStatusDisabled => '已停止记录';
+
+  @override
+  String diagnosticStorageUsage(String size) {
+    return '本地日志占用：$size';
+  }
+
+  @override
+  String get exportDiagnosticFile => '导出诊断文件';
+
+  @override
+  String get clearDiagnosticData => '清除诊断日志';
+
+  @override
+  String get diagnosticExportConfirmTitle => '导出诊断文件？';
+
+  @override
+  String get diagnosticExportConfirmDesc =>
+      '将生成一个 JSON 文件，并调用系统分享面板。文件只包含客户端性能、错误摘要及匿名设备运行信息，请在发送前自行确认接收方。';
+
+  @override
+  String get diagnosticExportAction => '导出';
+
+  @override
+  String get diagnosticClearConfirmTitle => '清除诊断日志？';
+
+  @override
+  String get diagnosticClearConfirmDesc => '设备上的诊断日志将被永久删除。';
+
+  @override
+  String get diagnosticExportFailed => '诊断文件导出失败';
+
+  @override
   String get appTitle => 'ヤハギ';
 
   @override
@@ -1529,6 +1581,58 @@ class AppLocalizationsZh extends AppLocalizations {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get diagnosticLoggingSection => '用戶端診斷日誌';
+
+  @override
+  String get diagnosticLoggingTitle => '記錄用戶端診斷日誌';
+
+  @override
+  String get diagnosticLoggingDesc => '僅記錄效能和錯誤摘要，不包含帳號、密碼或登入憑據';
+
+  @override
+  String get diagnosticPrivacyTitle => '隱私安全診斷';
+
+  @override
+  String get diagnosticPrivacyDesc =>
+      '匯出前會再次檢查內容。日誌不記錄帳號、密碼、Cookie、權杖、請求正文、回應正文、聊天內容或截圖，也不會自動上傳。';
+
+  @override
+  String get diagnosticStatusEnabled => '正在記錄';
+
+  @override
+  String get diagnosticStatusDisabled => '已停止記錄';
+
+  @override
+  String diagnosticStorageUsage(String size) {
+    return '本機日誌佔用：$size';
+  }
+
+  @override
+  String get exportDiagnosticFile => '匯出診斷檔案';
+
+  @override
+  String get clearDiagnosticData => '清除診斷日誌';
+
+  @override
+  String get diagnosticExportConfirmTitle => '匯出診斷檔案？';
+
+  @override
+  String get diagnosticExportConfirmDesc =>
+      '將產生一個 JSON 檔案，並呼叫系統分享面板。檔案只包含用戶端效能、錯誤摘要及匿名裝置執行資訊，請在傳送前自行確認接收方。';
+
+  @override
+  String get diagnosticExportAction => '匯出';
+
+  @override
+  String get diagnosticClearConfirmTitle => '清除診斷日誌？';
+
+  @override
+  String get diagnosticClearConfirmDesc => '裝置上的診斷日誌將被永久刪除。';
+
+  @override
+  String get diagnosticExportFailed => '診斷檔案匯出失敗';
 
   @override
   String get appTitle => 'ヤハギ';

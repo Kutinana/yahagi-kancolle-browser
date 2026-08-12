@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import 'src/battle/battle_controller.dart';
@@ -12,6 +15,7 @@ import 'src/battle/battle_damage_alert.dart';
 import 'src/battle/fcd_map_controller.dart';
 import 'src/battle/fcd_map_store.dart';
 import 'src/battle/fcd_map_update_service.dart';
+import 'src/logbook/logbook_database.dart';
 import 'src/logbook/logbook_page.dart';
 import 'src/battle/live_battle_card.dart';
 import 'src/audio/game_audio_controller.dart';
@@ -31,6 +35,15 @@ import 'src/capture/capture_mode_controller.dart';
 import 'src/capture/capture_mode_store.dart';
 import 'src/capture/game_capture_controller.dart';
 import 'src/capture/game_capture_port.dart';
+import 'src/diagnostics/diagnostic_controller.dart';
+import 'src/diagnostics/diagnostic_event.dart';
+import 'src/diagnostics/diagnostic_export_service.dart';
+import 'src/diagnostics/diagnostic_game_api_observer.dart';
+import 'src/diagnostics/diagnostic_performance_monitor.dart';
+import 'src/diagnostics/diagnostic_platform_port.dart';
+import 'src/diagnostics/diagnostic_recorder.dart';
+import 'src/diagnostics/diagnostic_settings_store.dart';
+import 'src/diagnostics/diagnostic_storage.dart';
 import 'src/fleet/fleet_information_center.dart';
 import 'src/fleet/ship_status_style.dart';
 import 'src/fleet/anchorage_repair_navigation.dart';
@@ -165,7 +178,8 @@ Future<void> main() async {
     ),
   );
   await improvementPlannerController.loadFavorites();
-  final currentVersion = (await PackageInfo.fromPlatform()).version;
+  final packageInfo = await PackageInfo.fromPlatform();
+  final currentVersion = packageInfo.version;
   FcdMapStorage fcdMapStorage;
   try {
     fcdMapStorage = await ApplicationFcdMapStorage.create();
@@ -243,6 +257,63 @@ Future<void> main() async {
     SharedPreferencesScreenAwakeStore(),
   );
   await screenAwakeController.attachPort(const MethodChannelScreenAwakePort());
+  final applicationSupportDirectory = await getApplicationSupportDirectory();
+  final temporaryDirectory = await getTemporaryDirectory();
+  final diagnosticStorage = DiagnosticStorage(
+    directory: Directory(
+      p.join(applicationSupportDirectory.path, 'diagnostics'),
+    ),
+  );
+  final diagnosticRecorder = DiagnosticRecorder(sink: diagnosticStorage);
+  const diagnosticPlatform = MethodChannelDiagnosticPlatformPort();
+  final diagnosticApiObserver = DiagnosticGameApiObserver(
+    recorder: diagnosticRecorder,
+  );
+  var lastBrowserDiagnosticState = browserController.loadState;
+  void recordBrowserState() {
+    final state = browserController.loadState;
+    if (state == lastBrowserDiagnosticState) return;
+    lastBrowserDiagnosticState = state;
+    diagnosticRecorder.record(
+      DiagnosticEvent.webViewState(
+        occurredAt: DateTime.now(),
+        state: state.name,
+        durationMs: 0,
+      ),
+    );
+  }
+
+  final diagnosticPerformanceMonitor = DiagnosticPerformanceMonitor(
+    recorder: diagnosticRecorder,
+    platform: diagnosticPlatform,
+    pendingApiEvents: () => gameApiEventPipeline.pendingEventCount,
+    databaseBytes: LogbookDatabase.instance.diagnosticFileSizeBytes,
+  );
+  final diagnosticController = DiagnosticController(
+    settings: SharedPreferencesDiagnosticSettingsStore(),
+    storage: diagnosticStorage,
+    recorder: diagnosticRecorder,
+    exporter: DiagnosticExportService(
+      storage: diagnosticStorage,
+      exportDirectory: Directory(
+        p.join(temporaryDirectory.path, 'diagnostics-export'),
+      ),
+      platform: diagnosticPlatform,
+      appVersion: '${packageInfo.version}+${packageInfo.buildNumber}',
+    ),
+    performanceMonitor: diagnosticPerformanceMonitor,
+    onAttachObservers: () {
+      gameApiEventPipeline.observer = diagnosticApiObserver;
+      browserController.addListener(recordBrowserState);
+    },
+    onDetachObservers: () {
+      if (identical(gameApiEventPipeline.observer, diagnosticApiObserver)) {
+        gameApiEventPipeline.observer = null;
+      }
+      browserController.removeListener(recordBrowserState);
+    },
+  );
+  await diagnosticController.initialize();
   runApp(
     YahagiApp(
       layoutSettingsController: layoutSettingsController,
@@ -271,6 +342,7 @@ Future<void> main() async {
       currentVersion: currentVersion,
       releaseChecker: releaseChecker,
       screenAwakeController: screenAwakeController,
+      diagnosticController: diagnosticController,
     ),
   );
   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -310,6 +382,7 @@ class YahagiApp extends StatelessWidget {
     this.toolbarDisplayController,
     this.gameScreenshotController,
     this.showDeveloperDiagnostics = false,
+    this.diagnosticController,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -340,6 +413,7 @@ class YahagiApp extends StatelessWidget {
   final GameToolbarDisplayController? toolbarDisplayController;
   final GameScreenshotController? gameScreenshotController;
   final bool showDeveloperDiagnostics;
+  final DiagnosticController? diagnosticController;
 
   @override
   Widget build(BuildContext context) {
@@ -416,6 +490,7 @@ class YahagiApp extends StatelessWidget {
                 toolbarDisplayController: toolbarDisplayController,
                 gameScreenshotController: gameScreenshotController,
                 showDeveloperDiagnostics: showDeveloperDiagnostics,
+                diagnosticController: diagnosticController,
                 gameSurface: _buildGameSurface(),
               ),
             ),
@@ -522,6 +597,7 @@ class YahagiShell extends StatefulWidget {
     this.questCatalogController,
     this.improvementPlannerController,
     this.showDeveloperDiagnostics = false,
+    this.diagnosticController,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -551,6 +627,7 @@ class YahagiShell extends StatefulWidget {
   final GameToolbarDisplayController? toolbarDisplayController;
   final GameScreenshotController? gameScreenshotController;
   final bool showDeveloperDiagnostics;
+  final DiagnosticController? diagnosticController;
 
   @override
   State<YahagiShell> createState() => _YahagiShellState();
@@ -1130,6 +1207,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             showTitle: false,
                             showDeveloperDiagnostics:
                                 widget.showDeveloperDiagnostics,
+                            diagnosticController: widget.diagnosticController,
                             selectedIndex: _settingsTabIndex,
                           ),
                         if (_workspaceIndex == 9 &&

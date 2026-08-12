@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../battle/fcd_map_controller.dart';
+import '../diagnostics/diagnostic_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../improvement/improvement_dataset_update_section.dart';
 import '../improvement/improvement_planner_controller.dart';
@@ -21,6 +22,7 @@ class BattleSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.questCatalogController,
     required this.safetySettingsController,
     this.improvementPlannerController,
+    this.diagnosticController,
   });
 
   final BattlePredictionSettingsController? battlePredictionSettingsController;
@@ -28,6 +30,7 @@ class BattleSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final QuestCatalogController? questCatalogController;
   final SafetySettingsController safetySettingsController;
   final ImprovementPlannerController? improvementPlannerController;
+  final DiagnosticController? diagnosticController;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +45,22 @@ class BattleSettingsPage extends StatelessWidget with SettingsUIHelpers {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (diagnosticController case final diagnostics?) ...<Widget>[
+              buildSectionTitle(l10n.diagnosticLoggingSection),
+              buildCard(
+                child: AnimatedBuilder(
+                  animation: diagnostics,
+                  builder: (context, _) => buildSwitchTile(
+                    switchKey: const Key('diagnosticLoggingSwitch'),
+                    title: l10n.diagnosticLoggingTitle,
+                    subtitle: l10n.diagnosticLoggingDesc,
+                    value: diagnostics.enabled,
+                    onChanged: diagnostics.setEnabled,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
             buildSectionTitle(l10n.battleAlertsSection),
             buildCard(
               child: AnimatedBuilder(

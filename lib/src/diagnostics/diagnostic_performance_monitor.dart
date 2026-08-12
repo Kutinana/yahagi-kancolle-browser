@@ -135,11 +135,34 @@ final class DiagnosticPerformanceMonitor with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_attached) return;
     if (state == AppLifecycleState.resumed) {
+      _recordLifecycle(DiagnosticLifecycleState.resumed);
       _timer ??= Timer.periodic(sampleInterval, (_) => unawaited(sample()));
     } else {
+      _recordLifecycle(
+        state == AppLifecycleState.detached
+            ? DiagnosticLifecycleState.stopped
+            : DiagnosticLifecycleState.paused,
+      );
       _timer?.cancel();
       _timer = null;
       unawaited(recorder.flush());
     }
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    if (!_attached) return;
+    _recordLifecycle(DiagnosticLifecycleState.lowMemory);
+    unawaited(sample());
+  }
+
+  void _recordLifecycle(DiagnosticLifecycleState state) {
+    recorder.record(
+      DiagnosticEvent.lifecycle(
+        occurredAt: _now(),
+        state: state,
+        uptimeMs: _uptime.elapsedMilliseconds,
+      ),
+    );
   }
 }

@@ -99,6 +99,102 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @diagnosticLoggingSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'客户端诊断日志'**
+  String get diagnosticLoggingSection;
+
+  /// No description provided for @diagnosticLoggingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录客户端诊断日志'**
+  String get diagnosticLoggingTitle;
+
+  /// No description provided for @diagnosticLoggingDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅记录性能和错误摘要，不包含账号、密码或登录凭据'**
+  String get diagnosticLoggingDesc;
+
+  /// No description provided for @diagnosticPrivacyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐私安全诊断'**
+  String get diagnosticPrivacyTitle;
+
+  /// No description provided for @diagnosticPrivacyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出前会再次检查内容。日志不记录账号、密码、Cookie、令牌、请求正文、响应正文、聊天内容或截图，也不会自动上传。'**
+  String get diagnosticPrivacyDesc;
+
+  /// No description provided for @diagnosticStatusEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在记录'**
+  String get diagnosticStatusEnabled;
+
+  /// No description provided for @diagnosticStatusDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已停止记录'**
+  String get diagnosticStatusDisabled;
+
+  /// No description provided for @diagnosticStorageUsage.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地日志占用：{size}'**
+  String diagnosticStorageUsage(String size);
+
+  /// No description provided for @exportDiagnosticFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出诊断文件'**
+  String get exportDiagnosticFile;
+
+  /// No description provided for @clearDiagnosticData.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除诊断日志'**
+  String get clearDiagnosticData;
+
+  /// No description provided for @diagnosticExportConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出诊断文件？'**
+  String get diagnosticExportConfirmTitle;
+
+  /// No description provided for @diagnosticExportConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'将生成一个 JSON 文件，并调用系统分享面板。文件只包含客户端性能、错误摘要及匿名设备运行信息，请在发送前自行确认接收方。'**
+  String get diagnosticExportConfirmDesc;
+
+  /// No description provided for @diagnosticExportAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出'**
+  String get diagnosticExportAction;
+
+  /// No description provided for @diagnosticClearConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除诊断日志？'**
+  String get diagnosticClearConfirmTitle;
+
+  /// No description provided for @diagnosticClearConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'设备上的诊断日志将被永久删除。'**
+  String get diagnosticClearConfirmDesc;
+
+  /// No description provided for @diagnosticExportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'诊断文件导出失败'**
+  String get diagnosticExportFailed;
+
   /// No description provided for @appTitle.
   ///
   /// In zh, this message translates to:

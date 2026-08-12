@@ -4,9 +4,11 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import '../browser/game_browser_controller.dart';
 import '../capture/capture_mode_controller.dart';
 import '../capture/game_capture_controller.dart';
+import '../diagnostics/diagnostic_controller.dart';
 import '../prototype_status_controller.dart';
 import 'about_dialog.dart';
 import 'diagnostics_section.dart';
+import 'diagnostic_user_section.dart';
 import 'release_check_service.dart';
 import 'settings_ui_helpers.dart';
 import 'game_rendering_mode_controller.dart';
@@ -22,6 +24,7 @@ class AboutSupportSettingsPage extends StatelessWidget with SettingsUIHelpers {
     required this.gameCaptureController,
     this.showDeveloperDiagnostics = false,
     this.gameRenderingModeController,
+    this.diagnosticController,
   });
 
   final String currentVersion;
@@ -32,6 +35,7 @@ class AboutSupportSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final GameCaptureController gameCaptureController;
   final bool showDeveloperDiagnostics;
   final GameRenderingModeController? gameRenderingModeController;
+  final DiagnosticController? diagnosticController;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +55,11 @@ class AboutSupportSettingsPage extends StatelessWidget with SettingsUIHelpers {
               currentVersion: currentVersion,
               releaseChecker: releaseChecker,
             ),
+            if (diagnosticController case final diagnostics?) ...<Widget>[
+              const SizedBox(height: 24),
+              buildSectionTitle(l10n.diagnosticPrivacyTitle),
+              buildCard(child: DiagnosticUserSection(controller: diagnostics)),
+            ],
             if (showDeveloperDiagnostics) ...<Widget>[
               const SizedBox(height: 24),
               buildSectionTitle(l10n.diagnosticsAndAbout),

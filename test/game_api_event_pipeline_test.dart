@@ -224,6 +224,33 @@ void main() {
       expect(idleCompleted, isTrue);
     },
   );
+
+  test(
+    'observer receives scalar timings and pending depth returns to zero',
+    () async {
+      final observer = _RecordingPipelineObserver();
+      final pipeline = GameApiEventPipeline(
+        consumers: <GameApiEventConsumer>[_RecordingConsumer()],
+        observer: observer,
+      );
+
+      pipeline.add(_event('/kcsapi/api_port/port', _body(4)));
+      expect(pipeline.pendingEventCount, 1);
+      await pipeline.idle;
+
+      expect(pipeline.pendingEventCount, 0);
+      expect(observer.timings.single.path, '/kcsapi/api_port/port');
+      expect(observer.timings.single.responseBytes, greaterThan(0));
+      expect(observer.timings.single.toString(), isNot(contains('padding')));
+    },
+  );
+}
+
+final class _RecordingPipelineObserver implements GameApiPipelineObserver {
+  final List<GameApiTiming> timings = <GameApiTiming>[];
+
+  @override
+  void onCompleted(GameApiTiming timing) => timings.add(timing);
 }
 
 final class _RecordingConsumer implements GameApiEventConsumer {

@@ -116,7 +116,7 @@ final class DiagnosticStorage implements DiagnosticSink {
         } on FormatException {
           break;
         } on DiagnosticPrivacyViolation {
-          break;
+          rethrow;
         }
       }
     }

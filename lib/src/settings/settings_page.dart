@@ -6,6 +6,7 @@ import '../browser/game_browser_controller.dart';
 import '../browser/game_toolbar_display_controller.dart';
 import '../capture/capture_mode_controller.dart';
 import '../capture/game_capture_controller.dart';
+import '../diagnostics/diagnostic_controller.dart';
 import '../prototype_status_controller.dart';
 import '../game_state/game_state_controller.dart';
 import 'layout_settings_controller.dart';
@@ -54,6 +55,7 @@ class SettingsPage extends StatelessWidget {
     this.selectedIndex = 0,
     this.gameRenderingModeController,
     this.isBattleActive = false,
+    this.diagnosticController,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -81,6 +83,7 @@ class SettingsPage extends StatelessWidget {
   final int selectedIndex;
   final GameRenderingModeController? gameRenderingModeController;
   final bool isBattleActive;
+  final DiagnosticController? diagnosticController;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +108,7 @@ class SettingsPage extends StatelessWidget {
           questCatalogController: questCatalogController,
           improvementPlannerController: improvementPlannerController,
           safetySettingsController: safetySettingsController,
+          diagnosticController: diagnosticController,
         ),
         NetworkSettingsPageNew(
           networkSettingsController: networkSettingsController,
@@ -121,6 +125,7 @@ class SettingsPage extends StatelessWidget {
           gameCaptureController: gameCaptureController,
           showDeveloperDiagnostics: showDeveloperDiagnostics,
           gameRenderingModeController: gameRenderingModeController,
+          diagnosticController: diagnosticController,
         ),
       ],
     );

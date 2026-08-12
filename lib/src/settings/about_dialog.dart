@@ -219,9 +219,7 @@ class AboutContentWidget extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xffd4a85f,
-                          ).withValues(alpha: 0.1),
+                          color: const Color(0xffd4a85f).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: const Color(
@@ -260,9 +258,7 @@ class AboutContentWidget extends StatelessWidget {
                       icon: const Icon(Icons.code, size: 18),
                       label: Text(
                         l10n.viewOnGitHub,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       onPressed: () async {
                         final uri = Uri.parse(githubUrl);
@@ -278,17 +274,12 @@ class AboutContentWidget extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xff142735),
                         foregroundColor: const Color(0xff8197a5),
-                        side: const BorderSide(
-                          color: Color(0xff294052),
-                        ),
+                        side: const BorderSide(color: Color(0xff294052)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
-                      icon: const Icon(
-                        Icons.system_update_alt,
-                        size: 18,
-                      ),
+                      icon: const Icon(Icons.system_update_alt, size: 18),
                       label: Text(l10n.checkForUpdates),
                       onPressed: () => _checkForUpdates(context),
                     ),
@@ -306,48 +297,46 @@ class AboutContentWidget extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                size: 16,
-                                color: Color(0xff8197a5),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                l10n.disclaimerTitle,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xff8197a5),
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '${l10n.disclaimerP1}\n\n${l10n.disclaimerP2}\n\n'
-                            '${l10n.disclaimerP3}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              height: 1.6,
-                              color: Color(0xffa0b6c4),
-                            ),
-                          ),
-                          const SizedBox(key: Key('about-disclaimer-end')),
-                        ],
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 16,
+                      color: Color(0xff8197a5),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      l10n.disclaimerTitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xff8197a5),
+                        letterSpacing: 1,
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${l10n.disclaimerP1}\n\n${l10n.disclaimerP2}\n\n'
+                  '${l10n.disclaimerP3}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.6,
+                    color: Color(0xffa0b6c4),
+                  ),
+                ),
+                const SizedBox(key: Key('about-disclaimer-end')),
+              ],
+            ),
+          ),
           // Footer
           Container(
             padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: Color(0xff294052))),
               color: Color(0xff0d1a26),
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(12),
-              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
             ),
             alignment: Alignment.center,
             child: Text(

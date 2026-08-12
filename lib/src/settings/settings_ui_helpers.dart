@@ -33,6 +33,7 @@ mixin SettingsUIHelpers {
   Widget buildSwitchTile({
     required String title,
     Key? titleKey,
+    Key? switchKey,
     String? subtitle,
     Widget? trailingBeforeSwitch,
     required bool value,
@@ -70,6 +71,7 @@ mixin SettingsUIHelpers {
           ],
           const SizedBox(width: 12),
           Switch(
+            key: switchKey,
             value: value,
             onChanged: onChanged,
             activeThumbColor: const Color(0xffd4a85f),

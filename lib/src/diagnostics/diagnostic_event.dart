@@ -123,7 +123,7 @@ final class DiagnosticEvent {
     fields: <String, Object?>{
       'state': state,
       'durationMs': durationMs,
-      if (errorCode != null) 'errorCode': errorCode,
+      'errorCode': ?errorCode,
     },
   );
 

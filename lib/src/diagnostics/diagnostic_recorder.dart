@@ -8,16 +8,14 @@ typedef DiagnosticTimerFactory =
 
 final class DiagnosticRecorder {
   DiagnosticRecorder({
-    required DiagnosticSink sink,
-    bool enabled = true,
+    required this._sink,
+    this._enabled = true,
     this.flushEventCount = 50,
     this.flushByteCount = 64 * 1024,
     this.flushInterval = const Duration(seconds: 30),
     DiagnosticTimerFactory? timerFactory,
   }) : assert(flushEventCount > 0),
        assert(flushByteCount > 0),
-       _sink = sink,
-       _enabled = enabled,
        _timerFactory = timerFactory ?? _defaultTimerFactory {
     if (_enabled) _scheduleTimer();
   }
