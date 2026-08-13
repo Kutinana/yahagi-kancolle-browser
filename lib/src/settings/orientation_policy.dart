@@ -25,7 +25,8 @@ DisplayMode _lastMode = DisplayMode.auto;
 List<DeviceOrientation> _lastOrientations = const <DeviceOrientation>[];
 
 /// 自动模式：普通手机/折叠屏外屏锁定横屏轴；
-/// 近似方形的展开折叠屏锁定竖屏轴；普通宽屏平板跟随系统旋转。
+/// 近似方形的展开折叠屏与普通宽屏平板跟随系统旋转。
+/// 方形屏的工作区仍由自适应布局保持为上下结构。
 List<DeviceOrientation> preferredOrientationsFor(Size size, DisplayMode mode) {
   switch (mode) {
     case DisplayMode.landscape:
@@ -35,7 +36,7 @@ List<DeviceOrientation> preferredOrientationsFor(Size size, DisplayMode mode) {
     case DisplayMode.auto:
       return switch (classifyAdaptiveWindow(size)) {
         AdaptiveWindowClass.compact => _phoneOrientations,
-        AdaptiveWindowClass.nearSquareLarge => _portraitOrientations,
+        AdaptiveWindowClass.nearSquareLarge => _sensorOrientations,
         AdaptiveWindowClass.wideLarge => _sensorOrientations,
       };
   }
