@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/combat_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart';
 import 'package:yahagi_kancolle_browser/src/quest/quest_center_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
+
+Widget _localizedApp({required Widget home, Locale? locale}) => MaterialApp(
+  locale: locale,
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  home: home,
+);
 
 void main() {
   const state = GameState(
@@ -32,7 +40,7 @@ void main() {
       },
     );
     await tester.pumpWidget(
-      MaterialApp(
+      _localizedApp(
         home: Scaffold(
           body: WorkspaceContextHeader(
             workspaceIndex: 0,
@@ -61,7 +69,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      _localizedApp(
         home: Scaffold(
           body: WorkspaceContextHeader(
             workspaceIndex: 1,
@@ -88,7 +96,7 @@ void main() {
       combatState: CombatState(sortieFleetId: 1, isActive: true),
     );
     await tester.pumpWidget(
-      const MaterialApp(
+      _localizedApp(
         home: Scaffold(
           body: WorkspaceContextHeader(
             workspaceIndex: 1,
@@ -113,7 +121,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      _localizedApp(
         home: Scaffold(
           body: WorkspaceContextHeader(
             workspaceIndex: 4,
@@ -139,7 +147,7 @@ void main() {
 
   testWidgets('senka workspace shows the formal page title', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      _localizedApp(
         home: Scaffold(
           body: WorkspaceContextHeader(
             workspaceIndex: 9,
@@ -181,7 +189,7 @@ void main() {
     );
     QuestCenterMode? changedMode;
     await tester.pumpWidget(
-      MaterialApp(
+      _localizedApp(
         home: Scaffold(
           body: WorkspaceContextHeader(
             workspaceIndex: 5,
@@ -209,7 +217,7 @@ void main() {
     final filters = QuestFilterController();
     addTearDown(filters.dispose);
     await tester.pumpWidget(
-      MaterialApp(
+      _localizedApp(
         home: Scaffold(
           body: WorkspaceContextHeader(
             workspaceIndex: 5,
@@ -235,7 +243,7 @@ void main() {
   ) async {
     bool? selectedShips;
     await tester.pumpWidget(
-      MaterialApp(
+      _localizedApp(
         home: Scaffold(
           body: WorkspaceContextHeader(
             workspaceIndex: 7,
@@ -277,7 +285,7 @@ void main() {
   ) async {
     var selectedTab = 0;
     await tester.pumpWidget(
-      MaterialApp(
+      _localizedApp(
         locale: const Locale('zh'),
         home: Scaffold(
           body: WorkspaceContextHeader(

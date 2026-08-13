@@ -428,6 +428,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get networkErrorDesc => '更新の確認中にエラーが発生しました。後でもう一度お試しください。';
 
   @override
+  String get externalLinkOpenFailed => 'リンクを開けません。ブラウザがインストールされているか確認してください。';
+
+  @override
   String get noUpdateLog => '更新ログなし';
 
   @override

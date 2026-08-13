@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/improvement/improvement_planner_controller.dart';
 import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart';
@@ -11,6 +12,8 @@ void main() {
       var mode = ConstructionCenterMode.construction;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: StatefulBuilder(
             builder: (context, setState) => Scaffold(
               body: WorkspaceContextHeader(

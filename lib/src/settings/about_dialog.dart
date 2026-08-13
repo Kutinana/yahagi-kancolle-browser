@@ -4,18 +4,41 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import 'release_check_service.dart';
 
+typedef ExternalUrlLauncher = Future<bool> Function(Uri uri);
+
 class AboutContentWidget extends StatelessWidget {
   const AboutContentWidget({
     super.key,
     this.currentVersion = '1.0.2',
     this.releaseChecker,
+    this.externalUrlLauncher,
   });
 
   final String currentVersion;
   final ReleaseChecker? releaseChecker;
+  final ExternalUrlLauncher? externalUrlLauncher;
   static const String repoOwner = 'yamatosaki';
   static const String repoName = 'yahagi-kancolle-browser';
   static const String githubUrl = 'https://github.com/$repoOwner/$repoName';
+
+  Future<void> _openExternalUrl(BuildContext context, Uri uri) async {
+    var launched = false;
+    try {
+      launched =
+          await (externalUrlLauncher?.call(uri) ??
+              launchUrl(uri, mode: LaunchMode.externalApplication));
+    } catch (_) {
+      launched = false;
+    }
+    if (launched || !context.mounted) return;
+
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(l10n.externalLinkOpenFailed)));
+  }
 
   Future<void> _checkForUpdates(BuildContext context) async {
     final l10n =
@@ -112,10 +135,7 @@ class AboutContentWidget extends StatelessWidget {
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              final uri = Uri.parse(htmlUrl);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
+              await _openExternalUrl(context, Uri.parse(htmlUrl));
             },
             child: Text(
               l10n.goDownload,
@@ -261,13 +281,7 @@ class AboutContentWidget extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       onPressed: () async {
-                        final uri = Uri.parse(githubUrl);
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
+                        await _openExternalUrl(context, Uri.parse(githubUrl));
                       },
                     ),
                     ElevatedButton.icon(

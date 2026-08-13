@@ -136,6 +136,7 @@
   "checkFailed": "檢查失敗",
   "networkError": "網路錯誤",
   "networkErrorDesc": "檢查更新時發生錯誤，請稍後重試。",
+  "externalLinkOpenFailed": "無法開啟連結，請檢查是否已安裝瀏覽器。",
   "noUpdateLog": "暫無更新日誌",
   "battleWarningOff": "關閉",
   "battleWarningReminder": "閃爍提醒",

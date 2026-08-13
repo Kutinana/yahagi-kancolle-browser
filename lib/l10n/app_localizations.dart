@@ -903,6 +903,12 @@ abstract class AppLocalizations {
   /// **'检查更新时发生错误，请稍后重试。'**
   String get networkErrorDesc;
 
+  /// No description provided for @externalLinkOpenFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法打开链接，请检查是否已安装浏览器。'**
+  String get externalLinkOpenFailed;
+
   /// No description provided for @noUpdateLog.
   ///
   /// In zh, this message translates to:

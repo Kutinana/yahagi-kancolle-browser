@@ -425,6 +425,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkErrorDesc => '检查更新时发生错误，请稍后重试。';
 
   @override
+  String get externalLinkOpenFailed => '无法打开链接，请检查是否已安装浏览器。';
+
+  @override
   String get noUpdateLog => '暂无更新日志';
 
   @override
@@ -2037,6 +2040,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get networkErrorDesc => '檢查更新時發生錯誤，請稍後重試。';
+
+  @override
+  String get externalLinkOpenFailed => '無法開啟連結，請檢查是否已安裝瀏覽器。';
 
   @override
   String get noUpdateLog => '暫無更新日誌';

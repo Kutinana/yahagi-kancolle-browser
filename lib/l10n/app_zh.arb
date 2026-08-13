@@ -136,6 +136,7 @@
   "checkFailed": "检查失败",
   "networkError": "网络错误",
   "networkErrorDesc": "检查更新时发生错误，请稍后重试。",
+  "externalLinkOpenFailed": "无法打开链接，请检查是否已安装浏览器。",
   "noUpdateLog": "暂无更新日志",
   "battleWarningOff": "关闭",
   "battleWarningReminder": "闪烁提醒",

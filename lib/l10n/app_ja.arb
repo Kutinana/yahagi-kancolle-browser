@@ -136,6 +136,7 @@
   "checkFailed": "確認に失敗しました",
   "networkError": "ネットワークエラー",
   "networkErrorDesc": "更新の確認中にエラーが発生しました。後でもう一度お試しください。",
+  "externalLinkOpenFailed": "リンクを開けません。ブラウザがインストールされているか確認してください。",
   "noUpdateLog": "更新ログなし",
   "battleWarningOff": "オフ",
   "battleWarningReminder": "点滅通知",
