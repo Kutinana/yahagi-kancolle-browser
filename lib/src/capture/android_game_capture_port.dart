@@ -20,12 +20,17 @@ GameCapturePort createPlatformGameCapturePort() {
 
 final class MethodChannelGameCapturePort implements GameCapturePort {
   MethodChannelGameCapturePort({this.channel = _defaultGameCaptureChannel}) {
+    _handlerOwners[channel.name] = _handlerOwner;
     channel.setMethodCallHandler(_onMethodCall);
   }
 
+  static final Map<String, Object> _handlerOwners = <String, Object>{};
+
   final MethodChannel channel;
+  final Object _handlerOwner = Object();
   final StreamController<CapturedApiEvent> _events =
       StreamController<CapturedApiEvent>.broadcast();
+  bool _disposed = false;
 
   @override
   Stream<CapturedApiEvent> get events => _events.stream;
@@ -77,7 +82,12 @@ final class MethodChannelGameCapturePort implements GameCapturePort {
 
   @override
   void dispose() {
-    channel.setMethodCallHandler(null);
+    if (_disposed) return;
+    _disposed = true;
+    if (identical(_handlerOwners[channel.name], _handlerOwner)) {
+      _handlerOwners.remove(channel.name);
+      channel.setMethodCallHandler(null);
+    }
     unawaited(_events.close());
   }
 }

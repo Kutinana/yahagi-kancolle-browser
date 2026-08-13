@@ -4,5 +4,6 @@ object GameRenderingModeHcppPolicy {
     const val PREFERENCES_NAME = "FlutterSharedPreferences"
     const val RENDERING_MODE_KEY = "flutter.game.renderingMode"
 
-    fun shouldEnable(storedMode: String?): Boolean = storedMode != "standard"
+    @Suppress("UNUSED_PARAMETER")
+    fun shouldEnable(storedMode: String?): Boolean = false
 }

@@ -8,11 +8,13 @@ class GameBrowserOverlay extends StatefulWidget {
     required this.controller,
     required this.gameSurface,
     required this.toolbar,
+    this.persistent = false,
   });
 
   final GameToolbarController controller;
   final Widget gameSurface;
   final Widget toolbar;
+  final bool persistent;
 
   @override
   State<GameBrowserOverlay> createState() => _GameBrowserOverlayState();
@@ -32,100 +34,107 @@ class _GameBrowserOverlayState extends State<GameBrowserOverlay> {
     return Stack(
       key: const Key('game-browser-overlay'),
       children: [
-        ColoredBox(color: const Color(0xff102431), child: widget.gameSurface),
-        Positioned.fill(
-          child: AnimatedBuilder(
-            animation: widget.controller,
-            builder: (context, _) {
-              final isVisible = widget.controller.isVisible;
-              return Stack(
-                children: [
-                  if (!isVisible)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      width: 160,
-                      height: 40,
-                      child: GestureDetector(
-                        key: const Key('game-toolbar-swipe-zone'),
-                        behavior: HitTestBehavior.opaque,
-                        onPanStart: (_) => _resetGesture(),
-                        onPanUpdate: _onPanUpdate,
-                        onPanEnd: (_) => _resetGesture(),
-                        onPanCancel: _resetGesture,
+        Positioned(
+          left: 0,
+          top: widget.persistent ? 42 : 0,
+          right: 0,
+          bottom: 0,
+          child: GestureDetector(
+            key: const Key('game-toolbar-gesture-surface'),
+            behavior: HitTestBehavior.deferToChild,
+            onPanStart: widget.persistent ? null : (_) => _resetGesture(),
+            onPanUpdate: widget.persistent ? null : _onPanUpdate,
+            onPanEnd: widget.persistent ? null : (_) => _resetGesture(),
+            onPanCancel: widget.persistent ? null : _resetGesture,
+            child: ColoredBox(
+              color: const Color(0xff102431),
+              child: widget.gameSurface,
+            ),
+          ),
+        ),
+        if (widget.persistent)
+          Positioned(
+            key: const Key('persistent-game-toolbar-layout'),
+            left: 0,
+            top: 0,
+            right: 0,
+            height: 42,
+            child: widget.toolbar,
+          )
+        else
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: widget.controller,
+              builder: (context, _) {
+                final isVisible = widget.controller.isVisible;
+                return IgnorePointer(
+                  key: const Key('game-toolbar-panel'),
+                  ignoring: !isVisible,
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        left: 12,
+                        top: 8,
+                        right: 12,
                       ),
-                    ),
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      key: const Key('game-toolbar-panel'),
-                      ignoring: !isVisible,
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            left: 12,
-                            top: 8,
-                            right: 12,
-                          ),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 240),
-                            reverseDuration: const Duration(milliseconds: 240),
-                            transitionBuilder: (child, animation) {
-                              final position =
-                                  Tween<Offset>(
-                                    begin: const Offset(0, -1.4),
-                                    end: Offset.zero,
-                                  ).animate(
-                                    CurvedAnimation(
-                                      parent: animation,
-                                      curve: Curves.easeOutCubic,
-                                    ),
-                                  );
-                              return FadeTransition(
-                                opacity: animation,
-                                child: SlideTransition(
-                                  position: position,
-                                  child: child,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        reverseDuration: const Duration(milliseconds: 240),
+                        transitionBuilder: (child, animation) {
+                          final position =
+                              Tween<Offset>(
+                                begin: const Offset(0, -1.4),
+                                end: Offset.zero,
+                              ).animate(
+                                CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOutCubic,
                                 ),
                               );
-                            },
-                            child: isVisible
-                                ? ConstrainedBox(
-                                    key: const Key('game-toolbar-visible'),
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 700,
-                                    ),
-                                    child: SizedBox(
-                                      width: double.infinity,
-                                      child: Listener(
-                                        onPointerDown: (_) => widget.controller
-                                            .beginInteraction(),
-                                        onPointerUp: (_) =>
-                                            widget.controller.endInteraction(),
-                                        onPointerCancel: (_) =>
-                                            widget.controller.endInteraction(),
-                                        child: widget.toolbar,
-                                      ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(
-                                    key: Key('game-toolbar-hidden'),
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: position,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: isVisible
+                            ? ConstrainedBox(
+                                key: const Key('game-toolbar-visible'),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 700,
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: Listener(
+                                    onPointerDown: (_) =>
+                                        widget.controller.beginInteraction(),
+                                    onPointerUp: (_) =>
+                                        widget.controller.endInteraction(),
+                                    onPointerCancel: (_) =>
+                                        widget.controller.endInteraction(),
+                                    child: widget.toolbar,
                                   ),
-                          ),
-                        ),
+                                ),
+                              )
+                            : const SizedBox.shrink(
+                                key: Key('game-toolbar-hidden'),
+                              ),
                       ),
                     ),
                   ),
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
+    if (widget.controller.isVisible) return;
     if (_gestureRejected || _gestureCompleted) {
       return;
     }

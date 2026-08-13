@@ -24,8 +24,8 @@ const _sensorOrientations = <DeviceOrientation>[
 DisplayMode _lastMode = DisplayMode.auto;
 List<DeviceOrientation> _lastOrientations = const <DeviceOrientation>[];
 
-/// 自动模式：普通手机/折叠屏外屏强制横屏；
-/// 平板与展开的折叠屏跟随四向传感器，由当前屏幕尺寸选择横向或竖向工作区。
+/// 自动模式：普通手机/折叠屏外屏锁定横屏轴；
+/// 近似方形的展开折叠屏锁定竖屏轴；普通宽屏平板跟随系统旋转。
 List<DeviceOrientation> preferredOrientationsFor(Size size, DisplayMode mode) {
   switch (mode) {
     case DisplayMode.landscape:
@@ -35,14 +35,13 @@ List<DeviceOrientation> preferredOrientationsFor(Size size, DisplayMode mode) {
     case DisplayMode.auto:
       return switch (classifyAdaptiveWindow(size)) {
         AdaptiveWindowClass.compact => _phoneOrientations,
-        AdaptiveWindowClass.nearSquareLarge => _sensorOrientations,
+        AdaptiveWindowClass.nearSquareLarge => _portraitOrientations,
         AdaptiveWindowClass.wideLarge => _sensorOrientations,
       };
   }
 }
 
-/// 普通手机与折叠屏折叠态强制横屏；
-/// 平板与展开的折叠屏按玩家选择的模式处理。
+/// 自动模式按窗口类别选择方向轴；手动模式覆盖自动判断。
 void applyOrientationPolicy(Size size, [DisplayMode mode = DisplayMode.auto]) {
   final orientations = preferredOrientationsFor(size, mode);
   if (mode == _lastMode && _sameOrientations(orientations, _lastOrientations)) {

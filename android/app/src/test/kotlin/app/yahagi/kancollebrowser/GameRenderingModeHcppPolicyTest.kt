@@ -1,7 +1,6 @@
 package app.yahagi.kancollebrowser
 
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GameRenderingModeHcppPolicyTest {
@@ -11,10 +10,10 @@ class GameRenderingModeHcppPolicyTest {
     }
 
     @Test
-    fun compatibilityModesEnableHcppBeforeEngineStartup() {
-        assertTrue(GameRenderingModeHcppPolicy.shouldEnable("compatibility"))
-        assertTrue(GameRenderingModeHcppPolicy.shouldEnable("canvasCompatibility"))
-        assertTrue(GameRenderingModeHcppPolicy.shouldEnable(null))
-        assertTrue(GameRenderingModeHcppPolicy.shouldEnable("future-mode"))
+    fun foldableSafeModesKeepHcppDisabledBeforeEngineStartup() {
+        assertFalse(GameRenderingModeHcppPolicy.shouldEnable("compatibility"))
+        assertFalse(GameRenderingModeHcppPolicy.shouldEnable("canvasCompatibility"))
+        assertFalse(GameRenderingModeHcppPolicy.shouldEnable(null))
+        assertFalse(GameRenderingModeHcppPolicy.shouldEnable("future-mode"))
     }
 }

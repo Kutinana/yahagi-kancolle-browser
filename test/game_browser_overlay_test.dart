@@ -5,20 +5,21 @@ import 'package:yahagi_kancolle_browser/src/browser/game_toolbar_controller.dart
 
 void main() {
   testWidgets(
-    'uses an invisible 160 by 40 swipe zone without arrow affordance',
+    'hidden toolbar does not place a blocking layer over the game',
     (tester) async {
       final controller = GameToolbarController();
       controller.collapse();
+      var taps = 0;
 
-      await tester.pumpWidget(_TestApp(controller: controller));
+      await tester.pumpWidget(
+        _TestApp(controller: controller, onGameTap: () => taps++),
+      );
 
       expect(find.byKey(const Key('game-browser-overlay')), findsOneWidget);
-      expect(find.byKey(const Key('game-toolbar-swipe-zone')), findsOneWidget);
-      expect(
-        tester.getSize(find.byKey(const Key('game-toolbar-swipe-zone'))),
-        const Size(160, 40),
-      );
+      expect(find.byKey(const Key('game-toolbar-swipe-zone')), findsNothing);
       expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
+      await tester.tapAt(const Offset(80, 20));
+      expect(taps, 1);
       controller.dispose();
     },
   );
@@ -31,12 +32,12 @@ void main() {
 
     await tester.pumpWidget(_TestApp(controller: controller));
 
-    final zone = find.byKey(const Key('game-toolbar-swipe-zone'));
-    await tester.drag(zone, const Offset(0, 20));
+    final game = find.byKey(const Key('game-toolbar-gesture-surface'));
+    await tester.drag(game, const Offset(0, 20));
     await tester.pumpAndSettle();
     expect(controller.isVisible, isFalse);
 
-    await tester.drag(zone, const Offset(0, 40));
+    await tester.drag(game, const Offset(0, 40));
     await tester.pumpAndSettle();
     expect(controller.isVisible, isTrue);
     controller.dispose();
@@ -51,7 +52,7 @@ void main() {
     await tester.pumpWidget(_TestApp(controller: controller));
 
     await tester.drag(
-      find.byKey(const Key('game-toolbar-swipe-zone')),
+      find.byKey(const Key('game-toolbar-gesture-surface')),
       const Offset(60, 40),
     );
     await tester.pumpAndSettle();
@@ -89,7 +90,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('fake-toolbar')), findsNothing);
-    expect(find.byKey(const Key('game-toolbar-swipe-zone')), findsOneWidget);
+    expect(find.byKey(const Key('game-toolbar-swipe-zone')), findsNothing);
     controller.dispose();
   });
 
@@ -110,12 +111,39 @@ void main() {
     expect(identical(before, after), isTrue);
     controller.dispose();
   });
+
+  testWidgets('switching persistent mode keeps the game surface element stable', (
+    tester,
+  ) async {
+    final controller = GameToolbarController();
+
+    await tester.pumpWidget(_TestApp(controller: controller));
+    final before = tester.element(find.byKey(const Key('fake-game-surface')));
+
+    await tester.pumpWidget(
+      _TestApp(controller: controller, persistent: true),
+    );
+    await tester.pump();
+
+    expect(
+      tester.element(find.byKey(const Key('fake-game-surface'))),
+      same(before),
+    );
+    expect(find.byKey(const Key('persistent-game-toolbar-layout')), findsOneWidget);
+    controller.dispose();
+  });
 }
 
 class _TestApp extends StatelessWidget {
-  const _TestApp({required this.controller});
+  const _TestApp({
+    required this.controller,
+    this.persistent = false,
+    this.onGameTap,
+  });
 
   final GameToolbarController controller;
+  final bool persistent;
+  final VoidCallback? onGameTap;
 
   @override
   Widget build(BuildContext context) {
@@ -126,9 +154,12 @@ class _TestApp extends StatelessWidget {
           height: 600,
           child: GameBrowserOverlay(
             controller: controller,
-            gameSurface: const ColoredBox(
-              key: Key('fake-game-surface'),
-              color: Colors.black,
+            persistent: persistent,
+            gameSurface: GestureDetector(
+              key: const Key('fake-game-surface'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onGameTap,
+              child: const ColoredBox(color: Colors.black),
             ),
             toolbar: const ColoredBox(
               key: Key('fake-toolbar'),

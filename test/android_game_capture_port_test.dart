@@ -71,6 +71,45 @@ void main() {
     expect((await received).path, '/kcsapi/api_port/port');
   });
 
+  test('disposing a stale port keeps the replacement handler active', () async {
+    messenger.setMockMethodCallHandler(channel, (_) async => null);
+    final stalePort = MethodChannelGameCapturePort(channel: channel);
+    final replacementPort = MethodChannelGameCapturePort(channel: channel);
+    addTearDown(stalePort.dispose);
+    addTearDown(replacementPort.dispose);
+    final received = <String>[];
+    final subscription = replacementPort.events.listen(
+      (event) => received.add(event.path),
+    );
+    addTearDown(subscription.cancel);
+
+    stalePort.dispose();
+    final completer = Completer<void>();
+    await messenger.handlePlatformMessage(
+      channel.name,
+      channel.codec.encodeMethodCall(
+        MethodCall('onCaptureEvent', <String, Object?>{
+          'version': 1,
+          'kind': 'kcsapi_response',
+          'method': 'POST',
+          'path': '/kcsapi/api_port/port',
+          'requestParams': <String, Object?>{},
+          'responseBody': 'svdata={"api_result":1}',
+          'statusCode': 200,
+          'transport': 'xhr',
+          'sourceOrigin': 'https://w01y.kancolle-server.com',
+          'capturedAt': '2026-08-14T10:00:00.000Z',
+          'sequence': 2,
+        }),
+      ),
+      (_) => completer.complete(),
+    );
+    await completer.future;
+    await Future<void>.delayed(Duration.zero);
+
+    expect(received, <String>['/kcsapi/api_port/port']);
+  });
+
   test('treats a missing native implementation as unsupported', () async {
     messenger.setMockMethodCallHandler(channel, (call) async {
       throw MissingPluginException();

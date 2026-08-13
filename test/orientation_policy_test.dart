@@ -21,14 +21,19 @@ void main() {
     );
   });
 
-  test('自动：近似正方形折叠屏保持竖向布局并跟随四向旋转', () {
+  test('自动：近似正方形折叠屏锁定竖屏轴并允许上下颠倒', () {
     expect(
       preferredOrientationsFor(const Size(673, 841), DisplayMode.auto),
       <DeviceOrientation>[
         DeviceOrientation.portraitUp,
-        DeviceOrientation.landscapeLeft,
         DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeRight,
+      ],
+    );
+    expect(
+      preferredOrientationsFor(const Size(841, 673), DisplayMode.auto),
+      <DeviceOrientation>[
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
       ],
     );
   });

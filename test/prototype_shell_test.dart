@@ -190,13 +190,27 @@ void main() {
       tester.element(find.byType(Scaffold).first),
     ).hideCurrentSnackBar();
     await tester.pumpAndSettle();
+    final gameSurfaceElement = tester.element(
+      find.byKey(const Key('fake-game-surface')),
+    );
     await toolbarDisplayController.setMode(GameToolbarDisplayMode.persistent);
     await tester.pumpAndSettle();
     final persistentLayout = find.byKey(
       const Key('persistent-game-toolbar-layout'),
     );
     expect(persistentLayout, findsOneWidget);
-    expect(find.byKey(const Key('game-browser-overlay')), findsNothing);
+    expect(find.byKey(const Key('game-browser-overlay')), findsOneWidget);
+    expect(
+      tester.element(find.byKey(const Key('fake-game-surface'))),
+      same(gameSurfaceElement),
+    );
+    final persistentGameSize = tester.getSize(
+      find.byKey(const Key('fake-game-surface')),
+    );
+    expect(
+      persistentGameSize.width / persistentGameSize.height,
+      closeTo(1200 / 720, 0.001),
+    );
     expect(
       tester.getTopLeft(persistentLayout).dy,
       closeTo(tester.getTopLeft(panel).dy, 0.1),
@@ -496,6 +510,7 @@ void main() {
     await senkaController.initialize();
     final toolbarController = GameToolbarController();
     var disposeCount = 0;
+    var deactivateCount = 0;
 
     await tester.pumpWidget(
       YahagiApp(
@@ -527,6 +542,7 @@ void main() {
         gameSurface: _LifecycleProbe(
           key: const Key('side-switch-game-surface'),
           onDispose: () => disposeCount++,
+          onDeactivate: () => deactivateCount++,
         ),
       ),
     );
@@ -556,10 +572,29 @@ void main() {
     expect(find.text('战果：1138（#365）'), findsOneWidget);
     final menuButton = find.byKey(const Key('workspace-nav-game'));
     final gameSurface = find.byKey(const Key('side-switch-game-surface'));
+    final originalGameSurfaceElement = tester.element(gameSurface);
     expect(
       tester.getCenter(menuButton).dx,
       lessThan(tester.getCenter(gameSurface).dx),
     );
+
+    for (final size in <Size>[
+      const Size(900, 700),
+      const Size(1280, 720),
+      const Size(700, 900),
+      const Size(1400, 720),
+    ]) {
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      expect(disposeCount, 0);
+      expect(deactivateCount, 0);
+      expect(tester.element(gameSurface), same(originalGameSurfaceElement));
+      final renderedGameSize = tester.getSize(gameSurface);
+      expect(
+        renderedGameSize.width / renderedGameSize.height,
+        closeTo(1200 / 720, 0.001),
+      );
+    }
 
     await layoutSettingsController.setWorkspaceMenuOnRight(true);
     await tester.pumpAndSettle();
@@ -792,15 +827,26 @@ class _RepairNavigationReducer extends GameStateReducer {
 }
 
 class _LifecycleProbe extends StatefulWidget {
-  const _LifecycleProbe({super.key, required this.onDispose});
+  const _LifecycleProbe({
+    super.key,
+    required this.onDispose,
+    this.onDeactivate,
+  });
 
   final VoidCallback onDispose;
+  final VoidCallback? onDeactivate;
 
   @override
   State<_LifecycleProbe> createState() => _LifecycleProbeState();
 }
 
 class _LifecycleProbeState extends State<_LifecycleProbe> {
+  @override
+  void deactivate() {
+    widget.onDeactivate?.call();
+    super.deactivate();
+  }
+
   @override
   void dispose() {
     widget.onDispose();

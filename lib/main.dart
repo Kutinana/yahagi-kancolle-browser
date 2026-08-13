@@ -854,7 +854,6 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                           .gameAreaRatio
                                           .clamp(0.5, 0.75);
                                 final gameFlex = (gameAreaRatio * 1000).round();
-                                final informationFlex = 1000 - gameFlex;
                                 final persistentToolbar =
                                     widget.toolbarDisplayController?.mode ==
                                     GameToolbarDisplayMode.persistent;
@@ -956,27 +955,12 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     persistent: persistent,
                                   ),
                                 );
-                                final gameWidget = persistentToolbar
-                                    ? Column(
-                                        key: const Key(
-                                          'persistent-game-toolbar-layout',
-                                        ),
-                                        children: <Widget>[
-                                          SizedBox(
-                                            height: 42,
-                                            child: buildToolbar(true),
-                                          ),
-                                          if (isLandscape)
-                                            Expanded(child: gameSurfaceWrapper)
-                                          else
-                                            gameSurfaceWrapper,
-                                        ],
-                                      )
-                                    : GameBrowserOverlay(
-                                        controller: widget.toolbarController,
-                                        gameSurface: gameSurfaceWrapper,
-                                        toolbar: buildToolbar(false),
-                                      );
+                                final gameWidget = GameBrowserOverlay(
+                                  controller: widget.toolbarController,
+                                  persistent: persistentToolbar,
+                                  gameSurface: gameSurfaceWrapper,
+                                  toolbar: buildToolbar(persistentToolbar),
+                                );
 
                                 final infoWidget = _InformationPanel(
                                   layoutSettingsController:
@@ -1026,71 +1010,86 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                   },
                                 );
 
-                                return isLandscape
-                                    ? Row(
-                                        children: [
-                                          Expanded(
-                                            flex: gameFlex,
-                                            child: DecoratedBox(
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xff0a1823),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black38,
-                                                    offset: Offset(2, 0),
-                                                    blurRadius: 4,
-                                                  ),
-                                                ],
-                                              ),
-                                              child: gameWidget,
+                                const dividerExtent = 1.0;
+                                final availableWidth =
+                                    constraints.maxWidth - dividerExtent;
+                                final gamePanelExtent = isLandscape
+                                    ? availableWidth * gameFlex / 1000
+                                    : (constraints.maxWidth * 720 / 1200 +
+                                              (persistentToolbar ? 42 : 0))
+                                          .clamp(
+                                            0.0,
+                                            constraints.maxHeight -
+                                                dividerExtent,
+                                          )
+                                          .toDouble();
+
+                                return Stack(
+                                  children: [
+                                    Positioned(
+                                      left: 0,
+                                      top: 0,
+                                      width: isLandscape
+                                          ? gamePanelExtent
+                                          : constraints.maxWidth,
+                                      height: isLandscape
+                                          ? constraints.maxHeight
+                                          : gamePanelExtent,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xff0a1823),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black38,
+                                              offset: isLandscape
+                                                  ? const Offset(2, 0)
+                                                  : const Offset(0, 2),
+                                              blurRadius: 4,
                                             ),
-                                          ),
-                                          const VerticalDivider(
-                                            width: 1,
-                                            thickness: 1,
-                                            color: Color(0xff294052),
-                                          ),
-                                          Expanded(
-                                            flex: informationFlex,
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                left: 4,
-                                              ),
-                                              child: infoWidget,
+                                          ],
+                                        ),
+                                        child: gameWidget,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: isLandscape ? gamePanelExtent : 0,
+                                      top: isLandscape ? 0 : gamePanelExtent,
+                                      width: isLandscape
+                                          ? dividerExtent
+                                          : constraints.maxWidth,
+                                      height: isLandscape
+                                          ? constraints.maxHeight
+                                          : dividerExtent,
+                                      child: isLandscape
+                                          ? const VerticalDivider(
+                                              width: dividerExtent,
+                                              thickness: dividerExtent,
+                                              color: Color(0xff294052),
+                                            )
+                                          : const Divider(
+                                              height: dividerExtent,
+                                              thickness: dividerExtent,
+                                              color: Color(0xff294052),
                                             ),
-                                          ),
-                                        ],
-                                      )
-                                    : Column(
-                                        children: [
-                                          DecoratedBox(
-                                            decoration: const BoxDecoration(
-                                              color: Color(0xff0a1823),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black38,
-                                                  offset: Offset(0, 2),
-                                                  blurRadius: 4,
-                                                ),
-                                              ],
-                                            ),
-                                            child: gameWidget,
-                                          ),
-                                          const Divider(
-                                            height: 1,
-                                            thickness: 1,
-                                            color: Color(0xff294052),
-                                          ),
-                                          Expanded(
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 4,
-                                              ),
-                                              child: infoWidget,
-                                            ),
-                                          ),
-                                        ],
-                                      );
+                                    ),
+                                    Positioned(
+                                      left: isLandscape
+                                          ? gamePanelExtent + dividerExtent
+                                          : 0,
+                                      top: isLandscape
+                                          ? 0
+                                          : gamePanelExtent + dividerExtent,
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Padding(
+                                        padding: isLandscape
+                                            ? const EdgeInsets.only(left: 4)
+                                            : const EdgeInsets.only(top: 4),
+                                        child: infoWidget,
+                                      ),
+                                    ),
+                                  ],
+                                );
                               },
                             ),
                           ),
