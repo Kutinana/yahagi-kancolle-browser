@@ -61,5 +61,8 @@ final class _FakePlatform implements DiagnosticPlatformPort {
       throw UnimplementedError();
 
   @override
+  Future<String?> saveJson(String path) => throw UnimplementedError();
+
+  @override
   Future<void> shareJson(String path) => throw UnimplementedError();
 }

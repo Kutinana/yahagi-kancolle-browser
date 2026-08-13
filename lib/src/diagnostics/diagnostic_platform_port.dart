@@ -59,6 +59,8 @@ abstract interface class DiagnosticPlatformPort {
 
   Future<DiagnosticRuntimeSnapshot> runtimeSnapshot();
 
+  Future<String?> saveJson(String path);
+
   Future<void> shareJson(String path);
 }
 
@@ -119,6 +121,22 @@ final class MethodChannelDiagnosticPlatformPort
       nativeHeapKb: _int(map, 'nativeHeapKb'),
       lowMemory: lowMemory,
     );
+  }
+
+  @override
+  Future<String?> saveJson(String path) async {
+    final value = await channel.invokeMethod<Object?>(
+      'saveJson',
+      <String, Object?>{'path': path},
+    );
+    if (value == null) return null;
+    if (value is! String ||
+        !RegExp(
+          r'^Yahagi-Diagnostics-\d{8}-\d{6}(?:-\d+)?\.json$',
+        ).hasMatch(value)) {
+      throw const DiagnosticPlatformSchemaException();
+    }
+    return value;
   }
 
   @override

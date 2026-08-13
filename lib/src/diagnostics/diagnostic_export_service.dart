@@ -27,7 +27,28 @@ final class DiagnosticExportService {
   final DateTime Function() _now;
   final DiagnosticPrivacyPolicy _policy = DiagnosticPrivacyPolicy.v1();
 
+  Future<String?> save() async {
+    final file = await _createAuditedExport();
+    try {
+      return await platform.saveJson(file.path);
+    } catch (_) {
+      if (await file.exists()) await file.delete();
+      rethrow;
+    }
+  }
+
   Future<File> exportAndShare() async {
+    final file = await _createAuditedExport();
+    try {
+      await platform.shareJson(file.path);
+      return file;
+    } catch (_) {
+      if (await file.exists()) await file.delete();
+      rethrow;
+    }
+  }
+
+  Future<File> _createAuditedExport() async {
     await exportDirectory.create(recursive: true);
     await _removeOldExports();
     final now = _now();
@@ -73,7 +94,6 @@ final class DiagnosticExportService {
         throw const DiagnosticExportPrivacyException();
       }
       await _audit(file);
-      await platform.shareJson(file.path);
       return file;
     } on DiagnosticPrivacyViolation {
       if (await file.exists()) await file.delete();
@@ -99,7 +119,7 @@ final class DiagnosticExportService {
           }).isNotEmpty) {
         throw const DiagnosticExportPrivacyException();
       }
-      _policy.validateRecord(decoded);
+      _policy.validateExportDocument(decoded);
     } on DiagnosticPrivacyViolation {
       throw const DiagnosticExportPrivacyException();
     } on FormatException {

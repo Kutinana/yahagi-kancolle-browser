@@ -57,6 +57,27 @@ final class DiagnosticPrivacyPolicy {
     }
   }
 
+  void validateExportDocument(Map<String, Object?> document) {
+    for (final entry in document.entries) {
+      if (entry.key != 'records') {
+        validateField(entry.key, entry.value);
+        continue;
+      }
+
+      validateField(entry.key, null);
+      final records = entry.value;
+      if (records is! List<Object?>) {
+        throw const DiagnosticPrivacyViolation('invalid-records-list');
+      }
+      for (final record in records) {
+        if (record is! Map<String, Object?>) {
+          throw const DiagnosticPrivacyViolation('invalid-record');
+        }
+        validateRecord(record);
+      }
+    }
+  }
+
   String safeApiPath(String value) {
     if (!_safeApiPath.hasMatch(value) ||
         value.contains('?') ||
