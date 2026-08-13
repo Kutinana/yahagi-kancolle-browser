@@ -24,6 +24,8 @@
 ヤハギ（Yahagi）是一款基于 Flutter 和 Android System WebView 开发的《舰队 Collection》移动端浏览器及本地信息辅助工具。游戏网页由 Android System WebView（Chromium）加载，浏览、登录、Cookie 和页面交互方式与同设备上的 Chrome 接近；受系统 WebView 与 Chrome 版本差异影响，具体行为可能略有不同。
 
 应用只读取游戏页面已经收到的 `/kcsapi/` 响应，用于在设备本地生成辅助信息和日志。它不会自动填写账号、点击页面、编成舰队、补给、出击或领取任务，所有游戏操作仍由玩家本人完成。
+收到很多提督的建议，本次创建了 QQ 群，方便各位提督交流、提供意见和反馈。
+QQ群：1104904097
 
 ## 软件展示
 
