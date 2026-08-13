@@ -50,6 +50,8 @@ app.*.map.json
 .superpowers/
 docs/superpowers/
 docs/internal/
+docs/plans/
+docs/specs/
 docs/previews/*
 !docs/previews/combined-fleet-prophet-sidebar-preview.png
 docs/demos/
@@ -68,3 +70,8 @@ tool/wiki_bonus/cache/
 
 # Akashi bonus dataset build cache (raw HTML)
 tool/akashi_bonus/cache/
+
+# Generated reports and local test datasets
+tool/*/reports/
+test/fixtures/
+test/*/fixtures/
