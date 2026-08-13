@@ -77,6 +77,8 @@ void main() {
       'questMonthly',
       'questOther',
       'questUnknown',
+      // 大破提醒 is standard game terminology in both Chinese scripts.
+      'gameSafety',
       'latestVersionLabel',
       'cancel',
       'speed',
@@ -124,6 +126,8 @@ void main() {
       'questSeasonal',
       'questYearly',
       'notCompleted',
+      // “分享” is the standard action label in both Chinese scripts.
+      'diagnosticShareAction',
     };
     const reviewedJa = <String>{
       'appTitle',
@@ -148,9 +152,8 @@ void main() {
       'statusSuccess',
       // 「33式」 is the in-game formula name in Japanese as well.
       'formula33',
-      // 改修 and 画面 are established UI terms shared with Japanese.
+      // 改修 is an established UI term shared with Japanese.
       'improvement',
-      'settingsTabScreen',
       // These established game terms use the same spelling in Japanese.
       'armor',
       'evasion',

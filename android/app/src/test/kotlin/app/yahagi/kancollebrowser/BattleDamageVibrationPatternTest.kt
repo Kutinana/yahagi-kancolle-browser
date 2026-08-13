@@ -5,18 +5,26 @@ import org.junit.Test
 
 class BattleDamageVibrationPatternTest {
     @Test
-    fun moderateUsesOneShortPulse() {
+    fun moderateUsesOneClearShortPulse() {
         val pattern = BattleDamageVibrationPattern.forSeverity("moderate")
 
-        assertArrayEquals(longArrayOf(0, 140), pattern.timings)
-        assertArrayEquals(intArrayOf(0, 170), pattern.amplitudes)
+        assertArrayEquals(longArrayOf(0, 300), pattern.timings)
+        assertArrayEquals(intArrayOf(0, 255), pattern.amplitudes)
     }
 
     @Test
     fun heavyUsesTwoStrongerPulses() {
         val pattern = BattleDamageVibrationPattern.forSeverity("heavy")
 
-        assertArrayEquals(longArrayOf(0, 190, 90, 230), pattern.timings)
+        assertArrayEquals(longArrayOf(0, 255, 90, 255), pattern.timings)
         assertArrayEquals(intArrayOf(0, 255, 0, 255), pattern.amplitudes)
+    }
+
+    @Test
+    fun postBattleWarningUsesOneClearShortPulse() {
+        val pattern = BattleDamageVibrationPattern.forSeverity("postBattleWarning")
+
+        assertArrayEquals(longArrayOf(0, 300), pattern.timings)
+        assertArrayEquals(intArrayOf(0, 255), pattern.amplitudes)
     }
 }

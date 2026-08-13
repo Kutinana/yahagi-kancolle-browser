@@ -104,6 +104,7 @@ void main() {
       find.byKey(const Key('rendering-mode-confirm-dialog')),
       findsOneWidget,
     );
+    expect(find.textContaining('自动重启应用'), findsOneWidget);
     await tester.tap(find.byKey(const Key('rendering-mode-cancel')));
     await tester.pumpAndSettle();
 

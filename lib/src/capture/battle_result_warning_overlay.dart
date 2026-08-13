@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../battle/battle_controller.dart';
+import '../battle/battle_damage_alert.dart';
 import '../battle/battle_models.dart';
 import '../settings/safety_settings_controller.dart';
 import '../settings/safety_settings_store.dart';
@@ -28,12 +30,14 @@ class BattleResultWarningOverlay extends StatefulWidget {
     required this.gameCaptureController,
     required this.battleController,
     required this.safetySettingsController,
+    required this.damageAlertPort,
     required this.child,
   });
 
   final GameCaptureController gameCaptureController;
   final BattleController battleController;
   final SafetySettingsController safetySettingsController;
+  final BattleDamageAlertPort damageAlertPort;
   final Widget child;
 
   @override
@@ -112,6 +116,16 @@ class _BattleResultWarningOverlayState
     final battle = widget.battleController.current;
     if (shouldShowPostBattleWarning(battle)) {
       final mode = widget.safetySettingsController.battleWarningMode;
+      if (mode == BattleWarningMode.off) return;
+      if (widget.safetySettingsController.battleDamageVibrationEnabled) {
+        unawaited(
+          widget.damageAlertPort
+              .alert(BattleDamageAlertSeverity.postBattleWarning)
+              .catchError((Object error) {
+                debugPrint('战后大破警告震动失败: $error');
+              }),
+        );
+      }
       if (mode == BattleWarningMode.confirm) {
         _showWarningDialog();
       } else if (mode == BattleWarningMode.reminder) {

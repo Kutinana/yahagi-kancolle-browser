@@ -51,17 +51,26 @@ class DiagnosticUserSection extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             FilledButton.icon(
-              key: const Key('exportDiagnosticFileButton'),
+              key: const Key('saveDiagnosticFileButton'),
               onPressed: controller.exporting
                   ? null
-                  : () => _confirmExport(context, l10n),
+                  : () => _confirmSave(context, l10n),
               icon: controller.exporting
                   ? const SizedBox.square(
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.ios_share_outlined),
-              label: Text(l10n.exportDiagnosticFile),
+                  : const Icon(Icons.save_alt_outlined),
+              label: Text(l10n.saveDiagnosticFile),
+            ),
+            const SizedBox(height: 4),
+            OutlinedButton.icon(
+              key: const Key('shareDiagnosticFileButton'),
+              onPressed: controller.exporting
+                  ? null
+                  : () => _confirmShare(context, l10n),
+              icon: const Icon(Icons.ios_share_outlined),
+              label: Text(l10n.shareDiagnosticFile),
             ),
             TextButton.icon(
               key: const Key('clearDiagnosticDataButton'),
@@ -75,35 +84,72 @@ class DiagnosticUserSection extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmExport(
-    BuildContext context,
-    AppLocalizations l10n,
-  ) async {
+  Future<void> _confirmSave(BuildContext context, AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.diagnosticExportConfirmTitle),
-        content: Text(l10n.diagnosticExportConfirmDesc),
+        title: Text(l10n.diagnosticSaveConfirmTitle),
+        content: Text(l10n.diagnosticSaveConfirmDesc),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
           ),
           FilledButton(
+            key: const Key('confirmSaveDiagnosticFileButton'),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(l10n.diagnosticExportAction),
+            child: Text(l10n.diagnosticSaveAction),
           ),
         ],
       ),
     );
     if (confirmed != true || !context.mounted) return;
     try {
-      await controller.export();
+      final fileName = await controller.save();
+      if (fileName != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.diagnosticSaveSucceeded(fileName))),
+        );
+      }
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.diagnosticExportFailed)));
+        ).showSnackBar(SnackBar(content: Text(l10n.diagnosticSaveFailed)));
+      }
+    }
+  }
+
+  Future<void> _confirmShare(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.diagnosticShareConfirmTitle),
+        content: Text(l10n.diagnosticShareConfirmDesc),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          FilledButton(
+            key: const Key('confirmShareDiagnosticFileButton'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.diagnosticShareAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await controller.share();
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.diagnosticShareFailed)));
       }
     }
   }

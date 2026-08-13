@@ -146,7 +146,7 @@ List<String> _secretaryLabels(
   return <String>[
     for (final entry in weekdaysBySecretary.entries)
       if (includeWeekdays)
-        '${entry.key}（${_weekdayLabels(entry.value).join('、')}）'
+        '${entry.key}${_weekdayLabels(entry.value).join()}'
       else
         entry.key,
   ];
@@ -163,7 +163,7 @@ String _resolvedSecretaryLabel(
 }
 
 List<String> _weekdayLabels(Set<int> weekdays) {
-  const labels = <String>['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  const labels = <String>['①', '②', '③', '④', '⑤', '⑥', '⑦'];
   final sorted = weekdays.where((day) => day >= 1 && day <= 7).toList()..sort();
   return <String>[for (final day in sorted) labels[day - 1]];
 }

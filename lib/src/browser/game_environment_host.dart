@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'game_application_restart_port.dart';
 import '../settings/game_rendering_mode.dart';
 import '../settings/game_rendering_mode_controller.dart';
 
@@ -12,11 +13,13 @@ class GameEnvironmentHost extends StatefulWidget {
     required this.controller,
     required this.gameBuilder,
     this.beforeRestart,
+    this.applicationRestartPort,
   });
 
   final GameRenderingModeController controller;
   final GameEnvironmentBuilder gameBuilder;
   final Future<void> Function()? beforeRestart;
+  final GameApplicationRestartPort? applicationRestartPort;
 
   @override
   State<GameEnvironmentHost> createState() => _GameEnvironmentHostState();
@@ -53,6 +56,17 @@ class _GameEnvironmentHostState extends State<GameEnvironmentHost>
     setState(() => _showGame = false);
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) throw StateError('Game environment host was disposed');
+
+    final applicationRestartPort = widget.applicationRestartPort;
+    if (applicationRestartPort != null) {
+      try {
+        await applicationRestartPort.restartApplication();
+      } catch (_) {
+        if (mounted) setState(() => _showGame = true);
+        rethrow;
+      }
+      return;
+    }
 
     setState(() {
       _mode = mode;

@@ -19,9 +19,9 @@ import '../battle/fcd_map_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../improvement/improvement_planner_controller.dart';
 import 'screen_settings_page.dart';
-import 'sound_settings_page.dart';
 import 'battle_settings_page.dart';
 import 'network_settings_page_new.dart';
+import 'data_settings_page.dart';
 import 'about_support_settings_page.dart';
 import 'battle_prediction_settings.dart';
 import 'game_frame_rate_settings.dart';
@@ -93,39 +93,39 @@ class SettingsPage extends StatelessWidget {
         ScreenSettingsPage(
           layoutSettingsController: layoutSettingsController,
           displayModeController: displayModeController,
+          audioController: audioController,
           toolbarDisplayController: toolbarDisplayController,
-          captureModeController: captureModeController,
           gameFrameRateSettingsController: gameFrameRateSettingsController,
           screenAwakeController: screenAwakeController,
           gameRenderingModeController: gameRenderingModeController,
           isBattleActive: isBattleActive,
         ),
-        SoundSettingsPage(audioController: audioController),
         BattleSettingsPage(
           battlePredictionSettingsController:
               battlePredictionSettingsController,
-          fcdMapController: fcdMapController,
-          questCatalogController: questCatalogController,
-          improvementPlannerController: improvementPlannerController,
           safetySettingsController: safetySettingsController,
-          diagnosticController: diagnosticController,
         ),
         NetworkSettingsPageNew(
           networkSettingsController: networkSettingsController,
           gadgetBypassController: gadgetBypassController,
-          gameStateController: gameStateController,
           browserController: browserController,
+        ),
+        DataSettingsPage(
+          captureModeController: captureModeController,
+          browserController: browserController,
+          gameCaptureController: gameCaptureController,
+          prototypeStatusController: prototypeStatusController,
+          gameStateController: gameStateController,
+          diagnosticController: diagnosticController,
+          showDeveloperDiagnostics: showDeveloperDiagnostics,
+          gameRenderingModeController: gameRenderingModeController,
+          fcdMapController: fcdMapController,
+          questCatalogController: questCatalogController,
+          improvementPlannerController: improvementPlannerController,
         ),
         AboutSupportSettingsPage(
           currentVersion: currentVersion,
           releaseChecker: releaseChecker,
-          prototypeStatusController: prototypeStatusController,
-          browserController: browserController,
-          captureModeController: captureModeController,
-          gameCaptureController: gameCaptureController,
-          showDeveloperDiagnostics: showDeveloperDiagnostics,
-          gameRenderingModeController: gameRenderingModeController,
-          diagnosticController: diagnosticController,
         ),
       ],
     );

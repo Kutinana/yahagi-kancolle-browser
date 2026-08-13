@@ -49,20 +49,83 @@ void main() {
     expect(detached, 0);
     expect((await storage.inspect()).totalBytes, 0);
   });
+
+  test('save and share flush records and always reset busy state', () async {
+    final root = Directory.systemTemp.createTempSync('diagnostic-controller-');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final storage = DiagnosticStorage(directory: Directory('${root.path}/log'));
+    final recorder = DiagnosticRecorder(sink: storage, enabled: false);
+    final platform = _FakePlatform(
+      savedName: 'Yahagi-Diagnostics-20260813-091445.json',
+    );
+    final controller = DiagnosticController(
+      settings: MemoryDiagnosticSettingsStore(true),
+      storage: storage,
+      recorder: recorder,
+      exporter: DiagnosticExportService(
+        storage: storage,
+        exportDirectory: Directory('${root.path}/export'),
+        platform: platform,
+        appVersion: 'test',
+      ),
+      manageGlobalErrors: false,
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    recorder.record(
+      DiagnosticEvent.lifecycle(
+        occurredAt: DateTime.utc(2026, 8, 13),
+        state: DiagnosticLifecycleState.resumed,
+        uptimeMs: 1,
+      ),
+    );
+
+    expect(await controller.save(), 'Yahagi-Diagnostics-20260813-091445.json');
+    await controller.share();
+
+    expect(controller.exporting, isFalse);
+    expect(platform.savedPaths, hasLength(1));
+    expect(platform.sharedPaths, hasLength(1));
+    expect(await storage.readRecords().length, greaterThanOrEqualTo(2));
+  });
 }
 
 final class _FakePlatform implements DiagnosticPlatformPort {
-  @override
-  Future<DiagnosticDeviceSnapshot> deviceSnapshot() =>
-      throw UnimplementedError();
+  _FakePlatform({this.savedName});
+
+  final String? savedName;
+  final List<String> savedPaths = <String>[];
+  final List<String> sharedPaths = <String>[];
 
   @override
-  Future<DiagnosticRuntimeSnapshot> runtimeSnapshot() =>
-      throw UnimplementedError();
+  Future<DiagnosticDeviceSnapshot> deviceSnapshot() async =>
+      const DiagnosticDeviceSnapshot(
+        manufacturer: 'Google',
+        model: 'Pixel',
+        androidSdk: 35,
+        androidRelease: '15',
+        supportedAbi: 'arm64-v8a',
+        memoryClassMb: 8192,
+        screenWidthPx: 2400,
+        screenHeightPx: 1080,
+        webViewVersion: '139',
+      );
 
   @override
-  Future<String?> saveJson(String path) => throw UnimplementedError();
+  Future<DiagnosticRuntimeSnapshot> runtimeSnapshot() async =>
+      const DiagnosticRuntimeSnapshot(
+        pssKb: 1,
+        javaHeapKb: 1,
+        nativeHeapKb: 1,
+        lowMemory: false,
+      );
 
   @override
-  Future<void> shareJson(String path) => throw UnimplementedError();
+  Future<String?> saveJson(String path) async {
+    savedPaths.add(path);
+    return savedName;
+  }
+
+  @override
+  Future<void> shareJson(String path) async => sharedPaths.add(path);
 }

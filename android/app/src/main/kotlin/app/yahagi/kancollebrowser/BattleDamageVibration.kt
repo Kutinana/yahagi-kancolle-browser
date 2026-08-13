@@ -14,12 +14,12 @@ data class BattleDamageVibrationPattern(
         fun forSeverity(severity: String): BattleDamageVibrationPattern =
             when (severity) {
                 "heavy" -> BattleDamageVibrationPattern(
-                    timings = longArrayOf(0, 190, 90, 230),
+                    timings = longArrayOf(0, 255, 90, 255),
                     amplitudes = intArrayOf(0, 255, 0, 255),
                 )
                 else -> BattleDamageVibrationPattern(
-                    timings = longArrayOf(0, 140),
-                    amplitudes = intArrayOf(0, 170),
+                    timings = longArrayOf(0, 300),
+                    amplitudes = intArrayOf(0, 255),
                 )
             }
     }

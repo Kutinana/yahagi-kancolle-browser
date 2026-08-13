@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
+import '../audio/game_audio_controller.dart';
 import '../browser/game_toolbar_display_controller.dart';
-import '../capture/capture_mode_controller.dart';
-import '../capture/capture_mode_selector.dart';
 import 'display_mode_controller.dart';
 import 'display_mode_section.dart';
 import 'game_frame_rate_settings.dart';
@@ -19,8 +18,8 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
     super.key,
     required this.layoutSettingsController,
     required this.displayModeController,
+    this.audioController,
     this.toolbarDisplayController,
-    required this.captureModeController,
     this.gameFrameRateSettingsController,
     this.screenAwakeController,
     this.gameRenderingModeController,
@@ -29,8 +28,8 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
 
   final LayoutSettingsController layoutSettingsController;
   final DisplayModeController displayModeController;
+  final GameAudioController? audioController;
   final GameToolbarDisplayController? toolbarDisplayController;
-  final CaptureModeController captureModeController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final ScreenAwakeController? screenAwakeController;
   final GameRenderingModeController? gameRenderingModeController;
@@ -194,17 +193,6 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            buildSectionTitle(l10n.captureMode),
-            buildCard(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: CaptureModeSelector(controller: captureModeController),
-              ),
-            ),
             if (gameFrameRateSettingsController != null) ...<Widget>[
               const SizedBox(height: 24),
               buildSectionTitle(l10n.frameRateSettingsSection),
@@ -235,6 +223,34 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                     subtitle: l10n.screenAwakeDesc,
                     value: screenAwakeController!.enabled,
                     onChanged: screenAwakeController!.setEnabled,
+                  ),
+                ),
+              ),
+            ],
+            if (audioController case final audio?) ...<Widget>[
+              const SizedBox(height: 24),
+              buildSectionTitle(l10n.gameAndSound),
+              buildCard(
+                child: AnimatedBuilder(
+                  animation: audio,
+                  builder: (context, _) => Column(
+                    children: <Widget>[
+                      buildSwitchTile(
+                        title: l10n.gameSound,
+                        value: !audio.isMuted,
+                        onChanged: (value) {
+                          if (audio.canToggle) audio.toggleMuted();
+                        },
+                      ),
+                      const Divider(color: Color(0xff294052), height: 1),
+                      buildSwitchTile(
+                        title: l10n.backgroundAudio,
+                        titleKey: const Key('settings-background-audio'),
+                        subtitle: l10n.backgroundAudioDesc,
+                        value: audio.backgroundPlaybackEnabled,
+                        onChanged: audio.setBackgroundPlaybackEnabled,
+                      ),
+                    ],
                   ),
                 ),
               ),

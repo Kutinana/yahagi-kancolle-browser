@@ -370,9 +370,9 @@ class SettingsSegmented extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final labels = <String>[
       l10n.settingsTabScreen,
-      l10n.settingsTabSound,
       l10n.settingsTabBattle,
       l10n.settingsTabNetwork,
+      l10n.settingsTabData,
       l10n.settingsTabAboutSupport,
     ];
     return Container(
@@ -388,6 +388,7 @@ class SettingsSegmented extends StatelessWidget {
           for (var index = 0; index < labels.length; index++)
             Expanded(
               child: _SettingsSegmentButton(
+                key: Key('settings-tab-$index'),
                 selected: index == selectedIndex,
                 label: labels[index],
                 onTap: () => onChanged(index),
@@ -401,6 +402,7 @@ class SettingsSegmented extends StatelessWidget {
 
 class _SettingsSegmentButton extends StatelessWidget {
   const _SettingsSegmentButton({
+    super.key,
     required this.selected,
     required this.label,
     required this.onTap,

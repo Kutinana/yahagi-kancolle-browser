@@ -30,6 +30,7 @@ import 'src/browser/game_toolbar_display_controller.dart';
 import 'src/browser/game_screenshot_controller.dart';
 import 'src/browser/game_surface_boundary.dart';
 import 'src/browser/game_environment_host.dart';
+import 'src/browser/game_application_restart_port.dart';
 import 'src/capture/battle_result_warning_overlay.dart';
 import 'src/capture/capture_mode_controller.dart';
 import 'src/capture/capture_mode_store.dart';
@@ -508,6 +509,7 @@ class YahagiApp extends StatelessWidget {
       gameCaptureController: gameCaptureController,
       battleController: battleController,
       safetySettingsController: safetySettingsController,
+      damageAlertPort: const MethodChannelBattleDamageAlertPort(),
       child: child,
     );
 
@@ -523,6 +525,7 @@ class YahagiApp extends StatelessWidget {
     return GameEnvironmentHost(
       controller: renderingController,
       beforeRestart: _waitForCaptureQueues,
+      applicationRestartPort: const MethodChannelGameApplicationRestartPort(),
       gameBuilder: (context, mode, key) =>
           withBattleWarning(_buildGameWebView(key, renderingMode: mode)),
     );

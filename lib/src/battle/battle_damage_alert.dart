@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import 'battle_models.dart';
 
-enum BattleDamageAlertSeverity { moderate, heavy }
+enum BattleDamageAlertSeverity { moderate, heavy, postBattleWarning }
 
 abstract interface class BattleDamageAlertPort {
   Future<void> alert(BattleDamageAlertSeverity severity);

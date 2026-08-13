@@ -336,7 +336,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 220));
 
     expect(controller.selectedWeekday, improvementAllWeekdays);
-    expect(find.text('睦月（周一、周二）'), findsOneWidget);
+    expect(find.text('睦月①②'), findsOneWidget);
   });
 
   testWidgets('places search and filter after favorite and filters evolution', (
@@ -532,7 +532,7 @@ void main() {
     },
   );
 
-  testWidgets('marks two evolution routes and colors quantities blue', (
+  testWidgets('links multiple evolution routes with interactive route lanes', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -591,6 +591,7 @@ void main() {
               improvementMax: 10,
               items: <ImprovementConsumeItem>[
                 ImprovementConsumeItem(equipmentId: 121, count: 1),
+                ImprovementConsumeItem(materialName: '测试资材', count: 1),
               ],
               routeKind: 'kind1',
             ),
@@ -643,28 +644,162 @@ void main() {
       ),
     );
 
-    expect(find.text('94式高射装置①'), findsOneWidget);
-    expect(find.text('新型砲熕兵装資材②'), findsOneWidget);
-    expect(find.text('新型兵装資材②'), findsOneWidget);
-    expect(find.text('冬月①'), findsOneWidget);
-    expect(find.text('白雪改二②'), findsOneWidget);
-    expect(
-      tester
-          .widget<Wrap>(find.byKey(const Key('improvement-secretaries-3')))
-          .runSpacing,
-      2,
-    );
-    expect(tester.widget<Text>(find.text('冬月①')).style?.height, 1.1);
+    expect(find.text('94式高射装置'), findsOneWidget);
+    expect(find.text('新型砲熕兵装資材'), findsOneWidget);
+    expect(find.text('新型兵装資材'), findsOneWidget);
+    expect(find.text('冬月'), findsOneWidget);
+    expect(find.text('白雪改二'), findsOneWidget);
+    expect(find.text('路线 A'), findsNWidgets(3));
+    expect(find.text('路线 B'), findsNWidgets(3));
+    expect(find.textContaining('①'), findsNothing);
+    expect(find.textContaining('②'), findsNothing);
     expect(
       tester
           .widget<FrozenDataTable>(
             find.byKey(const Key('improvement-planner-table')),
           )
           .rowHeights,
-      const <double>[152],
+      everyElement(greaterThan(152)),
     );
-    expect(find.text('10cm連装高角砲改＋増設機銃①'), findsOneWidget);
-    expect(find.text('10cm連装高角砲改②'), findsOneWidget);
+    expect(find.text('10cm連装高角砲改＋増設機銃'), findsOneWidget);
+    expect(find.text('10cm連装高角砲改'), findsOneWidget);
+
+    final routeBConsume = find.byKey(
+      const Key('improvement-route-3-consume-1'),
+    );
+    final routeBSecretary = find.byKey(
+      const Key('improvement-route-3-secretary-1'),
+    );
+    final routeBTarget = find.byKey(const Key('improvement-route-3-target-1'));
+    final routeAConsume = find.byKey(
+      const Key('improvement-route-3-consume-0'),
+    );
+    final routeASecretary = find.byKey(
+      const Key('improvement-route-3-secretary-0'),
+    );
+    expect(
+      tester.getSize(routeASecretary).height,
+      lessThan(tester.getSize(routeAConsume).height),
+    );
+    expect(
+      tester.getSize(routeBSecretary).height,
+      lessThan(tester.getSize(routeBConsume).height),
+      reason: '秘书舰胶囊应按自身内容高度收紧',
+    );
+    expect(tester.getSize(routeBSecretary).height, lessThanOrEqualTo(60));
+    expect(tester.getSize(routeBTarget).height, lessThanOrEqualTo(60));
+    for (final column in const <String>['consume', 'secretary', 'target']) {
+      final routeA = find.byKey(Key('improvement-route-3-$column-0'));
+      final routeB = find.byKey(Key('improvement-route-3-$column-1'));
+      final gap = tester.getRect(routeB).top - tester.getRect(routeA).bottom;
+      expect(gap, inInclusiveRange(0, 4), reason: '同一列的路线 A 与路线 B 胶囊应紧凑连续排列');
+    }
+    final routeBLabel = find.descendant(
+      of: routeBConsume,
+      matching: find.text('路线 B'),
+    );
+    final routeBLastItem = find.descendant(
+      of: routeBConsume,
+      matching: find.text('熟練搭乗員'),
+    );
+    final routeBRect = tester.getRect(routeBConsume);
+    final topInset = tester.getRect(routeBLabel).top - routeBRect.top;
+    final bottomInset =
+        routeBRect.bottom - tester.getRect(routeBLastItem).bottom;
+    expect(
+      bottomInset,
+      lessThanOrEqualTo(topInset + 10),
+      reason: '路线胶囊底部留白不应明显大于顶部留白',
+    );
+
+    const routeColumns = <String>['consume', 'secretary', 'target'];
+    for (final column in routeColumns) {
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(Key('improvement-route-3-$column-0')),
+            )
+            .opacity,
+        1,
+      );
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(Key('improvement-route-3-$column-1')),
+            )
+            .opacity,
+        1,
+      );
+    }
+
+    await tester.tap(find.byKey(const Key('improvement-route-3-consume-1')));
+    await tester.pumpAndSettle();
+
+    for (final column in routeColumns) {
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(Key('improvement-route-3-$column-0')),
+            )
+            .opacity,
+        0.32,
+      );
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(Key('improvement-route-3-$column-1')),
+            )
+            .opacity,
+        1,
+      );
+    }
+
+    await tester.drag(
+      find.byKey(const Key('improvement-table-horizontal-scroll')),
+      const Offset(-900, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('improvement-route-3-target-0')));
+    await tester.pumpAndSettle();
+    for (final column in routeColumns) {
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(Key('improvement-route-3-$column-0')),
+            )
+            .opacity,
+        1,
+      );
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(Key('improvement-route-3-$column-1')),
+            )
+            .opacity,
+        0.32,
+      );
+    }
+
+    await tester.tap(find.byKey(const Key('improvement-route-3-secretary-0')));
+    await tester.pumpAndSettle();
+    for (final column in routeColumns) {
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(Key('improvement-route-3-$column-0')),
+            )
+            .opacity,
+        1,
+      );
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find.byKey(Key('improvement-route-3-$column-1')),
+            )
+            .opacity,
+        1,
+      );
+    }
     expect(find.text('new_gun_material'), findsNothing);
     expect(
       find.byKey(

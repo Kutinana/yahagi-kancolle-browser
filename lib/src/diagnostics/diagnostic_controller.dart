@@ -82,12 +82,18 @@ final class DiagnosticController extends ChangeNotifier {
     }
   }
 
-  Future<File> export() async {
+  Future<String?> save() => _runExport(exporter.save);
+
+  Future<File> share() => _runExport(exporter.exportAndShare);
+
+  Future<File> export() => share();
+
+  Future<T> _runExport<T>(Future<T> Function() operation) async {
     _exporting = true;
     notifyListeners();
     try {
       await recorder.flush();
-      return await exporter.exportAndShare();
+      return await operation();
     } finally {
       _exporting = false;
       await refreshStorageState();

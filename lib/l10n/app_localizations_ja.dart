@@ -40,6 +40,43 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exportDiagnosticFile => '診断ファイルを書き出す';
 
   @override
+  String get saveDiagnosticFile => '端末に保存';
+
+  @override
+  String get shareDiagnosticFile => '診断ファイルを共有';
+
+  @override
+  String get diagnosticSaveConfirmTitle => '診断ファイルを保存しますか？';
+
+  @override
+  String get diagnosticSaveConfirmDesc =>
+      'プライバシーチェック済みの JSON ファイルを作成します。保存先フォルダーのみを選択してください。ファイル名は自動生成され、変更できません。';
+
+  @override
+  String get diagnosticSaveAction => 'フォルダーを選択';
+
+  @override
+  String diagnosticSaveSucceeded(String fileName) {
+    return '保存しました：$fileName';
+  }
+
+  @override
+  String get diagnosticSaveFailed => '診断ファイルの保存に失敗しました';
+
+  @override
+  String get diagnosticShareConfirmTitle => '診断ファイルを共有しますか？';
+
+  @override
+  String get diagnosticShareConfirmDesc =>
+      'プライバシーチェック済みの JSON ファイルを作成し、システムの共有画面を開きます。送信先をご確認ください。';
+
+  @override
+  String get diagnosticShareAction => '共有';
+
+  @override
+  String get diagnosticShareFailed => '診断ファイルの共有に失敗しました';
+
+  @override
   String get clearDiagnosticData => '診断ログを削除';
 
   @override
@@ -178,7 +215,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreSystemNetwork => 'システムネットワークに戻す';
 
   @override
-  String get gameSafety => 'ゲームの安全性';
+  String get gameSafety => '大破警告';
 
   @override
   String get blockSortieTitle => '大破進撃ストッパー';
@@ -1240,7 +1277,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get gameRenderingModeConfirmMessage =>
-      '切り替えるとゲームページを自動的に再構築します。現在のページは一時的に閉じて再読み込みされます。操作中の切り替えは避けてください。';
+      '描画モードを切り替えるとアプリが自動的に再起動し、ゲームページが再読み込みされます。進行中の操作を終了してから切り替えてください。';
 
   @override
   String get gameRenderingModeBattleWarning =>
@@ -1274,7 +1311,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreDefaultOrder => '既定の並び順に戻す';
 
   @override
-  String get settingsTabScreen => '画面';
+  String get settingsTabScreen => '画面と音声';
 
   @override
   String get settingsTabSound => 'サウンド';
@@ -1286,7 +1323,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsTabNetwork => 'ネットワーク';
 
   @override
-  String get settingsTabAboutSupport => '情報・サポート';
+  String get settingsTabData => 'データ';
+
+  @override
+  String get settingsTabAboutSupport => '情報';
 
   @override
   String get frameRateSettingsSection => 'フレームレート設定';

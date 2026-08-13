@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_application_restart_port.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_environment_host.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode_controller.dart';
 
 void main() {
-  testWidgets('restart removes the old game for one frame before rebuilding', (
+  testWidgets('restart removes the game before requesting an app restart', (
     tester,
   ) async {
     final controller = await GameRenderingModeController.load(
@@ -13,12 +14,14 @@ void main() {
     );
     addTearDown(controller.dispose);
     var beforeRestartCalls = 0;
+    final applicationRestartPort = _RecordingApplicationRestartPort();
 
     await tester.pumpWidget(
       MaterialApp(
         home: GameEnvironmentHost(
           controller: controller,
           beforeRestart: () async => beforeRestartCalls += 1,
+          applicationRestartPort: applicationRestartPort,
           gameBuilder: (context, mode, key) => ColoredBox(
             key: key,
             color: Colors.black,
@@ -41,9 +44,10 @@ void main() {
     );
 
     await tester.pump();
-    expect(find.text('game-standard'), findsOneWidget);
     expect((await changing).status, GameRenderingModeChangeStatus.applied);
     expect(beforeRestartCalls, 1);
+    expect(applicationRestartPort.calls, 1);
+    expect(find.textContaining('game-'), findsNothing);
   });
 
   testWidgets('host keeps exactly one game after repeated sequential changes', (
@@ -97,4 +101,12 @@ void main() {
     final result = await controller.changeMode(GameRenderingMode.standard);
     expect(result.status, GameRenderingModeChangeStatus.unavailable);
   });
+}
+
+final class _RecordingApplicationRestartPort
+    implements GameApplicationRestartPort {
+  int calls = 0;
+
+  @override
+  Future<void> restartApplication() async => calls += 1;
 }

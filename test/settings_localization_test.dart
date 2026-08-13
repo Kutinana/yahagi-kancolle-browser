@@ -14,12 +14,12 @@ void main() {
       ),
     );
 
-    expect(find.text('画面'), findsOneWidget);
-    expect(find.text('サウンド'), findsOneWidget);
+    expect(find.text('画面と音声'), findsOneWidget);
     expect(find.text('戦闘'), findsOneWidget);
     expect(find.text('ネットワーク'), findsOneWidget);
-    expect(find.text('情報・サポート'), findsOneWidget);
-    expect(find.text('声音'), findsNothing);
+    expect(find.text('データ'), findsOneWidget);
+    expect(find.text('情報'), findsOneWidget);
+    expect(find.text('サウンド'), findsNothing);
   });
 
   testWidgets('settings tabs render in Traditional Chinese', (tester) async {
@@ -30,11 +30,12 @@ void main() {
       ),
     );
 
-    expect(find.text('畫面'), findsOneWidget);
-    expect(find.text('聲音'), findsOneWidget);
+    expect(find.text('畫面與聲音'), findsOneWidget);
     expect(find.text('戰鬥'), findsOneWidget);
     expect(find.text('網路'), findsOneWidget);
-    expect(find.text('關於與支援'), findsOneWidget);
+    expect(find.text('資料'), findsOneWidget);
+    expect(find.text('關於'), findsOneWidget);
+    expect(find.text('聲音'), findsNothing);
   });
 
   testWidgets('battle prediction settings render in Japanese', (tester) async {

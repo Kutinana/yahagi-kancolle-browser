@@ -112,7 +112,7 @@ void main() {
     );
 
     expect(rows, hasLength(1));
-    expect(rows.single.secretaryLabels, <String>['明石（周一、周五）', '夕张（周二、周五）']);
+    expect(rows.single.secretaryLabels, <String>['明石①⑤', '夕张①②③④⑤⑥⑦']);
   });
 
   test('specific weekday keeps secretary labels without weekday suffix', () {
@@ -236,8 +236,8 @@ void main() {
 
     expect(rows, hasLength(1));
     expect(rows.single.upgradeRoutes.single.secretaryLabels, <String>[
-      '明石（周一、周五）',
-      '夕张（周二、周五）',
+      '明石①⑤',
+      '夕张①②③④⑤⑥⑦',
     ]);
   });
 
@@ -310,8 +310,13 @@ ImprovementEntry _multiWeekdayEntry({required bool evolvable}) =>
           secretaryId: 2,
           secretaryLabel: '夕张',
           weekdays: Set<int>.unmodifiable(<int>{
+            DateTime.monday,
             DateTime.tuesday,
+            DateTime.wednesday,
+            DateTime.thursday,
             DateTime.friday,
+            DateTime.saturday,
+            DateTime.sunday,
           }),
         ),
       ],

@@ -1,8 +1,10 @@
 ﻿package app.yahagi.kancollebrowser
 
 import android.Manifest
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -10,9 +12,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
 import android.media.MediaScannerConnection
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.util.Log
 import android.view.View
@@ -24,6 +28,8 @@ import android.webkit.WebView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import io.flutter.embedding.android.FlutterActivity
@@ -42,6 +48,9 @@ import app.yahagi.kancollebrowser.capture.ScreenshotCaptureAttempt
 import app.yahagi.kancollebrowser.capture.ScreenshotCapturePolicy
 import app.yahagi.kancollebrowser.capture.ScreenshotDestination
 import app.yahagi.kancollebrowser.capture.ScreenshotViewCandidate
+import app.yahagi.kancollebrowser.diagnostics.DiagnosticExportDirectoryHost
+import app.yahagi.kancollebrowser.diagnostics.DiagnosticDirectoryPickerUi
+import app.yahagi.kancollebrowser.diagnostics.DiagnosticPickerSystemBars
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticPlatformHandler
 import java.io.File
 import java.io.FileOutputStream
@@ -49,7 +58,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateManager.Host {
+class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateManager.Host,
+    DiagnosticExportDirectoryHost {
     @Suppress("DEPRECATION")
     override fun getFlutterShellArgs(): FlutterShellArgs {
         val shellArgs = super.getFlutterShellArgs()
@@ -96,13 +106,35 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         const val GAME_FRAME_RATE_CHANNEL = "app.yahagi.kancollebrowser/game_frame_rate"
         const val BATTLE_DAMAGE_ALERT_CHANNEL = "app.yahagi.kancollebrowser/battle_damage_alert"
         const val DIAGNOSTICS_CHANNEL = "app.yahagi.kancollebrowser/diagnostics"
+        const val GAME_ENVIRONMENT_CHANNEL = "app.yahagi.kancollebrowser/game_environment"
         const val SCREENSHOT_PERMISSION_REQUEST = 2406
+        const val DIAGNOSTIC_DIRECTORY_REQUEST = 2407
     }
 
     private var gameCaptureBridge: GameCaptureBridge? = null
     private var webViewProxyManager: WebViewProxyManager? = null
     private var gadgetBypassManager: GadgetBypassManager? = null
     private var gameFrameRateManager: GameFrameRateManager? = null
+    private var diagnosticPlatformHandler: DiagnosticPlatformHandler? = null
+    private val diagnosticDirectoryPickerUi by lazy {
+        DiagnosticDirectoryPickerUi(
+            systemBars = object : DiagnosticPickerSystemBars {
+                override fun showExitControls() {
+                    WindowInsetsControllerCompat(window, window.decorView).show(
+                        WindowInsetsCompat.Type.systemBars(),
+                    )
+                }
+
+                override fun restoreImmersiveMode() {
+                    WindowInsetsControllerCompat(window, window.decorView).apply {
+                        systemBarsBehavior =
+                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        hide(WindowInsetsCompat.Type.systemBars())
+                    }
+                }
+            },
+        )
+    }
     private var gadgetBypassLayoutListener: ViewTreeObserver.OnGlobalLayoutListener? = null
     
     private var boundWebView: WebView? = null
@@ -115,6 +147,21 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            GAME_ENVIRONMENT_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "restartActivity" -> {
+                    result.success(null)
+                    Handler(Looper.getMainLooper()).post {
+                        if (!isFinishing && !isDestroyed) recreate()
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
         
         webViewProxyManager = WebViewProxyManager(context)
         MethodChannel(
@@ -185,10 +232,12 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             when (call.method) {
                 "alert" -> {
                     val severity = call.argument<String>("severity")
-                    if (severity != "moderate" && severity != "heavy") {
+                    if (severity == null ||
+                        severity !in setOf("moderate", "heavy", "postBattleWarning")
+                    ) {
                         result.error(
                             "invalid_argument",
-                            "severity must be moderate or heavy",
+                            "severity must be moderate, heavy, or postBattleWarning",
                             null,
                         )
                         return@setMethodCallHandler
@@ -199,10 +248,11 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             }
         }
 
+        diagnosticPlatformHandler = DiagnosticPlatformHandler(applicationContext, this)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             DIAGNOSTICS_CHANNEL,
-        ).setMethodCallHandler(DiagnosticPlatformHandler(applicationContext))
+        ).setMethodCallHandler(diagnosticPlatformHandler)
 
         val captureChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -277,6 +327,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         gadgetBypassManager = null
         gameFrameRateManager?.dispose()
         gameFrameRateManager = null
+        diagnosticPlatformHandler?.dispose()
+        diagnosticPlatformHandler = null
         fixedCanvasLayoutListener?.let { listener ->
             boundWebView?.removeOnLayoutChangeListener(listener)
         }
@@ -296,6 +348,30 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         )
         activeScreenshotResult = null
         super.onDestroy()
+    }
+
+    override fun openDiagnosticExportDirectory(initialUri: Uri?) {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && initialUri != null) {
+                putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri)
+            }
+        }
+        diagnosticDirectoryPickerUi.open {
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, DIAGNOSTIC_DIRECTORY_REQUEST)
+        }
+    }
+
+    @Deprecated("Deprecated in Android")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != DIAGNOSTIC_DIRECTORY_REQUEST) return
+        diagnosticDirectoryPickerUi.finish()
+        diagnosticPlatformHandler?.onDirectorySelected(
+            data?.data?.takeIf { resultCode == Activity.RESULT_OK },
+        )
     }
 
     override fun onRequestPermissionsResult(

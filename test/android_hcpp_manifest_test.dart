@@ -26,4 +26,17 @@ void main() {
     expect(activity, contains('ARG_ENABLE_HCPP_AND_SURFACE_CONTROL'));
     expect(activity, contains('ARG_DISABLE_HCPP_AND_SURFACE_CONTROL'));
   });
+
+  test('restarts the activity after a rendering mode change', () {
+    final activity = File(
+      'android/app/src/main/kotlin/app/yahagi/kancollebrowser/MainActivity.kt',
+    ).readAsStringSync();
+
+    expect(
+      activity,
+      contains('app.yahagi.kancollebrowser/game_environment'),
+    );
+    expect(activity, contains('"restartActivity"'));
+    expect(activity, contains('recreate()'));
+  });
 }

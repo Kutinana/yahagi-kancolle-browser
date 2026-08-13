@@ -31,7 +31,6 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
     _selectedMode = widget.controller.settings.mode;
     _hostController.text = widget.controller.settings.host;
     _portController.text = widget.controller.settings.port.toString();
-    widget.controller.refreshNetworkStatus();
   }
 
   @override
@@ -342,7 +341,6 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
             lookupAppLocalizations(const Locale('zh'));
         final c = widget.controller;
         final bool isProxySupported = c.isProxyOverrideSupported;
-        final bool isVpnActive = c.networkStatus.hasVpn;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -496,14 +494,6 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
                       fontSize: 13,
                     ),
                   ),
-                  Text(
-                    '${l10n.vpnStatus}: ${isVpnActive ? l10n.vpnActive : l10n.vpnInactive}',
-                    style: const TextStyle(
-                      color: Color(0xff8197a5),
-                      fontSize: 13,
-                    ),
-                  ),
-
                   _buildDiagnosticCard(l10n, c.lastTestResult),
 
                   const SizedBox(height: 16),

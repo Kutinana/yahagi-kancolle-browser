@@ -153,6 +153,72 @@ abstract class AppLocalizations {
   /// **'导出诊断文件'**
   String get exportDiagnosticFile;
 
+  /// No description provided for @saveDiagnosticFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存到本地'**
+  String get saveDiagnosticFile;
+
+  /// No description provided for @shareDiagnosticFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享诊断文件'**
+  String get shareDiagnosticFile;
+
+  /// No description provided for @diagnosticSaveConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存诊断文件？'**
+  String get diagnosticSaveConfirmTitle;
+
+  /// No description provided for @diagnosticSaveConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'将生成一个经过隐私检查的 JSON 文件。接下来只需选择保存文件夹，文件名由客户端自动生成且不可修改。'**
+  String get diagnosticSaveConfirmDesc;
+
+  /// No description provided for @diagnosticSaveAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择文件夹'**
+  String get diagnosticSaveAction;
+
+  /// No description provided for @diagnosticSaveSucceeded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存：{fileName}'**
+  String diagnosticSaveSucceeded(String fileName);
+
+  /// No description provided for @diagnosticSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'诊断文件保存失败'**
+  String get diagnosticSaveFailed;
+
+  /// No description provided for @diagnosticShareConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享诊断文件？'**
+  String get diagnosticShareConfirmTitle;
+
+  /// No description provided for @diagnosticShareConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'将生成一个经过隐私检查的 JSON 文件，并打开系统分享面板。请在发送前自行确认接收方。'**
+  String get diagnosticShareConfirmDesc;
+
+  /// No description provided for @diagnosticShareAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get diagnosticShareAction;
+
+  /// No description provided for @diagnosticShareFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'诊断文件分享失败'**
+  String get diagnosticShareFailed;
+
   /// No description provided for @clearDiagnosticData.
   ///
   /// In zh, this message translates to:
@@ -426,7 +492,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameSafety.
   ///
   /// In zh, this message translates to:
-  /// **'游戏安全'**
+  /// **'大破提醒'**
   String get gameSafety;
 
   /// No description provided for @blockSortieTitle.
@@ -2411,7 +2477,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameRenderingModeConfirmMessage.
   ///
   /// In zh, this message translates to:
-  /// **'切换后将自动重建游戏页面，当前页面会短暂关闭并重新载入。请先避免正在进行的操作。'**
+  /// **'切换渲染模式会自动重启应用，游戏页面将重新载入。请先结束正在进行的操作。'**
   String get gameRenderingModeConfirmMessage;
 
   /// No description provided for @gameRenderingModeBattleWarning.
@@ -2477,7 +2543,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTabScreen.
   ///
   /// In zh, this message translates to:
-  /// **'画面'**
+  /// **'画面与声音'**
   String get settingsTabScreen;
 
   /// No description provided for @settingsTabSound.
@@ -2498,10 +2564,16 @@ abstract class AppLocalizations {
   /// **'网络'**
   String get settingsTabNetwork;
 
+  /// No description provided for @settingsTabData.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据'**
+  String get settingsTabData;
+
   /// No description provided for @settingsTabAboutSupport.
   ///
   /// In zh, this message translates to:
-  /// **'关于与支持'**
+  /// **'关于'**
   String get settingsTabAboutSupport;
 
   /// No description provided for @frameRateSettingsSection.

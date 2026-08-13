@@ -39,6 +39,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportDiagnosticFile => '导出诊断文件';
 
   @override
+  String get saveDiagnosticFile => '保存到本地';
+
+  @override
+  String get shareDiagnosticFile => '分享诊断文件';
+
+  @override
+  String get diagnosticSaveConfirmTitle => '保存诊断文件？';
+
+  @override
+  String get diagnosticSaveConfirmDesc =>
+      '将生成一个经过隐私检查的 JSON 文件。接下来只需选择保存文件夹，文件名由客户端自动生成且不可修改。';
+
+  @override
+  String get diagnosticSaveAction => '选择文件夹';
+
+  @override
+  String diagnosticSaveSucceeded(String fileName) {
+    return '已保存：$fileName';
+  }
+
+  @override
+  String get diagnosticSaveFailed => '诊断文件保存失败';
+
+  @override
+  String get diagnosticShareConfirmTitle => '分享诊断文件？';
+
+  @override
+  String get diagnosticShareConfirmDesc =>
+      '将生成一个经过隐私检查的 JSON 文件，并打开系统分享面板。请在发送前自行确认接收方。';
+
+  @override
+  String get diagnosticShareAction => '分享';
+
+  @override
+  String get diagnosticShareFailed => '诊断文件分享失败';
+
+  @override
   String get clearDiagnosticData => '清除诊断日志';
 
   @override
@@ -176,7 +213,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreSystemNetwork => '恢复系统网络';
 
   @override
-  String get gameSafety => '游戏安全';
+  String get gameSafety => '大破提醒';
 
   @override
   String get blockSortieTitle => '大破进击保护';
@@ -1230,7 +1267,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameRenderingModeConfirmMessage =>
-      '切换后将自动重建游戏页面，当前页面会短暂关闭并重新载入。请先避免正在进行的操作。';
+      '切换渲染模式会自动重启应用，游戏页面将重新载入。请先结束正在进行的操作。';
 
   @override
   String get gameRenderingModeBattleWarning =>
@@ -1264,7 +1301,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreDefaultOrder => '还原默认排序';
 
   @override
-  String get settingsTabScreen => '画面';
+  String get settingsTabScreen => '画面与声音';
 
   @override
   String get settingsTabSound => '声音';
@@ -1276,7 +1313,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTabNetwork => '网络';
 
   @override
-  String get settingsTabAboutSupport => '关于与支持';
+  String get settingsTabData => '数据';
+
+  @override
+  String get settingsTabAboutSupport => '关于';
 
   @override
   String get frameRateSettingsSection => '帧率设置';
@@ -1613,6 +1653,43 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get exportDiagnosticFile => '匯出診斷檔案';
 
   @override
+  String get saveDiagnosticFile => '儲存到本機';
+
+  @override
+  String get shareDiagnosticFile => '分享診斷檔案';
+
+  @override
+  String get diagnosticSaveConfirmTitle => '儲存診斷檔案？';
+
+  @override
+  String get diagnosticSaveConfirmDesc =>
+      '將產生一個通過隱私檢查的 JSON 檔案。接下來只需選擇儲存資料夾，檔名由用戶端自動產生且不可修改。';
+
+  @override
+  String get diagnosticSaveAction => '選擇資料夾';
+
+  @override
+  String diagnosticSaveSucceeded(String fileName) {
+    return '已儲存：$fileName';
+  }
+
+  @override
+  String get diagnosticSaveFailed => '診斷檔案儲存失敗';
+
+  @override
+  String get diagnosticShareConfirmTitle => '分享診斷檔案？';
+
+  @override
+  String get diagnosticShareConfirmDesc =>
+      '將產生一個通過隱私檢查的 JSON 檔案，並開啟系統分享面板。請在傳送前自行確認接收方。';
+
+  @override
+  String get diagnosticShareAction => '分享';
+
+  @override
+  String get diagnosticShareFailed => '診斷檔案分享失敗';
+
+  @override
   String get clearDiagnosticData => '清除診斷日誌';
 
   @override
@@ -1750,7 +1827,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get restoreSystemNetwork => '恢復系統網路';
 
   @override
-  String get gameSafety => '遊戲安全';
+  String get gameSafety => '大破提醒';
 
   @override
   String get blockSortieTitle => '大破進擊保護';
@@ -2805,7 +2882,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameRenderingModeConfirmMessage =>
-      '切換後將自動重建遊戲頁面，目前頁面會短暫關閉並重新載入。請先避免正在進行的操作。';
+      '切換渲染模式會自動重新啟動應用程式，遊戲頁面將重新載入。請先結束正在進行的操作。';
 
   @override
   String get gameRenderingModeBattleWarning =>
@@ -2839,7 +2916,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get restoreDefaultOrder => '還原預設排序';
 
   @override
-  String get settingsTabScreen => '畫面';
+  String get settingsTabScreen => '畫面與聲音';
 
   @override
   String get settingsTabSound => '聲音';
@@ -2851,7 +2928,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsTabNetwork => '網路';
 
   @override
-  String get settingsTabAboutSupport => '關於與支援';
+  String get settingsTabData => '資料';
+
+  @override
+  String get settingsTabAboutSupport => '關於';
 
   @override
   String get frameRateSettingsSection => '幀率設定';

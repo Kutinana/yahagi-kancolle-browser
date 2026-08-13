@@ -417,7 +417,7 @@ class _SlidingSegment<T> extends StatelessWidget {
   }
 }
 
-class _ImprovementTable extends StatelessWidget {
+class _ImprovementTable extends StatefulWidget {
   const _ImprovementTable({
     required this.rows,
     required this.controller,
@@ -427,7 +427,14 @@ class _ImprovementTable extends StatelessWidget {
   final ImprovementPlannerController controller;
   final GameState state;
 
-  MasterSlotItem? _master(int id) => state.masterSlotItems[id];
+  @override
+  State<_ImprovementTable> createState() => _ImprovementTableState();
+}
+
+class _ImprovementTableState extends State<_ImprovementTable> {
+  final Map<int, int> _focusedRouteByEquipment = <int, int>{};
+
+  MasterSlotItem? _master(int id) => widget.state.masterSlotItems[id];
   String _name(int id) => _master(id)?.name ?? '#$id';
   int _icon(int id) {
     final type = _master(id)?.type ?? const <int>[];
@@ -437,12 +444,36 @@ class _ImprovementTable extends StatelessWidget {
   List<String> _secretaryValues(ImprovementPlannerRow row) {
     final routes = row.upgradeRoutes;
     if (routes.isEmpty) return row.secretaryLabels;
-    final hasMultipleRoutes = routes.length > 1;
     return <String>[
-      for (var routeIndex = 0; routeIndex < routes.length; routeIndex++)
-        for (final secretary in routes[routeIndex].secretaryLabels)
-          '$secretary${_routeMarker(routeIndex, hasMultipleRoutes)}',
+      for (final route in routes)
+        for (final secretary in route.secretaryLabels) secretary,
     ];
+  }
+
+  double _routeHeight(int lineCount) => 34.0 + 24.0 * math.max(1, lineCount);
+
+  List<double> _consumeRouteHeights(ImprovementPlannerRow row) => <double>[
+    for (final route in row.upgradeRoutes)
+      _routeHeight(route.upgrade.items.length),
+  ];
+
+  List<double> _secretaryRouteHeights(ImprovementPlannerRow row) => <double>[
+    for (final route in row.upgradeRoutes)
+      _routeHeight(_secretaryLineCount(route.secretaryLabels)),
+  ];
+
+  List<double> _targetRouteHeights(ImprovementPlannerRow row) => <double>[
+    for (final _ in row.upgradeRoutes) _routeHeight(1),
+  ];
+
+  void _toggleRoute(int equipmentId, int routeIndex) {
+    setState(() {
+      if (_focusedRouteByEquipment[equipmentId] == routeIndex) {
+        _focusedRouteByEquipment.remove(equipmentId);
+      } else {
+        _focusedRouteByEquipment[equipmentId] = routeIndex;
+      }
+    });
   }
 
   int _secretaryLineCount(List<String> values) {
@@ -470,6 +501,19 @@ class _ImprovementTable extends StatelessWidget {
 
   double _rowHeight(ImprovementPlannerRow row) {
     final routes = row.upgradeRoutes;
+    final routeLaneHeight = routes.length > 1
+        ? 8.0 +
+              <List<double>>[
+                    _consumeRouteHeights(row),
+                    _secretaryRouteHeights(row),
+                    _targetRouteHeights(row),
+                  ]
+                  .map(
+                    (heights) =>
+                        heights.fold<double>(0, (sum, height) => sum + height),
+                  )
+                  .reduce(math.max)
+        : 0.0;
     return math.max(
       FrozenDataTable.minimumRowHeight,
       8 +
@@ -483,13 +527,14 @@ class _ImprovementTable extends StatelessWidget {
                 ),
             24.0 * _secretaryLineCount(_secretaryValues(row)),
             24.0 * math.max(1, routes.length),
+            routeLaneHeight,
           ].reduce(math.max),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final heights = <double>[for (final row in rows) _rowHeight(row)];
+    final heights = <double>[for (final row in widget.rows) _rowHeight(row)];
     return FrozenDataTable(
       key: const Key('improvement-planner-table'),
       keyPrefix: 'improvement-table',
@@ -500,8 +545,8 @@ class _ImprovementTable extends StatelessWidget {
         _Header(key: Key('improvement-frozen-equipment'), label: '装备名字'),
       ],
       frozenCells: (index) {
-        final entry = rows[index].entry;
-        final favorite = controller.favoriteEquipmentIds.contains(
+        final entry = widget.rows[index].entry;
+        final favorite = widget.controller.favoriteEquipmentIds.contains(
           entry.equipmentId,
         );
         return <Widget>[
@@ -511,7 +556,8 @@ class _ImprovementTable extends StatelessWidget {
               key: Key('improvement-favorite-${entry.equipmentId}'),
               padding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
-              onPressed: () => controller.toggleFavorite(entry.equipmentId),
+              onPressed: () =>
+                  widget.controller.toggleFavorite(entry.equipmentId),
               icon: Icon(
                 favorite ? Icons.star : Icons.star_border,
                 size: 18,
@@ -541,11 +587,27 @@ class _ImprovementTable extends StatelessWidget {
         _Header(label: '进化装备'),
       ],
       scrollableCells: (index) {
-        final row = rows[index];
+        final row = widget.rows[index];
         final entry = row.entry;
         final routes = row.upgradeRoutes;
         final evolvableToday = routes.isNotEmpty;
         final hasMultipleRoutes = routes.length > 1;
+        final consumeRouteHeights = hasMultipleRoutes
+            ? _consumeRouteHeights(row)
+            : const <double>[];
+        final secretaryRouteHeights = hasMultipleRoutes
+            ? _secretaryRouteHeights(row)
+            : const <double>[];
+        final targetRouteHeights = hasMultipleRoutes
+            ? _targetRouteHeights(row)
+            : const <double>[];
+        final storedFocusedRoute = _focusedRouteByEquipment[entry.equipmentId];
+        final focusedRouteIndex =
+            storedFocusedRoute != null && storedFocusedRoute < routes.length
+            ? storedFocusedRoute
+            : null;
+        void onRouteTap(int routeIndex) =>
+            _toggleRoute(entry.equipmentId, routeIndex);
         return <Widget>[
           _BaseCostCell(
             cost: entry.baseCost,
@@ -555,11 +617,37 @@ class _ImprovementTable extends StatelessWidget {
           ),
           _ConsumeItemsCell(items: entry.stage0, name: _name, icon: _icon),
           _ConsumeItemsCell(items: entry.stage1, name: _name, icon: _icon),
-          _UpgradeConsumeCell(routes: routes, name: _name, icon: _icon),
-          _SecretaryWrap(
-            wrapKey: Key('improvement-secretaries-${entry.equipmentId}'),
-            values: _secretaryValues(row),
-          ),
+          hasMultipleRoutes
+              ? _RouteColumn(
+                  equipmentId: entry.equipmentId,
+                  column: 'consume',
+                  routes: routes,
+                  heights: consumeRouteHeights,
+                  focusedRouteIndex: focusedRouteIndex,
+                  onRouteTap: onRouteTap,
+                  contentBuilder: (routeIndex) => _RouteConsumeContent(
+                    items: routes[routeIndex].upgrade.items,
+                    name: _name,
+                    icon: _icon,
+                  ),
+                )
+              : _UpgradeConsumeCell(routes: routes, name: _name, icon: _icon),
+          hasMultipleRoutes
+              ? _RouteColumn(
+                  equipmentId: entry.equipmentId,
+                  column: 'secretary',
+                  routes: routes,
+                  heights: secretaryRouteHeights,
+                  focusedRouteIndex: focusedRouteIndex,
+                  onRouteTap: onRouteTap,
+                  contentBuilder: (routeIndex) => _RouteSecretaryContent(
+                    values: routes[routeIndex].secretaryLabels,
+                  ),
+                )
+              : _SecretaryWrap(
+                  wrapKey: Key('improvement-secretaries-${entry.equipmentId}'),
+                  values: _secretaryValues(row),
+                ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Align(
@@ -567,20 +655,37 @@ class _ImprovementTable extends StatelessWidget {
               child: Text(evolvableToday ? '可进化' : '—', style: _cellStyle),
             ),
           ),
-          _Lines(
-            values: <String>[
-              for (var routeIndex = 0; routeIndex < routes.length; routeIndex++)
-                '${_name(routes[routeIndex].upgrade.targetEquipmentId)}${_routeMarker(routeIndex, hasMultipleRoutes)}',
-            ],
-            leading: <Widget>[
-              for (final route in routes)
-                EquipmentTypeIconImage(
-                  iconId: _icon(route.upgrade.targetEquipmentId),
-                  width: 20,
-                  height: 20,
+          hasMultipleRoutes
+              ? _RouteColumn(
+                  equipmentId: entry.equipmentId,
+                  column: 'target',
+                  routes: routes,
+                  heights: targetRouteHeights,
+                  focusedRouteIndex: focusedRouteIndex,
+                  onRouteTap: onRouteTap,
+                  contentBuilder: (routeIndex) {
+                    final targetId =
+                        routes[routeIndex].upgrade.targetEquipmentId;
+                    return _EquipmentLine(
+                      iconId: _icon(targetId),
+                      name: _name(targetId),
+                    );
+                  },
+                )
+              : _Lines(
+                  values: <String>[
+                    for (final route in routes)
+                      _name(route.upgrade.targetEquipmentId),
+                  ],
+                  leading: <Widget>[
+                    for (final route in routes)
+                      EquipmentTypeIconImage(
+                        iconId: _icon(route.upgrade.targetEquipmentId),
+                        width: 20,
+                        height: 20,
+                      ),
+                  ],
                 ),
-            ],
-          ),
         ];
       },
     );
@@ -599,12 +704,6 @@ const _quantityStyle = TextStyle(
   fontWeight: FontWeight.w800,
   height: 1.1,
 );
-
-String _routeMarker(int index, bool enabled) {
-  if (!enabled) return '';
-  const markers = <String>['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
-  return index < markers.length ? markers[index] : '(${index + 1})';
-}
 
 String _materialDisplayName(ImprovementConsumeItem item) =>
     item.materialName ??
@@ -666,16 +765,10 @@ class _Header extends StatelessWidget {
 }
 
 class _EquipmentLine extends StatelessWidget {
-  const _EquipmentLine({
-    required this.iconId,
-    required this.name,
-    this.count,
-    this.suffix = '',
-  });
+  const _EquipmentLine({required this.iconId, required this.name, this.count});
   final int iconId;
   final String name;
   final int? count;
-  final String suffix;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -683,7 +776,7 @@ class _EquipmentLine extends StatelessWidget {
       children: [
         EquipmentTypeIconImage(iconId: iconId, width: 20, height: 20),
         const SizedBox(width: 5),
-        Expanded(child: Text('$name$suffix', style: _cellStyle)),
+        Expanded(child: Text(name, style: _cellStyle)),
         if (count != null) Text('×$count', style: _quantityStyle),
       ],
     ),
@@ -717,6 +810,212 @@ class _ConsumeItemsCell extends StatelessWidget {
         );
 }
 
+typedef _RouteContentBuilder = Widget Function(int routeIndex);
+
+class _RouteColumn extends StatelessWidget {
+  const _RouteColumn({
+    required this.equipmentId,
+    required this.column,
+    required this.routes,
+    required this.heights,
+    required this.focusedRouteIndex,
+    required this.onRouteTap,
+    required this.contentBuilder,
+  });
+
+  final int equipmentId;
+  final String column;
+  final List<ImprovementUpgradeRoute> routes;
+  final List<double> heights;
+  final int? focusedRouteIndex;
+  final ValueChanged<int> onRouteTap;
+  final _RouteContentBuilder contentBuilder;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Column(
+      children: [
+        for (var routeIndex = 0; routeIndex < routes.length; routeIndex++)
+          _RouteLane(
+            routeKey: Key('improvement-route-$equipmentId-$column-$routeIndex'),
+            routeIndex: routeIndex,
+            height: heights[routeIndex],
+            focusedRouteIndex: focusedRouteIndex,
+            onTap: () => onRouteTap(routeIndex),
+            child: contentBuilder(routeIndex),
+          ),
+      ],
+    ),
+  );
+}
+
+class _RouteLane extends StatelessWidget {
+  const _RouteLane({
+    required this.routeKey,
+    required this.routeIndex,
+    required this.height,
+    required this.focusedRouteIndex,
+    required this.onTap,
+    required this.child,
+  });
+
+  final Key routeKey;
+  final int routeIndex;
+  final double height;
+  final int? focusedRouteIndex;
+  final VoidCallback onTap;
+  final Widget child;
+
+  Color get _color => const <Color>[
+    Color(0xff58bce8),
+    Color(0xffffad5c),
+    Color(0xff8ed081),
+    Color(0xffc792ea),
+  ][routeIndex % 4];
+
+  String get _label {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    return routeIndex < letters.length
+        ? letters[routeIndex]
+        : '${routeIndex + 1}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFocused = focusedRouteIndex == routeIndex;
+    final isDimmed = focusedRouteIndex != null && !isFocused;
+    return AnimatedOpacity(
+      key: routeKey,
+      duration: const Duration(milliseconds: 160),
+      opacity: isDimmed ? 0.32 : 1,
+      child: SizedBox(
+        height: height,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(7),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
+                decoration: BoxDecoration(
+                  color: _color.withValues(alpha: isFocused ? 0.18 : 0.08),
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(
+                    color: _color.withValues(alpha: isFocused ? 1 : 0.66),
+                    width: isFocused ? 2 : 1,
+                  ),
+                  boxShadow: isFocused
+                      ? <BoxShadow>[
+                          BoxShadow(
+                            color: _color.withValues(alpha: 0.24),
+                            blurRadius: 8,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 18,
+                          height: 18,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _color.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: _color),
+                          ),
+                          child: Text(
+                            _label,
+                            style: TextStyle(
+                              color: _color,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '路线 $_label',
+                          style: TextStyle(
+                            color: _color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            height: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Expanded(child: child),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RouteConsumeContent extends StatelessWidget {
+  const _RouteConsumeContent({
+    required this.items,
+    required this.name,
+    required this.icon,
+  });
+
+  final List<ImprovementConsumeItem> items;
+  final String Function(int) name;
+  final int Function(int) icon;
+
+  @override
+  Widget build(BuildContext context) => items.isEmpty
+      ? const _EmptyCell()
+      : Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (final item in items)
+              item.equipmentId == null
+                  ? _MaterialLine(item: item)
+                  : _EquipmentLine(
+                      iconId: icon(item.equipmentId!),
+                      name: name(item.equipmentId!),
+                      count: item.count,
+                    ),
+          ],
+        );
+}
+
+class _RouteSecretaryContent extends StatelessWidget {
+  const _RouteSecretaryContent({required this.values});
+
+  final List<String> values;
+
+  @override
+  Widget build(BuildContext context) => values.isEmpty
+      ? const _EmptyCell()
+      : Align(
+          alignment: Alignment.centerLeft,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 2,
+            children: [
+              for (final value in values)
+                Text(value, maxLines: 1, style: _cellStyle),
+            ],
+          ),
+        );
+}
+
 class _UpgradeConsumeCell extends StatelessWidget {
   const _UpgradeConsumeCell({
     required this.routes,
@@ -732,22 +1031,17 @@ class _UpgradeConsumeCell extends StatelessWidget {
     if (routes.isEmpty) {
       return const _EmptyCell();
     }
-    final hasMultipleRoutes = routes.length > 1;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (var routeIndex = 0; routeIndex < routes.length; routeIndex++)
-          for (final item in routes[routeIndex].upgrade.items)
+        for (final route in routes)
+          for (final item in route.upgrade.items)
             item.equipmentId == null
-                ? _MaterialLine(
-                    item: item,
-                    suffix: _routeMarker(routeIndex, hasMultipleRoutes),
-                  )
+                ? _MaterialLine(item: item)
                 : _EquipmentLine(
                     iconId: icon(item.equipmentId!),
                     name: name(item.equipmentId!),
                     count: item.count,
-                    suffix: _routeMarker(routeIndex, hasMultipleRoutes),
                   ),
       ],
     );
@@ -755,9 +1049,8 @@ class _UpgradeConsumeCell extends StatelessWidget {
 }
 
 class _MaterialLine extends StatelessWidget {
-  const _MaterialLine({required this.item, this.suffix = ''});
+  const _MaterialLine({required this.item});
   final ImprovementConsumeItem item;
-  final String suffix;
 
   @override
   Widget build(BuildContext context) {
@@ -778,12 +1071,7 @@ class _MaterialLine extends StatelessWidget {
             ),
             const SizedBox(width: 5),
           ],
-          Expanded(
-            child: Text(
-              '${_materialDisplayName(item)}$suffix',
-              style: _cellStyle,
-            ),
-          ),
+          Expanded(child: Text(_materialDisplayName(item), style: _cellStyle)),
           Text('×${item.count}', style: _quantityStyle),
         ],
       ),

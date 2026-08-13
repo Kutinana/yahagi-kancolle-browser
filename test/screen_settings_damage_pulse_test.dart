@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:yahagi_kancolle_browser/src/capture/capture_mode.dart';
-import 'package:yahagi_kancolle_browser/src/capture/capture_mode_controller.dart';
-import 'package:yahagi_kancolle_browser/src/capture/capture_mode_store.dart';
+import 'package:yahagi_kancolle_browser/src/audio/game_audio_controller.dart';
+import 'package:yahagi_kancolle_browser/src/audio/game_audio_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/display_mode_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/display_mode_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
@@ -11,6 +10,43 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart'
 import 'package:yahagi_kancolle_browser/src/settings/screen_settings_page.dart';
 
 void main() {
+  testWidgets('screen settings expose background audio playback switch', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final layoutController = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    final displayController = await DisplayModeController.load(
+      MemoryDisplayModeStore(),
+    );
+    final audioController = await GameAudioController.load(
+      SharedPreferencesGameAudioStore(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ScreenSettingsPage(
+          layoutSettingsController: layoutController,
+          displayModeController: displayController,
+          audioController: audioController,
+        ),
+      ),
+    );
+
+    final label = find.byKey(const Key('settings-background-audio'));
+    await tester.ensureVisible(label);
+    expect(label, findsOneWidget);
+    expect(find.text('开启后，应用进入后台时游戏声音仍会继续播放。'), findsOneWidget);
+    expect(audioController.backgroundPlaybackEnabled, isFalse);
+
+    final row = find.ancestor(of: label, matching: find.byType(Row)).first;
+    await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
+    await tester.pumpAndSettle();
+
+    expect(audioController.backgroundPlaybackEnabled, isTrue);
+  });
+
   testWidgets('workspace menu side switch moves preference to the right', (
     tester,
   ) async {
@@ -21,16 +57,11 @@ void main() {
     final displayController = await DisplayModeController.load(
       MemoryDisplayModeStore(),
     );
-    final captureController = await CaptureModeController.load(
-      _MemoryCaptureModeStore(),
-    );
-
     await tester.pumpWidget(
       MaterialApp(
         home: ScreenSettingsPage(
           layoutSettingsController: layoutController,
           displayModeController: displayController,
-          captureModeController: captureController,
         ),
       ),
     );
@@ -56,16 +87,11 @@ void main() {
       final displayController = await DisplayModeController.load(
         MemoryDisplayModeStore(),
       );
-      final captureController = await CaptureModeController.load(
-        _MemoryCaptureModeStore(),
-      );
-
       await tester.pumpWidget(
         MaterialApp(
           home: ScreenSettingsPage(
             layoutSettingsController: layoutController,
             displayModeController: displayController,
-            captureModeController: captureController,
           ),
         ),
       );
@@ -98,16 +124,11 @@ void main() {
       final displayController = await DisplayModeController.load(
         MemoryDisplayModeStore(),
       );
-      final captureController = await CaptureModeController.load(
-        _MemoryCaptureModeStore(),
-      );
-
       await tester.pumpWidget(
         MaterialApp(
           home: ScreenSettingsPage(
             layoutSettingsController: layoutController,
             displayModeController: displayController,
-            captureModeController: captureController,
           ),
         ),
       );
@@ -143,16 +164,4 @@ void main() {
       );
     },
   );
-}
-
-final class _MemoryCaptureModeStore implements CaptureModeStore {
-  CaptureMode mode = CaptureMode.game;
-
-  @override
-  Future<CaptureMode?> read() async => mode;
-
-  @override
-  Future<void> write(CaptureMode mode) async {
-    this.mode = mode;
-  }
 }

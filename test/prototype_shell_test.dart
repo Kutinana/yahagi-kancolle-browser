@@ -216,6 +216,21 @@ void main() {
       closeTo(settingsLabelX, 0.1),
     );
     expect(find.text('应用推荐显示比例（游戏与菜单比例 65:35）'), findsOneWidget);
+    expect(find.text('游戏声音'), findsOneWidget);
+    expect(find.text('后台播放声音'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings-tab-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('大破提醒'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('大破提醒')).dy,
+      lessThan(tester.getTopLeft(find.text('战斗提醒')).dy),
+    );
+    await tester.tap(find.byKey(const Key('settings-tab-2')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('settings-logout-label')), findsNothing);
+    expect(find.textContaining('VPN 状态'), findsNothing);
+    await tester.tap(find.byKey(const Key('settings-tab-3')));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('settings-logout-label')));
     await tester.pumpAndSettle();
     expect(
@@ -225,7 +240,6 @@ void main() {
 
     expect(find.text('游戏模式（默认）'), findsOneWidget);
     expect(find.text('纯浏览模式'), findsOneWidget);
-    expect(find.text('后台播放声音'), findsOneWidget);
     expect(find.text('关于 ヤハギ', skipOffstage: false), findsWidgets);
     expect(find.text('诊断与关于', skipOffstage: false), findsNothing);
     expect(find.text('安全边界', skipOffstage: false), findsNothing);
@@ -300,6 +314,8 @@ void main() {
     await tester.tap(find.byKey(const Key('workspace-nav-settings')));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('settings-tab-3')));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('纯浏览模式'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('纯浏览模式'));
