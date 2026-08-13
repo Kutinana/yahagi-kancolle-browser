@@ -29,11 +29,16 @@ void main() {
         '12.7cm 连装炮',
       );
       final gun = state.masterSlotItems[201]!;
+      expect(gun.sortNo, 17);
+      expect(state.masterSlotItems[202]?.sortNo, 0);
       expect(gun.firepower, 3);
       expect(gun.antiAir, 2);
       expect(gun.accuracy, 1);
       expect(gun.range, 1);
       expect(state.masterShips[101]?.portraitVersion, '7');
+      expect(state.masterShips[101]?.sortNo, 50);
+      expect(state.masterShips[101]?.copyWith(portraitVersion: '8').sortNo, 50);
+      expect(state.masterShips[102]?.sortNo, 0);
       expect(state.masterShips[101]?.classTypeId, 34);
       expect(state.masterShips[101]?.buildTimeMinutes, 60);
       expect(state.masterShips[101]?.slotCount, 4);

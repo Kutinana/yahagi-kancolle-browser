@@ -130,6 +130,97 @@ void main() {
     expect(rows.single.secretaryLabels, <String>['明石', '夕张']);
   });
 
+  test('resolves numeric secretary labels by ship sort number', () {
+    final rows = projectImprovementRows(
+      ImprovementDataset(
+        version: const ImprovementDatasetVersion(
+          dataVersion: 'test',
+          commitSha: '',
+        ),
+        entries: <ImprovementEntry>[
+          ImprovementEntry(
+            equipmentId: 10,
+            baseCost: const ImprovementResourceCost(
+              fuel: 0,
+              ammo: 0,
+              steel: 0,
+              bauxite: 0,
+            ),
+            arrangements: <ImprovementArrangement>[
+              ImprovementArrangement(
+                secretaryId: 444,
+                secretaryLabel: '#444',
+                weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
+              ),
+              ImprovementArrangement(
+                secretaryId: 1,
+                secretaryLabel: '明石',
+                weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
+              ),
+              ImprovementArrangement(
+                secretaryId: 999,
+                secretaryLabel: '#999',
+                weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
+              ),
+              ImprovementArrangement(
+                secretaryId: 444,
+                secretaryLabel: '#444改',
+                weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
+              ),
+            ],
+            stage0: const <ImprovementConsumeItem>[],
+            stage1: const <ImprovementConsumeItem>[],
+            upgrades: const <ImprovementUpgrade>[],
+          ),
+        ],
+      ),
+      weekday: DateTime.monday,
+      shipMasters: const <int, MasterShip>{
+        444: MasterShip(id: 444, name: 'Aquila', shipTypeId: 11, sortNo: 244),
+        644: MasterShip(id: 644, name: '桃', shipTypeId: 2, sortNo: 444),
+      },
+    );
+
+    expect(rows.single.secretaryLabels, <String>['桃', '明石', '#999', '#444改']);
+    expect(rows.single.secretaryLabels, isNot(contains('#444')));
+    expect(rows.single.secretaryLabels, isNot(contains('Aquila')));
+  });
+
+  test('keeps numeric secretary label when ship sort number is ambiguous', () {
+    final rows = projectImprovementRows(
+      ImprovementDataset(
+        version: const ImprovementDatasetVersion(
+          dataVersion: 'test',
+          commitSha: '',
+        ),
+        entries: <ImprovementEntry>[_secretaryEntry('#444', 444)],
+      ),
+      weekday: DateTime.monday,
+      shipMasters: const <int, MasterShip>{
+        644: MasterShip(id: 644, name: '桃', shipTypeId: 2, sortNo: 444),
+        645: MasterShip(id: 645, name: '桃改', shipTypeId: 2, sortNo: 444),
+      },
+    );
+
+    expect(rows.single.secretaryLabels, <String>['#444']);
+  });
+
+  test('keeps oversized numeric secretary label without throwing', () {
+    const label = '#999999999999999999999999999999999999999999999999999999';
+    final rows = projectImprovementRows(
+      ImprovementDataset(
+        version: const ImprovementDatasetVersion(
+          dataVersion: 'test',
+          commitSha: '',
+        ),
+        entries: <ImprovementEntry>[_secretaryEntry(label, null)],
+      ),
+      weekday: DateTime.monday,
+    );
+
+    expect(rows.single.secretaryLabels, <String>[label]);
+  });
+
   test('all weekdays is evolvable when any weekday has a valid route', () {
     final rows = projectImprovementRows(
       ImprovementDataset(
@@ -174,6 +265,26 @@ void main() {
     expect(rows.map((row) => row.entry.equipmentId), <int>[10]);
   });
 }
+
+ImprovementEntry _secretaryEntry(String label, int? id) => ImprovementEntry(
+  equipmentId: 10,
+  baseCost: const ImprovementResourceCost(
+    fuel: 0,
+    ammo: 0,
+    steel: 0,
+    bauxite: 0,
+  ),
+  arrangements: <ImprovementArrangement>[
+    ImprovementArrangement(
+      secretaryId: id,
+      secretaryLabel: label,
+      weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
+    ),
+  ],
+  stage0: const <ImprovementConsumeItem>[],
+  stage1: const <ImprovementConsumeItem>[],
+  upgrades: const <ImprovementUpgrade>[],
+);
 
 ImprovementEntry _multiWeekdayEntry({required bool evolvable}) =>
     ImprovementEntry(

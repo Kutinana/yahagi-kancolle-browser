@@ -42,6 +42,7 @@ class ImprovementPlannerController extends ChangeNotifier {
         _dataset,
         weekday: selectedWeekday,
         equipmentMasters: state.masterSlotItems,
+        shipMasters: state.masterShips,
         query: query,
         equipmentCategory: equipmentCategory,
         favoriteEquipmentIds: _favoriteEquipmentIds,

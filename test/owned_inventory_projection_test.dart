@@ -87,6 +87,41 @@ void main() {
     },
   );
 
+  test('sorts equipment groups by official equipment order', () {
+    const masters = <int, MasterSlotItem>{
+      900: MasterSlotItem(id: 900, name: 'z', type: <int>[]),
+      110: MasterSlotItem(id: 110, name: 'y', sortNo: 999, type: <int>[1]),
+      202: MasterSlotItem(id: 202, name: 'x', sortNo: 10, type: <int>[1, 0, 1]),
+      201: MasterSlotItem(id: 201, name: 'w', sortNo: 20, type: <int>[1, 0, 1]),
+      30: MasterSlotItem(id: 30, name: 'v', type: <int>[1, 0, 2]),
+      40: MasterSlotItem(id: 40, name: 'u', type: <int>[1, 0, 2]),
+      50: MasterSlotItem(id: 50, name: 't', sortNo: 70, type: <int>[1, 0, 3]),
+      70: MasterSlotItem(id: 70, name: 's', type: <int>[1, 0, 3]),
+      120: MasterSlotItem(id: 120, name: 'r', sortNo: 1, type: <int>[2, 0, 0]),
+    };
+    const state = GameState(
+      masterSlotItems: masters,
+      slotItems: <int, OwnedSlotItem>{
+        1: OwnedSlotItem(id: 1, masterId: 201),
+        2: OwnedSlotItem(id: 2, masterId: 120),
+        3: OwnedSlotItem(id: 3, masterId: 40),
+        4: OwnedSlotItem(id: 4, masterId: 900),
+        5: OwnedSlotItem(id: 5, masterId: 70),
+        6: OwnedSlotItem(id: 6, masterId: 202),
+        7: OwnedSlotItem(id: 7, masterId: 30),
+        8: OwnedSlotItem(id: 8, masterId: 110),
+        9: OwnedSlotItem(id: 9, masterId: 50),
+      },
+    );
+
+    expect(
+      OwnedInventoryProjection(
+        state,
+      ).equipmentGroups().map((group) => group.master.id),
+      <int>[900, 110, 202, 201, 30, 40, 50, 70, 120],
+    );
+  });
+
   test(
     'summarizes all improvements before proficiencies in ascending order',
     () {

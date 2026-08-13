@@ -93,6 +93,48 @@ void main() {
     expect(controller.rowsFor(state), hasLength(1));
   });
 
+  test('controller resolves secretary labels through live ship masters', () {
+    final controller = ImprovementPlannerController(
+      dataset: ImprovementDataset(
+        version: const ImprovementDatasetVersion(
+          dataVersion: 'test',
+          commitSha: '',
+        ),
+        entries: <ImprovementEntry>[
+          ImprovementEntry(
+            equipmentId: 1,
+            baseCost: const ImprovementResourceCost(
+              fuel: 0,
+              ammo: 0,
+              steel: 0,
+              bauxite: 0,
+            ),
+            arrangements: <ImprovementArrangement>[
+              ImprovementArrangement(
+                secretaryId: 444,
+                secretaryLabel: '#444',
+                weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
+              ),
+            ],
+            stage0: const <ImprovementConsumeItem>[],
+            stage1: const <ImprovementConsumeItem>[],
+            upgrades: const <ImprovementUpgrade>[],
+          ),
+        ],
+      ),
+      clock: () => DateTime.utc(2026, 8, 10),
+    );
+    addTearDown(controller.dispose);
+    const state = GameState(
+      masterShips: <int, MasterShip>{
+        444: MasterShip(id: 444, name: 'Aquila', shipTypeId: 11, sortNo: 244),
+        644: MasterShip(id: 644, name: '桃', shipTypeId: 2, sortNo: 444),
+      },
+    );
+
+    expect(controller.rowsFor(state).single.secretaryLabels, <String>['桃']);
+  });
+
   test('controller defaults to today and accepts all weekdays', () {
     final controller = ImprovementPlannerController(
       dataset: dataset,

@@ -386,17 +386,10 @@ void main() {
     expect(firstPortrait, findsOneWidget);
     expect(lastPortrait, findsNothing);
     final bodyList = find.byKey(const Key('owned-inventory-body-scroll'));
-    final bodyScrollable = find.descendant(
-      of: bodyList,
-      matching: find.byType(Scrollable),
-    );
     expect(bodyList, findsOneWidget);
-    expect(bodyScrollable, findsOneWidget);
-
-    await tester.scrollUntilVisible(
-      lastPortrait,
-      500,
-      scrollable: bodyScrollable,
+    final bodyListWidget = tester.widget<ListView>(bodyList);
+    bodyListWidget.controller!.jumpTo(
+      bodyListWidget.controller!.position.maxScrollExtent,
     );
     await tester.pump();
 
@@ -521,14 +514,10 @@ void main() {
       final bodyListFinder = find.byKey(
         const Key('owned-inventory-body-scroll'),
       );
-      final bodyScrollable = find.descendant(
-        of: bodyListFinder,
-        matching: find.byType(Scrollable),
-      );
-      await tester.drag(bodyScrollable, const Offset(0, -500));
+      final bodyList = tester.widget<ListView>(bodyListFinder);
+      bodyList.controller!.jumpTo(500);
       await tester.pump();
 
-      final bodyList = tester.widget<ListView>(bodyListFinder);
       final frozenList = tester.widget<ListView>(
         find.byKey(const Key('owned-inventory-frozen-scroll')),
       );
@@ -541,23 +530,22 @@ void main() {
       final horizontalFinder = find.byKey(
         const Key('owned-inventory-horizontal-scroll'),
       );
-      final horizontalScrollable = find.descendant(
-        of: horizontalFinder,
-        matching: find.byType(Scrollable),
-      );
       expect(horizontalFinder, findsOneWidget);
-      await tester.drag(horizontalScrollable.first, const Offset(-500, 0));
+      final horizontal = tester.widget<SingleChildScrollView>(horizontalFinder);
+      horizontal.controller!.jumpTo(500);
       await tester.pump();
 
-      final horizontal = tester.widget<SingleChildScrollView>(horizontalFinder);
-      final header = tester.widget<SingleChildScrollView>(
-        find.byKey(const Key('owned-inventory-header-scroll')),
+      final headerTranslation = find.descendant(
+        of: find.byKey(const Key('owned-inventory-table-ships')),
+        matching: find.byWidgetPredicate((widget) {
+          if (widget is! Transform) return false;
+          final translation = widget.transform.getTranslation();
+          return (translation.x + horizontal.controller!.offset).abs() <= 0.1 &&
+              translation.y.abs() <= 0.1;
+        }),
       );
       expect(horizontal.controller!.offset, greaterThan(0));
-      expect(
-        header.controller!.offset,
-        closeTo(horizontal.controller!.offset, 0.1),
-      );
+      expect(headerTranslation, findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

@@ -39,6 +39,7 @@ class MasterShip {
     required this.id,
     required this.name,
     required this.shipTypeId,
+    this.sortNo = 0,
     this.classTypeId = 0,
     this.speed = 0,
     this.range = 0,
@@ -53,6 +54,7 @@ class MasterShip {
   final int id;
   final String name;
   final int shipTypeId;
+  final int sortNo;
   final int classTypeId;
   final int speed;
   final int range;
@@ -68,6 +70,7 @@ class MasterShip {
       id: id,
       name: name,
       shipTypeId: shipTypeId,
+      sortNo: sortNo,
       classTypeId: classTypeId,
       speed: speed,
       range: range,
@@ -85,6 +88,7 @@ class MasterSlotItem {
   const MasterSlotItem({
     required this.id,
     required this.name,
+    this.sortNo = 0,
     this.firepower = 0,
     this.torpedo = 0,
     this.bombing = 0,
@@ -100,6 +104,7 @@ class MasterSlotItem {
 
   final int id;
   final String name;
+  final int sortNo;
   final int firepower;
   final int torpedo;
   final int bombing;

@@ -35,6 +35,7 @@ List<ImprovementPlannerRow> projectImprovementRows(
   ImprovementDataset dataset, {
   required int weekday,
   Map<int, MasterSlotItem> equipmentMasters = const <int, MasterSlotItem>{},
+  Map<int, MasterShip> shipMasters = const <int, MasterShip>{},
   String query = '',
   EquipmentInventoryCategory equipmentCategory = EquipmentInventoryCategory.all,
   Set<int> favoriteEquipmentIds = const <int>{},
@@ -44,6 +45,18 @@ List<ImprovementPlannerRow> projectImprovementRows(
   final rows = <ImprovementPlannerRow>[];
   final normalizedQuery = query.trim().toLowerCase();
   final allWeekdays = weekday == improvementAllWeekdays;
+  final shipNamesBySortNo = <int, String>{};
+  final ambiguousShipSortNos = <int>{};
+  for (final master in shipMasters.values) {
+    final sortNo = master.sortNo;
+    if (sortNo <= 0 || ambiguousShipSortNos.contains(sortNo)) continue;
+    if (shipNamesBySortNo.containsKey(sortNo)) {
+      shipNamesBySortNo.remove(sortNo);
+      ambiguousShipSortNos.add(sortNo);
+    } else {
+      shipNamesBySortNo[sortNo] = master.name;
+    }
+  }
   for (final entry in dataset.entries) {
     final master = equipmentMasters[entry.equipmentId];
     if (normalizedQuery.isNotEmpty &&
@@ -68,6 +81,7 @@ List<ImprovementPlannerRow> projectImprovementRows(
     final labels = _secretaryLabels(
       dayArrangements,
       includeWeekdays: allWeekdays,
+      shipNamesBySortNo: shipNamesBySortNo,
     );
     if (labels.isNotEmpty) {
       final routes = <ImprovementUpgradeRoute>[];
@@ -82,6 +96,7 @@ List<ImprovementPlannerRow> projectImprovementRows(
         final routeSecretaries = _secretaryLabels(
           routeArrangements,
           includeWeekdays: allWeekdays,
+          shipNamesBySortNo: shipNamesBySortNo,
         );
         if (routeSecretaries.isNotEmpty) {
           routes.add(
@@ -116,11 +131,16 @@ List<ImprovementPlannerRow> projectImprovementRows(
 List<String> _secretaryLabels(
   Iterable<ImprovementArrangement> arrangements, {
   required bool includeWeekdays,
+  required Map<int, String> shipNamesBySortNo,
 }) {
   final weekdaysBySecretary = <String, Set<int>>{};
   for (final arrangement in arrangements) {
+    final secretaryLabel = _resolvedSecretaryLabel(
+      arrangement.secretaryLabel,
+      shipNamesBySortNo,
+    );
     weekdaysBySecretary
-        .putIfAbsent(arrangement.secretaryLabel, () => <int>{})
+        .putIfAbsent(secretaryLabel, () => <int>{})
         .addAll(arrangement.weekdays);
   }
   return <String>[
@@ -130,6 +150,16 @@ List<String> _secretaryLabels(
       else
         entry.key,
   ];
+}
+
+String _resolvedSecretaryLabel(
+  String label,
+  Map<int, String> shipNamesBySortNo,
+) {
+  final match = RegExp(r'^#(\d+)$').firstMatch(label);
+  if (match == null) return label;
+  final sortNo = int.tryParse(match.group(1)!);
+  return sortNo == null ? label : shipNamesBySortNo[sortNo] ?? label;
 }
 
 List<String> _weekdayLabels(Set<int> weekdays) {

@@ -297,9 +297,31 @@ class OwnedInventoryProjection {
         ),
       );
     }
-    groups.sort((a, b) => a.master.name.compareTo(b.master.name));
+    groups.sort(_compareEquipmentGroups);
     return groups;
   }
+}
+
+int _compareEquipmentGroups(
+  EquipmentInventoryGroup left,
+  EquipmentInventoryGroup right,
+) {
+  final leftType = left.master.type;
+  final rightType = right.master.type;
+  final byBroad = (leftType.isNotEmpty ? leftType[0] : 0).compareTo(
+    rightType.isNotEmpty ? rightType[0] : 0,
+  );
+  if (byBroad != 0) return byBroad;
+  final byFine = (leftType.length > 2 ? leftType[2] : 0).compareTo(
+    rightType.length > 2 ? rightType[2] : 0,
+  );
+  if (byFine != 0) return byFine;
+  final leftSort = left.master.sortNo > 0 ? left.master.sortNo : left.master.id;
+  final rightSort = right.master.sortNo > 0
+      ? right.master.sortNo
+      : right.master.id;
+  final bySort = leftSort.compareTo(rightSort);
+  return bySort != 0 ? bySort : left.master.id.compareTo(right.master.id);
 }
 
 EquipmentInventoryCategory equipmentInventoryCategoryFor(MasterSlotItem item) {

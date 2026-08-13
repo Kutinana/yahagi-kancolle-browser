@@ -945,6 +945,7 @@ class GameStateReducer {
         id: id,
         name: name,
         shipTypeId: _asInt(item['api_stype']),
+        sortNo: _asInt(item['api_sortno']),
         classTypeId: _asInt(item['api_ctype']),
         speed: _asInt(item['api_soku']),
         range: _asInt(item['api_leng']),
@@ -1326,6 +1327,7 @@ class GameStateReducer {
       result[id] = MasterSlotItem(
         id: id,
         name: name,
+        sortNo: _asInt(item['api_sortno']),
         firepower: _asInt(item['api_houg']),
         torpedo: _asInt(item['api_raig']),
         bombing: _asInt(item['api_baku']),
