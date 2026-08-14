@@ -62,6 +62,7 @@ import 'src/game_state/game_state_store.dart';
 import 'src/layout/adaptive_layout.dart';
 import 'src/layout/workspace_navigation_side.dart';
 import 'src/layout/workspace_context_header.dart';
+import 'src/layout/window_metrics_recovery_scheduler.dart';
 import 'src/performance/second_tick_scope.dart';
 import 'src/inventory/owned_inventory_page.dart';
 import 'src/improvement/improvement_dataset_store.dart';
@@ -640,6 +641,8 @@ class YahagiShell extends StatefulWidget {
 }
 
 class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
+  final WindowMetricsRecoveryScheduler _windowMetricsRecoveryScheduler =
+      WindowMetricsRecoveryScheduler();
   int _workspaceIndex = 0;
   int? _expeditionCheckFleetId;
   int? _fleetCenterInitialFleetId;
@@ -669,6 +672,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     widget.displayModeController.removeListener(_applyOrientationPolicy);
     widget.layoutSettingsController.removeListener(_onLayoutSettingsChanged);
     _questFilters.dispose();
+    _windowMetricsRecoveryScheduler.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -684,17 +688,31 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   @override
   void didChangeMetrics() {
     _applyOrientationPolicy();
-    widget.browserController
-        .runJavaScript(
-          'if(window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();',
-        )
-        .catchError((Object _) {});
+    _scheduleWindowMetricsRecovery();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     widget.audioController.handleLifecycleState(state);
     widget.screenAwakeController?.handleLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _scheduleWindowMetricsRecovery();
+    }
+  }
+
+  void _scheduleWindowMetricsRecovery() {
+    _windowMetricsRecoveryScheduler.schedule(() {
+      if (!mounted) return;
+      setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.browserController
+            .runJavaScript(
+              'if(window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();',
+            )
+            .catchError((Object _) {});
+      });
+    });
   }
 
   void _applyOrientationPolicy() {

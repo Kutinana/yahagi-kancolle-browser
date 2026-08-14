@@ -219,6 +219,29 @@ void main() {
       tester.getSize(persistentLayout).width + tester.getSize(panel).width,
       lessThanOrEqualTo(workspaceWidth),
     );
+
+    tester.view.physicalSize = const Size(900, 900);
+    tester.binding.handleMetricsChanged();
+    await tester.pump(const Duration(seconds: 1));
+    expect(
+      tester.element(find.byKey(const Key('fake-game-surface'))),
+      same(gameSurfaceElement),
+    );
+    final unfoldedGameRect = tester.getRect(
+      find.byKey(const Key('fake-game-surface')),
+    );
+    expect(
+      unfoldedGameRect.width / unfoldedGameRect.height,
+      closeTo(1200 / 720, 0.001),
+    );
+    expect(
+      tester.getTopLeft(panel).dy,
+      greaterThanOrEqualTo(unfoldedGameRect.bottom),
+    );
+
+    tester.view.physicalSize = const Size(1200, 700);
+    tester.binding.handleMetricsChanged();
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.byKey(const Key('workspace-nav-settings')));
     await tester.pumpAndSettle();
 
