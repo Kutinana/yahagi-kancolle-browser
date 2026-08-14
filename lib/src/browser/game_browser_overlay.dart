@@ -23,9 +23,11 @@ class GameBrowserOverlay extends StatefulWidget {
 class _GameBrowserOverlayState extends State<GameBrowserOverlay> {
   static const _minimumVerticalDrag = 36.0;
   static const _maximumHorizontalDrag = 48.0;
+  static const _revealGestureEdgeHeight = 48.0;
 
   double _verticalDrag = 0;
   double _horizontalDrag = 0;
+  int? _activePointer;
   bool _gestureRejected = false;
   bool _gestureCompleted = false;
 
@@ -39,13 +41,13 @@ class _GameBrowserOverlayState extends State<GameBrowserOverlay> {
           top: widget.persistent ? 42 : 0,
           right: 0,
           bottom: 0,
-          child: GestureDetector(
+          child: Listener(
             key: const Key('game-toolbar-gesture-surface'),
             behavior: HitTestBehavior.deferToChild,
-            onPanStart: widget.persistent ? null : (_) => _resetGesture(),
-            onPanUpdate: widget.persistent ? null : _onPanUpdate,
-            onPanEnd: widget.persistent ? null : (_) => _resetGesture(),
-            onPanCancel: widget.persistent ? null : _resetGesture,
+            onPointerDown: widget.persistent ? null : _onPointerDown,
+            onPointerMove: widget.persistent ? null : _onPointerMove,
+            onPointerUp: widget.persistent ? null : _onPointerFinished,
+            onPointerCancel: widget.persistent ? null : _onPointerFinished,
             child: ColoredBox(
               color: const Color(0xff102431),
               child: widget.gameSurface,
@@ -133,13 +135,20 @@ class _GameBrowserOverlayState extends State<GameBrowserOverlay> {
     );
   }
 
-  void _onPanUpdate(DragUpdateDetails details) {
+  void _onPointerDown(PointerDownEvent event) {
+    _resetGesture();
+    _activePointer = event.pointer;
+    _gestureRejected = event.localPosition.dy > _revealGestureEdgeHeight;
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
     if (widget.controller.isVisible) return;
+    if (_activePointer != event.pointer) return;
     if (_gestureRejected || _gestureCompleted) {
       return;
     }
-    _verticalDrag += details.delta.dy;
-    _horizontalDrag += details.delta.dx.abs();
+    _verticalDrag += event.delta.dy;
+    _horizontalDrag += event.delta.dx.abs();
     if (_horizontalDrag > _maximumHorizontalDrag) {
       _gestureRejected = true;
       return;
@@ -150,7 +159,13 @@ class _GameBrowserOverlayState extends State<GameBrowserOverlay> {
     }
   }
 
+  void _onPointerFinished(PointerEvent event) {
+    if (_activePointer != event.pointer) return;
+    _resetGesture();
+  }
+
   void _resetGesture() {
+    _activePointer = null;
     _verticalDrag = 0;
     _horizontalDrag = 0;
     _gestureRejected = false;

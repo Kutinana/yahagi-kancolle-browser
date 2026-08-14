@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_records_page.dart';
 import 'package:yahagi_kancolle_browser/src/battle/live_battle_card.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
 
@@ -12,7 +14,22 @@ BattleController createController() {
   final reducer = GameStateReducer();
   var state = reducer.reduce(GameState.empty, start2Event);
   state = reducer.reduce(state, portEvent);
-  return BattleController(gameState: () => state);
+  return BattleController(
+    gameState: () => state,
+    predictionExecutor: const _InlinePredictionExecutor(),
+  );
+}
+
+final class _InlinePredictionExecutor implements BattlePredictionExecutor {
+  const _InlinePredictionExecutor();
+
+  @override
+  Future<BattlePredictionAppendResult> append({
+    required BattlePredictionEngine engine,
+    required String path,
+    required Map<String, Object?> data,
+  }) async =>
+      (engine: engine, prediction: engine.append(path: path, data: data));
 }
 
 class _TestBattleCard extends StatefulWidget {
@@ -235,7 +252,7 @@ void main() {
 
     expect(find.byKey(const Key('detailed-battle-panel')), findsOneWidget);
     await tester.tap(find.byKey(const Key('battle-mode-compact')));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.byKey(const Key('compact-battle-panel')), findsOneWidget);
     expect(find.byKey(const Key('compact-fleet-grid')), findsOneWidget);
@@ -243,7 +260,7 @@ void main() {
     expect(find.text('敌方 1/2'), findsNothing);
 
     await tester.tap(find.byKey(const Key('battle-mode-detailed')));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(find.byKey(const Key('detailed-battle-panel')), findsOneWidget);
   });
 
@@ -325,14 +342,14 @@ void main() {
       ),
     );
 
-    expect(find.text('战斗记录'), findsOneWidget);
+    expect(find.text('航海日志'), findsOneWidget);
     expect(find.text('Test Enemy Fleet'), findsOneWidget);
     expect(find.text('S'), findsOneWidget);
     final dropName = controller.gameStateSnapshot.masterShips[102]!.name;
     expect(find.text('掉落：$dropName'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('battle-record-0')));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     final friendName = controller.gameStateSnapshot.masterShips[101]!.name;
     expect(find.text(friendName), findsOneWidget);

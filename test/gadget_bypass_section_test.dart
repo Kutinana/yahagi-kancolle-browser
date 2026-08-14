@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/browser/gadget_bypass_channel.dart';
 import 'package:yahagi_kancolle_browser/src/browser/gadget_bypass_controller.dart';
 import 'package:yahagi_kancolle_browser/src/browser/gadget_bypass_store.dart';
@@ -36,11 +37,7 @@ class _FakeBypassPort implements GadgetBypassPort {
   @override
   Future<GadgetBypassDiagnoseResult> diagnose() async {
     return GadgetBypassDiagnoseResult(
-      w00g: GadgetBypassProbe(
-        reachable: true,
-        statusCode: 403,
-        elapsedMs: 12,
-      ),
+      w00g: GadgetBypassProbe(reachable: true, statusCode: 403, elapsedMs: 12),
       endpoint: GadgetBypassProbe(
         reachable: true,
         statusCode: 200,
@@ -61,6 +58,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: GadgetBypassSection(controller: controller)),
       ),
     );
@@ -87,6 +86,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: GadgetBypassSection(
             controller: controller,
@@ -115,6 +116,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: GadgetBypassSection(controller: controller)),
       ),
     );
@@ -143,6 +146,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: GadgetBypassSection(controller: controller)),
       ),
     );

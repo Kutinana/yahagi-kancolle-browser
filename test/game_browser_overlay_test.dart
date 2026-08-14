@@ -24,6 +24,22 @@ void main() {
     },
   );
 
+  testWidgets(
+    'auto-hide toolbar does not register a competing pan recognizer over game',
+    (tester) async {
+      final controller = GameToolbarController();
+      controller.collapse();
+
+      await tester.pumpWidget(_TestApp(controller: controller));
+
+      final inputSurface = tester.widget<Widget>(
+        find.byKey(const Key('game-toolbar-gesture-surface')),
+      );
+      expect(inputSurface, isA<Listener>());
+      controller.dispose();
+    },
+  );
+
   testWidgets('reveals only after a sufficiently long downward swipe', (
     tester,
   ) async {
@@ -33,13 +49,31 @@ void main() {
     await tester.pumpWidget(_TestApp(controller: controller));
 
     final game = find.byKey(const Key('game-toolbar-gesture-surface'));
-    await tester.drag(game, const Offset(0, 20));
+    final topEdge = tester.getTopLeft(game) + const Offset(100, 8);
+    await tester.dragFrom(topEdge, const Offset(0, 20));
     await tester.pumpAndSettle();
     expect(controller.isVisible, isFalse);
 
-    await tester.drag(game, const Offset(0, 40));
+    await tester.dragFrom(topEdge, const Offset(0, 40));
     await tester.pumpAndSettle();
     expect(controller.isVisible, isTrue);
+    controller.dispose();
+  });
+
+  testWidgets('downward drag inside game does not reveal auto-hide toolbar', (
+    tester,
+  ) async {
+    final controller = GameToolbarController();
+    controller.collapse();
+
+    await tester.pumpWidget(_TestApp(controller: controller));
+    final game = find.byKey(const Key('game-toolbar-gesture-surface'));
+    final interior = tester.getCenter(game);
+
+    await tester.dragFrom(interior, const Offset(0, 80));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isFalse);
     controller.dispose();
   });
 

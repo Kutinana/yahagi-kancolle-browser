@@ -9,6 +9,8 @@ import 'package:yahagi_kancolle_browser/src/battle/battle_pills.dart';
 import 'package:yahagi_kancolle_browser/src/battle/detailed_battle_panel.dart';
 import 'package:yahagi_kancolle_browser/src/battle/live_battle_card.dart';
 import 'package:yahagi_kancolle_browser/src/battle/official_enemy_preview.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
@@ -19,7 +21,22 @@ BattleController _createController() {
   final reducer = GameStateReducer();
   var state = reducer.reduce(GameState.empty, start2Event);
   state = reducer.reduce(state, portEvent);
-  return BattleController(gameState: () => state);
+  return BattleController(
+    gameState: () => state,
+    predictionExecutor: const _InlinePredictionExecutor(),
+  );
+}
+
+final class _InlinePredictionExecutor implements BattlePredictionExecutor {
+  const _InlinePredictionExecutor();
+
+  @override
+  Future<BattlePredictionAppendResult> append({
+    required BattlePredictionEngine engine,
+    required String path,
+    required Map<String, Object?> data,
+  }) async =>
+      (engine: engine, prediction: engine.append(path: path, data: data));
 }
 
 CapturedApiEvent _dayBattleWithAirSuperiority(int seiku) {

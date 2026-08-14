@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
 import 'package:yahagi_kancolle_browser/src/battle/live_battle_card.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
@@ -31,7 +33,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     final state = _combinedFleetState();
-    final controller = BattleController(gameState: () => state);
+    final controller = BattleController(
+      gameState: () => state,
+      predictionExecutor: const _InlinePredictionExecutor(),
+    );
     addTearDown(controller.dispose);
     controller
       ..accept(
@@ -120,7 +125,8 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    // Capture the deterministic peak of the 2200 ms moderate-damage pulse.
+    await tester.pump(const Duration(milliseconds: 1100));
 
     expect(
       tester.widget<Text>(find.text('水上打击部队')).style?.color,
@@ -142,7 +148,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     final state = _combinedFleetState();
-    final controller = BattleController(gameState: () => state);
+    final controller = BattleController(
+      gameState: () => state,
+      predictionExecutor: const _InlinePredictionExecutor(),
+    );
     addTearDown(controller.dispose);
     controller
       ..accept(
@@ -212,10 +221,10 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     await tester.tap(find.byKey(const Key('battle-mode-compact')));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.byKey(const Key('compact-fleet-grid')), findsOneWidget);
     expect(
@@ -316,6 +325,18 @@ File _materialIconsFont() {
     directory = directory.parent;
   }
   throw StateError('Unable to locate the Flutter Material Icons font.');
+}
+
+final class _InlinePredictionExecutor implements BattlePredictionExecutor {
+  const _InlinePredictionExecutor();
+
+  @override
+  Future<BattlePredictionAppendResult> append({
+    required BattlePredictionEngine engine,
+    required String path,
+    required Map<String, Object?> data,
+  }) async =>
+      (engine: engine, prediction: engine.append(path: path, data: data));
 }
 
 GameState _combinedFleetState() {
