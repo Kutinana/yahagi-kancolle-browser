@@ -6,6 +6,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.graphics.Bitmap
@@ -22,6 +23,7 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.PixelCopy
+import android.view.SurfaceView
 import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.webkit.WebView
@@ -95,6 +97,27 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         }
     }
 
+    override fun onMultiWindowModeChanged(
+        isInMultiWindowMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        gameSurfaceRecoveryTrigger.onMultiWindowModeChanged(isInMultiWindowMode)
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        gameSurfaceRecoveryTrigger.onPictureInPictureModeChanged(isInPictureInPictureMode)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        gameSurfaceRecoveryTrigger.onConfigurationChanged()
+    }
+
     private companion object {
         const val GAME_AUDIO_CHANNEL = "app.yahagi.kancollebrowser/game_audio"
         const val GAME_CAPTURE_CHANNEL = "app.yahagi.kancollebrowser/game_capture"
@@ -137,6 +160,11 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     }
     private var gadgetBypassLayoutListener: ViewTreeObserver.OnGlobalLayoutListener? = null
     
+    private val gameSurfaceRecoveryHandler = Handler(Looper.getMainLooper())
+    private val pendingGameSurfaceRecoveryActions = mutableListOf<Runnable>()
+    private val gameSurfaceRecoveryTrigger = GameSurfaceRecoveryTrigger(
+        ::scheduleGameSurfaceRecovery,
+    )
     private var boundWebView: WebView? = null
     private var fixedCanvasLayoutListener: View.OnLayoutChangeListener? = null
     private val fixedCanvasScalePolicy = FixedCanvasScalePolicy()
@@ -319,6 +347,10 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     }
 
     override fun onDestroy() {
+        pendingGameSurfaceRecoveryActions.forEach(
+            gameSurfaceRecoveryHandler::removeCallbacks,
+        )
+        pendingGameSurfaceRecoveryActions.clear()
         removeGadgetBypassLayoutListener()
         gameCaptureBridge?.dispose()
         gameCaptureBridge = null
@@ -1016,6 +1048,76 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             force,
         ) ?: return
         webView.setInitialScale(scalePercent)
+    }
+
+    private fun scheduleGameSurfaceRecovery(reason: GameSurfaceRecoveryReason) {
+        if (isFinishing || isDestroyed) return
+
+        Log.d("GameSurfaceRecovery", "Scheduling recovery for $reason")
+        pendingGameSurfaceRecoveryActions.forEach(
+            gameSurfaceRecoveryHandler::removeCallbacks,
+        )
+        pendingGameSurfaceRecoveryActions.clear()
+
+        for (delayMillis in longArrayOf(0L, 80L, 300L)) {
+            lateinit var action: Runnable
+            action = Runnable {
+                pendingGameSurfaceRecoveryActions.remove(action)
+                if (!isFinishing && !isDestroyed) {
+                    recoverGameSurfaces()
+                }
+            }
+            pendingGameSurfaceRecoveryActions.add(action)
+            gameSurfaceRecoveryHandler.postDelayed(action, delayMillis)
+        }
+    }
+
+    private fun recoverGameSurfaces() {
+        val decorView = window.decorView
+        recoverSurfaceTree(decorView)
+        decorView.requestApplyInsets()
+
+        val webViews = mutableListOf<WebView>()
+        collectWebViews(decorView, webViews)
+        val webView = boundWebView?.takeIf { it.isAttachedToWindow }
+            ?: webViews.singleOrNull()
+            ?: return
+
+        webView.requestLayout()
+        webView.invalidate()
+        webView.postInvalidateOnAnimation()
+        applyFixedCanvasScale(
+            webView,
+            webView.width,
+            webView.height,
+            force = true,
+        )
+        webView.evaluateJavascript(
+            """
+            (() => {
+              window.dispatchEvent(new Event('resize'));
+              const gameFrame = document.getElementById('game_frame');
+              try {
+                gameFrame?.contentWindow?.dispatchEvent(new Event('resize'));
+              } catch (_) {}
+            })();
+            """.trimIndent(),
+            null,
+        )
+    }
+
+    private fun recoverSurfaceTree(view: View) {
+        view.requestLayout()
+        view.invalidate()
+        if (view is SurfaceView) {
+            view.holder.setSizeFromLayout()
+            view.postInvalidateOnAnimation()
+        }
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                recoverSurfaceTree(view.getChildAt(index))
+            }
+        }
     }
 
     private fun collectWebViews(
