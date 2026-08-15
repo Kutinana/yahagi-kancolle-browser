@@ -339,6 +339,123 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'directly locks an inactive field and clears the temporary sort',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(2400, 600);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(start2Event)
+        ..accept(portEvent)
+        ..accept(slotItemEvent);
+      await controller.idle;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+        ),
+      );
+
+      final antiSubHeader = find.byKey(
+        const Key('owned-inventory-sort-antiSub'),
+      );
+      expect(find.text('等级 ▼'), findsOneWidget);
+
+      await tester.longPress(antiSubHeader);
+      await tester.pump();
+
+      expect(find.text('等级'), findsOneWidget);
+      expect(find.text('对潜 ▼①'), findsOneWidget);
+      expect(
+        find.descendant(of: antiSubHeader, matching: find.byIcon(Icons.lock)),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'keeps two locked levels while replacing the temporary last level',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(2400, 600);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(start2Event)
+        ..accept(portEvent)
+        ..accept(slotItemEvent);
+      await controller.idle;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+        ),
+      );
+
+      final antiSubHeader = find.byKey(
+        const Key('owned-inventory-sort-antiSub'),
+      );
+      final firepowerHeader = find.byKey(
+        const Key('owned-inventory-sort-firepower'),
+      );
+      final torpedoHeader = find.byKey(
+        const Key('owned-inventory-sort-torpedo'),
+      );
+      final armorHeader = find.byKey(const Key('owned-inventory-sort-armor'));
+
+      await tester.longPress(antiSubHeader);
+      await tester.pump();
+      await tester.longPress(firepowerHeader);
+      await tester.pump();
+
+      expect(find.text('对潜 ▼①'), findsOneWidget);
+      expect(find.text('火力 ▼②'), findsOneWidget);
+      expect(
+        find.descendant(of: antiSubHeader, matching: find.byIcon(Icons.lock)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: firepowerHeader, matching: find.byIcon(Icons.lock)),
+        findsOneWidget,
+      );
+
+      await tester.tap(torpedoHeader);
+      await tester.pump();
+      expect(find.text('雷装 ▼③'), findsOneWidget);
+      expect(
+        find.descendant(of: torpedoHeader, matching: find.byIcon(Icons.lock)),
+        findsNothing,
+      );
+
+      await tester.tap(armorHeader);
+      await tester.pump();
+      expect(find.text('对潜 ▼①'), findsOneWidget);
+      expect(find.text('火力 ▼②'), findsOneWidget);
+      expect(find.text('雷装'), findsOneWidget);
+      expect(find.text('装甲 ▼③'), findsOneWidget);
+      expect(
+        find.descendant(of: armorHeader, matching: find.byIcon(Icons.lock)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: antiSubHeader, matching: find.byIcon(Icons.lock)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: firepowerHeader, matching: find.byIcon(Icons.lock)),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('colors active headers and contains a narrow locked header', (
     tester,
   ) async {
@@ -423,15 +540,37 @@ void main() {
     expect(find.text('夕張'), findsOneWidget);
     expect(find.text('吹雪'), findsNothing);
 
-    await tester.tap(find.byKey(const Key('owned-inventory-sort-firepower')));
+    final antiSubHeader = find.byKey(const Key('owned-inventory-sort-antiSub'));
+    final firepowerHeader = find.byKey(
+      const Key('owned-inventory-sort-firepower'),
+    );
+    final levelHeader = find.byKey(const Key('owned-inventory-sort-level'));
+
+    await tester.longPress(antiSubHeader);
     await tester.pump();
-    expect(find.text('火力 ▼'), findsOneWidget);
+    await tester.longPress(firepowerHeader);
+    await tester.pump();
+    expect(find.text('对潜 ▼①'), findsOneWidget);
+    expect(find.text('火力 ▼②'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('owned-inventory-sort-reset')));
     await tester.pump();
 
     expect(find.text('等级 ▼'), findsOneWidget);
     expect(find.text('火力'), findsOneWidget);
+    expect(find.text('对潜'), findsOneWidget);
+    expect(
+      find.descendant(of: antiSubHeader, matching: find.byIcon(Icons.lock)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: firepowerHeader, matching: find.byIcon(Icons.lock)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: levelHeader, matching: find.byIcon(Icons.lock)),
+      findsNothing,
+    );
     expect(find.text('夕張'), findsOneWidget);
     expect(find.text('吹雪'), findsNothing);
     expect(tester.takeException(), isNull);
