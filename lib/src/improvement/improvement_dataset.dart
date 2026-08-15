@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+const int currentImprovementDatasetSchemaVersion = 2;
+
 class ImprovementDatasetVersion {
   const ImprovementDatasetVersion({
     required this.dataVersion,
@@ -42,18 +44,56 @@ class ImprovementConsumeItem {
     this.materialKey,
     this.materialName,
     required this.count,
+    this.starFrom,
+    this.starTo,
   });
 
   final int? equipmentId;
   final String? materialKey;
   final String? materialName;
   final int count;
+  final int? starFrom;
+  final int? starTo;
+
+  bool get isEveryAttempt => starFrom == null && starTo == null;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'equipment_id': equipmentId,
     'material_key': materialKey,
     'material_name': materialName,
     'count': count,
+    'star_from': starFrom,
+    'star_to': starTo,
+  };
+}
+
+class ImprovementStageCost {
+  const ImprovementStageCost({
+    required this.developmentMin,
+    required this.developmentMax,
+    required this.improvementMin,
+    required this.improvementMax,
+    required this.items,
+  });
+
+  const ImprovementStageCost.legacy(this.items)
+    : developmentMin = 0,
+      developmentMax = 0,
+      improvementMin = 0,
+      improvementMax = 0;
+
+  final int developmentMin;
+  final int developmentMax;
+  final int improvementMin;
+  final int improvementMax;
+  final List<ImprovementConsumeItem> items;
+
+  Map<String, Object> toJson() => <String, Object>{
+    'development_min': developmentMin,
+    'development_max': developmentMax,
+    'improvement_min': improvementMin,
+    'improvement_max': improvementMax,
+    'items': items.map((item) => item.toJson()).toList(),
   };
 }
 
@@ -124,25 +164,30 @@ class ImprovementEntry {
   final int equipmentId;
   final ImprovementResourceCost baseCost;
   final List<ImprovementArrangement> arrangements;
-  final List<ImprovementConsumeItem> stage0;
-  final List<ImprovementConsumeItem> stage1;
+  final ImprovementStageCost stage0;
+  final ImprovementStageCost stage1;
   final List<ImprovementUpgrade> upgrades;
 
   Map<String, Object> toJson() => <String, Object>{
     'equipment_id': equipmentId,
     'base_cost': baseCost.toJson(),
     'arrangements': arrangements.map((value) => value.toJson()).toList(),
-    'stage0': stage0.map((value) => value.toJson()).toList(),
-    'stage1': stage1.map((value) => value.toJson()).toList(),
+    'stage0': stage0.toJson(),
+    'stage1': stage1.toJson(),
     'upgrades': upgrades.map((value) => value.toJson()).toList(),
   };
 }
 
 class ImprovementDataset {
-  const ImprovementDataset({required this.version, required this.entries});
+  const ImprovementDataset({
+    this.schemaVersion = currentImprovementDatasetSchemaVersion,
+    required this.version,
+    required this.entries,
+  });
 
   factory ImprovementDataset.parse(String source) {
     final root = _jsonMap(jsonDecode(source), 'root');
+    final schemaVersion = root['schema_version'] as int? ?? 1;
     final versionJson = _jsonMap(root['version'], 'version');
     final entries = _jsonList(root['entries'], 'entries')
         .map((value) {
@@ -155,6 +200,27 @@ class ImprovementDataset {
               materialKey: item['material_key'] as String?,
               materialName: item['material_name'] as String?,
               count: item['count'] as int,
+              starFrom: item['star_from'] as int?,
+              starTo: item['star_to'] as int?,
+            );
+          }
+
+          ImprovementStageCost stage(Object? value, String label) {
+            if (value is List) {
+              return ImprovementStageCost.legacy(
+                value.map(consume).toList(growable: false),
+              );
+            }
+            final stage = _jsonMap(value, label);
+            return ImprovementStageCost(
+              developmentMin: stage['development_min'] as int,
+              developmentMax: stage['development_max'] as int,
+              improvementMin: stage['improvement_min'] as int,
+              improvementMax: stage['improvement_max'] as int,
+              items: _jsonList(
+                stage['items'],
+                '$label.items',
+              ).map(consume).toList(growable: false),
             );
           }
 
@@ -183,14 +249,8 @@ class ImprovementDataset {
                   );
                 })
                 .toList(growable: false),
-            stage0: _jsonList(
-              row['stage0'],
-              'stage0',
-            ).map(consume).toList(growable: false),
-            stage1: _jsonList(
-              row['stage1'],
-              'stage1',
-            ).map(consume).toList(growable: false),
+            stage0: stage(row['stage0'], 'stage0'),
+            stage1: stage(row['stage1'], 'stage1'),
             upgrades: _jsonList(row['upgrades'], 'upgrades')
                 .map((value) {
                   final upgrade = _jsonMap(value, 'upgrade');
@@ -212,6 +272,7 @@ class ImprovementDataset {
         })
         .toList(growable: false);
     return ImprovementDataset(
+      schemaVersion: schemaVersion,
       version: ImprovementDatasetVersion(
         dataVersion: versionJson['data_version'] as String,
         commitSha: versionJson['commit_sha'] as String,
@@ -220,10 +281,12 @@ class ImprovementDataset {
     );
   }
 
+  final int schemaVersion;
   final ImprovementDatasetVersion version;
   final List<ImprovementEntry> entries;
 
   String encode() => jsonEncode(<String, Object>{
+    'schema_version': schemaVersion,
     'version': version.toJson(),
     'entries': entries.map((entry) => entry.toJson()).toList(),
   });

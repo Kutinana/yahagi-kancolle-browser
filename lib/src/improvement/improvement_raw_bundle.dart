@@ -83,15 +83,21 @@ class ImprovementRawBundle {
           )
           .add(_consumeItem(row, materialNames));
     }
-    final stageItems = <int, Map<int, List<ImprovementConsumeItem>>>{};
+    final stages = <int, Map<int, ImprovementStageCost>>{};
     for (final row in stepRows) {
       final equipmentId = _positiveInt(row, 'equipment_id');
       final step = _nonNegativeInt(row, 'step_id');
-      stageItems.putIfAbsent(
+      stages.putIfAbsent(
         equipmentId,
-        () => <int, List<ImprovementConsumeItem>>{},
-      )[step] = List<ImprovementConsumeItem>.unmodifiable(
-        itemsByStep[_string(row, 'id')] ?? const <ImprovementConsumeItem>[],
+        () => <int, ImprovementStageCost>{},
+      )[step] = ImprovementStageCost(
+        developmentMin: _nonNegativeInt(row, 'consume_development_min'),
+        developmentMax: _nonNegativeInt(row, 'consume_development_max'),
+        improvementMin: _nonNegativeInt(row, 'consume_improvement_min'),
+        improvementMax: _nonNegativeInt(row, 'consume_improvement_max'),
+        items: List<ImprovementConsumeItem>.unmodifiable(
+          itemsByStep[_string(row, 'id')] ?? const <ImprovementConsumeItem>[],
+        ),
       );
     }
     final arrangements = <int, List<ImprovementArrangement>>{};
@@ -165,11 +171,23 @@ class ImprovementRawBundle {
                 const <ImprovementArrangement>[],
           ),
           stage0:
-              stageItems[_positiveInt(row, 'id')]?[0] ??
-              const <ImprovementConsumeItem>[],
+              stages[_positiveInt(row, 'id')]?[0] ??
+              const ImprovementStageCost(
+                developmentMin: 0,
+                developmentMax: 0,
+                improvementMin: 0,
+                improvementMax: 0,
+                items: <ImprovementConsumeItem>[],
+              ),
           stage1:
-              stageItems[_positiveInt(row, 'id')]?[1] ??
-              const <ImprovementConsumeItem>[],
+              stages[_positiveInt(row, 'id')]?[1] ??
+              const ImprovementStageCost(
+                developmentMin: 0,
+                developmentMax: 0,
+                improvementMin: 0,
+                improvementMax: 0,
+                items: <ImprovementConsumeItem>[],
+              ),
           upgrades: List<ImprovementUpgrade>.unmodifiable(
             upgrades[_positiveInt(row, 'id')] ?? const <ImprovementUpgrade>[],
           ),
@@ -256,6 +274,15 @@ class ImprovementRawBundle {
       throw const FormatException('资材外键无效');
     }
     _nonNegativeInt(row, 'count');
+    final starFrom = _nullableInt(row['star_from']);
+    final starTo = _nullableInt(row['star_to']);
+    if ((starFrom == null) != (starTo == null)) {
+      throw const FormatException('改修消耗的星级范围必须同时指定起点和终点');
+    }
+    if (starFrom != null &&
+        (starFrom < 0 || starTo! > 9 || starFrom > starTo)) {
+      throw const FormatException('改修消耗的星级范围无效');
+    }
   }
 
   ImprovementConsumeItem _consumeItem(
@@ -266,6 +293,8 @@ class ImprovementRawBundle {
     materialKey: _nullableString(row['item_material_key']),
     materialName: materialNames[_nullableString(row['item_material_key'])],
     count: _nonNegativeInt(row, 'count'),
+    starFrom: _nullableInt(row['star_from']),
+    starTo: _nullableInt(row['star_to']),
   );
 
   List<Map<String, Object?>> _rows(String file) =>

@@ -8,6 +8,14 @@ import 'package:yahagi_kancolle_browser/src/improvement/improvement_projection.d
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/frozen_data_table.dart';
 
+const _emptyStage = ImprovementStageCost(
+  developmentMin: 0,
+  developmentMax: 0,
+  improvementMin: 0,
+  improvementMax: 0,
+  items: <ImprovementConsumeItem>[],
+);
+
 void main() {
   final dataset = ImprovementDataset(
     version: const ImprovementDatasetVersion(
@@ -30,12 +38,42 @@ void main() {
             weekdays: Set<int>.unmodifiable(<int>{1, 2}),
           ),
         ],
-        stage0: const <ImprovementConsumeItem>[
-          ImprovementConsumeItem(equipmentId: 2, count: 1),
-        ],
-        stage1: const <ImprovementConsumeItem>[
-          ImprovementConsumeItem(equipmentId: 3, count: 2),
-        ],
+        stage0: const ImprovementStageCost(
+          developmentMin: 4,
+          developmentMax: 5,
+          improvementMin: 2,
+          improvementMax: 3,
+          items: <ImprovementConsumeItem>[
+            ImprovementConsumeItem(equipmentId: 2, count: 1),
+          ],
+        ),
+        stage1: const ImprovementStageCost(
+          developmentMin: 7,
+          developmentMax: 8,
+          improvementMin: 3,
+          improvementMax: 6,
+          items: <ImprovementConsumeItem>[
+            ImprovementConsumeItem(equipmentId: 3, count: 2),
+            ImprovementConsumeItem(
+              materialKey: 'ActionReport',
+              count: 4,
+              starFrom: 7,
+              starTo: 7,
+            ),
+            ImprovementConsumeItem(
+              materialKey: 'kaigai-skill',
+              count: 1,
+              starFrom: 8,
+              starTo: 8,
+            ),
+            ImprovementConsumeItem(
+              materialKey: 'new_plane_material',
+              count: 1,
+              starFrom: 9,
+              starTo: 9,
+            ),
+          ],
+        ),
         upgrades: const <ImprovementUpgrade>[
           ImprovementUpgrade(
             targetEquipmentId: 293,
@@ -116,8 +154,8 @@ void main() {
                 weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
               ),
             ],
-            stage0: const <ImprovementConsumeItem>[],
-            stage1: const <ImprovementConsumeItem>[],
+            stage0: _emptyStage,
+            stage1: _emptyStage,
             upgrades: const <ImprovementUpgrade>[],
           ),
         ],
@@ -269,6 +307,37 @@ void main() {
               text.style?.color == const Color(0xffdce8ed),
         ),
         isTrue,
+      );
+      expect(
+        find.byKey(const Key('improvement-stage-development-icon-0')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('improvement-stage-improvement-icon-0')),
+        findsOneWidget,
+      );
+      expect(find.text('每次'), findsNWidgets(2));
+      expect(find.text('+7→+8'), findsOneWidget);
+      expect(find.text('+8→+9'), findsOneWidget);
+      expect(find.text('+9→MAX'), findsOneWidget);
+      expect(find.text('开'), findsNothing);
+      expect(find.text('改'), findsNothing);
+      expect(
+        tester
+            .widget<Align>(
+              find
+                  .descendant(
+                    of: find.byKey(const Key('improvement-stage-1-1')),
+                    matching: find.byType(Align),
+                  )
+                  .first,
+            )
+            .alignment,
+        Alignment.topLeft,
+      );
+      expect(
+        tester.getSize(find.byKey(const Key('improvement-stage-1-1'))).height,
+        128,
       );
       expect(tester.takeException(), isNull);
     });
@@ -567,21 +636,36 @@ void main() {
               routeKind: 'kind2',
             ),
           ],
-          stage0: const <ImprovementConsumeItem>[
-            ImprovementConsumeItem(materialKey: 'ActionReport', count: 1),
-            ImprovementConsumeItem(
-              materialKey: 'emergency-repair-material',
-              count: 1,
-            ),
-            ImprovementConsumeItem(materialKey: 'fast-build', count: 1),
-            ImprovementConsumeItem(materialKey: 'kaigai-skill', count: 1),
-          ],
-          stage1: const <ImprovementConsumeItem>[
-            ImprovementConsumeItem(materialKey: 'kousyo-sigen', count: 1),
-            ImprovementConsumeItem(materialKey: 'MedalL', count: 1),
-            ImprovementConsumeItem(materialKey: 'NeEngine', count: 1),
-            ImprovementConsumeItem(materialKey: 'new_plane_material', count: 1),
-          ],
+          stage0: const ImprovementStageCost(
+            developmentMin: 0,
+            developmentMax: 0,
+            improvementMin: 0,
+            improvementMax: 0,
+            items: <ImprovementConsumeItem>[
+              ImprovementConsumeItem(materialKey: 'ActionReport', count: 1),
+              ImprovementConsumeItem(
+                materialKey: 'emergency-repair-material',
+                count: 1,
+              ),
+              ImprovementConsumeItem(materialKey: 'fast-build', count: 1),
+              ImprovementConsumeItem(materialKey: 'kaigai-skill', count: 1),
+            ],
+          ),
+          stage1: const ImprovementStageCost(
+            developmentMin: 0,
+            developmentMax: 0,
+            improvementMin: 0,
+            improvementMax: 0,
+            items: <ImprovementConsumeItem>[
+              ImprovementConsumeItem(materialKey: 'kousyo-sigen', count: 1),
+              ImprovementConsumeItem(materialKey: 'MedalL', count: 1),
+              ImprovementConsumeItem(materialKey: 'NeEngine', count: 1),
+              ImprovementConsumeItem(
+                materialKey: 'new_plane_material',
+                count: 1,
+              ),
+            ],
+          ),
           upgrades: const <ImprovementUpgrade>[
             ImprovementUpgrade(
               targetEquipmentId: 122,
@@ -732,6 +816,11 @@ void main() {
       );
     }
 
+    await tester.drag(
+      find.byKey(const Key('improvement-table-horizontal-scroll')),
+      const Offset(-120, 0),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('improvement-route-3-consume-1')));
     await tester.pumpAndSettle();
 

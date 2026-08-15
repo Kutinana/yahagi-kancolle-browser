@@ -22,12 +22,13 @@ class ImprovementDatasetStore {
       final source = await storage.readCached();
       if (source == null) return bundled;
       final cached = ImprovementDataset.parse(source);
-      return cached.version.dataVersion.compareTo(
-                bundled.version.dataVersion,
-              ) >=
-              0
-          ? cached
-          : bundled;
+      final dataVersionComparison = cached.version.dataVersion.compareTo(
+        bundled.version.dataVersion,
+      );
+      if (dataVersionComparison != 0) {
+        return dataVersionComparison > 0 ? cached : bundled;
+      }
+      return cached.schemaVersion >= bundled.schemaVersion ? cached : bundled;
     } catch (_) {
       return bundled;
     }

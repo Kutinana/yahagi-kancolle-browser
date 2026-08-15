@@ -4,6 +4,14 @@ import 'package:yahagi_kancolle_browser/src/improvement/improvement_dataset.dart
 import 'package:yahagi_kancolle_browser/src/improvement/improvement_projection.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
 
+const _emptyStage = ImprovementStageCost(
+  developmentMin: 0,
+  developmentMax: 0,
+  improvementMin: 0,
+  improvementMax: 0,
+  items: <ImprovementConsumeItem>[],
+);
+
 void main() {
   final dataset = ImprovementDataset(
     version: const ImprovementDatasetVersion(
@@ -168,8 +176,8 @@ void main() {
                 weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
               ),
             ],
-            stage0: const <ImprovementConsumeItem>[],
-            stage1: const <ImprovementConsumeItem>[],
+            stage0: _emptyStage,
+            stage1: _emptyStage,
             upgrades: const <ImprovementUpgrade>[],
           ),
         ],
@@ -281,8 +289,8 @@ ImprovementEntry _secretaryEntry(String label, int? id) => ImprovementEntry(
       weekdays: Set<int>.unmodifiable(<int>{DateTime.monday}),
     ),
   ],
-  stage0: const <ImprovementConsumeItem>[],
-  stage1: const <ImprovementConsumeItem>[],
+  stage0: _emptyStage,
+  stage1: _emptyStage,
   upgrades: const <ImprovementUpgrade>[],
 );
 
@@ -320,8 +328,8 @@ ImprovementEntry _multiWeekdayEntry({required bool evolvable}) =>
           }),
         ),
       ],
-      stage0: const <ImprovementConsumeItem>[],
-      stage1: const <ImprovementConsumeItem>[],
+      stage0: _emptyStage,
+      stage1: _emptyStage,
       upgrades: evolvable
           ? const <ImprovementUpgrade>[
               ImprovementUpgrade(
@@ -356,8 +364,8 @@ ImprovementEntry _entry(
       routeKind: evolutionAvailableToday ? null : 'kind1',
     ),
   ],
-  stage0: const <ImprovementConsumeItem>[],
-  stage1: const <ImprovementConsumeItem>[],
+  stage0: _emptyStage,
+  stage1: _emptyStage,
   upgrades: evolvable
       ? <ImprovementUpgrade>[
           ImprovementUpgrade(

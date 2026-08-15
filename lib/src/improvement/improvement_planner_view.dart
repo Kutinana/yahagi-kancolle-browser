@@ -518,8 +518,8 @@ class _ImprovementTableState extends State<_ImprovementTable> {
       FrozenDataTable.minimumRowHeight,
       8 +
           <double>[
-            24.0 * row.entry.stage0.length,
-            24.0 * row.entry.stage1.length,
+            24.0 * (1 + row.entry.stage0.items.length),
+            24.0 * (1 + row.entry.stage1.items.length),
             24.0 *
                 routes.fold<int>(
                   0,
@@ -573,7 +573,7 @@ class _ImprovementTableState extends State<_ImprovementTable> {
           ),
         ];
       },
-      scrollableColumnWidths: const <double>[170, 210, 210, 220, 190, 82, 220],
+      scrollableColumnWidths: const <double>[170, 210, 280, 220, 190, 82, 220],
       scrollableHeaders: const <Widget>[
         _Header(
           label: '基础消耗',
@@ -615,8 +615,20 @@ class _ImprovementTableState extends State<_ImprovementTable> {
               'improvement-cell-base-cost-align-${entry.equipmentId}',
             ),
           ),
-          _ConsumeItemsCell(items: entry.stage0, name: _name, icon: _icon),
-          _ConsumeItemsCell(items: entry.stage1, name: _name, icon: _icon),
+          _StageConsumeCell(
+            key: Key('improvement-stage-0-${entry.equipmentId}'),
+            stageIndex: 0,
+            stage: entry.stage0,
+            name: _name,
+            icon: _icon,
+          ),
+          _StageConsumeCell(
+            key: Key('improvement-stage-1-${entry.equipmentId}'),
+            stageIndex: 1,
+            stage: entry.stage1,
+            name: _name,
+            icon: _icon,
+          ),
           hasMultipleRoutes
               ? _RouteColumn(
                   equipmentId: entry.equipmentId,
@@ -765,10 +777,16 @@ class _Header extends StatelessWidget {
 }
 
 class _EquipmentLine extends StatelessWidget {
-  const _EquipmentLine({required this.iconId, required this.name, this.count});
+  const _EquipmentLine({
+    required this.iconId,
+    required this.name,
+    this.count,
+    this.badge,
+  });
   final int iconId;
   final String name;
   final int? count;
+  final String? badge;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -776,38 +794,160 @@ class _EquipmentLine extends StatelessWidget {
       children: [
         EquipmentTypeIconImage(iconId: iconId, width: 20, height: 20),
         const SizedBox(width: 5),
-        Expanded(child: Text(name, style: _cellStyle)),
+        Expanded(
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: _cellStyle,
+          ),
+        ),
+        if (badge != null) ...[
+          const SizedBox(width: 4),
+          _ConsumeBadge(label: badge!),
+          const SizedBox(width: 5),
+        ],
         if (count != null) Text('×$count', style: _quantityStyle),
       ],
     ),
   );
 }
 
-class _ConsumeItemsCell extends StatelessWidget {
-  const _ConsumeItemsCell({
-    required this.items,
+class _StageConsumeCell extends StatelessWidget {
+  const _StageConsumeCell({
+    super.key,
+    required this.stageIndex,
+    required this.stage,
     required this.name,
     required this.icon,
   });
-  final List<ImprovementConsumeItem> items;
+  final int stageIndex;
+  final ImprovementStageCost stage;
   final String Function(int) name;
   final int Function(int) icon;
+
   @override
-  Widget build(BuildContext context) => items.isEmpty
-      ? const _EmptyCell()
-      : Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (final item in items)
-              item.equipmentId == null
-                  ? _MaterialLine(item: item)
-                  : _EquipmentLine(
-                      iconId: icon(item.equipmentId!),
-                      name: name(item.equipmentId!),
-                      count: item.count,
-                    ),
-          ],
-        );
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.topLeft,
+    child: Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _StageMaterialCostLine(stageIndex: stageIndex, stage: stage),
+          for (final item in stage.items)
+            _StageConsumeItemLine(item: item, name: name, icon: icon),
+        ],
+      ),
+    ),
+  );
+}
+
+class _StageMaterialCostLine extends StatelessWidget {
+  const _StageMaterialCostLine({required this.stageIndex, required this.stage});
+
+  final int stageIndex;
+  final ImprovementStageCost stage;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    child: Row(
+      children: [
+        Image.asset(
+          'assets/images/material/07.png',
+          key: Key('improvement-stage-development-icon-$stageIndex'),
+          width: 18,
+          height: 18,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '${stage.developmentMin} / ${stage.developmentMax}',
+          style: _quantityStyle,
+        ),
+        const SizedBox(width: 14),
+        Image.asset(
+          'assets/images/material/08.png',
+          key: Key('improvement-stage-improvement-icon-$stageIndex'),
+          width: 18,
+          height: 18,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '${stage.improvementMin} / ${stage.improvementMax}',
+          style: _quantityStyle,
+        ),
+      ],
+    ),
+  );
+}
+
+class _StageConsumeItemLine extends StatelessWidget {
+  const _StageConsumeItemLine({
+    required this.item,
+    required this.name,
+    required this.icon,
+  });
+
+  final ImprovementConsumeItem item;
+  final String Function(int) name;
+  final int Function(int) icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final line = item.equipmentId == null
+        ? _MaterialLine(item: item, badge: item.isEveryAttempt ? '每次' : null)
+        : _EquipmentLine(
+            iconId: icon(item.equipmentId!),
+            name: name(item.equipmentId!),
+            count: item.count,
+            badge: item.isEveryAttempt ? '每次' : null,
+          );
+    if (item.isEveryAttempt) {
+      return line;
+    }
+    return Row(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: _ConsumeBadge(label: _starRangeLabel(item)),
+        ),
+        Expanded(child: line),
+      ],
+    );
+  }
+}
+
+String _starRangeLabel(ImprovementConsumeItem item) {
+  final from = item.starFrom!;
+  final destination = item.starTo == 9 ? 'MAX' : '+${item.starTo! + 1}';
+  return '+$from→$destination';
+}
+
+class _ConsumeBadge extends StatelessWidget {
+  const _ConsumeBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    decoration: BoxDecoration(
+      color: const Color(0xff8b5e12),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      style: const TextStyle(
+        color: Color(0xffffd56a),
+        fontSize: 9,
+        fontWeight: FontWeight.w900,
+        height: 1,
+      ),
+    ),
+  );
 }
 
 typedef _RouteContentBuilder = Widget Function(int routeIndex);
@@ -1049,8 +1189,9 @@ class _UpgradeConsumeCell extends StatelessWidget {
 }
 
 class _MaterialLine extends StatelessWidget {
-  const _MaterialLine({required this.item});
+  const _MaterialLine({required this.item, this.badge});
   final ImprovementConsumeItem item;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -1071,7 +1212,19 @@ class _MaterialLine extends StatelessWidget {
             ),
             const SizedBox(width: 5),
           ],
-          Expanded(child: Text(_materialDisplayName(item), style: _cellStyle)),
+          Expanded(
+            child: Text(
+              _materialDisplayName(item),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: _cellStyle,
+            ),
+          ),
+          if (badge != null) ...[
+            const SizedBox(width: 4),
+            _ConsumeBadge(label: badge!),
+            const SizedBox(width: 5),
+          ],
           Text('×${item.count}', style: _quantityStyle),
         ],
       ),

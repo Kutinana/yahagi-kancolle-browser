@@ -55,13 +55,17 @@ void main() {
         'item_equipment_id': 2,
         'item_material_key': null,
         'count': 1,
+        'star_from': null,
+        'star_to': null,
       },
       <String, Object?>{
-        'id': '1_1|equipment|3|-|-',
+        'id': '1_1|equipment|3|7|7',
         'step_id': '1_1',
         'item_equipment_id': 3,
         'item_material_key': null,
         'count': 2,
+        'star_from': 7,
+        'star_to': 7,
       },
     ]),
     'improvement_consume_step.json': jsonEncode(<Object>[
@@ -124,10 +128,28 @@ void main() {
     expect(entry.baseCost.fuel, 10);
     expect(entry.arrangements.single.secretaryLabel, '睦月');
     expect(entry.arrangements.single.weekdays, <int>{1, 2, 3, 4, 5, 6, 7});
-    expect(entry.stage0.single.equipmentId, 2);
-    expect(entry.stage1.single.count, 2);
+    expect(dataset.schemaVersion, 2);
+    expect(entry.stage0.developmentMin, 2);
+    expect(entry.stage0.developmentMax, 2);
+    expect(entry.stage0.improvementMin, 1);
+    expect(entry.stage0.improvementMax, 2);
+    expect(entry.stage0.items.single.equipmentId, 2);
+    expect(entry.stage0.items.single.isEveryAttempt, isTrue);
+    expect(entry.stage1.developmentMin, 3);
+    expect(entry.stage1.developmentMax, 4);
+    expect(entry.stage1.improvementMin, 2);
+    expect(entry.stage1.improvementMax, 3);
+    expect(entry.stage1.items.single.count, 2);
+    expect(entry.stage1.items.single.starFrom, 7);
+    expect(entry.stage1.items.single.starTo, 7);
+    expect(entry.stage1.items.single.isEveryAttempt, isFalse);
     expect(entry.upgrades.single.targetEquipmentId, 293);
     expect(entry.upgrades.single.items.single.equipmentId, 4);
+
+    final reparsed = ImprovementDataset.parse(dataset.encode());
+    expect(reparsed.schemaVersion, 2);
+    expect(reparsed.entries.single.stage1.developmentMax, 4);
+    expect(reparsed.entries.single.stage1.items.single.starFrom, 7);
   });
 
   test('keeps the upstream display name for material consumption', () {
@@ -185,6 +207,27 @@ void main() {
     (costs.first! as Map<String, Object?>)['consume_fuel'] = -1;
     files['equip_base_cost.json'] = jsonEncode(costs);
     expect(() => ImprovementRawBundle.parse(files), throwsFormatException);
+  });
+
+  test('rejects incomplete or descending star ranges', () {
+    final incomplete = fixture();
+    final incompleteItems =
+        jsonDecode(incomplete['improvement_consume_item.json']!)
+            as List<Object?>;
+    final incompleteRow = incompleteItems.last! as Map<String, Object?>;
+    incompleteRow['star_to'] = null;
+    incomplete['improvement_consume_item.json'] = jsonEncode(incompleteItems);
+    expect(() => ImprovementRawBundle.parse(incomplete), throwsFormatException);
+
+    final descending = fixture();
+    final descendingItems =
+        jsonDecode(descending['improvement_consume_item.json']!)
+            as List<Object?>;
+    final descendingRow = descendingItems.last! as Map<String, Object?>;
+    descendingRow['star_from'] = 9;
+    descendingRow['star_to'] = 7;
+    descending['improvement_consume_item.json'] = jsonEncode(descendingItems);
+    expect(() => ImprovementRawBundle.parse(descending), throwsFormatException);
   });
 
   test('loads a complete embedded offline snapshot', () async {
