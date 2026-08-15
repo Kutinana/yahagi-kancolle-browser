@@ -203,20 +203,20 @@ class _FrozenDataTableState extends State<FrozenDataTable> {
                             final offset = _horizontal.hasClients
                                 ? _horizontal.offset
                                 : 0.0;
-                            return Transform.translate(
-                              offset: Offset(-offset, 0),
-                              child: child,
+                            return OverflowBox(
+                              alignment: Alignment.centerLeft,
+                              maxWidth: double.infinity,
+                              child: Transform.translate(
+                                offset: Offset(-offset, 0),
+                                child: child,
+                              ),
                             );
                           },
-                          child: OverflowBox(
-                            alignment: Alignment.centerLeft,
-                            maxWidth: double.infinity,
-                            child: row(
-                              widget.scrollableHeaders,
-                              widget.scrollableColumnWidths,
-                              FrozenDataTable.headerHeight,
-                              background: const Color(0xff17303e),
-                            ),
+                          child: row(
+                            widget.scrollableHeaders,
+                            widget.scrollableColumnWidths,
+                            FrozenDataTable.headerHeight,
+                            background: const Color(0xff17303e),
                           ),
                         ),
                       ),

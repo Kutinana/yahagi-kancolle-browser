@@ -616,6 +616,63 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('rightmost sort headers stay tappable after horizontal scroll', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(844, 390);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    final horizontal = tester.widget<SingleChildScrollView>(
+      find.byKey(const Key('owned-inventory-horizontal-scroll')),
+    );
+    horizontal.controller!.jumpTo(
+      horizontal.controller!.position.maxScrollExtent,
+    );
+    await tester.pump();
+
+    for (final field in <String>[
+      'luck',
+      'evasion',
+      'antiSub',
+      'lineOfSight',
+      'locked',
+    ]) {
+      final header = find.byKey(Key('owned-inventory-sort-$field'));
+      expect(header.hitTestable(), findsOneWidget, reason: field);
+
+      await tester.tap(header);
+      await tester.pump();
+
+      expect(
+        find.descendant(
+          of: header,
+          matching: find.byWidgetPredicate(
+            (widget) => widget is Text && widget.data!.contains('▼'),
+          ),
+        ),
+        findsOneWidget,
+        reason: field,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('restores the default sort without clearing ship category', (
     tester,
   ) async {
