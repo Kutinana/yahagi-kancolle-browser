@@ -49,19 +49,28 @@ void main() {
     );
   });
 
-  test('long-pressing active locks it and a new tap becomes the final key', () {
-    const state = ShipInventorySortState.initial();
+  test('long-pressing active preserves direction and clears active', () {
+    final state = const ShipInventorySortState.initial()
+        .tap(ShipInventorySortField.name)
+        .tap(ShipInventorySortField.name);
 
-    final locked = state.longPress(ShipInventorySortField.level);
-    final withActive = locked.tap(ShipInventorySortField.name);
+    final locked = state.longPress(ShipInventorySortField.name);
 
     expect(locked.activeCriterion, isNull);
     expect(locked.lockedCriteria, hasLength(1));
     expectCriterion(
       locked.lockedCriteria.single,
-      ShipInventorySortField.level,
-      true,
+      ShipInventorySortField.name,
+      false,
     );
+  });
+
+  test('a new tap after locking active becomes the final key', () {
+    const state = ShipInventorySortState.initial();
+
+    final locked = state.longPress(ShipInventorySortField.level);
+    final withActive = locked.tap(ShipInventorySortField.name);
+
     expect(withActive.effectiveCriteria, hasLength(2));
     expectCriterion(
       withActive.effectiveCriteria.first,
