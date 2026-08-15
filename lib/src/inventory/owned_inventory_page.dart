@@ -126,8 +126,10 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   }
 
   void _longPressShipSort(ShipInventorySortField field) {
+    final nextState = _sortState.longPress(field);
+    if (identical(nextState, _sortState)) return;
     setState(() {
-      _sortState = _sortState.longPress(field);
+      _sortState = nextState;
       _cachedShipRows = null;
     });
   }

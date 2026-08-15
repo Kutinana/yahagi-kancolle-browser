@@ -153,6 +153,115 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('sort interactions reorder real frozen ship rows', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(2400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final startEnvelope =
+        jsonDecode(start2Event.responseBody) as Map<String, Object?>;
+    final startData =
+        jsonDecode(jsonEncode(startEnvelope['api_data']))
+            as Map<String, Object?>;
+    final masterShips = startData['api_mst_ship']! as List<Object?>;
+    masterShips.add(<String, Object?>{
+      ...Map<String, Object?>.from(masterShips[1]! as Map),
+      'api_id': 103,
+      'api_name': '睦月',
+    });
+
+    final portEnvelope =
+        jsonDecode(portEvent.responseBody) as Map<String, Object?>;
+    final portData = portEnvelope['api_data']! as Map<String, Object?>;
+    final sourceShips = portData['api_ship']! as List<Object?>;
+    final first = Map<String, Object?>.from(sourceShips[0]! as Map);
+    final second = Map<String, Object?>.from(sourceShips[1]! as Map);
+    final ships = <Object?>[
+      <String, Object?>{
+        ...first,
+        'api_id': 9001,
+        'api_ship_id': 101,
+        'api_lv': 60,
+        'api_karyoku': <int>[10, 10],
+        'api_soukou': <int>[5, 5],
+        'api_taisen': <int>[10, 10],
+      },
+      <String, Object?>{
+        ...second,
+        'api_id': 9002,
+        'api_ship_id': 102,
+        'api_lv': 50,
+        'api_karyoku': <int>[30, 30],
+        'api_soukou': <int>[10, 10],
+        'api_taisen': <int>[5, 5],
+      },
+      <String, Object?>{
+        ...second,
+        'api_id': 9003,
+        'api_ship_id': 103,
+        'api_lv': 40,
+        'api_karyoku': <int>[20, 20],
+        'api_soukou': <int>[10, 10],
+        'api_taisen': <int>[30, 30],
+      },
+    ];
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(kcsapiEvent('/kcsapi/api_start2/getData', startData))
+      ..accept(
+        kcsapiEvent('/kcsapi/api_port/port', <String, Object?>{
+          'api_ship': ships,
+          'api_deck_port': const <Object?>[],
+        }),
+      );
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    double rowTop(int shipId) =>
+        tester.getTopLeft(find.byKey(Key('owned-ship-portrait-$shipId'))).dy;
+    void expectOrder(List<int> shipIds) {
+      for (var index = 1; index < shipIds.length; index++) {
+        expect(rowTop(shipIds[index - 1]), lessThan(rowTop(shipIds[index])));
+      }
+    }
+
+    expectOrder(const <int>[9001, 9002, 9003]);
+
+    final firepowerHeader = find.byKey(
+      const Key('owned-inventory-sort-firepower'),
+    );
+    await tester.tap(firepowerHeader);
+    await tester.pump();
+    expectOrder(const <int>[9002, 9003, 9001]);
+
+    await tester.tap(firepowerHeader);
+    await tester.pump();
+    expectOrder(const <int>[9001, 9003, 9002]);
+
+    final armorHeader = find.byKey(const Key('owned-inventory-sort-armor'));
+    await tester.tap(armorHeader);
+    await tester.pump();
+    await tester.longPress(armorHeader);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('owned-inventory-sort-antiSub')));
+    await tester.pump();
+    expectOrder(const <int>[9003, 9002, 9001]);
+
+    await tester.tap(find.byKey(const Key('owned-inventory-sort-reset')));
+    await tester.pump();
+    expectOrder(const <int>[9001, 9002, 9003]);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('locks a temporary sort and appends one temporary last level', (
     tester,
   ) async {
@@ -213,6 +322,9 @@ void main() {
     await tester.pump();
     expect(find.text('火力 ▲①'), findsOneWidget);
 
+    final table = tester.widget(
+      find.byKey(const Key('owned-inventory-table-ships')),
+    );
     await tester.longPress(firepowerHeader);
     await tester.pump();
     expect(find.text('火力 ▲①'), findsOneWidget);
@@ -220,6 +332,69 @@ void main() {
       find.descendant(of: firepowerHeader, matching: find.byIcon(Icons.lock)),
       findsOneWidget,
     );
+    expect(
+      tester.widget(find.byKey(const Key('owned-inventory-table-ships'))),
+      same(table),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('colors active headers and contains a narrow locked header', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(844, 390);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    final typeHeader = find.byKey(const Key('owned-inventory-sort-type'));
+    await tester.tap(typeHeader);
+    await tester.pump();
+    final temporaryText = tester.widget<Text>(
+      find.descendant(of: typeHeader, matching: find.text('舰种 ▼')),
+    );
+    expect(temporaryText.style?.color, const Color(0xffffc85a));
+
+    await tester.longPress(typeHeader);
+    await tester.pump();
+    final lockedTextFinder = find.descendant(
+      of: typeHeader,
+      matching: find.text('舰种 ▼①'),
+    );
+    final lockFinder = find.descendant(
+      of: typeHeader,
+      matching: find.byIcon(Icons.lock),
+    );
+    expect(
+      tester.widget<Text>(lockedTextFinder).style?.color,
+      const Color(0xff72bded),
+    );
+    expect(lockFinder, findsOneWidget);
+
+    final headerRect = tester.getRect(typeHeader);
+    final textRect = tester.getRect(lockedTextFinder);
+    final lockRect = tester.getRect(lockFinder);
+    expect(textRect.left, greaterThanOrEqualTo(headerRect.left));
+    expect(textRect.right, lessThanOrEqualTo(headerRect.right));
+    expect(lockRect.left, greaterThanOrEqualTo(headerRect.left));
+    expect(lockRect.right, lessThanOrEqualTo(headerRect.right));
+    expect(textRect.top, greaterThanOrEqualTo(headerRect.top));
+    expect(textRect.bottom, lessThanOrEqualTo(headerRect.bottom));
+    expect(lockRect.top, greaterThanOrEqualTo(headerRect.top));
+    expect(lockRect.bottom, lessThanOrEqualTo(headerRect.bottom));
     expect(tester.takeException(), isNull);
   });
 
