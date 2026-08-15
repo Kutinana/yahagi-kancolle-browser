@@ -21,6 +21,29 @@ enum ShipInventorySortField {
   locked,
 }
 
+class ShipInventorySortCriterion {
+  const ShipInventorySortCriterion({
+    required this.field,
+    required this.descending,
+  });
+
+  final ShipInventorySortField field;
+  final bool descending;
+
+  ShipInventorySortCriterion copyWith({bool? descending}) =>
+      ShipInventorySortCriterion(
+        field: field,
+        descending: descending ?? this.descending,
+      );
+}
+
+const defaultShipInventorySortCriteria = <ShipInventorySortCriterion>[
+  ShipInventorySortCriterion(
+    field: ShipInventorySortField.level,
+    descending: true,
+  ),
+];
+
 enum EquipmentInventoryCategory {
   all,
   mainGun,
@@ -154,6 +177,7 @@ class OwnedInventoryProjection {
     ShipInventoryCategory category = ShipInventoryCategory.all,
     ShipInventorySortField sortField = ShipInventorySortField.level,
     bool descending = true,
+    List<ShipInventorySortCriterion>? sortCriteria,
   }) {
     final rows = <ShipInventoryRow>[
       for (final ship in state.ships.values)
@@ -166,10 +190,23 @@ class OwnedInventoryProjection {
             equipment: state.equipmentForShip(ship),
           ),
     ];
+    final criteria = sortCriteria == null
+        ? <ShipInventorySortCriterion>[
+            ShipInventorySortCriterion(
+              field: sortField,
+              descending: descending,
+            ),
+          ]
+        : sortCriteria.isEmpty
+        ? defaultShipInventorySortCriteria
+        : sortCriteria;
     rows.sort((left, right) {
-      final comparison = _compareShipRows(left, right, sortField);
-      final directed = descending ? -comparison : comparison;
-      return directed != 0 ? directed : left.ship.id.compareTo(right.ship.id);
+      for (final criterion in criteria) {
+        final comparison = _compareShipRows(left, right, criterion.field);
+        final directed = criterion.descending ? -comparison : comparison;
+        if (directed != 0) return directed;
+      }
+      return left.ship.id.compareTo(right.ship.id);
     });
     return rows;
   }

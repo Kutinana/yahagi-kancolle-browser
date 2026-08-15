@@ -68,6 +68,62 @@ void main() {
     },
   );
 
+  test('sorts ships by each criterion in priority order', () {
+    final projection = OwnedInventoryProjection(_multiSortFixture());
+
+    expect(
+      projection
+          .shipRows(
+            sortCriteria: const <ShipInventorySortCriterion>[
+              ShipInventorySortCriterion(
+                field: ShipInventorySortField.level,
+                descending: true,
+              ),
+              ShipInventorySortCriterion(
+                field: ShipInventorySortField.firepower,
+                descending: true,
+              ),
+              ShipInventorySortCriterion(
+                field: ShipInventorySortField.antiSub,
+                descending: false,
+              ),
+            ],
+          )
+          .map((row) => row.ship.id),
+      <int>[4, 3, 2, 1],
+    );
+  });
+
+  test('uses level descending when the criterion list is empty', () {
+    final projection = OwnedInventoryProjection(_multiSortFixture());
+
+    expect(
+      projection
+          .shipRows(sortCriteria: const <ShipInventorySortCriterion>[])
+          .map((row) => row.ship.id),
+      <int>[4, 1, 2, 3],
+    );
+  });
+
+  test('uses owned ship id ascending after every criterion ties', () {
+    final projection = OwnedInventoryProjection(_multiSortFixture());
+
+    expect(
+      projection
+          .shipRows(
+            sortCriteria: const <ShipInventorySortCriterion>[
+              ShipInventorySortCriterion(
+                field: ShipInventorySortField.level,
+                descending: true,
+              ),
+            ],
+          )
+          .where((row) => row.ship.level == 90)
+          .map((row) => row.ship.id),
+      <int>[1, 2, 3],
+    );
+  });
+
   test(
     'groups equipment counts, remaining items, variants and wearing ships',
     () {
@@ -202,3 +258,16 @@ void main() {
     );
   });
 }
+
+GameState _multiSortFixture() => const GameState(
+  masterShipTypes: <int, MasterShipType>{2: MasterShipType(id: 2, name: '驱逐舰')},
+  masterShips: <int, MasterShip>{
+    101: MasterShip(id: 101, name: '测试舰', shipTypeId: 2),
+  },
+  ships: <int, OwnedShip>{
+    4: OwnedShip(id: 4, masterId: 101, level: 100, firepower: 10, antiSub: 10),
+    3: OwnedShip(id: 3, masterId: 101, level: 90, firepower: 60, antiSub: 30),
+    2: OwnedShip(id: 2, masterId: 101, level: 90, firepower: 60, antiSub: 70),
+    1: OwnedShip(id: 1, masterId: 101, level: 90, firepower: 50, antiSub: 40),
+  },
+);
