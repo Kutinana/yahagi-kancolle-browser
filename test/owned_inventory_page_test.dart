@@ -100,15 +100,104 @@ void main() {
     );
 
     expect(find.text('舰娘 2'), findsOneWidget);
-    expect(find.text('等级 ▼'), findsOneWidget);
-    await tester.tap(find.text('等级 ▼'));
+    expect(find.text('等级 ▼①'), findsOneWidget);
+    await tester.tap(find.text('等级 ▼①'));
     await tester.pump();
-    expect(find.text('等级 ▲'), findsOneWidget);
+    expect(find.text('等级 ▲①'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
     await tester.pump();
     expect(find.text('总数（剩余）'), findsOneWidget);
     expect(find.textContaining('12.7cm'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('builds toggles and removes a multi-level ship sort', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(2400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('owned-inventory-sort-firepower')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('owned-inventory-sort-antiSub')));
+    await tester.pump();
+
+    expect(find.text('等级 ▼①'), findsOneWidget);
+    expect(find.text('火力 ▼②'), findsOneWidget);
+    final antiSubHeader = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('owned-inventory-sort-antiSub')),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(antiSubHeader.data, '对潜 ▼③');
+
+    await tester.tap(find.byKey(const Key('owned-inventory-sort-firepower')));
+    await tester.pump();
+    expect(find.text('火力 ▲②'), findsOneWidget);
+
+    await tester.longPress(
+      find.byKey(const Key('owned-inventory-sort-firepower')),
+    );
+    await tester.pump();
+    expect(find.text('火力'), findsOneWidget);
+    expect(find.text('对潜 ▼②'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('restores the default sort without clearing ship category', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(2400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('ship-filter-dd')));
+    await tester.pump();
+    expect(find.text('夕張'), findsOneWidget);
+    expect(find.text('吹雪'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('owned-inventory-sort-firepower')));
+    await tester.pump();
+    expect(find.text('火力 ▼②'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('owned-inventory-sort-reset')));
+    await tester.pump();
+
+    expect(find.text('等级 ▼①'), findsOneWidget);
+    expect(find.text('火力'), findsOneWidget);
+    expect(find.text('夕張'), findsOneWidget);
+    expect(find.text('吹雪'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
