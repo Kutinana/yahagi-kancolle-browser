@@ -1334,10 +1334,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sortHeaderHint => '選択で並び順を切替。長押しまたは Shift+Enter でロック';
 
   @override
-  String get sortHeaderLockedHint => '選択で昇順・降順を切替。リセットでロックを解除';
+  String get sortHeaderLockedHint => '選択で昇順・降順を切替。長押しまたは Shift+Enter でロック解除';
 
   @override
   String get sortLockAction => '次の優先順位としてロック';
+
+  @override
+  String get sortUnlockAction => '現在のソートロックを解除';
 
   @override
   String get settingsTabScreen => '画面と音声';

@@ -1324,10 +1324,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sortHeaderHint => '点击切换排序；长按或按 Shift+Enter 锁定';
 
   @override
-  String get sortHeaderLockedHint => '点击切换排序方向；通过还原清除锁定';
+  String get sortHeaderLockedHint => '点击切换排序方向；长按或按 Shift+Enter 解除锁定';
 
   @override
   String get sortLockAction => '锁定为下一优先级';
+
+  @override
+  String get sortUnlockAction => '解除当前排序锁定';
 
   @override
   String get settingsTabScreen => '画面与声音';
@@ -2971,10 +2974,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get sortHeaderHint => '點擊切換排序；長按或按 Shift+Enter 鎖定';
 
   @override
-  String get sortHeaderLockedHint => '點擊切換排序方向；透過還原清除鎖定';
+  String get sortHeaderLockedHint => '點擊切換排序方向；長按或按 Shift+Enter 解除鎖定';
 
   @override
   String get sortLockAction => '鎖定為下一優先級';
+
+  @override
+  String get sortUnlockAction => '解除目前排序鎖定';
 
   @override
   String get settingsTabScreen => '畫面與聲音';

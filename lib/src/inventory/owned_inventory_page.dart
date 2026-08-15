@@ -1072,7 +1072,9 @@ class _SortableHeader extends StatelessWidget {
       if (priority != null) l10n.sortPriority(priority!),
       if (active) locked ? l10n.sortLockedState : l10n.sortTemporaryState,
     ];
-    final lockAction = CustomSemanticsAction(label: l10n.sortLockAction);
+    final lockAction = CustomSemanticsAction(
+      label: locked ? l10n.sortUnlockAction : l10n.sortLockAction,
+    );
 
     return Semantics(
       container: true,
@@ -1080,11 +1082,11 @@ class _SortableHeader extends StatelessWidget {
       label: semanticsParts.join(', '),
       hint: locked ? l10n.sortHeaderLockedHint : l10n.sortHeaderHint,
       onTap: onTap,
-      onLongPress: locked ? null : onLongPress,
+      onLongPress: onLongPress,
       excludeSemantics: true,
-      customSemanticsActions: locked
-          ? null
-          : <CustomSemanticsAction, VoidCallback>{lockAction: onLongPress},
+      customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+        lockAction: onLongPress,
+      },
       child: Shortcuts(
         shortcuts: const <ShortcutActivator, Intent>{
           SingleActivator(LogicalKeyboardKey.enter, shift: true):
@@ -1094,7 +1096,7 @@ class _SortableHeader extends StatelessWidget {
           actions: <Type, Action<Intent>>{
             _LockSortIntent: CallbackAction<_LockSortIntent>(
               onInvoke: (_) {
-                if (!locked) onLongPress();
+                onLongPress();
                 return null;
               },
             ),

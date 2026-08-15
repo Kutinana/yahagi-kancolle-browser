@@ -2585,7 +2585,7 @@ abstract class AppLocalizations {
   /// No description provided for @sortHeaderLockedHint.
   ///
   /// In zh, this message translates to:
-  /// **'点击切换排序方向；通过还原清除锁定'**
+  /// **'点击切换排序方向；长按或按 Shift+Enter 解除锁定'**
   String get sortHeaderLockedHint;
 
   /// No description provided for @sortLockAction.
@@ -2593,6 +2593,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'锁定为下一优先级'**
   String get sortLockAction;
+
+  /// No description provided for @sortUnlockAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除当前排序锁定'**
+  String get sortUnlockAction;
 
   /// No description provided for @settingsTabScreen.
   ///

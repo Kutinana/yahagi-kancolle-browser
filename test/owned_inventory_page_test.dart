@@ -329,14 +329,15 @@ void main() {
     );
     await tester.longPress(firepowerHeader);
     await tester.pump();
-    expect(find.text('火力 ▲①'), findsOneWidget);
+    expect(find.text('火力'), findsOneWidget);
+    expect(find.text('装甲 ▼'), findsOneWidget);
     expect(
       find.descendant(of: firepowerHeader, matching: find.byIcon(Icons.lock)),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       tester.widget(find.byKey(const Key('owned-inventory-table-ships'))),
-      same(table),
+      isNot(same(table)),
     );
     expect(tester.takeException(), isNull);
   });
@@ -475,8 +476,20 @@ void main() {
     node = tester.getSemantics(firepowerHeader);
     data = node.getSemanticsData();
     expect(data.hasAction(SemanticsAction.tap), isTrue);
-    expect(data.hasAction(SemanticsAction.longPress), isFalse);
-    expect(data.hasAction(SemanticsAction.customAction), isFalse);
+    expect(data.hasAction(SemanticsAction.longPress), isTrue);
+    expect(data.hasAction(SemanticsAction.customAction), isTrue);
+    expect(data.hint, contains('长按或按 Shift+Enter 解除锁定'));
+
+    final unlockActionId = data.customSemanticsActionIds!.single;
+    node.owner!.performAction(
+      node.id,
+      SemanticsAction.customAction,
+      unlockActionId,
+    );
+    await tester.pump();
+
+    expect(find.text('火力'), findsOneWidget);
+    expect(find.text('等级 ▼'), findsOneWidget);
     semanticsHandle.dispose();
   });
 
@@ -555,6 +568,67 @@ void main() {
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'long-pressing a locked header removes it and advances later priorities',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(2400, 600);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh'),
+          home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+        ),
+      );
+
+      final antiSubHeader = find.byKey(
+        const Key('owned-inventory-sort-antiSub'),
+      );
+      final firepowerHeader = find.byKey(
+        const Key('owned-inventory-sort-firepower'),
+      );
+      final armorHeader = find.byKey(
+        const Key('owned-inventory-sort-armor'),
+      );
+
+      await tester.longPress(antiSubHeader);
+      await tester.pump();
+      await tester.longPress(firepowerHeader);
+      await tester.pump();
+      await tester.tap(armorHeader);
+      await tester.pump();
+
+      expect(find.text('对潜 ▼①'), findsOneWidget);
+      expect(find.text('火力 ▼②'), findsOneWidget);
+      expect(find.text('装甲 ▼③'), findsOneWidget);
+
+      await tester.longPress(antiSubHeader);
+      await tester.pump();
+
+      expect(find.text('对潜'), findsOneWidget);
+      expect(find.text('火力 ▼①'), findsOneWidget);
+      expect(find.text('装甲 ▼②'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: antiSubHeader,
+          matching: find.byIcon(Icons.lock),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: firepowerHeader,
+          matching: find.byIcon(Icons.lock),
+        ),
+        findsOneWidget,
+      );
     },
   );
 
