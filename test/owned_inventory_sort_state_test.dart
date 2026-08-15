@@ -113,23 +113,53 @@ void main() {
     expectCriterion(result.activeCriterion!, ShipInventorySortField.name, true);
   });
 
-  test('long-pressing a locked field leaves state unchanged', () {
+  test('long-pressing a locked field removes it and keeps remaining order', () {
     final state = const ShipInventorySortState.initial()
         .longPress(ShipInventorySortField.level)
-        .longPress(ShipInventorySortField.name);
+        .longPress(ShipInventorySortField.name)
+        .tap(ShipInventorySortField.condition);
 
     final result = state.longPress(ShipInventorySortField.level);
 
-    expect(identical(result, state), isTrue);
-    expect(result.lockedCriteria, hasLength(2));
+    expect(result.lockedCriteria, hasLength(1));
     expectCriterion(
-      result.lockedCriteria[0],
-      ShipInventorySortField.level,
+      result.lockedCriteria.single,
+      ShipInventorySortField.name,
       true,
     );
     expectCriterion(
-      result.lockedCriteria[1],
-      ShipInventorySortField.name,
+      result.activeCriterion!,
+      ShipInventorySortField.condition,
+      true,
+    );
+  });
+
+  test('unlocking the last lock keeps an active single-column sort', () {
+    final state = const ShipInventorySortState.initial()
+        .longPress(ShipInventorySortField.level)
+        .tap(ShipInventorySortField.firepower);
+
+    final result = state.longPress(ShipInventorySortField.level);
+
+    expect(result.lockedCriteria, isEmpty);
+    expectCriterion(
+      result.activeCriterion!,
+      ShipInventorySortField.firepower,
+      true,
+    );
+  });
+
+  test('unlocking the last lock without active restores default level sort', () {
+    final state = const ShipInventorySortState.initial().longPress(
+      ShipInventorySortField.antiSub,
+    );
+
+    final result = state.longPress(ShipInventorySortField.antiSub);
+
+    expect(result.lockedCriteria, isEmpty);
+    expectCriterion(
+      result.activeCriterion!,
+      ShipInventorySortField.level,
       true,
     );
   });

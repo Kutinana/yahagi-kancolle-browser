@@ -50,8 +50,16 @@ class ShipInventorySortState {
   }
 
   ShipInventorySortState longPress(ShipInventorySortField field) {
-    if (lockedCriteria.any((criterion) => criterion.field == field)) {
-      return this;
+    final lockedIndex = lockedCriteria.indexWhere(
+      (criterion) => criterion.field == field,
+    );
+    if (lockedIndex >= 0) {
+      final nextLocked = List<ShipInventorySortCriterion>.of(lockedCriteria)
+        ..removeAt(lockedIndex);
+      if (nextLocked.isEmpty && activeCriterion == null) {
+        return const ShipInventorySortState.initial();
+      }
+      return ShipInventorySortState._(nextLocked, activeCriterion);
     }
 
     final criterion = activeCriterion?.field == field
