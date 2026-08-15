@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
+import '../game_state/quest_text_normalizer.dart';
 import '../widgets/filter_controls.dart';
 import 'quest_catalog.dart';
 import 'quest_catalog_controller.dart';
@@ -1002,7 +1003,9 @@ class _QuestDetail extends StatelessWidget {
             _DetailCard(
               title: l10n.questDesc,
               child: Text(
-                detail.isEmpty ? l10n.noDescription : detail,
+                detail.isEmpty
+                    ? l10n.noDescription
+                    : normalizeQuestDetail(detail),
                 style: const TextStyle(fontSize: 13, height: 1.45),
               ),
             ),

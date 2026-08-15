@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'game_state.dart';
+import 'quest_text_normalizer.dart';
 
 class GameStateSerializer {
   static String serialize(GameState state) {
@@ -141,7 +142,7 @@ class GameStateSerializer {
           quests[id] = GameQuest(
             id: id,
             title: _string(v['title']),
-            detail: _string(v['detail']),
+            detail: normalizeQuestDetail(_string(v['detail'])),
             category: _int(v['category']) ?? 0,
             type: _int(v['type']) ?? 0,
             state: state,

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import '../game_state/game_state.dart';
+import '../game_state/quest_text_normalizer.dart';
 import 'quest_translation_fallbacks.dart';
 
 enum QuestUnlockState { unlocked, locked }
@@ -60,10 +61,10 @@ class QuestCatalogEntry {
       gameId: gameId,
       code: (json['code'] as String? ?? gameId.toString()).trim(),
       name: json['name'] as String? ?? '',
-      description: json['desc'] as String? ?? '',
+      description: normalizeQuestDetail(json['desc'] as String? ?? ''),
       translatedName: _nonEmptyString(json['nameZh']) ?? fallback?.name,
       translatedDescription:
-          _nonEmptyString(json['descZh']) ?? fallback?.description,
+          _normalizedNonEmptyString(json['descZh']) ?? fallback?.description,
       rewards: json['rewards'] as String? ?? json['memo'] as String? ?? '',
       memo: json['memo2'] as String? ?? '',
       prerequisites: (json['pre'] as List<Object?>? ?? const <Object?>[])
@@ -77,6 +78,11 @@ String? _nonEmptyString(Object? value) {
   if (value is! String) return null;
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
+}
+
+String? _normalizedNonEmptyString(Object? value) {
+  final text = _nonEmptyString(value);
+  return text == null ? null : normalizeQuestDetail(text);
 }
 
 class QuestCatalog {

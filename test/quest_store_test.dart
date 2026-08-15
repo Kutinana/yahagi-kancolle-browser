@@ -109,6 +109,19 @@ void main() {
     },
   );
 
+  test('legacy quest store removes hard line breaks from details', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'yahagi_quests':
+          '[{"id":439,"title":"兵站強化遠征任務",'
+          '"detail":"ボーキサイト輸送任務」及び\\r\\n「南西方面航空偵察作戦」",'
+          '"category":4,"type":1,"state":2,"progressFlag":0}]',
+    });
+
+    final restored = await SharedPreferencesQuestStore().loadQuests();
+
+    expect(restored[439]?.detail, 'ボーキサイト輸送任務」及び「南西方面航空偵察作戦」');
+  });
+
   for (final entry in <String, String>{
     'null': 'null',
     'wrong type': '"not-a-bool"',

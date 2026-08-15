@@ -1018,7 +1018,9 @@ void main() {
               'api_state': 2,
               'api_progress_flag': 0,
               'api_title': '西方連絡作戦準備を実施せよ！',
-              'api_detail': '潜水艦派遣作戦」<br>及び「欧州方面友軍との接触」<br/>各遠征<BR />を実施',
+              'api_detail':
+                  '潜水艦派遣作戦」<br>\r\n及び「欧州方面友軍との接触」'
+                  '<br/>\n各遠征<BR />\rを実施',
               'api_get_material': <int>[0, 900, 500, 500],
             },
           ],

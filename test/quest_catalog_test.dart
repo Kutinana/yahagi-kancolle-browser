@@ -189,8 +189,19 @@ void main() {
               '${entry.translatedName == null && entry.translatedDescription == null ? '+' : ''}'
               '${entry.translatedDescription == null ? 'description' : ''}',
     ];
+    final hardBreak = RegExp(
+      r'<br\b[^>]*>|[\r\n\u0085\u2028\u2029]',
+      caseSensitive: false,
+    );
+    final hardBreaks = <String>[
+      for (final entry in bundled.entries)
+        if (hardBreak.hasMatch(entry.description) ||
+            hardBreak.hasMatch(entry.translatedDescription ?? ''))
+          '${entry.gameId}/${entry.code}',
+    ];
 
     expect(missing, isEmpty, reason: missing.join('\n'));
+    expect(hardBreaks, isEmpty, reason: hardBreaks.join('\n'));
   });
 
   test('uses game id when upstream quest codes differ', () {

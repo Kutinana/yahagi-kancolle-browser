@@ -5,6 +5,7 @@ import '../capture/game_capture_path_catalog.dart';
 import 'combat_state.dart';
 import 'game_api_decoder.dart';
 import 'game_state.dart';
+import 'quest_text_normalizer.dart';
 
 export 'game_api_decoder.dart' show GameApiParseException;
 
@@ -661,9 +662,7 @@ class GameStateReducer {
       quests[id] = GameQuest(
         id: id,
         title: _asString(item['api_title']),
-        detail: _asString(
-          item['api_detail'],
-        ).replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), ''),
+        detail: normalizeQuestDetail(_asString(item['api_detail'])),
         category: _asInt(item['api_category']),
         type: _asInt(item['api_type']),
         state: state,

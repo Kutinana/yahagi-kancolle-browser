@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game_state/game_state.dart';
+import '../game_state/quest_text_normalizer.dart';
 import 'quest_store.dart';
 
 class SharedPreferencesQuestStore implements QuestStore {
@@ -27,7 +28,7 @@ class SharedPreferencesQuestStore implements QuestStore {
           quests[id] = GameQuest(
             id: id,
             title: item['title'] as String,
-            detail: item['detail'] as String,
+            detail: normalizeQuestDetail(item['detail'] as String),
             category: item['category'] as int,
             type: item['type'] as int,
             state: state,

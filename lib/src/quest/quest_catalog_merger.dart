@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../game_state/quest_text_normalizer.dart';
+
 String mergeQuestCatalogJson({
   required String japaneseJson,
   required String relationJson,
@@ -52,8 +54,7 @@ String mergeQuestCatalogJson({
   return jsonEncode(merged);
 }
 
-String _normalizeTranslation(String source) => source
-    .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '')
+String _normalizeTranslation(String source) => normalizeQuestDetail(source)
     .replaceFirst(RegExp(r'^[A-Za-z]+\|'), '')
     .replaceAllMapped(
       RegExp(r'([「『（(])[^|，。！？；：\n「『（(]{1,30}\|'),
