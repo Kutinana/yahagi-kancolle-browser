@@ -68,6 +68,13 @@ void main() {
     final shipHeight = tester
         .getSize(find.byKey(const Key('ship-filter-all')))
         .height;
+    final resetSort = find.byKey(const Key('owned-inventory-sort-reset'));
+    expect(resetSort, findsOneWidget);
+    await tester.ensureVisible(resetSort);
+    await tester.tap(resetSort);
+    await tester.pump();
+    expect(find.text('等级 ▼①'), findsOneWidget);
+
     await tester.tap(find.text('装备 0'));
     await tester.pump();
     final equipmentHeight = tester
@@ -158,6 +165,23 @@ void main() {
     await tester.pump();
     expect(find.text('火力'), findsOneWidget);
     expect(find.text('对潜 ▼②'), findsOneWidget);
+
+    await tester.longPress(
+      find.byKey(const Key('owned-inventory-sort-antiSub')),
+    );
+    await tester.pump();
+    expect(find.text('等级 ▼①'), findsOneWidget);
+    expect(find.text('对潜'), findsOneWidget);
+
+    await tester.longPress(
+      find.byKey(const Key('owned-inventory-sort-firepower')),
+    );
+    await tester.pump();
+    expect(find.text('等级 ▼①'), findsOneWidget);
+
+    await tester.longPress(find.byKey(const Key('ship-table-frozen-header')));
+    await tester.pump();
+    expect(find.text('等级 ▼①'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

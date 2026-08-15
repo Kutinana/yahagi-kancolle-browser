@@ -60,7 +60,14 @@ void main() {
       );
       expect(
         projection
-            .shipRows(sortField: ShipInventorySortField.level, descending: true)
+            .shipRows(
+              sortCriteria: const <ShipInventorySortCriterion>[
+                ShipInventorySortCriterion(
+                  field: ShipInventorySortField.level,
+                  descending: true,
+                ),
+              ],
+            )
             .map((row) => row.ship.id),
         <int>[2, 1],
       );

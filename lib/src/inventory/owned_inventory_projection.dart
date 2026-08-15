@@ -175,9 +175,8 @@ class OwnedInventoryProjection {
 
   List<ShipInventoryRow> shipRows({
     ShipInventoryCategory category = ShipInventoryCategory.all,
-    ShipInventorySortField sortField = ShipInventorySortField.level,
-    bool descending = true,
-    List<ShipInventorySortCriterion>? sortCriteria,
+    List<ShipInventorySortCriterion> sortCriteria =
+        defaultShipInventorySortCriteria,
   }) {
     final rows = <ShipInventoryRow>[
       for (final ship in state.ships.values)
@@ -190,14 +189,7 @@ class OwnedInventoryProjection {
             equipment: state.equipmentForShip(ship),
           ),
     ];
-    final criteria = sortCriteria == null
-        ? <ShipInventorySortCriterion>[
-            ShipInventorySortCriterion(
-              field: sortField,
-              descending: descending,
-            ),
-          ]
-        : sortCriteria.isEmpty
+    final criteria = sortCriteria.isEmpty
         ? defaultShipInventorySortCriteria
         : sortCriteria;
     rows.sort((left, right) {
