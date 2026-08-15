@@ -22,7 +22,7 @@ void main() {
         3: MasterShipType(id: 3, name: '轻巡洋舰'),
       },
       masterShips: {
-        1: MasterShip(id: 1, name: '雪风', shipTypeId: 2),
+        1: MasterShip(id: 1, name: '雪风', shipTypeId: 2, buildTimeMinutes: 30),
         2: MasterShip(id: 2, name: '矢矧改二乙', shipTypeId: 3),
         3: MasterShip(id: 3, name: '深雪', shipTypeId: 2),
       },
@@ -207,6 +207,69 @@ void main() {
     expect(row['fuel'], 30);
   });
 
+  test('records a ship built on another device when it is received', () async {
+    await database.insertConstructionRecord(
+      dockId: 2,
+      timestamp: DateTime.utc(2026, 8, 10, 10).millisecondsSinceEpoch,
+      constructionType: '普通建造',
+      shipId: 3,
+      shipName: '深雪',
+      shipType: '驱逐舰',
+      fuel: 30,
+      ammo: 30,
+      steel: 30,
+      bauxite: 30,
+      developmentMaterial: 1,
+      secretaryName: '矢矧改二乙 Lv.132',
+    );
+    final importedState = state.copyWith(
+      constructionDocks: <ConstructionDock>[
+        ConstructionDock(
+          id: 2,
+          state: 3,
+          createdShipMasterId: 1,
+          completionTime: DateTime.utc(2026, 8, 11, 11, 30),
+          fuel: 30,
+          ammunition: 30,
+          steel: 30,
+          bauxite: 30,
+          developmentMaterial: 1,
+        ),
+      ],
+    );
+
+    final receiveEvent = _event(
+      '/kcsapi/api_req_kousyou/getship',
+      params: const {'api_kdock_id': '2'},
+      data: const {
+        'api_ship': {'api_ship_id': 1},
+      },
+    );
+    await recorder.record(receiveEvent, importedState);
+
+    final rows = await database.getConstructionRecords();
+    expect(rows, hasLength(2));
+    final row = rows.first;
+    expect(row['dock_id'], 2);
+    expect(row['ship_name'], '雪风');
+    expect(row['construction_type'], '普通建造');
+    expect(row['fuel'], 30);
+    expect(row['ammo'], 30);
+    expect(row['steel'], 30);
+    expect(row['bauxite'], 30);
+    expect(row['development_material'], 1);
+    expect(row['secretary_name'], '—');
+    expect(
+      row['timestamp'],
+      DateTime.utc(2026, 8, 11, 11).millisecondsSinceEpoch,
+    );
+    expect(rows.last['ship_name'], '深雪');
+    expect(rows.last['secretary_name'], '矢矧改二乙 Lv.132');
+
+    await recorder.record(receiveEvent, importedState);
+    expect(await database.getConstructionRecords(), hasLength(2));
+  });
+
   test(
     'uses the ship already exposed by the construction dock response',
     () async {
@@ -260,7 +323,16 @@ void main() {
         _event(
           '/kcsapi/api_get_member/kdock',
           data: const <Object?>[
-            {'api_id': 2, 'api_created_ship_id': 1},
+            {
+              'api_id': 2,
+              'api_created_ship_id': 1,
+              'api_complete_time': 1786451400000,
+              'api_item1': 30,
+              'api_item2': 30,
+              'api_item3': 30,
+              'api_item4': 30,
+              'api_item5': 1,
+            },
           ],
         ),
         state,
@@ -270,6 +342,88 @@ void main() {
       expect(rows, hasLength(1));
       expect(rows.single['ship_name'], '雪风');
       expect(rows.single['ship_type'], '驱逐舰');
+    },
+  );
+
+  test(
+    'does not reuse stale pending data after another device replaces the build',
+    () async {
+      await recorder.record(
+        _event(
+          '/kcsapi/api_req_kousyou/createship',
+          params: const {
+            'api_kdock_id': '2',
+            'api_item1': '30',
+            'api_item2': '30',
+            'api_item3': '30',
+            'api_item4': '30',
+            'api_item5': '1',
+            'api_large_flag': '0',
+          },
+        ),
+        state,
+      );
+
+      final replacementStart = DateTime.utc(2026, 8, 12, 12);
+      final replacementCompletion = replacementStart.add(
+        const Duration(minutes: 30),
+      );
+      await recorder.record(
+        _event(
+          '/kcsapi/api_get_member/kdock',
+          data: <Object?>[
+            {
+              'api_id': 2,
+              'api_state': 3,
+              'api_created_ship_id': 1,
+              'api_complete_time': replacementCompletion.millisecondsSinceEpoch,
+              'api_item1': 30,
+              'api_item2': 30,
+              'api_item3': 30,
+              'api_item4': 30,
+              'api_item5': 1,
+            },
+          ],
+        ),
+        state,
+      );
+
+      final replacementState = state.copyWith(
+        constructionDocks: <ConstructionDock>[
+          ConstructionDock(
+            id: 2,
+            state: 3,
+            createdShipMasterId: 1,
+            completionTime: replacementCompletion,
+            fuel: 30,
+            ammunition: 30,
+            steel: 30,
+            bauxite: 30,
+            developmentMaterial: 1,
+          ),
+        ],
+      );
+      await recorder.record(
+        _event(
+          '/kcsapi/api_req_kousyou/getship',
+          params: const {'api_kdock_id': '2'},
+          data: const {
+            'api_ship': {'api_ship_id': 1},
+          },
+        ),
+        replacementState,
+      );
+
+      final rows = await database.getConstructionRecords();
+      expect(rows, hasLength(2));
+      expect(
+        rows.last['timestamp'],
+        DateTime.utc(2026, 8, 11, 12).millisecondsSinceEpoch,
+      );
+      expect(rows.last['ship_name'], '建造中');
+      expect(rows.first['timestamp'], replacementStart.millisecondsSinceEpoch);
+      expect(rows.first['ship_name'], '雪风');
+      expect(rows.first['secretary_name'], '—');
     },
   );
 

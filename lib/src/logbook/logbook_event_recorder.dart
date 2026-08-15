@@ -194,8 +194,6 @@ final class LogbookEventRecorder {
       developmentMaterial: _int(event.requestParams['api_item5']),
       secretaryName: _secretaryName(state),
     );
-    _pendingConstructions[dockId] = pending;
-
     final shipId = _createdShipId(
       _data(event, allowMissingData: true)['api_kdock'],
       dockId,
@@ -204,7 +202,7 @@ final class LogbookEventRecorder {
     final shipType = master == null
         ? null
         : state.masterShipTypes[master.shipTypeId]?.name;
-    await _database.insertConstructionRecord(
+    final recordId = await _database.insertConstructionRecord(
       dockId: dockId,
       timestamp: pending.timestamp,
       constructionType: pending.constructionType,
@@ -218,6 +216,7 @@ final class LogbookEventRecorder {
       developmentMaterial: pending.developmentMaterial,
       secretaryName: pending.secretaryName,
     );
+    _pendingConstructions[dockId] = pending.withRecordId(recordId);
   }
 
   Future<void> _recordConstruction(
@@ -232,26 +231,59 @@ final class LogbookEventRecorder {
     final shipType = master == null
         ? null
         : state.masterShipTypes[master.shipTypeId]?.name;
-    final updated = await _database.updateConstructionResult(
-      dockId: dockId,
-      shipId: shipId,
-      shipName: master?.name ?? '舰娘 ID $shipId',
-      shipType: shipType ?? '未知舰种',
-    );
-    if (!updated && pending != null) {
+    ConstructionDock? currentDock;
+    for (final dock in state.constructionDocks) {
+      if (dock.id == dockId &&
+          dock.isBuilding &&
+          dock.createdShipMasterId == shipId) {
+        currentDock = dock;
+        break;
+      }
+    }
+    var construction = pending;
+    var recordId = pending?.recordId ?? 0;
+    if (pending != null &&
+        currentDock != null &&
+        !_pendingMatchesDock(pending, currentDock, master)) {
+      construction = null;
+      recordId = 0;
+    }
+    if (construction == null && currentDock != null) {
+      construction = _constructionFromDock(
+        currentDock,
+        master,
+        fallback: event.capturedAt,
+      );
+    }
+    if (recordId <= 0 && construction != null) {
+      final latest = await _database.getLatestConstructionRecordForDock(dockId);
+      if (_matchesConstruction(latest, construction, shipId)) {
+        recordId = _int(latest?['id']);
+      }
+    }
+    final updated =
+        recordId > 0 &&
+        await _database.updateConstructionResult(
+          recordId: recordId,
+          dockId: dockId,
+          shipId: shipId,
+          shipName: master?.name ?? '舰娘 ID $shipId',
+          shipType: shipType ?? '未知舰种',
+        );
+    if (!updated && construction != null) {
       await _database.insertConstructionRecord(
         dockId: dockId,
-        timestamp: pending.timestamp,
-        constructionType: pending.constructionType,
+        timestamp: construction.timestamp,
+        constructionType: construction.constructionType,
         shipId: shipId > 0 ? shipId : null,
         shipName: master?.name ?? '舰娘 ID $shipId',
         shipType: shipType ?? '未知舰种',
-        fuel: pending.fuel,
-        ammo: pending.ammo,
-        steel: pending.steel,
-        bauxite: pending.bauxite,
-        developmentMaterial: pending.developmentMaterial,
-        secretaryName: pending.secretaryName,
+        fuel: construction.fuel,
+        ammo: construction.ammo,
+        steel: construction.steel,
+        bauxite: construction.bauxite,
+        developmentMaterial: construction.developmentMaterial,
+        secretaryName: construction.secretaryName,
       );
     }
   }
@@ -268,18 +300,95 @@ final class LogbookEventRecorder {
       if (dock == null) continue;
       final dockId = _int(dock['api_id']);
       final shipId = _int(dock['api_created_ship_id']);
-      if (dockId <= 0 || shipId <= 0) continue;
+      if (dockId <= 0) continue;
+      if (shipId <= 0) {
+        _pendingConstructions.remove(dockId);
+        continue;
+      }
       final master = state.masterShips[shipId];
       final shipType = master == null
           ? null
           : state.masterShipTypes[master.shipTypeId]?.name;
+      final pending = _pendingConstructions[dockId];
+      if (pending == null || pending.recordId <= 0) continue;
+      final currentDock = _constructionDockFromApi(dock);
+      if (!_pendingMatchesDock(pending, currentDock, master)) {
+        _pendingConstructions.remove(dockId);
+        continue;
+      }
       await _database.updateConstructionResult(
+        recordId: pending.recordId,
         dockId: dockId,
         shipId: shipId,
         shipName: master?.name ?? '舰娘 ID $shipId',
         shipType: shipType ?? '未知舰种',
       );
     }
+  }
+
+  ConstructionDock _constructionDockFromApi(Map<String, dynamic> data) {
+    final completionMilliseconds = _int(data['api_complete_time']);
+    return ConstructionDock(
+      id: _int(data['api_id']),
+      state: _int(data['api_state']),
+      createdShipMasterId: _int(data['api_created_ship_id']),
+      completionTime: completionMilliseconds > 0
+          ? DateTime.fromMillisecondsSinceEpoch(completionMilliseconds)
+          : null,
+      fuel: _int(data['api_item1']),
+      ammunition: _int(data['api_item2']),
+      steel: _int(data['api_item3']),
+      bauxite: _int(data['api_item4']),
+      developmentMaterial: _int(data['api_item5']),
+    );
+  }
+
+  _PendingConstruction _constructionFromDock(
+    ConstructionDock dock,
+    MasterShip? master, {
+    required DateTime fallback,
+  }) {
+    final startedAt = _constructionStartedAt(dock, master) ?? fallback;
+    return _PendingConstruction(
+      timestamp: startedAt.millisecondsSinceEpoch,
+      constructionType: dock.isLargeConstruction ? '大型建造' : '普通建造',
+      fuel: dock.fuel,
+      ammo: dock.ammunition,
+      steel: dock.steel,
+      bauxite: dock.bauxite,
+      developmentMaterial: dock.developmentMaterial,
+      secretaryName: '—',
+    );
+  }
+
+  bool _pendingMatchesDock(
+    _PendingConstruction pending,
+    ConstructionDock dock,
+    MasterShip? master,
+  ) {
+    if (pending.constructionType !=
+            (dock.isLargeConstruction ? '大型建造' : '普通建造') ||
+        pending.fuel != dock.fuel ||
+        pending.ammo != dock.ammunition ||
+        pending.steel != dock.steel ||
+        pending.bauxite != dock.bauxite ||
+        pending.developmentMaterial != dock.developmentMaterial) {
+      return false;
+    }
+    final startedAt = _constructionStartedAt(dock, master);
+    if (startedAt == null) return true;
+    return (pending.timestamp - startedAt.millisecondsSinceEpoch).abs() <=
+        const Duration(seconds: 5).inMilliseconds;
+  }
+
+  DateTime? _constructionStartedAt(ConstructionDock dock, MasterShip? master) {
+    if (dock.startedAt != null) return dock.startedAt;
+    if (dock.completionTime == null || (master?.buildTimeMinutes ?? 0) <= 0) {
+      return null;
+    }
+    return dock.completionTime!.subtract(
+      Duration(minutes: master!.buildTimeMinutes),
+    );
   }
 
   int _createdShipId(Object? rawDocks, int dockId) {
@@ -293,6 +402,28 @@ final class LogbookEventRecorder {
       if (shipId > 0) return shipId;
     }
     return 0;
+  }
+
+  bool _matchesConstruction(
+    Map<String, dynamic>? row,
+    _PendingConstruction construction,
+    int shipId,
+  ) {
+    if (row == null ||
+        _int(row['dock_id']) <= 0 ||
+        row['construction_type'] != construction.constructionType ||
+        _int(row['fuel']) != construction.fuel ||
+        _int(row['ammo']) != construction.ammo ||
+        _int(row['steel']) != construction.steel ||
+        _int(row['bauxite']) != construction.bauxite ||
+        _int(row['development_material']) != construction.developmentMaterial) {
+      return false;
+    }
+    final recordedShipId = _int(row['ship_id']);
+    if (recordedShipId > 0 && recordedShipId != shipId) return false;
+    final timestampDelta = (_int(row['timestamp']) - construction.timestamp)
+        .abs();
+    return timestampDelta <= const Duration(seconds: 5).inMilliseconds;
   }
 
   Future<void> _recordRetiredShips(
@@ -401,6 +532,7 @@ final class LogbookEventRecorder {
 
 final class _PendingConstruction {
   const _PendingConstruction({
+    this.recordId = 0,
     required this.timestamp,
     required this.constructionType,
     required this.fuel,
@@ -411,6 +543,7 @@ final class _PendingConstruction {
     required this.secretaryName,
   });
 
+  final int recordId;
   final int timestamp;
   final String constructionType;
   final int fuel;
@@ -419,6 +552,18 @@ final class _PendingConstruction {
   final int bauxite;
   final int developmentMaterial;
   final String secretaryName;
+
+  _PendingConstruction withRecordId(int value) => _PendingConstruction(
+    recordId: value,
+    timestamp: timestamp,
+    constructionType: constructionType,
+    fuel: fuel,
+    ammo: ammo,
+    steel: steel,
+    bauxite: bauxite,
+    developmentMaterial: developmentMaterial,
+    secretaryName: secretaryName,
+  );
 }
 
 final class _RewardItem {

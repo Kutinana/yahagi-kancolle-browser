@@ -49,7 +49,9 @@ app.*.map.json
 .scratch-resource-trend/
 .superpowers/
 docs/superpowers/
-docs/internal/
+docs/internal/*
+!docs/internal/expedition-poi-parity-audit.md
+!docs/internal/expedition-poi-parity-audit.csv
 docs/plans/
 docs/specs/
 docs/previews/*
@@ -73,5 +75,8 @@ tool/akashi_bonus/cache/
 
 # Generated reports and local test datasets
 tool/*/reports/
-test/fixtures/
+test/fixtures/*
+!test/fixtures/poi_ezexped/
+test/fixtures/poi_ezexped/*
+!test/fixtures/poi_ezexped/expedition_rules.json
 test/*/fixtures/

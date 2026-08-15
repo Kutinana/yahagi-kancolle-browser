@@ -981,7 +981,7 @@ void main() {
   ) async {
     final database = await LogbookDatabase.openForTesting();
     addTearDown(database.close);
-    await database.insertConstructionRecord(
+    final constructionRecordId = await database.insertConstructionRecord(
       dockId: 2,
       timestamp: DateTime.now().millisecondsSinceEpoch,
       constructionType: '普通建造',
@@ -1012,6 +1012,7 @@ void main() {
     expect(find.text('建造中'), findsOneWidget);
 
     await database.updateConstructionResult(
+      recordId: constructionRecordId,
       dockId: 2,
       shipId: 1,
       shipName: '雪风',

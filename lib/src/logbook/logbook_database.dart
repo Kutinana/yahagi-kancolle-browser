@@ -600,6 +600,7 @@ class LogbookDatabase extends ChangeNotifier {
   }
 
   Future<bool> updateConstructionResult({
+    required int recordId,
     required int dockId,
     required int shipId,
     required String shipName,
@@ -609,12 +610,25 @@ class LogbookDatabase extends ChangeNotifier {
     final changed = await db.update(
       'construction_logs',
       {'ship_id': shipId, 'ship_name': shipName, 'ship_type': shipType},
-      where:
-          'id = (SELECT id FROM construction_logs WHERE dock_id = ? ORDER BY id DESC LIMIT 1)',
-      whereArgs: [dockId],
+      where: 'id = ? AND dock_id = ?',
+      whereArgs: <Object?>[recordId, dockId],
     );
     if (changed > 0) _notifyChange(LogbookChangeCategory.construction);
     return changed > 0;
+  }
+
+  Future<Map<String, dynamic>?> getLatestConstructionRecordForDock(
+    int dockId,
+  ) async {
+    final db = await database;
+    final rows = await db.query(
+      'construction_logs',
+      where: 'dock_id = ?',
+      whereArgs: <Object?>[dockId],
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.single;
   }
 
   Future<List<Map<String, dynamic>>> getConstructionRecords({
