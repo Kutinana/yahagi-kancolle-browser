@@ -128,6 +128,9 @@ void main() {
       'notCompleted',
       // “分享” is the standard action label in both Chinese scripts.
       'diagnosticShareAction',
+      // “升序/降序” are standard sorting terms in both Chinese scripts.
+      'sortAscending',
+      'sortDescending',
     };
     const reviewedJa = <String>{
       'appTitle',
