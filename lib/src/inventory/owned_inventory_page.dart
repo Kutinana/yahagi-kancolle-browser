@@ -9,6 +9,7 @@ import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import '../widgets/frozen_data_table.dart';
 import 'owned_inventory_projection.dart';
+import 'owned_inventory_sort_state.dart';
 
 class OwnedInventoryPage extends StatefulWidget {
   const OwnedInventoryPage({
@@ -33,8 +34,7 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   ShipInventoryCategory _shipCategory = ShipInventoryCategory.all;
   EquipmentInventoryCategory _equipmentCategory =
       EquipmentInventoryCategory.all;
-  List<ShipInventorySortCriterion> _sortCriteria =
-      List<ShipInventorySortCriterion>.of(defaultShipInventorySortCriteria);
+  ShipInventorySortState _sortState = const ShipInventorySortState.initial();
   late GameState _state;
   late _InventoryDependencies _inventoryDependencies;
   List<ShipInventoryRow>? _cachedShipRows;
@@ -101,9 +101,10 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   }
 
   List<ShipInventoryRow> _shipRows() =>
-      _cachedShipRows ??= OwnedInventoryProjection(
-        _state,
-      ).shipRows(category: _shipCategory, sortCriteria: _sortCriteria);
+      _cachedShipRows ??= OwnedInventoryProjection(_state).shipRows(
+        category: _shipCategory,
+        sortCriteria: _sortState.effectiveCriteria,
+      );
 
   List<EquipmentInventoryGroup> _equipmentGroups() =>
       _cachedEquipmentGroups ??= OwnedInventoryProjection(
@@ -117,39 +118,23 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     widget.onSectionChanged?.call(value);
   }
 
-  void _toggleShipSort(ShipInventorySortField field) {
-    final next = List<ShipInventorySortCriterion>.of(_sortCriteria);
-    final index = next.indexWhere((criterion) => criterion.field == field);
-    if (index < 0) {
-      next.add(ShipInventorySortCriterion(field: field, descending: true));
-    } else {
-      next[index] = next[index].copyWith(descending: !next[index].descending);
-    }
+  void _tapShipSort(ShipInventorySortField field) {
     setState(() {
-      _sortCriteria = next;
+      _sortState = _sortState.tap(field);
       _cachedShipRows = null;
     });
   }
 
-  void _removeShipSort(ShipInventorySortField field) {
-    final next = _sortCriteria
-        .where((criterion) => criterion.field != field)
-        .toList();
+  void _longPressShipSort(ShipInventorySortField field) {
     setState(() {
-      _sortCriteria = next.isEmpty
-          ? List<ShipInventorySortCriterion>.of(
-              defaultShipInventorySortCriteria,
-            )
-          : next;
+      _sortState = _sortState.longPress(field);
       _cachedShipRows = null;
     });
   }
 
   void _restoreDefaultShipSort() {
     setState(() {
-      _sortCriteria = List<ShipInventorySortCriterion>.of(
-        defaultShipInventorySortCriteria,
-      );
+      _sortState = _sortState.restoreDefault();
       _cachedShipRows = null;
     });
   }
@@ -216,9 +201,9 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                   ? _ShipInventoryTable(
                       state: _state,
                       rows: shipRows,
-                      sortCriteria: _sortCriteria,
-                      onSort: _toggleShipSort,
-                      onRemoveSort: _removeShipSort,
+                      sortState: _sortState,
+                      onSort: _tapShipSort,
+                      onLongPressSort: _longPressShipSort,
                     )
                   : _EquipmentInventoryTable(
                       groups: equipmentGroups,
@@ -484,15 +469,15 @@ class _ShipInventoryTable extends StatelessWidget {
   const _ShipInventoryTable({
     required this.state,
     required this.rows,
-    required this.sortCriteria,
+    required this.sortState,
     required this.onSort,
-    required this.onRemoveSort,
+    required this.onLongPressSort,
   });
   final GameState state;
   final List<ShipInventoryRow> rows;
-  final List<ShipInventorySortCriterion> sortCriteria;
+  final ShipInventorySortState sortState;
   final ValueChanged<ShipInventorySortField> onSort;
-  final ValueChanged<ShipInventorySortField> onRemoveSort;
+  final ValueChanged<ShipInventorySortField> onLongPressSort;
 
   @override
   Widget build(BuildContext context) {
@@ -536,17 +521,31 @@ class _ShipInventoryTable extends StatelessWidget {
       52,
     ];
     Widget header(ShipInventorySortField field, String label, {Key? key}) {
-      final index = sortCriteria.indexWhere(
+      final lockedIndex = sortState.lockedCriteria.indexWhere(
         (criterion) => criterion.field == field,
       );
-      final criterion = index < 0 ? null : sortCriteria[index];
+      final locked = lockedIndex >= 0;
+      final temporarilyActive = sortState.activeCriterion?.field == field;
+      final active = locked || temporarilyActive;
+      final criterion = locked
+          ? sortState.lockedCriteria[lockedIndex]
+          : temporarilyActive
+          ? sortState.activeCriterion
+          : null;
+      final priority = locked
+          ? lockedIndex + 1
+          : temporarilyActive && sortState.lockedCriteria.isNotEmpty
+          ? sortState.lockedCriteria.length + 1
+          : null;
       return _SortableHeader(
         key: key ?? Key('owned-inventory-sort-${field.name}'),
         label: label,
-        priority: index < 0 ? null : index + 1,
+        active: active,
+        locked: locked,
+        priority: priority,
         descending: criterion?.descending ?? true,
         onTap: () => onSort(field),
-        onLongPress: () => onRemoveSort(field),
+        onLongPress: () => onLongPressSort(field),
       );
     }
 
@@ -1044,12 +1043,16 @@ class _SortableHeader extends StatelessWidget {
   const _SortableHeader({
     super.key,
     required this.label,
+    required this.active,
+    required this.locked,
     required this.priority,
     required this.descending,
     required this.onTap,
     required this.onLongPress,
   });
   final String label;
+  final bool active;
+  final bool locked;
   final int? priority;
   final bool descending;
   final VoidCallback onTap;
@@ -1065,16 +1068,27 @@ class _SortableHeader extends StatelessWidget {
         child: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
-          child: Text(
-            '$label${priority == null ? '' : ' ${descending ? '▼' : '▲'}${_circledPriority(priority!)}'}',
-            maxLines: 1,
-            style: TextStyle(
-              color: priority != null
-                  ? const Color(0xff72bded)
-                  : const Color(0xff9fb3bf),
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$label${active ? ' ${descending ? '▼' : '▲'}${priority == null ? '' : _circledPriority(priority!)}' : ''}',
+                maxLines: 1,
+                style: TextStyle(
+                  color: locked
+                      ? const Color(0xff72bded)
+                      : active
+                      ? const Color(0xffffc85a)
+                      : const Color(0xff9fb3bf),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (locked) ...[
+                const SizedBox(width: 3),
+                const Icon(Icons.lock, size: 12, color: Color(0xff72bded)),
+              ],
+            ],
           ),
         ),
       ),
