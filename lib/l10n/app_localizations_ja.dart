@@ -1314,6 +1314,32 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreDefaultOrder => '既定の並び順に戻す';
 
   @override
+  String get sortAscending => '昇順';
+
+  @override
+  String get sortDescending => '降順';
+
+  @override
+  String sortPriority(int priority) {
+    return '第$priority優先';
+  }
+
+  @override
+  String get sortLockedState => 'ロック済み';
+
+  @override
+  String get sortTemporaryState => '一時ソート';
+
+  @override
+  String get sortHeaderHint => '選択で並び順を切替。長押しまたは Shift+Enter でロック';
+
+  @override
+  String get sortHeaderLockedHint => '選択で昇順・降順を切替。リセットでロックを解除';
+
+  @override
+  String get sortLockAction => '次の優先順位としてロック';
+
+  @override
   String get settingsTabScreen => '画面と音声';
 
   @override

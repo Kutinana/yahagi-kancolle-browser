@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -377,6 +378,58 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('exposes sort state and supports Shift+Enter locking', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(2400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    final firepowerHeader = find.byKey(
+      const Key('owned-inventory-sort-firepower'),
+    );
+    final headerElement = tester.element(firepowerHeader);
+
+    bool headerHasFocus() {
+      final focusContext = tester.binding.focusManager.primaryFocus?.context;
+      if (focusContext == null) return false;
+      var isInsideHeader = identical(focusContext, headerElement);
+      focusContext.visitAncestorElements((ancestor) {
+        if (identical(ancestor, headerElement)) isInsideHeader = true;
+        return !isInsideHeader;
+      });
+      return isInsideHeader;
+    }
+
+    for (var i = 0; i < 40 && !headerHasFocus(); i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+    }
+    expect(headerHasFocus(), isTrue);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+
+    expect(find.text('火力 ▼①'), findsOneWidget);
+    final semantics = tester.getSemantics(firepowerHeader);
+    expect(semantics.label, contains('火力'));
+    expect(semantics.label, contains('降序'));
+    expect(semantics.label, contains('第1优先级'));
+    expect(semantics.label, contains('已锁定'));
+  });
 
   testWidgets(
     'keeps two locked levels while replacing the temporary last level',

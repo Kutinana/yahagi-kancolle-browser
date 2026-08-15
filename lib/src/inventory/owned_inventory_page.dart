@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../fleet/ship_portrait.dart';
@@ -1060,42 +1062,88 @@ class _SortableHeader extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    onLongPress: onLongPress,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$label${active ? ' ${descending ? '▼' : '▲'}${priority == null ? '' : _circledPriority(priority!)}' : ''}',
-                maxLines: 1,
-                style: TextStyle(
-                  color: locked
-                      ? const Color(0xff72bded)
-                      : active
-                      ? const Color(0xffffc85a)
-                      : const Color(0xff9fb3bf),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    final semanticsParts = <String>[
+      label,
+      if (active) descending ? l10n.sortDescending : l10n.sortAscending,
+      if (priority != null) l10n.sortPriority(priority!),
+      if (active) locked ? l10n.sortLockedState : l10n.sortTemporaryState,
+    ];
+    final lockAction = CustomSemanticsAction(label: l10n.sortLockAction);
+
+    return Semantics(
+      button: true,
+      label: semanticsParts.join(', '),
+      hint: locked ? l10n.sortHeaderLockedHint : l10n.sortHeaderHint,
+      excludeSemantics: true,
+      customSemanticsActions: locked
+          ? const <CustomSemanticsAction, VoidCallback>{}
+          : <CustomSemanticsAction, VoidCallback>{lockAction: onLongPress},
+      child: Shortcuts(
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.enter, shift: true):
+              _LockSortIntent(),
+        },
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            _LockSortIntent: CallbackAction<_LockSortIntent>(
+              onInvoke: (_) {
+                if (!locked) onLongPress();
+                return null;
+              },
+            ),
+          },
+          child: InkWell(
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$label${active ? ' ${descending ? '▼' : '▲'}${priority == null ? '' : _circledPriority(priority!)}' : ''}',
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: locked
+                              ? const Color(0xff72bded)
+                              : active
+                              ? const Color(0xffffc85a)
+                              : const Color(0xff9fb3bf),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (locked) ...[
+                        const SizedBox(width: 3),
+                        const Icon(
+                          Icons.lock,
+                          size: 12,
+                          color: Color(0xff72bded),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-              if (locked) ...[
-                const SizedBox(width: 3),
-                const Icon(Icons.lock, size: 12, color: Color(0xff72bded)),
-              ],
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+class _LockSortIntent extends Intent {
+  const _LockSortIntent();
 }
 
 String _circledPriority(int priority) => priority >= 1 && priority <= 20

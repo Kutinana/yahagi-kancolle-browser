@@ -454,6 +454,21 @@
   "briefing": "概要",
   "check": "チェック",
   "restoreDefaultOrder": "既定の並び順に戻す",
+  "sortAscending": "昇順",
+  "sortDescending": "降順",
+  "sortPriority": "第{priority}優先",
+  "@sortPriority": {
+    "placeholders": {
+      "priority": {
+        "type": "int"
+      }
+    }
+  },
+  "sortLockedState": "ロック済み",
+  "sortTemporaryState": "一時ソート",
+  "sortHeaderHint": "選択で並び順を切替。長押しまたは Shift+Enter でロック",
+  "sortHeaderLockedHint": "選択で昇順・降順を切替。リセットでロックを解除",
+  "sortLockAction": "次の優先順位としてロック",
   "settingsTabScreen": "画面と音声",
   "settingsTabSound": "サウンド",
   "settingsTabBattle": "戦闘",

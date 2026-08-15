@@ -1304,6 +1304,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreDefaultOrder => '还原默认排序';
 
   @override
+  String get sortAscending => '升序';
+
+  @override
+  String get sortDescending => '降序';
+
+  @override
+  String sortPriority(int priority) {
+    return '第$priority优先级';
+  }
+
+  @override
+  String get sortLockedState => '已锁定';
+
+  @override
+  String get sortTemporaryState => '临时排序';
+
+  @override
+  String get sortHeaderHint => '点击切换排序；长按或按 Shift+Enter 锁定';
+
+  @override
+  String get sortHeaderLockedHint => '点击切换排序方向；通过还原清除锁定';
+
+  @override
+  String get sortLockAction => '锁定为下一优先级';
+
+  @override
   String get settingsTabScreen => '画面与声音';
 
   @override
@@ -2920,6 +2946,32 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get restoreDefaultOrder => '還原預設排序';
+
+  @override
+  String get sortAscending => '升序';
+
+  @override
+  String get sortDescending => '降序';
+
+  @override
+  String sortPriority(int priority) {
+    return '第$priority優先級';
+  }
+
+  @override
+  String get sortLockedState => '已鎖定';
+
+  @override
+  String get sortTemporaryState => '臨時排序';
+
+  @override
+  String get sortHeaderHint => '點擊切換排序；長按或按 Shift+Enter 鎖定';
+
+  @override
+  String get sortHeaderLockedHint => '點擊切換排序方向；透過還原清除鎖定';
+
+  @override
+  String get sortLockAction => '鎖定為下一優先級';
 
   @override
   String get settingsTabScreen => '畫面與聲音';

@@ -454,6 +454,21 @@
   "briefing": "简报",
   "check": "检查",
   "restoreDefaultOrder": "还原默认排序",
+  "sortAscending": "升序",
+  "sortDescending": "降序",
+  "sortPriority": "第{priority}优先级",
+  "@sortPriority": {
+    "placeholders": {
+      "priority": {
+        "type": "int"
+      }
+    }
+  },
+  "sortLockedState": "已锁定",
+  "sortTemporaryState": "临时排序",
+  "sortHeaderHint": "点击切换排序；长按或按 Shift+Enter 锁定",
+  "sortHeaderLockedHint": "点击切换排序方向；通过还原清除锁定",
+  "sortLockAction": "锁定为下一优先级",
   "settingsTabScreen": "画面与声音",
   "settingsTabSound": "声音",
   "settingsTabBattle": "战斗",

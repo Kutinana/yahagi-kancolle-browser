@@ -2546,6 +2546,54 @@ abstract class AppLocalizations {
   /// **'还原默认排序'**
   String get restoreDefaultOrder;
 
+  /// No description provided for @sortAscending.
+  ///
+  /// In zh, this message translates to:
+  /// **'升序'**
+  String get sortAscending;
+
+  /// No description provided for @sortDescending.
+  ///
+  /// In zh, this message translates to:
+  /// **'降序'**
+  String get sortDescending;
+
+  /// No description provided for @sortPriority.
+  ///
+  /// In zh, this message translates to:
+  /// **'第{priority}优先级'**
+  String sortPriority(int priority);
+
+  /// No description provided for @sortLockedState.
+  ///
+  /// In zh, this message translates to:
+  /// **'已锁定'**
+  String get sortLockedState;
+
+  /// No description provided for @sortTemporaryState.
+  ///
+  /// In zh, this message translates to:
+  /// **'临时排序'**
+  String get sortTemporaryState;
+
+  /// No description provided for @sortHeaderHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击切换排序；长按或按 Shift+Enter 锁定'**
+  String get sortHeaderHint;
+
+  /// No description provided for @sortHeaderLockedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击切换排序方向；通过还原清除锁定'**
+  String get sortHeaderLockedHint;
+
+  /// No description provided for @sortLockAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'锁定为下一优先级'**
+  String get sortLockAction;
+
   /// No description provided for @settingsTabScreen.
   ///
   /// In zh, this message translates to:
