@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 
@@ -429,6 +430,54 @@ void main() {
     expect(semantics.label, contains('降序'));
     expect(semantics.label, contains('第1优先级'));
     expect(semantics.label, contains('已锁定'));
+  });
+
+  testWidgets('keeps accessible tap and named lock actions', (tester) async {
+    final semanticsHandle = tester.ensureSemantics();
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(2400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    final firepowerHeader = find.byKey(
+      const Key('owned-inventory-sort-firepower'),
+    );
+    var node = tester.getSemantics(firepowerHeader);
+    var data = node.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.hasAction(SemanticsAction.longPress), isTrue);
+    expect(data.hasAction(SemanticsAction.customAction), isTrue);
+
+    node.owner!.performAction(node.id, SemanticsAction.tap);
+    await tester.pump();
+    expect(find.text('火力 ▼'), findsOneWidget);
+
+    node = tester.getSemantics(firepowerHeader);
+    data = node.getSemanticsData();
+    final customActionId = data.customSemanticsActionIds!.single;
+    node.owner!.performAction(
+      node.id,
+      SemanticsAction.customAction,
+      customActionId,
+    );
+    await tester.pump();
+
+    expect(find.text('火力 ▼①'), findsOneWidget);
+    node = tester.getSemantics(firepowerHeader);
+    data = node.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.hasAction(SemanticsAction.longPress), isFalse);
+    expect(data.hasAction(SemanticsAction.customAction), isFalse);
+    semanticsHandle.dispose();
   });
 
   testWidgets(

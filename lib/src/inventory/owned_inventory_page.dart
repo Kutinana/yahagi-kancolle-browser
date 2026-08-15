@@ -1075,12 +1075,15 @@ class _SortableHeader extends StatelessWidget {
     final lockAction = CustomSemanticsAction(label: l10n.sortLockAction);
 
     return Semantics(
+      container: true,
       button: true,
       label: semanticsParts.join(', '),
       hint: locked ? l10n.sortHeaderLockedHint : l10n.sortHeaderHint,
+      onTap: onTap,
+      onLongPress: locked ? null : onLongPress,
       excludeSemantics: true,
       customSemanticsActions: locked
-          ? const <CustomSemanticsAction, VoidCallback>{}
+          ? null
           : <CustomSemanticsAction, VoidCallback>{lockAction: onLongPress},
       child: Shortcuts(
         shortcuts: const <ShortcutActivator, Intent>{
