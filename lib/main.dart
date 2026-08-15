@@ -695,9 +695,6 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     widget.audioController.handleLifecycleState(state);
     widget.screenAwakeController?.handleLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      _scheduleWindowMetricsRecovery();
-    }
   }
 
   void _scheduleWindowMetricsRecovery() {

@@ -23,7 +23,6 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.PixelCopy
-import android.view.SurfaceView
 import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.webkit.WebView
@@ -72,14 +71,9 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         val enableHcpp = GameRenderingModeHcppPolicy.shouldEnable(storedMode)
 
         shellArgs.remove(FlutterShellArgs.ARG_ENABLE_HCPP_AND_SURFACE_CONTROL)
-        shellArgs.remove(FlutterShellArgs.ARG_DISABLE_HCPP_AND_SURFACE_CONTROL)
-        shellArgs.add(
-            if (enableHcpp) {
-                FlutterShellArgs.ARG_ENABLE_HCPP_AND_SURFACE_CONTROL
-            } else {
-                FlutterShellArgs.ARG_DISABLE_HCPP_AND_SURFACE_CONTROL
-            },
-        )
+        if (enableHcpp) {
+            shellArgs.add(FlutterShellArgs.ARG_ENABLE_HCPP_AND_SURFACE_CONTROL)
+        }
         return shellArgs
     }
 
@@ -1059,7 +1053,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         )
         pendingGameSurfaceRecoveryActions.clear()
 
-        for (delayMillis in longArrayOf(0L, 80L, 300L)) {
+        for (delayMillis in longArrayOf(50L, 150L, 400L)) {
             lateinit var action: Runnable
             action = Runnable {
                 pendingGameSurfaceRecoveryActions.remove(action)
@@ -1074,13 +1068,15 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
 
     private fun recoverGameSurfaces() {
         val decorView = window.decorView
-        recoverSurfaceTree(decorView)
         decorView.requestApplyInsets()
 
         val webViews = mutableListOf<WebView>()
         collectWebViews(decorView, webViews)
-        val webView = boundWebView?.takeIf { it.isAttachedToWindow }
-            ?: webViews.singleOrNull()
+        val webView = boundWebView?.takeIf {
+            it.isAttachedToWindow && it.width > 0 && it.height > 0
+        } ?: webViews.singleOrNull()?.takeIf {
+            it.isAttachedToWindow && it.width > 0 && it.height > 0
+        }
             ?: return
 
         webView.requestLayout()
@@ -1104,20 +1100,6 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             """.trimIndent(),
             null,
         )
-    }
-
-    private fun recoverSurfaceTree(view: View) {
-        view.requestLayout()
-        view.invalidate()
-        if (view is SurfaceView) {
-            view.holder.setSizeFromLayout()
-            view.postInvalidateOnAnimation()
-        }
-        if (view is ViewGroup) {
-            for (index in 0 until view.childCount) {
-                recoverSurfaceTree(view.getChildAt(index))
-            }
-        }
     }
 
     private fun collectWebViews(

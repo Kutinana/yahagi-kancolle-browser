@@ -13,7 +13,7 @@ void main() {
     );
   });
 
-  test('selects HCPP before engine startup from the saved rendering mode', () {
+  test('disabled HCPP is omitted from engine startup arguments', () {
     final activity = File(
       'android/app/src/main/kotlin/app/yahagi/kancollebrowser/MainActivity.kt',
     ).readAsStringSync();
@@ -24,7 +24,11 @@ void main() {
     expect(activity, contains('override fun getFlutterShellArgs()'));
     expect(policy, contains('flutter.game.renderingMode'));
     expect(activity, contains('ARG_ENABLE_HCPP_AND_SURFACE_CONTROL'));
-    expect(activity, contains('ARG_DISABLE_HCPP_AND_SURFACE_CONTROL'));
+    expect(
+      activity,
+      isNot(contains('ARG_DISABLE_HCPP_AND_SURFACE_CONTROL')),
+      reason: 'Flutter treats the presence of this option as enabling HCPP',
+    );
   });
 
   test('restarts the activity after a rendering mode change', () {

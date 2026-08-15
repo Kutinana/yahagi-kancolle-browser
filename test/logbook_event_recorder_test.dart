@@ -184,6 +184,29 @@ void main() {
     expect(row['secretary_name'], '矢矧改二乙 Lv.132');
   });
 
+  test('records construction start when the response omits api_data', () async {
+    await recorder.record(
+      _eventWithoutData(
+        '/kcsapi/api_req_kousyou/createship',
+        params: const {
+          'api_kdock_id': '2',
+          'api_item1': '30',
+          'api_item2': '30',
+          'api_item3': '30',
+          'api_item4': '30',
+          'api_item5': '1',
+          'api_large_flag': '0',
+        },
+      ),
+      state,
+    );
+
+    final row = (await database.getConstructionRecords()).single;
+    expect(row['dock_id'], 2);
+    expect(row['ship_name'], '建造中');
+    expect(row['fuel'], 30);
+  });
+
   test(
     'uses the ship already exposed by the construction dock response',
     () async {
@@ -419,6 +442,17 @@ CapturedApiEvent _event(
   path: path,
   requestParams: params,
   responseBody: jsonEncode({'api_result': 1, 'api_data': data}),
+  source: CaptureSource.manual,
+  capturedAt: DateTime.utc(2026, 8, 11, 12),
+);
+
+CapturedApiEvent _eventWithoutData(
+  String path, {
+  Map<String, Object?> params = const {},
+}) => CapturedApiEvent(
+  path: path,
+  requestParams: params,
+  responseBody: jsonEncode({'api_result': 1, 'api_result_msg': '成功'}),
   source: CaptureSource.manual,
   capturedAt: DateTime.utc(2026, 8, 11, 12),
 );

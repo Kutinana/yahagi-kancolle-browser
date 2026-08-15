@@ -16,6 +16,7 @@ import 'browser/game_toolbar_controller.dart';
 import 'browser/game_webview_compatibility.dart';
 import 'browser/safe_page_address.dart';
 import 'browser/game_launch_config.dart';
+import 'browser/game_navigation_policy.dart';
 import 'capture/capture_mode.dart';
 import 'capture/capture_mode_controller.dart';
 import 'capture/android_game_capture_port.dart';
@@ -75,6 +76,7 @@ class _GameWebViewState extends State<GameWebView> {
   late final Future<void> _compatibilityReady;
   late final Future<void> _frameRateReady;
   late final GameCapturePort _gameCapturePort;
+  final GameNavigationPolicy _navigationPolicy = GameNavigationPolicy();
   late CaptureMode _activeCaptureMode;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
   static const _scaleChannel = MethodChannel(
@@ -129,6 +131,7 @@ class _GameWebViewState extends State<GameWebView> {
         NavigationDelegate(
           onNavigationRequest: _onNavigationRequest,
           onPageStarted: (url) {
+            _navigationPolicy.onPageStarted(Uri.tryParse(url));
             _navigationEpoch += 1;
             _frameRateRuntimeController?.onPageStarted();
             widget.controller.onPageStarted(url);
@@ -344,7 +347,7 @@ class _GameWebViewState extends State<GameWebView> {
         widget.browserController.mode == GameBrowserMode.localPrototype &&
         (uri?.scheme == 'about' || uri?.scheme == 'data');
     if (isLocalDocument ||
-        (uri != null && SafePageAddress.canNavigateInGameWebView(uri))) {
+        (uri != null && _navigationPolicy.canNavigate(uri))) {
       return NavigationDecision.navigate;
     }
 

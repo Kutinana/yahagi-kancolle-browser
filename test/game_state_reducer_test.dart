@@ -525,6 +525,40 @@ void main() {
       expect(state.constructionDocks, hasLength(4));
     });
 
+    test('accepts the real createship response without api_data', () {
+      final reducer = GameStateReducer();
+      final capturedAt = DateTime.utc(2026, 8, 15, 8);
+
+      final state = reducer.reduce(
+        GameState.empty,
+        kcsapiEvent(
+          '/kcsapi/api_req_kousyou/createship',
+          null,
+          includeApiData: false,
+          requestParams: const <String, Object?>{'api_kdock_id': '1'},
+          capturedAt: capturedAt,
+        ),
+      );
+
+      expect(state.updatedAt, capturedAt);
+    });
+
+    test('rejects a createship response with malformed api_data', () {
+      final reducer = GameStateReducer();
+
+      expect(
+        () => reducer.reduce(
+          GameState.empty,
+          kcsapiEvent(
+            '/kcsapi/api_req_kousyou/createship',
+            'not-an-object',
+            requestParams: const <String, Object?>{'api_kdock_id': '1'},
+          ),
+        ),
+        throwsA(isA<GameApiParseException>()),
+      );
+    });
+
     test('charge updates resources and supplied ships immediately', () {
       final reducer = GameStateReducer();
       var state = reducer.reduce(GameState.empty, portEvent);

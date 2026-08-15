@@ -26,6 +26,7 @@ class GameStateReducer {
           event.path == '/kcsapi/api_req_kaisou/slotset' ||
           event.path == '/kcsapi/api_req_kaisou/slotset_ex' ||
           event.path == '/kcsapi/api_req_kaisou/unsetslot_all' ||
+          event.path == '/kcsapi/api_req_kousyou/createship' ||
           event.path == '/kcsapi/api_req_nyukyo/start' ||
           event.path == '/kcsapi/api_req_nyukyo/speedchange' ||
           event.path == '/kcsapi/api_req_quest/clearitemget' ||
@@ -136,7 +137,9 @@ class GameStateReducer {
       ),
       '/kcsapi/api_req_kousyou/createship' => _constructionStart(
         state,
-        _requiredMap(data, 'createship'),
+        data == null
+            ? const <String, Object?>{}
+            : _requiredMap(data, 'createship'),
         event,
         origin,
       ),

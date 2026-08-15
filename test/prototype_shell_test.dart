@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +42,17 @@ import 'package:yahagi_kancolle_browser/src/fleet/repair_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 
 void main() {
+  test('app resume does not schedule a platform-view recovery frame', () {
+    final source = File('lib/main.dart').readAsStringSync();
+    final lifecycleBody = RegExp(
+      r'void didChangeAppLifecycleState\(AppLifecycleState state\) \{(.*?)\n  \}',
+      dotAll: true,
+    ).firstMatch(source)?.group(1);
+
+    expect(lifecycleBody, isNotNull);
+    expect(lifecycleBody, isNot(contains('_scheduleWindowMetricsRecovery')));
+  });
+
   testWidgets('shows the game surface, information panel, and capture modes', (
     tester,
   ) async {

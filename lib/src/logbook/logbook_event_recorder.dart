@@ -196,7 +196,10 @@ final class LogbookEventRecorder {
     );
     _pendingConstructions[dockId] = pending;
 
-    final shipId = _createdShipId(_data(event)['api_kdock'], dockId);
+    final shipId = _createdShipId(
+      _data(event, allowMissingData: true)['api_kdock'],
+      dockId,
+    );
     final master = state.masterShips[shipId];
     final shipType = master == null
         ? null
@@ -353,8 +356,14 @@ final class LogbookEventRecorder {
     };
   }
 
-  Map<String, Object?> _data(CapturedApiEvent event) {
-    final data = GameApiDecoder.decodeEventData(event);
+  Map<String, Object?> _data(
+    CapturedApiEvent event, {
+    bool allowMissingData = false,
+  }) {
+    final data = GameApiDecoder.decodeEventData(
+      event,
+      allowMissingData: allowMissingData,
+    );
     return data is Map
         ? Map<String, Object?>.from(data)
         : const <String, Object?>{};
