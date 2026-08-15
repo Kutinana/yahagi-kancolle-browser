@@ -3032,6 +3032,12 @@ abstract class AppLocalizations {
   /// **'全任务'**
   String get questAll;
 
+  /// No description provided for @chineseTranslation.
+  ///
+  /// In zh, this message translates to:
+  /// **'中文翻译'**
+  String get chineseTranslation;
+
   /// No description provided for @searchQuest.
   ///
   /// In zh, this message translates to:

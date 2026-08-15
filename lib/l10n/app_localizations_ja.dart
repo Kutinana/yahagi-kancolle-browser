@@ -1575,6 +1575,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get questAll => '全任務';
 
   @override
+  String get chineseTranslation => '中国語訳';
+
+  @override
   String get searchQuest => '任務を検索';
 
   @override

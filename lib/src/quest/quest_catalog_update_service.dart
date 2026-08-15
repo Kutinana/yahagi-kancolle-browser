@@ -14,7 +14,7 @@ const questCatalogDisplayCommitApi =
     '?path=files/quests-jp.json&per_page=1';
 const questCatalogRelationCommitApi =
     'https://api.github.com/repos/kcwikizh/kcQuests/commits'
-    '?path=quests-scn.json&per_page=1';
+    '?path=dist/quests-scn.json&per_page=1';
 const questCatalogCommitApi = questCatalogRelationCommitApi;
 
 sealed class QuestCatalogUpdateResult {
@@ -183,10 +183,12 @@ final class QuestCatalogUpdateService implements QuestCatalogUpdateClient {
 
   List<Uri> _relationSources(String sha) => <Uri>[
     Uri.parse(
-      'https://raw.githubusercontent.com/kcwikizh/kcQuests/$sha/quests-scn.json',
+      'https://raw.githubusercontent.com/kcwikizh/kcQuests/'
+      '$sha/dist/quests-scn.json',
     ),
     Uri.parse(
-      'https://cdn.jsdelivr.net/gh/kcwikizh/kcQuests@$sha/quests-scn.json',
+      'https://cdn.jsdelivr.net/gh/kcwikizh/kcQuests@'
+      '$sha/dist/quests-scn.json',
     ),
   ];
 

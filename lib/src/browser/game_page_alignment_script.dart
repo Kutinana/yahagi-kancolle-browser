@@ -1,22 +1,7 @@
 const String gamePageAlignmentScript = r'''
 (() => {
-  const isGamePage =
-    location.pathname.includes('kancolle') ||
-    location.pathname.includes('854854') ||
-    location.hostname === 'osapi.dmm.com' ||
-    location.pathname.includes('/kcs');
-  if (!isGamePage || location.hostname === 'accounts.dmm.com') return;
-
   const styleId = '__yahagi_mobile_fixed_canvas__';
-  let style = document.getElementById(styleId);
-
-  if (!style) {
-    style = document.createElement('style');
-    style.id = styleId;
-    document.head.appendChild(style);
-  }
-
-  style.textContent = `
+  const fixedCanvasCss = `
     html, body {
       margin: 0 !important;
       padding: 0 !important;
@@ -66,36 +51,124 @@ const String gamePageAlignmentScript = r'''
     }
   `;
 
-  window.__yahagiMobileAlignGame = () => {
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+  const cleanupGamePresentation = () => {
+    document.getElementById(styleId)?.remove();
 
-    const gameFrame = document.getElementById('game_frame');
-    if (gameFrame) {
-      gameFrame.setAttribute('scrolling', 'no');
-      try {
-        gameFrame.contentWindow?.scrollTo(0, 0);
-      } catch (_) {
-        // A cross-origin game frame is still locked by touch-action above.
-      }
+    if (window.__yahagiMobileScrollLock) {
+      window.removeEventListener('scroll', window.__yahagiMobileScrollLock);
+    }
+    if (window.__yahagiMobileAlignGame) {
+      window.removeEventListener('load', window.__yahagiMobileAlignGame);
+    }
+
+    document.getElementById('game_frame')?.removeAttribute('scrolling');
+    delete window.__yahagiMobileScrollLock;
+    delete window.__yahagiMobileAlignGame;
+  };
+
+  const isGamePage =
+    location.pathname.includes('kancolle') ||
+    location.pathname.includes('854854') ||
+    location.hostname === 'osapi.dmm.com' ||
+    location.pathname.includes('/kcs');
+  const isAccountPage =
+    location.hostname === 'accounts.dmm.com' ||
+    location.hostname === 'accounts.dmm.co.jp';
+
+  const hasAuthenticationControls = () =>
+    Boolean(
+      document.querySelector(
+        'input[type="password"], form[action*="/login"]',
+      ),
+    ) ||
+    Array.from(document.links).some((link) => {
+      const href = link.href.toLowerCase();
+      return href.includes('/login') || href.includes('accounts.dmm.');
+    });
+
+  const notifyPresentationState = (hasGameSurface) => {
+    const nextState = hasGameSurface ? 'game' : 'web';
+    if (window.__yahagiMobilePresentationState === nextState) return;
+    window.__yahagiMobilePresentationState = nextState;
+    if (window.YahagiPresentation) {
+      window.YahagiPresentation.postMessage(nextState);
     }
   };
 
-  if (window.__yahagiMobileScrollLock) {
-    window.removeEventListener('scroll', window.__yahagiMobileScrollLock);
-  }
-  window.__yahagiMobileScrollLock = () => {
-    window.__yahagiMobileAlignGame();
+  const applyGamePresentation = () => {
+    let style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    if (style.textContent !== fixedCanvasCss) {
+      style.textContent = fixedCanvasCss;
+    }
+
+    window.__yahagiMobileAlignGame = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+
+      const gameFrame = document.getElementById('game_frame');
+      if (gameFrame) {
+        gameFrame.setAttribute('scrolling', 'no');
+        try {
+          gameFrame.contentWindow?.scrollTo(0, 0);
+        } catch (_) {
+          // A cross-origin game frame is still locked by touch-action above.
+        }
+      }
+    };
+
+    if (window.__yahagiMobileScrollLock) {
+      window.removeEventListener('scroll', window.__yahagiMobileScrollLock);
+    }
+    window.__yahagiMobileScrollLock = () => {
+      window.__yahagiMobileAlignGame();
+    };
+    window.addEventListener('scroll', window.__yahagiMobileScrollLock, {
+      passive: true,
+    });
+
+    if (document.readyState === 'complete') {
+      window.__yahagiMobileAlignGame();
+    } else {
+      window.addEventListener('load', window.__yahagiMobileAlignGame);
+    }
   };
-  window.addEventListener('scroll', window.__yahagiMobileScrollLock, {
-    passive: true,
-  });
-  
-  if (document.readyState === 'complete') {
-    window.__yahagiMobileAlignGame();
-  } else {
-    window.addEventListener('load', window.__yahagiMobileAlignGame);
+
+  window.__yahagiMobileSyncPresentation = () => {
+    const hasGameSurface = Boolean(
+      document.querySelector('#game_frame, #game-container'),
+    );
+    const shouldUseGamePresentation =
+      isGamePage &&
+      !isAccountPage &&
+      hasGameSurface &&
+      !hasAuthenticationControls();
+
+    if (shouldUseGamePresentation) {
+      applyGamePresentation();
+    } else {
+      cleanupGamePresentation();
+    }
+    notifyPresentationState(shouldUseGamePresentation);
+    return shouldUseGamePresentation;
+  };
+
+  window.__yahagiMobilePresentationObserver?.disconnect();
+  if (isGamePage && !isAccountPage) {
+    window.__yahagiMobilePresentationObserver = new MutationObserver(() => {
+      window.__yahagiMobileSyncPresentation();
+    });
+    window.__yahagiMobilePresentationObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
   }
+
+  return window.__yahagiMobileSyncPresentation();
 })();
 ''';

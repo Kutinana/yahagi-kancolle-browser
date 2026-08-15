@@ -31,6 +31,8 @@ String mergeQuestCatalogJson({
             ))) {
       throw FormatException('Quest prerequisites are invalid for $gameId');
     }
+    final translatedName = _optionalString(relation, 'name');
+    final translatedDescription = _optionalString(relation, 'desc');
 
     merged[key] = <String, Object?>{
       'code': code,
@@ -40,9 +42,31 @@ String mergeQuestCatalogJson({
       if (display['resources'] case final List resources)
         'resources': resources,
       if (prerequisites case final List pre) 'pre': pre,
+      if (translatedName != null && translatedName.trim().isNotEmpty)
+        'nameZh': _normalizeTranslation(translatedName),
+      if (translatedDescription != null &&
+          translatedDescription.trim().isNotEmpty)
+        'descZh': _normalizeTranslation(translatedDescription),
     };
   }
   return jsonEncode(merged);
+}
+
+String _normalizeTranslation(String source) => source
+    .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '')
+    .replaceFirst(RegExp(r'^[A-Za-z]+\|'), '')
+    .replaceAllMapped(
+      RegExp(r'([「『（(])[^|，。！？；：\n「『（(]{1,30}\|'),
+      (match) => match.group(1)!,
+    );
+
+String? _optionalString(Map<String, dynamic> entry, String key) {
+  final value = entry[key];
+  if (value == null) return null;
+  if (value is! String) {
+    throw FormatException('Quest translation $key is invalid');
+  }
+  return value;
 }
 
 Map<String, dynamic> _decodeRoot(String source, String label) {

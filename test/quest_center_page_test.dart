@@ -104,6 +104,171 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets(
+    'Chinese translation is opt-in and changes only the selected detail text',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1180, 720);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = GameStateController(
+        questStore: _QuestFixtureStore(<int, GameQuest>{
+          442: const GameQuest(
+            id: 442,
+            title: '西方連絡作戦準備を実施せよ！',
+            detail: '西方連絡作戦準備：各遠征を実施せよ！',
+            category: 4,
+            type: 4,
+            state: 2,
+            progressFlag: 0,
+            materials: <int>[0, 900, 500, 500],
+          ),
+        }),
+      );
+      await controller.idle;
+      final catalog = QuestCatalog(const <QuestCatalogEntry>[
+        QuestCatalogEntry(
+          gameId: 442,
+          code: 'Dy7',
+          name: '西方連絡作戦準備を実施せよ！',
+          description: '西方連絡作戦準備：各遠征を実施せよ！',
+          translatedName: '实施西方联络作战准备！',
+          translatedDescription: '西方联络作战准备：实施各项远征！',
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: QuestCenterPage(controller: controller, catalog: catalog),
+        ),
+      );
+
+      final toggle = find.byKey(const Key('quest-translation-toggle'));
+      final tabs = find.byKey(const Key('quest-mode-tabs'));
+      expect(toggle, findsOneWidget);
+      expect(tester.getRect(toggle).right, lessThan(tester.getRect(tabs).left));
+      expect(find.text('西方連絡作戦準備を実施せよ！'), findsWidgets);
+      expect(find.text('实施西方联络作战准备！'), findsNothing);
+      expect(find.byType(Image), findsNWidgets(4));
+
+      await tester.tap(toggle);
+      await tester.pump();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('quest-card-442')),
+          matching: find.text('西方連絡作戦準備を実施せよ！'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('quest-detail-title-442')),
+          matching: find.text('实施西方联络作战准备！'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('西方联络作战准备：实施各项远征！'), findsOneWidget);
+      expect(find.text('燃料 0'), findsNothing);
+      expect(find.text('弹药 900'), findsNothing);
+      expect(find.byType(Image), findsNWidgets(4));
+
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: QuestCenterPage(controller: controller, catalog: catalog),
+        ),
+      );
+      expect(find.text('实施西方联络作战准备！'), findsNothing);
+      expect(find.text('西方連絡作戦準備を実施せよ！'), findsWidgets);
+      controller.dispose();
+    },
+  );
+
+  testWidgets('missing Chinese fields fall back to Japanese detail text', (
+    tester,
+  ) async {
+    final controller = GameStateController(
+      questStore: _QuestFixtureStore(<int, GameQuest>{
+        201: const GameQuest(
+          id: 201,
+          title: '日本語任務名',
+          detail: '日本語説明',
+          category: 2,
+          type: 4,
+          state: 2,
+          progressFlag: 0,
+        ),
+      }),
+    );
+    await controller.idle;
+    final catalog = QuestCatalog(const <QuestCatalogEntry>[
+      QuestCatalogEntry(
+        gameId: 201,
+        code: 'Bd1',
+        name: '日本語任務名',
+        description: '日本語説明',
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: QuestCenterPage(controller: controller, catalog: catalog),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('quest-translation-toggle')));
+    await tester.pump();
+
+    expect(find.text('日本語任務名'), findsWidgets);
+    expect(find.text('日本語説明'), findsOneWidget);
+    controller.dispose();
+  });
+
+  testWidgets('Chinese translation also applies in all-quests mode', (
+    tester,
+  ) async {
+    final controller = GameStateController();
+    final catalog = QuestCatalog(const <QuestCatalogEntry>[
+      QuestCatalogEntry(
+        gameId: 442,
+        code: 'Dy7',
+        name: '日本語任務名',
+        description: '日本語説明',
+        translatedName: '中文任务名',
+        translatedDescription: '中文说明',
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: QuestCenterPage(
+          controller: controller,
+          catalog: catalog,
+          mode: QuestCenterMode.all,
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('quest-translation-toggle')));
+    await tester.pump();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('quest-card-442')),
+        matching: find.text('日本語任務名'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('quest-detail-title-442')),
+        matching: find.text('中文任务名'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('中文说明'), findsOneWidget);
+    controller.dispose();
+  });
+
   testWidgets('shows a waiting state before quest data arrives', (
     tester,
   ) async {

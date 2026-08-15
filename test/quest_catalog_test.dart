@@ -114,6 +114,9 @@ void main() {
     expect(bundled.byGameId(201)?.description, contains('敵艦隊'));
     expect(bundled.byGameId(201)?.description, isNot(contains('敌舰队')));
     expect(bundled.successorsOf(201), isNotEmpty);
+    expect(bundled.byGameId(442)?.translatedName, '实施西方联络作战准备！');
+    expect(bundled.byGameId(442)?.translatedDescription, contains('「潜水艇派遣作战」'));
+    expect(bundled.byGameId(442)?.translatedDescription, isNot(contains('|')));
   });
 
   test('merges Japanese display text with kcWiki quest relations', () {
@@ -130,7 +133,7 @@ void main() {
         '201': <String, Object?>{
           'code': 'Bq11',
           'name': '南西诸岛方面“海上警备行动”发令！',
-          'desc': '中文说明',
+          'desc': '执行「远征|西方海域侦察作战」<br>以及后续远征',
           'memo': '中文奖励',
           'pre': <String>['Bm8', 'Cd1'],
         },
@@ -142,7 +145,52 @@ void main() {
     expect(entry['desc'], '艦隊を南西諸島方面へ出撃させよ！');
     expect(entry['rewards'], '開発資材');
     expect(entry['pre'], <String>['Bm8', 'Cd1']);
-    expect(merged, isNot(contains('中文')));
+    expect(entry['nameZh'], '南西诸岛方面“海上警备行动”发令！');
+    expect(entry['descZh'], '执行「西方海域侦察作战」以及后续远征');
+
+    final parsed = QuestCatalogEntry.fromJson(201, entry);
+    expect(parsed.translatedName, '南西诸岛方面“海上警备行动”发令！');
+    expect(parsed.translatedDescription, '执行「西方海域侦察作战」以及后续远征');
+  });
+
+  test('uses local quest translations only for missing upstream fields', () {
+    final localOnly = QuestCatalogEntry.fromJson(380, <String, Object?>{
+      'code': 'L2507C1',
+      'name': '日本語名',
+      'desc': '日本語説明',
+    });
+    expect(localOnly.translatedName, '【期间限定任务】登陆船团护卫演习');
+    expect(localOnly.translatedDescription, contains('至少1艘登陆舰及至少2艘护卫海防舰'));
+
+    final partiallyTranslated = QuestCatalogEntry.fromJson(
+      380,
+      <String, Object?>{
+        'code': 'L2507C1',
+        'name': '日本語名',
+        'desc': '日本語説明',
+        'nameZh': '上游名称',
+        'descZh': '   ',
+      },
+    );
+    expect(partiallyTranslated.translatedName, '上游名称');
+    expect(
+      partiallyTranslated.translatedDescription,
+      contains('至少1艘登陆舰及至少2艘护卫海防舰'),
+    );
+  });
+
+  test('every bundled quest has a complete Chinese detail translation', () async {
+    final bundled = await QuestCatalog.loadAsset();
+    final missing = <String>[
+      for (final entry in bundled.entries)
+        if (entry.translatedName == null || entry.translatedDescription == null)
+          '${entry.gameId}/${entry.code}: '
+              '${entry.translatedName == null ? 'name' : ''}'
+              '${entry.translatedName == null && entry.translatedDescription == null ? '+' : ''}'
+              '${entry.translatedDescription == null ? 'description' : ''}',
+    ];
+
+    expect(missing, isEmpty, reason: missing.join('\n'));
   });
 
   test('uses game id when upstream quest codes differ', () {

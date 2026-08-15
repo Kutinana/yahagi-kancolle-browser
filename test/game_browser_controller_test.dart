@@ -116,6 +116,15 @@ void main() {
     expect(port.clearSessionCalls, 1);
     expect(port.loadedUris, <Uri>[GameLaunchConfig.dmmGameEntry]);
   });
+
+  test('fit screen delegates a full presentation resynchronization', () async {
+    final port = FakeGameBrowserPort();
+    final controller = GameBrowserController(port: port);
+
+    await controller.fitGameScreen();
+
+    expect(port.fitGameScreenCalls, 1);
+  });
 }
 
 final class FakeGameBrowserPort implements GameBrowserPort {
@@ -127,6 +136,7 @@ final class FakeGameBrowserPort implements GameBrowserPort {
   var reloadCalls = 0;
   var goBackCalls = 0;
   var clearSessionCalls = 0;
+  var fitGameScreenCalls = 0;
   Completer<void>? reloadCompleter;
 
   @override
@@ -158,6 +168,11 @@ final class FakeGameBrowserPort implements GameBrowserPort {
   @override
   Future<void> runJavaScript(String javascript) async {
     lastRunJavaScript = javascript;
+  }
+
+  @override
+  Future<void> fitGameScreen() async {
+    fitGameScreenCalls++;
   }
 
   @override

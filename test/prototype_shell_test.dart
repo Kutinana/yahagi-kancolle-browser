@@ -1044,6 +1044,9 @@ final class _MemoryNetworkSettingsStore implements NetworkSettingsStore {
 
 final class _NoopBrowserPort implements GameBrowserPort {
   @override
+  Future<void> fitGameScreen() async {}
+
+  @override
   Future<bool> canGoBack() async => false;
 
   @override

@@ -7,8 +7,18 @@ import 'package:yahagi_kancolle_browser/src/quest/quest_catalog_dataset.dart';
 import 'package:yahagi_kancolle_browser/src/quest/quest_catalog_store.dart';
 
 void main() {
-  String raw(String name) => jsonEncode(<String, Object?>{
-    '1': <String, Object?>{'code': 'A1', 'name': name, 'desc': ''},
+  String raw(
+    String name, {
+    String? translatedName,
+    String? translatedDescription,
+  }) => jsonEncode(<String, Object?>{
+    '1': <String, Object?>{
+      'code': 'A1',
+      'name': name,
+      'desc': '',
+      'nameZh': ?translatedName,
+      'descZh': ?translatedDescription,
+    },
   });
 
   QuestCatalogVersion version(String data, int day) => QuestCatalogVersion(
@@ -39,6 +49,35 @@ void main() {
         (await store.loadBestAvailable()).source,
         QuestCatalogSource.bundled,
       );
+    },
+  );
+
+  test(
+    'newer cache inherits missing Chinese fields from bundled data',
+    () async {
+      final bundled = raw(
+        'bundled',
+        translatedName: '内置中文名',
+        translatedDescription: '内置中文说明',
+      );
+      final cached = raw('newer cached Japanese');
+      final storage = _MemoryStorage(
+        bundledData: bundled,
+        bundledMetadata: version(bundled, 1).toJson(),
+        cachedData: cached,
+        cachedMetadata: version(cached, 2).toJson(),
+      );
+
+      final loaded = await QuestCatalogStore(
+        storage,
+        minimumQuestCount: 1,
+      ).loadBestAvailable();
+      final entry = loaded.dataset.catalog.byGameId(1)!;
+
+      expect(loaded.source, QuestCatalogSource.cache);
+      expect(entry.name, 'newer cached Japanese');
+      expect(entry.translatedName, '内置中文名');
+      expect(entry.translatedDescription, '内置中文说明');
     },
   );
 

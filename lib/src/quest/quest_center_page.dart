@@ -137,11 +137,17 @@ class QuestHeaderControls extends StatelessWidget {
     required this.mode,
     required this.onModeChanged,
     required this.filters,
+    required this.translationEnabled,
+    required this.onTranslationChanged,
+    this.compactTranslation = false,
   });
 
   final QuestCenterMode mode;
   final ValueChanged<QuestCenterMode> onModeChanged;
   final QuestFilterController filters;
+  final bool translationEnabled;
+  final ValueChanged<bool> onTranslationChanged;
+  final bool compactTranslation;
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +159,12 @@ class QuestHeaderControls extends StatelessWidget {
       builder: (context, _) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          QuestTranslationToggle(
+            enabled: translationEnabled,
+            compact: compactTranslation,
+            onChanged: onTranslationChanged,
+          ),
+          const SizedBox(width: 8),
           QuestModeTabs(mode: mode, onChanged: onModeChanged),
           if (mode == QuestCenterMode.all) ...[
             const SizedBox(width: 6),
@@ -173,6 +185,65 @@ class QuestHeaderControls extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class QuestTranslationToggle extends StatelessWidget {
+  const QuestTranslationToggle({
+    super.key,
+    required this.enabled,
+    required this.onChanged,
+    this.compact = false,
+  });
+
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    final color = enabled ? const Color(0xffffd47a) : const Color(0xff9fb3bf);
+    return SizedBox(
+      key: const Key('quest-translation-toggle'),
+      height: 38,
+      width: compact ? 38 : 100,
+      child: Material(
+        color: enabled ? const Color(0xff5b4420) : const Color(0xff0b202d),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(19),
+          side: BorderSide(
+            color: enabled ? const Color(0xffb88b38) : const Color(0xff315064),
+          ),
+        ),
+        child: InkWell(
+          onTap: () => onChanged(!enabled),
+          borderRadius: BorderRadius.circular(19),
+          child: Tooltip(
+            message: l10n.chineseTranslation,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.translate, size: 17, color: color),
+                if (!compact) ...[
+                  const SizedBox(width: 5),
+                  Text(
+                    l10n.chineseTranslation,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -382,6 +453,8 @@ class QuestCenterPage extends StatefulWidget {
     this.catalog,
     this.catalogController,
     this.filterController,
+    this.translationEnabled,
+    this.onTranslationChanged,
   });
 
   final GameStateController controller;
@@ -392,6 +465,8 @@ class QuestCenterPage extends StatefulWidget {
   final QuestCatalog? catalog;
   final QuestCatalogController? catalogController;
   final QuestFilterController? filterController;
+  final bool? translationEnabled;
+  final ValueChanged<bool>? onTranslationChanged;
 
   @override
   State<QuestCenterPage> createState() => _QuestCenterPageState();
@@ -405,9 +480,19 @@ class _QuestCenterPageState extends State<QuestCenterPage> {
   Map<int, GameQuest>? _projectedLiveQuests;
   QuestCatalogProjection? _cachedProjection;
   final QuestFilterController _localFilters = QuestFilterController();
+  bool _localTranslationEnabled = false;
 
   QuestFilterController get _filters =>
       widget.filterController ?? _localFilters;
+  bool get _translationEnabled =>
+      widget.translationEnabled ?? _localTranslationEnabled;
+
+  void _changeTranslation(bool enabled) {
+    if (widget.translationEnabled == null) {
+      setState(() => _localTranslationEnabled = enabled);
+    }
+    widget.onTranslationChanged?.call(enabled);
+  }
 
   @override
   void initState() {
@@ -478,6 +563,8 @@ class _QuestCenterPageState extends State<QuestCenterPage> {
                   mode: _mode,
                   filters: _filters,
                   onModeChanged: _changeMode,
+                  translationEnabled: _translationEnabled,
+                  onTranslationChanged: _changeTranslation,
                 ),
               const Expanded(
                 child: Center(
@@ -499,6 +586,8 @@ class _QuestCenterPageState extends State<QuestCenterPage> {
                 mode: _mode,
                 filters: _filters,
                 onModeChanged: _changeMode,
+                translationEnabled: _translationEnabled,
+                onTranslationChanged: _changeTranslation,
               ),
             Expanded(
               child: entries.isEmpty
@@ -515,6 +604,18 @@ class _QuestCenterPageState extends State<QuestCenterPage> {
                         final detail = _QuestDetail(
                           key: const Key('quest-detail-panel'),
                           entry: selected,
+                          title: _translationEnabled
+                              ? _catalog
+                                        ?.byGameId(selected.id)
+                                        ?.translatedName ??
+                                    selected.title
+                              : selected.title,
+                          detail: _translationEnabled
+                              ? _catalog
+                                        ?.byGameId(selected.id)
+                                        ?.translatedDescription ??
+                                    selected.detail
+                              : selected.detail,
                           onRelationSelected: _selectRelation,
                         );
                         if (constraints.maxWidth < 760) {
@@ -624,11 +725,15 @@ class _QuestHeader extends StatelessWidget {
     required this.mode,
     required this.filters,
     required this.onModeChanged,
+    required this.translationEnabled,
+    required this.onTranslationChanged,
   });
 
   final QuestCenterMode mode;
   final QuestFilterController filters;
   final ValueChanged<QuestCenterMode> onModeChanged;
+  final bool translationEnabled;
+  final ValueChanged<bool> onTranslationChanged;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -644,9 +749,15 @@ class _QuestHeader extends StatelessWidget {
           mode: mode,
           filters: filters,
           onModeChanged: onModeChanged,
+          translationEnabled: translationEnabled,
+          onTranslationChanged: onTranslationChanged,
+          compactTranslation: constraints.maxWidth < 560,
         );
         if (constraints.maxWidth < 430) {
-          return Align(alignment: Alignment.centerRight, child: controls);
+          return Align(
+            alignment: Alignment.centerRight,
+            child: FittedBox(fit: BoxFit.scaleDown, child: controls),
+          );
         }
         return Row(
           children: [
@@ -814,10 +925,14 @@ class _QuestDetail extends StatelessWidget {
   const _QuestDetail({
     super.key,
     required this.entry,
+    required this.title,
+    required this.detail,
     required this.onRelationSelected,
   });
 
   final _QuestViewEntry entry;
+  final String title;
+  final String detail;
   final ValueChanged<int> onRelationSelected;
 
   @override
@@ -843,7 +958,7 @@ class _QuestDetail extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    entry.title,
+                    title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -887,7 +1002,7 @@ class _QuestDetail extends StatelessWidget {
             _DetailCard(
               title: l10n.questDesc,
               child: Text(
-                entry.detail.isEmpty ? l10n.noDescription : entry.detail,
+                detail.isEmpty ? l10n.noDescription : detail,
                 style: const TextStyle(fontSize: 13, height: 1.45),
               ),
             ),

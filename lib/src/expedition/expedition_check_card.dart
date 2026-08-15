@@ -4,7 +4,9 @@ import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import 'expedition_evaluator.dart';
 import 'expedition_income_calculator.dart';
+import 'expedition_mission_picker.dart';
 import 'expedition_rule_catalog.dart';
+import 'expedition_selection_store.dart';
 import 'expedition_strings.dart';
 
 class ExpeditionCheckContent extends StatefulWidget {
@@ -12,10 +14,12 @@ class ExpeditionCheckContent extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onOpenDetails,
+    this.selectionStore = const SharedPreferencesExpeditionSelectionStore(),
   });
 
   final GameStateController controller;
   final ValueChanged<int> onOpenDetails;
+  final ExpeditionSelectionStore selectionStore;
 
   @override
   State<ExpeditionCheckContent> createState() => _ExpeditionCheckContentState();
@@ -27,6 +31,36 @@ class _ExpeditionCheckContentState extends State<ExpeditionCheckContent> {
   int _target = 100;
   int _fleetId = 2;
   int _missionId = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreMissionForFleet(_fleetId);
+  }
+
+  Future<void> _restoreMissionForFleet(int fleetId) async {
+    final savedMissionId = await widget.selectionStore.loadMissionId(fleetId);
+    if (!mounted || _fleetId != fleetId) return;
+    final restoredMissionId =
+        savedMissionId != null && expeditionRules.containsKey(savedMissionId)
+        ? savedMissionId
+        : expeditionRules.keys.first;
+    if (_missionId == restoredMissionId) return;
+    setState(() => _missionId = restoredMissionId);
+  }
+
+  void _selectFleet(int fleetId) {
+    setState(() {
+      _fleetId = fleetId;
+      _missionId = expeditionRules.keys.first;
+    });
+    _restoreMissionForFleet(fleetId);
+  }
+
+  void _selectMission(int missionId) {
+    setState(() => _missionId = missionId);
+    widget.selectionStore.saveMissionId(_fleetId, missionId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +131,7 @@ class _ExpeditionCheckContentState extends State<ExpeditionCheckContent> {
         const SizedBox(height: 8),
         _fleetSelector(fleets),
         const SizedBox(height: 7),
-        _missionSelector(state, missionId, strings),
+        _missionSelector(state, missionId),
         const SizedBox(height: 8),
         if (_greatSuccess)
           Row(
@@ -320,50 +354,20 @@ class _ExpeditionCheckContentState extends State<ExpeditionCheckContent> {
           key: Key('expedition-fleet-${fleet.id}'),
           label: fleet.name,
           selected: _fleetId == fleet.id,
-          onTap: () => setState(() => _fleetId = fleet.id),
+          onTap: () => _selectFleet(fleet.id),
         ),
     ],
   );
 
-  Widget _missionSelector(
-    GameState state,
-    int current,
-    ExpeditionStrings strings,
-  ) => LayoutBuilder(
-    builder: (context, constraints) {
-      final textSize = _expeditionSummaryTextSize(constraints.maxWidth);
-      return DropdownButtonFormField<int>(
-        initialValue: current,
-        isExpanded: true,
-        decoration: const InputDecoration(
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          border: OutlineInputBorder(),
-        ),
-        items: [
-          for (final id in expeditionRules.keys)
-            DropdownMenuItem(
-              value: id,
-              child: Text(
-                '${_displayId(id)} · ${state.masterMissions[id]?.name ?? '远征'}',
-                key: const Key('expedition-mission-name'),
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: textSize,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-        ],
-        onChanged: (value) {
-          if (value == null) return;
-          setState(() => _missionId = value);
-        },
+  Widget _missionSelector(GameState state, int current) =>
+      ExpeditionMissionPicker(
+        missions: state.masterMissions,
+        missionIds: expeditionRules.keys,
+        selectedMissionId: current,
+        selectedTextKey: const Key('expedition-mission-name'),
+        compact: true,
+        onSelected: _selectMission,
       );
-    },
-  );
 
   Widget _statusBox(
     String text,
@@ -609,11 +613,3 @@ Widget _conditionRow(
     ),
   );
 }
-
-String _displayId(int id) => switch (id) {
-  >= 100 && <= 105 => 'A${id - 99}',
-  >= 110 && <= 115 => 'B${id - 109}',
-  >= 131 && <= 133 => 'D${id - 130}',
-  >= 141 && <= 142 => 'E${id - 140}',
-  _ => '$id',
-};

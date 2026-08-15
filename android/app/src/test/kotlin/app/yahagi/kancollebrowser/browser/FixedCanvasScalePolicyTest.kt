@@ -49,4 +49,47 @@ class FixedCanvasScalePolicyTest {
         assertTrue(1200 * scalePercent / 100f <= 731f)
         assertTrue(720 * scalePercent / 100f <= 401f)
     }
+
+    @Test
+    fun ignoresTemporaryViewportHeightWhileImeIsVisible() {
+        val policy = FixedCanvasScalePolicy()
+
+        assertEquals(50, policy.nextScalePercent(600, 360, 1200, 720))
+        assertNull(
+            policy.nextScalePercent(
+                600,
+                180,
+                1200,
+                720,
+                imeVisible = true,
+            ),
+        )
+        assertNull(policy.nextScalePercent(600, 360, 1200, 720))
+    }
+
+    @Test
+    fun resumesScalingAfterImeCloses() {
+        val policy = FixedCanvasScalePolicy()
+
+        assertEquals(50, policy.nextScalePercent(600, 360, 1200, 720))
+        assertNull(
+            policy.nextScalePercent(
+                600,
+                180,
+                1200,
+                720,
+                imeVisible = true,
+            ),
+        )
+        assertEquals(
+            66,
+            policy.nextScalePercent(
+                800,
+                480,
+                1200,
+                720,
+                imeVisible = false,
+            ),
+        )
+    }
 }

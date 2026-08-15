@@ -1005,6 +1005,29 @@ void main() {
       );
     });
 
+    test('removes HTML line breaks from quest details', () {
+      final reducer = GameStateReducer();
+      final state = reducer.reduce(
+        GameState.empty,
+        kcsapiEvent('/kcsapi/api_get_member/questlist', <String, Object?>{
+          'api_list': <Object?>[
+            <String, Object?>{
+              'api_no': 442,
+              'api_category': 4,
+              'api_type': 1,
+              'api_state': 2,
+              'api_progress_flag': 0,
+              'api_title': '西方連絡作戦準備を実施せよ！',
+              'api_detail': '潜水艦派遣作戦」<br>及び「欧州方面友軍との接触」<br/>各遠征<BR />を実施',
+              'api_get_material': <int>[0, 900, 500, 500],
+            },
+          ],
+        }),
+      );
+
+      expect(state.quests[442]?.detail, '潜水艦派遣作戦」及び「欧州方面友軍との接触」各遠征を実施');
+    });
+
     test('partial quest pages do not guess which cached quest is stale', () {
       final reducer = GameStateReducer();
       final staleTime = DateTime.utc(2026, 7, 29);

@@ -36,6 +36,8 @@ class WorkspaceContextHeader extends StatelessWidget {
     this.questMode = QuestCenterMode.active,
     this.onQuestModeChanged,
     this.questFilters,
+    this.questTranslationEnabled = false,
+    this.onQuestTranslationChanged,
     this.expeditionMode = ExpeditionSummaryMode.summary,
     this.onExpeditionModeChanged,
     this.constructionMode = ConstructionCenterMode.construction,
@@ -62,6 +64,8 @@ class WorkspaceContextHeader extends StatelessWidget {
   final QuestCenterMode questMode;
   final ValueChanged<QuestCenterMode>? onQuestModeChanged;
   final QuestFilterController? questFilters;
+  final bool questTranslationEnabled;
+  final ValueChanged<bool>? onQuestTranslationChanged;
   final ExpeditionSummaryMode expeditionMode;
   final ValueChanged<ExpeditionSummaryMode>? onExpeditionModeChanged;
   final ConstructionCenterMode constructionMode;
@@ -141,14 +145,28 @@ class WorkspaceContextHeader extends StatelessWidget {
       return LayoutBuilder(
         builder: (context, constraints) {
           final controls = questFilters == null
-              ? QuestModeTabs(
-                  mode: questMode,
-                  onChanged: onQuestModeChanged ?? (_) {},
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    QuestTranslationToggle(
+                      enabled: questTranslationEnabled,
+                      compact: constraints.maxWidth < 560,
+                      onChanged: onQuestTranslationChanged ?? (_) {},
+                    ),
+                    const SizedBox(width: 8),
+                    QuestModeTabs(
+                      mode: questMode,
+                      onChanged: onQuestModeChanged ?? (_) {},
+                    ),
+                  ],
                 )
               : QuestHeaderControls(
                   mode: questMode,
                   filters: questFilters!,
                   onModeChanged: onQuestModeChanged ?? (_) {},
+                  translationEnabled: questTranslationEnabled,
+                  onTranslationChanged: onQuestTranslationChanged ?? (_) {},
+                  compactTranslation: constraints.maxWidth < 560,
                 );
           if (constraints.maxWidth < 430) {
             return Align(

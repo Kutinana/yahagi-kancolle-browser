@@ -11,7 +11,9 @@ class FixedCanvasScalePolicy {
         contentWidth: Int,
         contentHeight: Int,
         force: Boolean = false,
+        imeVisible: Boolean = false,
     ): Int? {
+        if (imeVisible) return null
         if (
             viewportWidth <= 0 ||
             viewportHeight <= 0 ||

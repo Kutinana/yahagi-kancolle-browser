@@ -145,6 +145,11 @@ final class QuestCatalogDataset {
           throw const FormatException('Quest optional field is invalid');
         }
       }
+      for (final translated in const <String>['nameZh', 'descZh']) {
+        if (value[translated] != null && value[translated] is! String) {
+          throw const FormatException('Quest translation field is invalid');
+        }
+      }
       entries.add(QuestCatalogEntry.fromJson(gameId, value));
     }
     entries.sort((a, b) => a.gameId.compareTo(b.gameId));

@@ -109,6 +109,9 @@ void main() {
       if (request.url.host == 'api.github.com') {
         final isDisplay =
             request.url.queryParameters['path'] == 'files/quests-jp.json';
+        if (!isDisplay) {
+          expect(request.url.queryParameters['path'], 'dist/quests-scn.json');
+        }
         final sha = isDisplay ? displaySha : relationSha;
         return http.Response(
           '[{"sha":"$sha","commit":{"committer":'
@@ -131,6 +134,7 @@ void main() {
           200,
         );
       }
+      expect(request.url.path, contains('/dist/quests-scn.json'));
       return http.Response.bytes(
         utf8.encode(
           jsonEncode(<String, Object?>{
@@ -166,6 +170,8 @@ void main() {
     expect(saved.code, 'L2606A1');
     expect(saved.name, '日本語任務名');
     expect(saved.description, '日本語説明');
+    expect(saved.translatedName, '中文任务名');
+    expect(saved.translatedDescription, '中文说明');
     expect(saved.rewards, '日本語報酬');
     expect(saved.prerequisites, <String>['Fd4']);
   });

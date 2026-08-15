@@ -5,7 +5,9 @@ import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import 'expedition_evaluator.dart';
 import 'expedition_income_calculator.dart';
+import 'expedition_mission_picker.dart';
 import 'expedition_rule_catalog.dart';
+import 'expedition_selection_store.dart';
 import 'expedition_strings.dart';
 
 class ExpeditionCheckPage extends StatefulWidget {
@@ -15,11 +17,13 @@ class ExpeditionCheckPage extends StatefulWidget {
     required this.onBack,
     this.initialFleetId,
     this.showHeader = true,
+    this.selectionStore = const SharedPreferencesExpeditionSelectionStore(),
   });
   final GameStateController controller;
   final VoidCallback onBack;
   final int? initialFleetId;
   final bool showHeader;
+  final ExpeditionSelectionStore selectionStore;
   @override
   State<ExpeditionCheckPage> createState() => _ExpeditionCheckPageState();
 }
@@ -28,6 +32,38 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
   late int fleetId = widget.initialFleetId ?? 2;
   int missionId = 1, target = 100;
   bool great = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreMissionForFleet(fleetId);
+  }
+
+  Future<void> _restoreMissionForFleet(int restoredFleetId) async {
+    final savedMissionId = await widget.selectionStore.loadMissionId(
+      restoredFleetId,
+    );
+    if (!mounted || fleetId != restoredFleetId) return;
+    final restoredMissionId =
+        savedMissionId != null && expeditionRules.containsKey(savedMissionId)
+        ? savedMissionId
+        : expeditionRules.keys.first;
+    if (missionId == restoredMissionId) return;
+    setState(() => missionId = restoredMissionId);
+  }
+
+  void _selectFleet(int selectedFleetId) {
+    setState(() {
+      fleetId = selectedFleetId;
+      missionId = expeditionRules.keys.first;
+    });
+    _restoreMissionForFleet(selectedFleetId);
+  }
+
+  void _selectMission(int selectedMissionId) {
+    setState(() => missionId = selectedMissionId);
+    widget.selectionStore.saveMissionId(fleetId, selectedMissionId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +152,7 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
             fleets: fleets,
             selectedFleetId: fleetId,
             showTitle: false,
-            onFleetSelected: (id) => setState(() => fleetId = id),
+            onFleetSelected: _selectFleet,
           ),
         ),
         Expanded(
@@ -202,36 +238,12 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
       key: const Key('expedition-header-controls'),
       children: [
         Expanded(
-          child: DropdownButtonFormField<int>(
-            initialValue: missionId,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              for (final id in expeditionRules.keys)
-                DropdownMenuItem(
-                  value: id,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '${_displayId(id)} · ${state.masterMissions[id]?.name ?? '远征'}',
-                      key: id == missionId
-                          ? const Key('expedition-mission-label')
-                          : null,
-                      maxLines: 1,
-                      softWrap: false,
-                    ),
-                  ),
-                ),
-            ],
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => missionId = value);
-            },
+          child: ExpeditionMissionPicker(
+            missions: state.masterMissions,
+            missionIds: expeditionRules.keys,
+            selectedMissionId: missionId,
+            selectedTextKey: const Key('expedition-mission-label'),
+            onSelected: _selectMission,
           ),
         ),
         const SizedBox(width: 8),
@@ -391,14 +403,6 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
   );
   String _duration(Duration d) =>
       '${d.inHours.toString().padLeft(2, '0')}:${(d.inMinutes % 60).toString().padLeft(2, '0')}:00';
-
-  String _displayId(int id) => switch (id) {
-    >= 100 && <= 105 => 'A${id - 99}',
-    >= 110 && <= 115 => 'B${id - 109}',
-    >= 131 && <= 133 => 'D${id - 130}',
-    >= 141 && <= 142 => 'E${id - 140}',
-    _ => '$id',
-  };
 
   Widget _sectionTitle(String text) => Text(
     text,

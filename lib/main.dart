@@ -653,6 +653,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   int _settingsTabIndex = 0;
   RepairCenterMode _repairCenterMode = RepairCenterMode.dock;
   QuestCenterMode _questCenterMode = QuestCenterMode.active;
+  bool _questTranslationEnabled = false;
   final QuestFilterController _questFilters = QuestFilterController();
   ExpeditionSummaryMode _expeditionCenterMode = ExpeditionSummaryMode.summary;
   ConstructionCenterMode _constructionCenterMode =
@@ -678,11 +679,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   }
 
   void _onLayoutSettingsChanged() {
-    widget.browserController
-        .runJavaScript(
-          'if(window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();',
-        )
-        .catchError((Object _) {});
+    widget.browserController.fitGameScreen().catchError((Object _) {});
   }
 
   @override
@@ -703,11 +700,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
       setState(() {});
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        widget.browserController
-            .runJavaScript(
-              'if(window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();',
-            )
-            .catchError((Object _) {});
+        widget.browserController.fitGameScreen().catchError((Object _) {});
       });
     });
   }
@@ -811,6 +804,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                         },
                         questMode: _questCenterMode,
                         questFilters: _questFilters,
+                        questTranslationEnabled: _questTranslationEnabled,
+                        onQuestTranslationChanged: (enabled) {
+                          setState(() => _questTranslationEnabled = enabled);
+                        },
                         onQuestModeChanged: (mode) {
                           setState(() => _questCenterMode = mode);
                         },
@@ -921,10 +918,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                         widget.audioController.toggleMuted,
                                     onCollapse:
                                         widget.toolbarController.collapse,
-                                    onFitScreen: () =>
-                                        widget.browserController.runJavaScript(
-                                          'if(window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();',
-                                        ),
+                                    onFitScreen:
+                                        widget.browserController.fitGameScreen,
                                     onScreenshot:
                                         widget.gameScreenshotController == null
                                         ? null
@@ -1167,6 +1162,12 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             showTitle: false,
                             mode: _questCenterMode,
                             filterController: _questFilters,
+                            translationEnabled: _questTranslationEnabled,
+                            onTranslationChanged: (enabled) {
+                              setState(
+                                () => _questTranslationEnabled = enabled,
+                              );
+                            },
                             onModeChanged: (mode) {
                               setState(() => _questCenterMode = mode);
                             },

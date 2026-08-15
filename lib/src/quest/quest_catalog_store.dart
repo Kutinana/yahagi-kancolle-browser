@@ -110,7 +110,11 @@ final class QuestCatalogStore {
     }
     if (cached != null && cached.version.compareTo(bundled.version) >= 0) {
       return LoadedQuestCatalog(
-        dataset: cached,
+        dataset: QuestCatalogDataset(
+          catalog: cached.catalog.withTranslationFallbackFrom(bundled.catalog),
+          version: cached.version,
+          rawJson: cached.rawJson,
+        ),
         source: QuestCatalogSource.cache,
       );
     }

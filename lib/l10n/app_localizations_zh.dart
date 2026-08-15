@@ -1563,6 +1563,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get questAll => '全任务';
 
   @override
+  String get chineseTranslation => '中文翻译';
+
+  @override
   String get searchQuest => '搜索任务';
 
   @override
@@ -3205,6 +3208,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get questAll => '全部任務';
+
+  @override
+  String get chineseTranslation => '中文翻譯';
 
   @override
   String get searchQuest => '搜尋任務';

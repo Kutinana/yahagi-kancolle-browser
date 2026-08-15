@@ -41,6 +41,30 @@ class ExpeditionStrings {
       : traditional
       ? '選擇遠征'
       : '选择远征';
+  String get expeditionFallbackName => _ja
+      ? '遠征'
+      : traditional
+      ? '遠征'
+      : '远征';
+  String expeditionAreaName(int areaId) => switch (areaId) {
+    1 => _ja ? '鎮守府海域' : '镇守府海域',
+    2 =>
+      _ja
+          ? '南西諸島海域'
+          : traditional
+          ? '南西群島海域'
+          : '南西群岛海域',
+    3 => _ja ? '北方海域' : '北方海域',
+    4 => _ja ? '西方海域' : '西方海域',
+    5 => _ja ? '南方海域' : '南方海域',
+    7 => _ja ? '南西海域' : '南西海域',
+    _ =>
+      _ja
+          ? '海域 $areaId'
+          : traditional
+          ? '海域 $areaId'
+          : '海域 $areaId',
+  };
   String get expectedIncome => _ja
       ? '予想収入'
       : traditional

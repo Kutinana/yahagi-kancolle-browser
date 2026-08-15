@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import '../game_state/game_state.dart';
+import 'quest_translation_fallbacks.dart';
 
 enum QuestUnlockState { unlocked, locked }
 
@@ -12,6 +13,8 @@ class QuestCatalogEntry {
     required this.code,
     required this.name,
     required this.description,
+    this.translatedName,
+    this.translatedDescription,
     this.rewards = '',
     this.memo = '',
     this.prerequisites = const <String>[],
@@ -21,6 +24,8 @@ class QuestCatalogEntry {
   final String code;
   final String name;
   final String description;
+  final String? translatedName;
+  final String? translatedDescription;
   final String rewards;
   final String memo;
   final List<String> prerequisites;
@@ -50,11 +55,15 @@ class QuestCatalogEntry {
   }
 
   factory QuestCatalogEntry.fromJson(int gameId, Map<String, Object?> json) {
+    final fallback = questTranslationFallbacks[gameId];
     return QuestCatalogEntry(
       gameId: gameId,
       code: (json['code'] as String? ?? gameId.toString()).trim(),
       name: json['name'] as String? ?? '',
       description: json['desc'] as String? ?? '',
+      translatedName: _nonEmptyString(json['nameZh']) ?? fallback?.name,
+      translatedDescription:
+          _nonEmptyString(json['descZh']) ?? fallback?.description,
       rewards: json['rewards'] as String? ?? json['memo'] as String? ?? '',
       memo: json['memo2'] as String? ?? '',
       prerequisites: (json['pre'] as List<Object?>? ?? const <Object?>[])
@@ -62,6 +71,12 @@ class QuestCatalogEntry {
           .toList(growable: false),
     );
   }
+}
+
+String? _nonEmptyString(Object? value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 class QuestCatalog {
@@ -131,6 +146,26 @@ class QuestCatalog {
   QuestCatalogEntry? byGameId(int gameId) => _byGameId[gameId];
 
   QuestCatalogEntry? byCode(String code) => _byCode[code];
+
+  QuestCatalog withTranslationFallbackFrom(QuestCatalog fallback) =>
+      QuestCatalog(<QuestCatalogEntry>[
+        for (final entry in entries)
+          if (fallback.byGameId(entry.gameId) case final local?)
+            QuestCatalogEntry(
+              gameId: entry.gameId,
+              code: entry.code,
+              name: entry.name,
+              description: entry.description,
+              translatedName: entry.translatedName ?? local.translatedName,
+              translatedDescription:
+                  entry.translatedDescription ?? local.translatedDescription,
+              rewards: entry.rewards,
+              memo: entry.memo,
+              prerequisites: entry.prerequisites,
+            )
+          else
+            entry,
+      ]);
 
   List<QuestCatalogEntry> prerequisitesOf(int gameId) =>
       _prerequisitesByGameId[gameId] ?? const <QuestCatalogEntry>[];

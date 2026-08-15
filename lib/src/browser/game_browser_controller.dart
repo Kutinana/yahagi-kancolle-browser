@@ -20,6 +20,8 @@ abstract interface class GameBrowserPort {
 
   Future<void> runJavaScript(String javascript);
 
+  Future<void> fitGameScreen();
+
   Future<void> clearCache();
 
   Future<void> clearSession();
@@ -99,6 +101,13 @@ final class GameBrowserController extends ChangeNotifier {
     final port = _port;
     if (port != null) {
       await port.runJavaScript(javascript);
+    }
+  }
+
+  Future<void> fitGameScreen() async {
+    final port = _port;
+    if (port != null) {
+      await port.fitGameScreen();
     }
   }
 

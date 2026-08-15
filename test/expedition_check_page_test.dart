@@ -1,11 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/expedition/expedition_check_page.dart';
+import 'package:yahagi_kancolle_browser/src/expedition/expedition_selection_store.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  testWidgets('远征检查详情按舰队恢复上次选择的 A6', (tester) async {
+    final controller = GameStateController();
+    final store = _MemoryExpeditionSelectionStore(<int, int>{2: 105});
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExpeditionCheckPage(
+          controller: controller,
+          onBack: () {},
+          selectionStore: store,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('expedition-mission-label')))
+          .data,
+      startsWith('A6'),
+    );
+
+    await tester.tap(find.byKey(const Key('expedition-mission-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('expedition-mission-option-3')));
+    await tester.pumpAndSettle();
+    expect(store.values[2], 3);
+  });
+
   testWidgets('详情页无大发开关并在条件末尾始终显示提醒', (tester) async {
     final controller = GameStateController();
     addTearDown(controller.dispose);
@@ -52,14 +88,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      tester
-          .widget<DropdownButtonFormField<int>>(
-            find.byType(DropdownButtonFormField<int>).first,
-          )
-          .initialValue,
-      1,
-    );
+    expect(find.byKey(const Key('expedition-mission-picker')), findsOneWidget);
+    expect(find.textContaining('1 ·'), findsOneWidget);
   });
 
   testWidgets('详情页在窄屏显示耗时、消耗、收入与条件', (tester) async {
@@ -188,4 +218,19 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+}
+
+final class _MemoryExpeditionSelectionStore
+    implements ExpeditionSelectionStore {
+  _MemoryExpeditionSelectionStore(this.values);
+
+  final Map<int, int> values;
+
+  @override
+  Future<int?> loadMissionId(int fleetId) async => values[fleetId];
+
+  @override
+  Future<void> saveMissionId(int fleetId, int missionId) async {
+    values[fleetId] = missionId;
+  }
 }

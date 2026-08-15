@@ -238,6 +238,35 @@ void main() {
     );
   });
 
+  testWidgets('quest workspace exposes translation before mode tabs', (
+    tester,
+  ) async {
+    final filters = QuestFilterController();
+    addTearDown(filters.dispose);
+    bool? translationEnabled;
+    await tester.pumpWidget(
+      _localizedApp(
+        home: Scaffold(
+          body: WorkspaceContextHeader(
+            workspaceIndex: 5,
+            state: const GameState(),
+            selectedFleetId: 1,
+            questFilters: filters,
+            questTranslationEnabled: false,
+            onQuestTranslationChanged: (value) => translationEnabled = value,
+          ),
+        ),
+      ),
+    );
+
+    final toggle = find.byKey(const Key('quest-translation-toggle'));
+    final tabs = find.byKey(const Key('quest-mode-tabs'));
+    expect(toggle, findsOneWidget);
+    expect(tester.getRect(toggle).right, lessThan(tester.getRect(tabs).left));
+    await tester.tap(toggle);
+    expect(translationEnabled, isTrue);
+  });
+
   testWidgets('owned inventory puts its section switch in the top right', (
     tester,
   ) async {

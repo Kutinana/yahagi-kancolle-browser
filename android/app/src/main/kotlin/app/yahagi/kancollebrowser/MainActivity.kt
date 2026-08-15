@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.ViewCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import io.flutter.embedding.android.FlutterActivity
@@ -318,6 +319,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                     val contentHeight = call.argument<Int>("contentHeight") ?: 720
                     setFixedCanvasScaling(contentWidth, contentHeight, result)
                 }
+                "releaseFixedCanvas" -> releaseFixedCanvasScaling(result)
                 else -> result.notImplemented()
             }
         }
@@ -1040,8 +1042,35 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             fixedCanvasContentWidth,
             fixedCanvasContentHeight,
             force,
+            imeVisible = ViewCompat.getRootWindowInsets(webView)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) == true,
         ) ?: return
         webView.setInitialScale(scalePercent)
+    }
+
+    private fun releaseFixedCanvasScaling(result: MethodChannel.Result) {
+        try {
+            val webView = boundWebView
+            fixedCanvasLayoutListener?.let { listener ->
+                webView?.removeOnLayoutChangeListener(listener)
+            }
+            fixedCanvasLayoutListener = null
+            boundWebView = null
+            fixedCanvasScalePolicy.reset()
+
+            if (webView != null) {
+                webView.settings.useWideViewPort = false
+                webView.settings.loadWithOverviewMode = false
+                webView.setInitialScale(0)
+            }
+            result.success(null)
+        } catch (error: RuntimeException) {
+            result.error(
+                "scaling_release_failed",
+                error.message ?: "Unable to release WebView scaling.",
+                null,
+            )
+        }
     }
 
     private fun scheduleGameSurfaceRecovery(reason: GameSurfaceRecoveryReason) {

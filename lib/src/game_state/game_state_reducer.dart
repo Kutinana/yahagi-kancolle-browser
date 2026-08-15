@@ -663,7 +663,7 @@ class GameStateReducer {
         title: _asString(item['api_title']),
         detail: _asString(
           item['api_detail'],
-        ).replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n'),
+        ).replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), ''),
         category: _asInt(item['api_category']),
         type: _asInt(item['api_type']),
         state: state,
