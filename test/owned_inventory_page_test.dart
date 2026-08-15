@@ -360,22 +360,20 @@ void main() {
       ),
     );
 
-    final typeHeader = find.byKey(const Key('owned-inventory-sort-type'));
-    await tester.tap(typeHeader);
-    await tester.pump();
+    final levelHeader = find.byKey(const Key('owned-inventory-sort-level'));
     final temporaryText = tester.widget<Text>(
-      find.descendant(of: typeHeader, matching: find.text('舰种 ▼')),
+      find.descendant(of: levelHeader, matching: find.text('等级 ▼')),
     );
     expect(temporaryText.style?.color, const Color(0xffffc85a));
 
-    await tester.longPress(typeHeader);
+    await tester.longPress(levelHeader);
     await tester.pump();
     final lockedTextFinder = find.descendant(
-      of: typeHeader,
-      matching: find.text('舰种 ▼①'),
+      of: levelHeader,
+      matching: find.text('等级 ▼①'),
     );
     final lockFinder = find.descendant(
-      of: typeHeader,
+      of: levelHeader,
       matching: find.byIcon(Icons.lock),
     );
     expect(
@@ -384,9 +382,10 @@ void main() {
     );
     expect(lockFinder, findsOneWidget);
 
-    final headerRect = tester.getRect(typeHeader);
+    final headerRect = tester.getRect(levelHeader);
     final textRect = tester.getRect(lockedTextFinder);
     final lockRect = tester.getRect(lockFinder);
+    expect(headerRect.width, 58);
     expect(textRect.left, greaterThanOrEqualTo(headerRect.left));
     expect(textRect.right, lessThanOrEqualTo(headerRect.right));
     expect(lockRect.left, greaterThanOrEqualTo(headerRect.left));
