@@ -112,7 +112,9 @@ class _ExpeditionCheckContentState extends State<ExpeditionCheckContent> {
               const SizedBox(width: 6),
               Expanded(
                 child: _statusBox(
-                  '${strings.greatSuccess}：${evaluation.greatSuccessPassed ? strings.passed : strings.failed} (${evaluation.greatSuccessRate.toStringAsFixed(2)}%)',
+                  evaluation.greatSuccessPassed
+                      ? '${strings.greatSuccess}：${strings.passed} (${evaluation.greatSuccessRate.toStringAsFixed(2)}%)'
+                      : '${strings.greatSuccess}：${strings.failed}',
                   evaluation.greatSuccessPassed,
                   onTap: () => widget.onOpenDetails(_fleetId),
                 ),
@@ -356,7 +358,8 @@ class _ExpeditionCheckContentState extends State<ExpeditionCheckContent> {
             ),
         ],
         onChanged: (value) {
-          if (value != null) setState(() => _missionId = value);
+          if (value == null) return;
+          setState(() => _missionId = value);
         },
       );
     },

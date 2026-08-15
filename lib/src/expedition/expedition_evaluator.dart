@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import '../game_state/game_state.dart';
+import 'expedition_composition_formatter.dart';
+import 'expedition_income_calculator.dart';
 import 'expedition_models.dart';
 import 'expedition_rule_catalog.dart';
 
@@ -158,7 +160,7 @@ class ExpeditionEvaluator {
             _result(
               ExpeditionConditionKind.antiSub,
               '总对潜 ≥ ${stats['asw']}',
-              ships.fold(0, (v, s) => v + s.antiSub),
+              _effectiveAntiSub(state, ships),
               stats['asw']!,
             ),
           if ((stats['los'] ?? 0) > 0)
@@ -225,7 +227,7 @@ class ExpeditionEvaluator {
       rate = ships.isEmpty
           ? 0
           : _roundedRate(
-              sparkled * 15 + 15 + math.sqrt(level).floor() + level ~/ 10,
+              sparkled * 15 + 15 + (math.sqrt(level) + level / 10).floor(),
             );
       final highest = ships.isEmpty
           ? 0
@@ -234,8 +236,12 @@ class ExpeditionEvaluator {
         ExpeditionConditionResult(
           kind: ExpeditionConditionKind.higherLevelFlagship,
           label: '舰队最高等级舰为旗舰',
-          actual: level >= highest ? '已满足' : '未满足',
-          passed: level >= highest,
+          actual: rate >= 100
+              ? '大成功率已达 100%'
+              : level >= highest
+              ? '已满足'
+              : '未满足',
+          passed: rate >= 100 || level >= highest,
         ),
       );
     } else {
@@ -268,42 +274,42 @@ class ExpeditionEvaluator {
   ) {
     const normal = <int>{68, 193};
     const related = <int>{75, 68, 166, 167, 193, 408, 409, 436, 449};
-    final used = <int>{};
-    for (final ship in state.ships.values) {
-      used.addAll(ship.slotIds.where((id) => id > 0));
-      if (ship.extraSlotId > 0) used.add(ship.extraSlotId);
+    final usedByFleets = <int>{};
+    for (final otherFleet in state.fleets) {
+      for (final shipId in otherFleet.shipIds) {
+        final ship = state.ships[shipId];
+        if (ship == null) continue;
+        usedByFleets.addAll(ship.slotIds.where((id) => id > 0));
+        if (ship.extraSlotId > 0) usedByFleets.add(ship.extraSlotId);
+      }
     }
     final spare = state.slotItems.values.any(
-      (item) => normal.contains(item.masterId) && !used.contains(item.id),
+      (item) =>
+          normal.contains(item.masterId) && !usedByFleets.contains(item.id),
     );
-    final fleetItems = <OwnedSlotItem>[
-      for (final ship in ships)
-        for (final e in state.equipmentForShip(ship)) e.owned,
-    ];
-    final baseBonus =
-        fleetItems.where((e) => normal.contains(e.masterId)).length * 5;
-    final hasOpenRelevantSlot = ships.any((ship) {
+    final normalBonus =
+        ExpeditionIncomeCalculator.daihatsuBonusBreakdownForFleet(
+          state,
+          fleet,
+        ).normal;
+    final hasExtraDaihatsuCapability = ships.any((ship) {
       final master = state.masterForShip(ship);
-      if (master == null || !_canEquipDaihatsu(master.shipTypeId)) return false;
-      final filled = ship.slotIds.where((id) => id > 0).length;
-      return filled < master.slotCount ||
-          ship.slotIds.any((id) => id <= 0) ||
-          !state
-              .equipmentForShip(ship)
-              .every((e) => related.contains(e.owned.masterId));
+      if (master == null || !master.equipTypeIds.contains(24)) return false;
+      final occupiedRelevantSlots = ship.slotIds.where((slotId) {
+        final item = state.slotItems[slotId];
+        return item != null && related.contains(item.masterId);
+      }).length;
+      return master.slotCount - occupiedRelevantSlots > 0;
     });
-    final passed = !spare || baseBonus >= 20 || !hasOpenRelevantSlot;
+    final passed = !spare || normalBonus >= 0.2 || !hasExtraDaihatsuCapability;
     return ExpeditionConditionResult(
       kind: ExpeditionConditionKind.daihatsuFill,
-      label: '尽可能多携带大发系装备',
+      label: '尽可能多的大发动艇或特大发动艇',
       actual: passed ? '已满足' : '未满足',
       passed: passed,
-      auxiliary: true,
     );
   }
 
-  static bool _canEquipDaihatsu(int type) =>
-      const <int>{1, 2, 3, 16, 17, 20, 21, 22}.contains(type);
   static double _roundedRate(int numerator) =>
       (numerator / 0.0099).round() / 100;
   static ExpeditionConditionResult _result(
@@ -327,6 +333,24 @@ class ExpeditionEvaluator {
             .length,
   );
 
+  static int _effectiveAntiSub(GameState state, List<OwnedShip> ships) {
+    final total = ships.fold<int>(0, (sum, ship) => sum + ship.antiSub);
+    final reconEquipmentAntiSub = ships.fold<int>(0, (sum, ship) {
+      return sum +
+          state.equipmentForShip(ship).fold<int>(0, (equipmentSum, equipment) {
+            final master = equipment.master;
+            final category = master != null && master.type.length > 2
+                ? master.type[2]
+                : 0;
+            return equipmentSum +
+                (const <int>{10, 11, 41}.contains(category)
+                    ? master!.antiSub
+                    : 0);
+          });
+    });
+    return total - reconEquipmentAntiSub;
+  }
+
   static int _countType(String type, GameState state, List<OwnedShip> ships) =>
       ships.where((ship) {
         final master = state.masterForShip(ship);
@@ -345,14 +369,12 @@ class ExpeditionEvaluator {
           'SSLike' => id == 13 || id == 14,
           'DDorDE' => id == 1 || id == 2,
           'CVLike' => id == 7 || id == 11 || id == 16 || id == 18,
-          'CVE' => id == 7 && ship.antiSub > 0,
+          'CVE' => id == 7 && master.baseAntiSub > 0,
           _ => false,
         };
       }).length;
   static String _compositionLabel(List<Map<String, int>> variants) =>
-      variants.length == 1
-      ? '舰队构成：${variants.first.entries.map((e) => '${e.key} ${e.value}').join(' + ')}'
-      : '舰队构成符合任一方案';
+      '舰队构成：${formatExpeditionComposition(variants)}';
 }
 
 const Set<int> _flagshipGreatSuccess = <int>{

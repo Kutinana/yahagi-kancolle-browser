@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/dashboard_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/expedition_summary_card.dart';
+import 'package:yahagi_kancolle_browser/src/expedition/expedition_check_card.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_store.dart';
@@ -10,6 +11,37 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  testWidgets('详细卡片无大发开关并在条件末尾始终显示提醒', (tester) async {
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ExpeditionCheckContent(
+            controller: controller,
+            onOpenDetails: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('详细'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('expedition-daihatsu-optimization-switch')),
+      findsNothing,
+    );
+    expect(find.text('尽量装满大发'), findsNothing);
+    expect(find.text('尽可能多的大发动艇或特大发动艇'), findsOneWidget);
+  });
+
   testWidgets('首页远征检查默认选择远征 1', (tester) async {
     final controller = GameStateController();
     addTearDown(controller.dispose);
@@ -221,6 +253,8 @@ void main() {
     );
     await tester.tap(find.text('大成功'));
     await tester.pumpAndSettle();
+    expect(find.textContaining('大成功：未通过 ('), findsNothing);
+    expect(find.text('大成功：未通过'), findsOneWidget);
     await tester.tap(find.text('详细'));
     await tester.pump();
     expect(find.byKey(const Key('expedition-status-text')), findsWidgets);

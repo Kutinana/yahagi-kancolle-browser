@@ -63,6 +63,45 @@ void main() {
       expect(state.ships[9001]?.range, 4);
     });
 
+    test('start2 captures base ASW and resolved per-ship equip types', () {
+      final state = GameStateReducer().reduce(
+        GameState.empty,
+        kcsapiEvent('/kcsapi/api_start2/getData', <String, Object?>{
+          'api_mst_stype': <Object?>[
+            <String, Object?>{
+              'api_id': 7,
+              'api_name': '轻空母',
+              'api_equip_type': <String, Object?>{'24': 1, '10': 0},
+            },
+          ],
+          'api_mst_equip_ship': <String, Object?>{
+            '702': <String, Object?>{
+              'api_equip_type': <String, Object?>{'1': null},
+            },
+          },
+          'api_mst_ship': <Object?>[
+            <String, Object?>{
+              'api_id': 701,
+              'api_name': '护卫空母',
+              'api_stype': 7,
+              'api_tais': <int>[8, 40],
+            },
+            <String, Object?>{
+              'api_id': 702,
+              'api_name': '受限轻空母',
+              'api_stype': 7,
+              'api_tais': <int>[0, 0],
+            },
+          ],
+        }),
+      );
+
+      expect(state.masterShips[701]?.baseAntiSub, 8);
+      expect(state.masterShips[701]?.equipTypeIds, contains(24));
+      expect(state.masterShips[702]?.baseAntiSub, 0);
+      expect(state.masterShips[702]?.equipTypeIds, isNot(contains(24)));
+    });
+
     test('material update changes only resources', () {
       final reducer = GameStateReducer();
       final initial = reducer.reduce(

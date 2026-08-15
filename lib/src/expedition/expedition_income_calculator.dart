@@ -49,6 +49,12 @@ class ExpeditionIncomeCalculator {
   }
 
   static double daihatsuBonusForFleet(GameState state, Fleet fleet) {
+    final breakdown = daihatsuBonusBreakdownForFleet(state, fleet);
+    return breakdown.normal + breakdown.improvement + breakdown.toku;
+  }
+
+  static ({double normal, double improvement, double toku})
+  daihatsuBonusBreakdownForFleet(GameState state, Fleet fleet) {
     var bonus05 = 0;
     var bonus03 = 0;
     var bonus02 = 0;
@@ -106,7 +112,7 @@ class ExpeditionIncomeCalculator {
             ? 0.059
             : 0.06,
     };
-    return normal + improvement + tokuBonus;
+    return (normal: normal, improvement: improvement, toku: tokuBonus);
   }
 }
 

@@ -6,6 +6,36 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dar
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  testWidgets('详情页无大发开关并在条件末尾始终显示提醒', (tester) async {
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExpeditionCheckPage(controller: controller, onBack: () {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('expedition-daihatsu-optimization-switch')),
+      findsNothing,
+    );
+    expect(find.text('尽量装满大发'), findsNothing);
+    final daihatsuReminder = find.text('尽可能多的大发动艇或特大发动艇');
+    expect(daihatsuReminder, findsOneWidget);
+    expect(find.textContaining('收益优化'), findsNothing);
+    expect(
+      tester.getTopLeft(daihatsuReminder).dy,
+      greaterThan(tester.getTopLeft(find.text('舰队完成补给')).dy),
+    );
+  });
+
   testWidgets('远征检查详情默认选择远征 1', (tester) async {
     final controller = GameStateController();
     addTearDown(controller.dispose);
@@ -87,6 +117,8 @@ void main() {
     );
     await tester.tap(find.text('大成功'));
     await tester.pumpAndSettle();
+    expect(find.textContaining('大成功: 未通过 ('), findsNothing);
+    expect(find.text('大成功: 未通过'), findsOneWidget);
 
     final controls = find.byKey(const Key('expedition-header-controls'));
     final results = find.byKey(const Key('expedition-header-results'));

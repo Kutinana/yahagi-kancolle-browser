@@ -28,6 +28,7 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
   late int fleetId = widget.initialFleetId ?? 2;
   int missionId = 1, target = 100;
   bool great = false;
+
   @override
   Widget build(BuildContext context) {
     final s = ExpeditionStrings.of(context);
@@ -129,8 +130,9 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
                     builder: (context, headerConstraints) {
                       final normalResult =
                           '${s.normalCheck}: ${ev.normalPassed ? s.passed : s.failed}';
-                      final greatResult =
-                          '${s.greatSuccess}: ${ev.greatSuccessPassed ? s.passed : s.failed} (${ev.greatSuccessRate.toStringAsFixed(2)}%)';
+                      final greatResult = ev.greatSuccessPassed
+                          ? '${s.greatSuccess}: ${s.passed} (${ev.greatSuccessRate.toStringAsFixed(2)}%)'
+                          : '${s.greatSuccess}: ${s.failed}';
                       final minimumControlsWidth = great ? 460.0 : 390.0;
                       final estimatedResultsWidth = great ? 350.0 : 150.0;
                       final resultsOnSecondLine =
@@ -227,7 +229,8 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
                 ),
             ],
             onChanged: (value) {
-              if (value != null) setState(() => missionId = value);
+              if (value == null) return;
+              setState(() => missionId = value);
             },
           ),
         ),

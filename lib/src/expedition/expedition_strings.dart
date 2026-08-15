@@ -96,7 +96,6 @@ class ExpeditionStrings {
       : traditional
       ? '返回遊戲'
       : '返回游戏';
-
   String get satisfied => _ja
       ? '達成'
       : traditional
@@ -209,9 +208,9 @@ class ExpeditionStrings {
             : value.label,
       ExpeditionConditionKind.daihatsuFill =>
         _ja
-            ? '可能な限り大発系装備を搭載'
+            ? '可能な限り大発動艇または特大発動艇を搭載'
             : traditional
-            ? '盡可能多攜帶大發系裝備'
+            ? '盡可能多攜帶大發動艇或特大發動艇'
             : value.label,
     };
   }

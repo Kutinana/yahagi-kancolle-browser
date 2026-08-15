@@ -28,10 +28,15 @@ enum GameResourceType {
 }
 
 class MasterShipType {
-  const MasterShipType({required this.id, required this.name});
+  const MasterShipType({
+    required this.id,
+    required this.name,
+    this.equipTypeIds = const <int>{},
+  });
 
   final int id;
   final String name;
+  final Set<int> equipTypeIds;
 }
 
 class MasterShip {
@@ -47,6 +52,8 @@ class MasterShip {
     this.maxAmmo = 0,
     this.slotCount = 0,
     this.buildTimeMinutes = 0,
+    this.baseAntiSub = 0,
+    this.equipTypeIds = const <int>{},
     this.portraitFileName,
     this.portraitVersion,
   });
@@ -62,6 +69,8 @@ class MasterShip {
   final int maxAmmo;
   final int slotCount;
   final int buildTimeMinutes;
+  final int baseAntiSub;
+  final Set<int> equipTypeIds;
   final String? portraitFileName;
   final String? portraitVersion;
 
@@ -78,6 +87,8 @@ class MasterShip {
       maxAmmo: maxAmmo,
       slotCount: slotCount,
       buildTimeMinutes: buildTimeMinutes,
+      baseAntiSub: baseAntiSub,
+      equipTypeIds: equipTypeIds,
       portraitFileName: portraitFileName ?? this.portraitFileName,
       portraitVersion: portraitVersion ?? this.portraitVersion,
     );

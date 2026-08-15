@@ -921,6 +921,7 @@ class GameStateReducer {
     final shipTypes = _parseMasterShipTypes(
       _optionalList(data['api_mst_stype']),
     );
+    final shipEquipOverrides = _optionalMap(data['api_mst_equip_ship']);
     final portraitData = <int, ({String? fileName, String? version})>{};
     for (final value in _optionalList(data['api_mst_shipgraph'])) {
       final item = _optionalMap(value);
@@ -944,10 +945,19 @@ class GameStateReducer {
         continue;
       }
       final portrait = portraitData[id];
+      final shipTypeId = _asInt(item['api_stype']);
+      final shipOverride = _optionalMap(shipEquipOverrides?['$id']);
+      final equipTypeIds = shipOverride == null
+          ? shipTypes[shipTypeId]?.equipTypeIds ?? const <int>{}
+          : _positiveIntKeys(
+              _optionalMap(shipOverride['api_equip_type']),
+              requireEnabledValue: false,
+            );
+      final antiSubRange = _optionalList(item['api_tais']);
       ships[id] = MasterShip(
         id: id,
         name: name,
-        shipTypeId: _asInt(item['api_stype']),
+        shipTypeId: shipTypeId,
         sortNo: _asInt(item['api_sortno']),
         classTypeId: _asInt(item['api_ctype']),
         speed: _asInt(item['api_soku']),
@@ -956,6 +966,8 @@ class GameStateReducer {
         maxAmmo: _asInt(item['api_bull_max']),
         slotCount: _asInt(item['api_slot_num']),
         buildTimeMinutes: _asInt(item['api_buildtime']),
+        baseAntiSub: antiSubRange.isEmpty ? 0 : _asInt(antiSubRange.first),
+        equipTypeIds: equipTypeIds,
         portraitFileName: portrait?.fileName,
         portraitVersion: portrait?.version,
       );
@@ -1312,7 +1324,14 @@ class GameStateReducer {
       final id = _asInt(item?['api_id']);
       final name = _asString(item?['api_name']);
       if (item != null && id > 0 && name.isNotEmpty) {
-        result[id] = MasterShipType(id: id, name: name);
+        result[id] = MasterShipType(
+          id: id,
+          name: name,
+          equipTypeIds: _positiveIntKeys(
+            _optionalMap(item['api_equip_type']),
+            requireEnabledValue: true,
+          ),
+        );
       }
     }
     return result;
@@ -1579,6 +1598,19 @@ class GameStateReducer {
 
   static List<Object?> _optionalList(Object? value) {
     return value is List ? List<Object?>.from(value) : const <Object?>[];
+  }
+
+  static Set<int> _positiveIntKeys(
+    Map<String, Object?>? values, {
+    required bool requireEnabledValue,
+  }) {
+    if (values == null) return const <int>{};
+    return Set<int>.unmodifiable(
+      values.entries
+          .where((entry) => !requireEnabledValue || _asInt(entry.value) == 1)
+          .map((entry) => int.tryParse(entry.key) ?? 0)
+          .where((id) => id > 0),
+    );
   }
 
   static List<Object?> _optionalListOrSingleMap(Object? value) {

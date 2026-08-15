@@ -213,7 +213,14 @@ final Map<int, ExpeditionRule> expeditionRules = <int, ExpeditionRule>{
   42: ExpeditionRule(42, [
     ..._base(45, 4),
     _r(ExpeditionRequirementType.levelSum, 200),
-    _escort,
+    _ac([
+      {'CL': 1, 'DD': 2},
+      {'CL': 1, 'DE': 2},
+      {'DD': 1, 'DE': 3},
+      {'CT': 1, 'DE': 2},
+      {'CVE': 1, 'DD': 2},
+      {'CVE': 1, 'DE': 2},
+    ]),
   ]),
   43: ExpeditionRule(43, [
     ..._base(55, 6),
