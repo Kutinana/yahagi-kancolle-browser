@@ -55,6 +55,7 @@ void main() {
   testWidgets('keeps both filter rows equally compact on a square foldable', (
     tester,
   ) async {
+    final semanticsHandle = tester.ensureSemantics();
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(720, 720);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -73,6 +74,22 @@ void main() {
     final resetSort = find.byKey(const Key('owned-inventory-sort-reset'));
     expect(resetSort, findsOneWidget);
     await tester.ensureVisible(resetSort);
+    expect(
+      find.descendant(of: resetSort, matching: find.byIcon(Icons.restore)),
+      findsOneWidget,
+    );
+    expect(find.text('还原默认排序'), findsNothing);
+    expect(tester.getSize(resetSort), const Size(34, 28));
+    final resetIcon = tester.widget<Icon>(
+      find.descendant(of: resetSort, matching: find.byIcon(Icons.restore)),
+    );
+    expect(resetIcon.size, 19);
+    expect(resetIcon.color, const Color(0xffffc85a));
+    final resetTooltip = tester.widget<Tooltip>(
+      find.descendant(of: resetSort, matching: find.byType(Tooltip)),
+    );
+    expect(resetTooltip.message, '还原默认排序');
+    expect(tester.getSemantics(resetSort).label, contains('还原默认排序'));
     await tester.tap(resetSort);
     await tester.pump();
     expect(find.text('等级 ▼'), findsOneWidget);
@@ -87,6 +104,7 @@ void main() {
     expect(shipHeight, equipmentHeight);
     expect(shipHeight, lessThanOrEqualTo(30));
     expect(tester.takeException(), isNull);
+    semanticsHandle.dispose();
   });
 
   testWidgets('renders live ships and grouped equipment and toggles sorting', (

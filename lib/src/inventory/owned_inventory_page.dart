@@ -179,6 +179,7 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                 label: (value) => _shipCategoryLabel(value, l10n),
                 keyFor: (value) => Key('ship-filter-${value.name}'),
                 actionLabel: l10n.restoreDefaultOrder,
+                actionIcon: Icons.restore,
                 actionKey: const Key('owned-inventory-sort-reset'),
                 onAction: _restoreDefaultShipSort,
                 onSelected: (value) => setState(() {
@@ -364,6 +365,7 @@ class _FilterStrip<T> extends StatelessWidget {
     required this.onSelected,
     this.resultSuffix = '',
     this.actionLabel,
+    this.actionIcon,
     this.actionKey,
     this.onAction,
   });
@@ -375,6 +377,7 @@ class _FilterStrip<T> extends StatelessWidget {
   final Key Function(T) keyFor;
   final ValueChanged<T> onSelected;
   final String? actionLabel;
+  final IconData? actionIcon;
   final Key? actionKey;
   final VoidCallback? onAction;
   @override
@@ -398,12 +401,20 @@ class _FilterStrip<T> extends StatelessWidget {
               const SizedBox(width: 6),
             ],
             if (actionLabel != null && onAction != null) ...[
-              _FilterChip(
-                key: actionKey,
-                label: actionLabel!,
-                selected: false,
-                onTap: onAction!,
-              ),
+              if (actionIcon == null)
+                _FilterChip(
+                  key: actionKey,
+                  label: actionLabel!,
+                  selected: false,
+                  onTap: onAction!,
+                )
+              else
+                _FilterActionButton(
+                  key: actionKey,
+                  label: actionLabel!,
+                  icon: actionIcon!,
+                  onTap: onAction!,
+                ),
               const SizedBox(width: 6),
             ],
             Text(
@@ -423,6 +434,48 @@ class _FilterStrip<T> extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FilterActionButton extends StatelessWidget {
+  const _FilterActionButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    onTap: onTap,
+    excludeSemantics: true,
+    child: Tooltip(
+      message: label,
+      child: SizedBox(
+        width: 34,
+        height: 28,
+        child: Material(
+          color: const Color(0xff102936),
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: Color(0xff315064)),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(9),
+            child: Center(
+              child: Icon(icon, size: 19, color: const Color(0xffffc85a)),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _FilterChip extends StatelessWidget {
