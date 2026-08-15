@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_page.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/frozen_data_table.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
@@ -50,6 +51,41 @@ void main() {
     expect(find.text('改修／熟练度'), findsOneWidget);
     expect(find.text('着装情况'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses uniform 78 widths for ship stat columns', (tester) async {
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    final table = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('owned-inventory-table-ships')),
+    );
+
+    expect(table.frozenColumnWidths, const <double>[240]);
+    expect(table.scrollableColumnWidths, const <double>[
+      96,
+      78,
+      78,
+      78,
+      78,
+      78,
+      78,
+      78,
+      78,
+      78,
+      78,
+      78,
+      78,
+      210,
+      52,
+    ]);
   });
 
   testWidgets('keeps both filter rows equally compact on a square foldable', (
@@ -650,7 +686,7 @@ void main() {
     },
   );
 
-  testWidgets('colors active headers and contains a narrow locked header', (
+  testWidgets('colors active headers and contains a locked header', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -696,7 +732,7 @@ void main() {
     final headerRect = tester.getRect(levelHeader);
     final textRect = tester.getRect(lockedTextFinder);
     final lockRect = tester.getRect(lockFinder);
-    expect(headerRect.width, 58);
+    expect(headerRect.width, 78);
     expect(textRect.left, greaterThanOrEqualTo(headerRect.left));
     expect(textRect.right, lessThanOrEqualTo(headerRect.right));
     expect(lockRect.left, greaterThanOrEqualTo(headerRect.left));
