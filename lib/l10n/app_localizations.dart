@@ -2399,7 +2399,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameFrameRatePowerSaving.
   ///
   /// In zh, this message translates to:
-  /// **'省电'**
+  /// **'低耗'**
   String get gameFrameRatePowerSaving;
 
   /// No description provided for @gameFrameRateHighRefresh.

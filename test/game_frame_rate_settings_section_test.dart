@@ -17,10 +17,10 @@ void main() {
 
       expect(find.byType(SegmentedButton<GameFrameRateMode>), findsOneWidget);
       expect(find.text('自动'), findsOneWidget);
-      expect(find.text('省电'), findsOneWidget);
+      expect(find.text('低耗'), findsOneWidget);
       expect(find.text('高刷'), findsOneWidget);
 
-      await tester.tap(find.text('省电'));
+      await tester.tap(find.text('低耗'));
       await tester.pumpAndSettle();
 
       expect(controller.mode, GameFrameRateMode.stable30);
@@ -30,10 +30,10 @@ void main() {
   );
 
   for (final localeCase in <({Locale locale, List<String> texts})>[
-    (locale: const Locale('zh'), texts: <String>['游戏帧率', '自动', '省电', '高刷']),
+    (locale: const Locale('zh'), texts: <String>['游戏帧率', '自动', '低耗', '高刷']),
     (
       locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
-      texts: <String>['遊戲幀率', '自動', '省電', '高刷'],
+      texts: <String>['遊戲幀率', '自動', '低耗', '高刷'],
     ),
     (
       locale: const Locale('ja'),

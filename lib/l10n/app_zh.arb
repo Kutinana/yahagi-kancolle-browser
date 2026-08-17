@@ -429,7 +429,7 @@
   "questCatalogStorageError": "任务资料保存失败，已保留当前版本。",
   "gameFrameRateTitle": "游戏帧率",
   "gameFrameRateAutomatic": "自动",
-  "gameFrameRatePowerSaving": "省电",
+  "gameFrameRatePowerSaving": "低耗",
   "gameFrameRateHighRefresh": "高刷",
   "gameFrameRateAutomaticDesc": "封顶 60 FPS；若持续不稳定、系统开启节能或设备发热，将自动降至 30 FPS。",
   "gameFrameRatePowerSavingDesc": "固定 30 FPS，优先降低发热和耗电。",

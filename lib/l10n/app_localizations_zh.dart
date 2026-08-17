@@ -1222,7 +1222,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameFrameRateAutomatic => '自动';
 
   @override
-  String get gameFrameRatePowerSaving => '省电';
+  String get gameFrameRatePowerSaving => '低耗';
 
   @override
   String get gameFrameRateHighRefresh => '高刷';
@@ -2873,7 +2873,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameFrameRateAutomatic => '自動';
 
   @override
-  String get gameFrameRatePowerSaving => '省電';
+  String get gameFrameRatePowerSaving => '低耗';
 
   @override
   String get gameFrameRateHighRefresh => '高刷';
