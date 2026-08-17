@@ -188,6 +188,6 @@ class GameResourceCacheStore(
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     companion object {
-        const val DEFAULT_MAX_BYTES: Long = 10L * 1024L * 1024L * 1024L
+        const val DEFAULT_MAX_BYTES: Long = 10_000_000_000L
     }
 }

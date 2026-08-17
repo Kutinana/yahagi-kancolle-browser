@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_channel.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_controller.dart';
@@ -10,6 +12,20 @@ void main() {
       '6.84 GB / 8.12 GB（84.2%）',
     );
   });
+
+  test(
+    'does not show the cache capacity as an unknown manifest size',
+    () async {
+      final controller = GameResourceCacheController(
+        store: MemoryStore(),
+        port: FakePort(),
+      );
+      await controller.initialize();
+
+      expect(controller.completenessLine, '0.00 GB / --（--）');
+      controller.dispose();
+    },
+  );
 
   test(
     'changing mode configures native cache without clearing files',
@@ -63,6 +79,28 @@ void main() {
       controller.dispose();
     },
   );
+
+  test('overlapping status refreshes are coalesced', () async {
+    final port = FakePort();
+    final controller = GameResourceCacheController(
+      store: MemoryStore(),
+      port: port,
+    );
+    await controller.initialize();
+    port.statusGate = Completer<void>();
+    port.statusEntered = Completer<void>();
+
+    final first = controller.refresh();
+    await port.statusEntered!.future;
+    final second = controller.refresh();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(port.statusCalls, 2);
+    port.statusGate!.complete();
+    await Future.wait(<Future<void>>[first, second]);
+    expect(port.statusCalls, 3);
+    controller.dispose();
+  });
 }
 
 final class MemoryStore implements GameResourceCacheStore {
@@ -79,6 +117,9 @@ final class MemoryStore implements GameResourceCacheStore {
 final class FakePort implements GameResourceCachePort {
   final List<GameResourceCacheMode> configured = <GameResourceCacheMode>[];
   int clearCalls = 0;
+  int statusCalls = 0;
+  Completer<void>? statusGate;
+  Completer<void>? statusEntered;
   GameResourceCacheStatus nextStatus = GameResourceCacheStatus.empty;
 
   @override
@@ -88,10 +129,22 @@ final class FakePort implements GameResourceCachePort {
   }
 
   @override
-  Future<GameResourceCacheStatus> status() async => nextStatus;
+  Future<GameResourceCacheStatus> status() async {
+    statusCalls++;
+    final gate = statusGate;
+    if (gate != null) {
+      final entered = statusEntered;
+      if (entered != null && !entered.isCompleted) entered.complete();
+      await gate.future;
+    }
+    return nextStatus;
+  }
 
   @override
-  Future<bool> setManifest(GameResourceManifest manifest) async => true;
+  Future<bool> setManifest(
+    GameResourceManifest manifest, {
+    bool Function()? shouldContinue,
+  }) async => shouldContinue?.call() ?? true;
 
   @override
   Future<bool> startDownload({bool allowMetered = false}) async => true;

@@ -127,5 +127,22 @@ void main() {
       isTrue,
     );
     expect(manifest.urls.toSet().length, manifest.urls.length);
+    expect(
+      manifest.targetBytes,
+      manifest.urls.fold<int>(0, (sum, url) {
+        final path = url.toLowerCase().split('?').first;
+        if (path.endsWith('.mp3') || path.endsWith('.ogg')) {
+          return sum + 75000;
+        }
+        if (path.endsWith('.png') || path.endsWith('.jpg')) {
+          return sum + 115000;
+        }
+        if (path.endsWith('/kcs2/js/main.js')) return sum + 11000000;
+        if (path.endsWith('.js')) return sum + 650000;
+        if (path.endsWith('.json')) return sum + 17000;
+        if (path.endsWith('.woff2')) return sum + 2500000;
+        return sum + 50000;
+      }),
+    );
   });
 }

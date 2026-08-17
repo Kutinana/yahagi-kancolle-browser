@@ -359,11 +359,13 @@ final class GameResourceManifestBuilder {
 
   static int _estimatedBytes(String url) {
     final path = url.toLowerCase().split('?').first;
-    if (path.endsWith('.mp3') || path.endsWith('.ogg')) return 220000;
-    if (path.endsWith('.png') || path.endsWith('.jpg')) return 420000;
-    if (path.endsWith('.js')) return 350000;
-    if (path.endsWith('.json')) return 80000;
-    return 120000;
+    if (path.endsWith('/kcs2/js/main.js')) return 11000000;
+    if (path.endsWith('.mp3') || path.endsWith('.ogg')) return 75000;
+    if (path.endsWith('.png') || path.endsWith('.jpg')) return 115000;
+    if (path.endsWith('.js')) return 650000;
+    if (path.endsWith('.json')) return 17000;
+    if (path.endsWith('.woff2')) return 2500000;
+    return 50000;
   }
 
   static List<Map<String, Object?>> _maps(Object? value) => _list(

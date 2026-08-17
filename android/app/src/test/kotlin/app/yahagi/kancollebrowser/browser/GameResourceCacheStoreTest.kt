@@ -14,6 +14,11 @@ class GameResourceCacheStoreTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
+    fun `default capacity is ten decimal gigabytes`() {
+        assertEquals(10_000_000_000L, GameResourceCacheStore.DEFAULT_MAX_BYTES)
+    }
+
+    @Test
     fun `atomic commit survives index reload`() {
         val root = temporaryFolder.newFolder("cache")
         val key = GameResourceCacheKey("/kcs2/resources/a.png?version=21")

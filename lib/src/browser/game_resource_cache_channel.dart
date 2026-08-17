@@ -112,7 +112,10 @@ final class GameResourceCacheStatus {
 abstract interface class GameResourceCachePort {
   Future<bool> configure(GameResourceCacheMode mode);
   Future<GameResourceCacheStatus> status();
-  Future<bool> setManifest(GameResourceManifest manifest);
+  Future<bool> setManifest(
+    GameResourceManifest manifest, {
+    bool Function()? shouldContinue,
+  });
   Future<bool> startDownload({bool allowMetered = false});
   Future<bool> pauseDownload();
   Future<GameResourceCacheStatus> checkIntegrity();
@@ -129,6 +132,8 @@ final class MethodChannelGameResourceCachePort
   ]);
 
   final MethodChannel channel;
+  static const int _manifestBatchSize = 500;
+  static int _nextManifestTransaction = 0;
 
   @override
   Future<bool> configure(GameResourceCacheMode mode) async =>
@@ -142,13 +147,64 @@ final class MethodChannelGameResourceCachePort
       _statusFrom(await channel.invokeMethod<Map<Object?, Object?>>('status'));
 
   @override
-  Future<bool> setManifest(GameResourceManifest manifest) async =>
-      await channel.invokeMethod<bool>('setManifest', <String, Object?>{
-        'profile': manifest.profile,
-        'urls': manifest.urls,
-        'targetBytes': manifest.targetBytes,
-      }) ??
-      false;
+  Future<bool> setManifest(
+    GameResourceManifest manifest, {
+    bool Function()? shouldContinue,
+  }) async {
+    final transactionId =
+        '${DateTime.now().microsecondsSinceEpoch}-${_nextManifestTransaction++}';
+    var begun = false;
+    var committed = false;
+    try {
+      if (shouldContinue?.call() == false) return false;
+      begun =
+          await channel.invokeMethod<bool>('beginManifest', <String, Object?>{
+            'transactionId': transactionId,
+            'profile': manifest.profile,
+            'targetBytes': manifest.targetBytes,
+          }) ??
+          false;
+      if (!begun) return false;
+      for (
+        var offset = 0;
+        offset < manifest.urls.length;
+        offset += _manifestBatchSize
+      ) {
+        if (shouldContinue?.call() == false) return false;
+        final end = (offset + _manifestBatchSize).clamp(
+          0,
+          manifest.urls.length,
+        );
+        final appended =
+            await channel.invokeMethod<bool>(
+              'appendManifest',
+              <String, Object?>{
+                'transactionId': transactionId,
+                'urls': manifest.urls.sublist(offset, end),
+              },
+            ) ??
+            false;
+        if (!appended) return false;
+      }
+      if (shouldContinue?.call() == false) return false;
+      committed =
+          await channel.invokeMethod<bool>('commitManifest', <String, Object?>{
+            'transactionId': transactionId,
+          }) ??
+          false;
+      return committed;
+    } finally {
+      if (begun && !committed) {
+        try {
+          await channel.invokeMethod<bool>('abortManifest', <String, Object?>{
+            'transactionId': transactionId,
+          });
+        } on PlatformException {
+          // The channel is already unavailable; native process cleanup owns it.
+        }
+      }
+    }
+  }
 
   @override
   Future<bool> startDownload({bool allowMetered = false}) async =>

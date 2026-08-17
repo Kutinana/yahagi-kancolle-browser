@@ -111,6 +111,74 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     @Test
+    fun `manifest urls are not rewritten with frequently updated state`() {
+        val stateFile = temporaryFolder.newFile("download-state.json")
+        val fixture = fixture(stateFile = stateFile)
+        val url = official("/kcs2/resources/large-manifest-entry.png")
+
+        fixture.coordinator.setManifest("full", listOf(url), 9)
+
+        assertFalse(stateFile.readText().contains(url))
+        fixture.coordinator.dispose()
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.FULL },
+            stateFile,
+        )
+        assertEquals(1, restored.status().missingCount)
+        assertEquals(9, restored.status().targetBytes)
+        assertTrue(restored.startDownload())
+        awaitState(restored, GameResourceDownloadState.COMPLETE)
+        restored.dispose()
+    }
+
+    @Test
+    fun `first status after restart restores cached bytes from manifest snapshot`() {
+        val stateFile = temporaryFolder.newFile("download-state.json")
+        val fixture = fixture(stateFile = stateFile)
+        val url = official("/kcs2/resources/cached.png")
+        fixture.engine.fetch(url)
+        fixture.coordinator.setManifest("light", listOf(url), 1)
+        fixture.coordinator.dispose()
+
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.LIGHT },
+            stateFile,
+        )
+
+        assertEquals(1, restored.status().cachedBytes)
+        assertEquals(0, restored.status().missingCount)
+        restored.dispose()
+    }
+
+    @Test
+    fun `authorized download resumes after restart when wifi returns`() {
+        val stateFile = temporaryFolder.newFile("download-state.json")
+        var network = GameResourceNetworkState(connected = true, metered = true)
+        val fixture = fixture(stateFile = stateFile, networkProvider = { network })
+        fixture.coordinator.setManifest(
+            "light",
+            listOf(official("/kcs2/resources/resume.png")),
+            1,
+        )
+        assertFalse(fixture.coordinator.startDownload())
+        fixture.coordinator.dispose()
+
+        network = GameResourceNetworkState(connected = true, metered = false)
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.LIGHT },
+            stateFile,
+            { network },
+        )
+        restored.onNetworkChanged()
+
+        awaitState(restored, GameResourceDownloadState.COMPLETE)
+        restored.dispose()
+    }
+
+    @Test
     fun `bulk download waits for wifi and resumes when network changes`() {
         var network = GameResourceNetworkState(connected = true, metered = true)
         val fixture = fixture(networkProvider = { network })
@@ -222,6 +290,61 @@ class GameResourceDownloadCoordinatorTest {
 
         assertFalse(visited.contains(oldSecond))
         assertTrue(visited.contains(current))
+        fixture.coordinator.dispose()
+    }
+
+    @Test
+    fun `superseded prepared manifest is rolled back`() {
+        val stateFile = temporaryFolder.newFile("download-state.json")
+        val fixture = fixture(stateFile = stateFile)
+        val original = official("/kcs2/resources/original.png")
+        val stale = official("/kcs2/resources/stale.png")
+        fixture.coordinator.setManifest("light", listOf(original), 1)
+        val prepared = fixture.coordinator.prepareManifest("full", listOf(stale), 9)
+        val checks = AtomicInteger()
+
+        val applied = fixture.coordinator.applyPreparedManifestIf(prepared) {
+            checks.incrementAndGet() == 1
+        }
+        fixture.coordinator.discardPreparedManifest(prepared)
+
+        assertFalse(applied)
+        assertEquals(1, fixture.coordinator.status().targetBytes)
+        fixture.coordinator.dispose()
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.LIGHT },
+            stateFile,
+        )
+        assertEquals(1, restored.status().targetBytes)
+        assertEquals(1, restored.status().missingCount)
+        restored.dispose()
+    }
+
+    @Test
+    fun `network callback after dispose is ignored`() {
+        val fixture = fixture()
+        fixture.coordinator.dispose()
+
+        fixture.coordinator.onNetworkChanged()
+
+        assertFalse(fixture.coordinator.startDownload())
+    }
+
+    @Test
+    fun `superseded mode configuration has no side effects`() {
+        val fixture = fixture()
+        fixture.coordinator.setManifest(
+            "light",
+            listOf(official("/kcs2/resources/current.png")),
+            1,
+        )
+
+        assertFalse(fixture.coordinator.configureModeChange(isDisabled = true) { false })
+
+        assertEquals(GameResourceDownloadState.IDLE, fixture.coordinator.status().state)
+        assertTrue(fixture.coordinator.startDownload())
+        awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
         fixture.coordinator.dispose()
     }
 

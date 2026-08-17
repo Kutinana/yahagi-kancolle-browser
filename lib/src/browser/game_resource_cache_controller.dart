@@ -29,16 +29,17 @@ final class GameResourceCacheController extends ChangeNotifier {
   bool _initialized = false;
   bool _busy = false;
   bool _pageVisible = false;
+  Future<void>? _refreshFuture;
+  bool _refreshPending = false;
   Timer? _timer;
 
   GameResourceCacheMode get mode => _mode;
   GameResourceCacheStatus get status => _status;
   bool get initialized => _initialized;
   bool get busy => _busy;
-  String get completenessLine => formatCacheCompleteness(
-    _status.cachedBytes,
-    _status.targetBytes > 0 ? _status.targetBytes : _status.maxBytes,
-  );
+  String get completenessLine => _status.targetBytes > 0
+      ? formatCacheCompleteness(_status.cachedBytes, _status.targetBytes)
+      : '${(_status.cachedBytes / 1000000000).toStringAsFixed(2)} GB / --（--）';
 
   Future<void> initialize() async {
     _mode = await _store.load();
@@ -57,9 +58,17 @@ final class GameResourceCacheController extends ChangeNotifier {
     await refresh();
   }
 
-  Future<void> submitManifest(GameResourceManifest manifest) async {
-    await _port.setManifest(manifest);
+  Future<bool> submitManifest(
+    GameResourceManifest manifest, {
+    bool Function()? shouldContinue,
+  }) async {
+    final submitted = await _port.setManifest(
+      manifest,
+      shouldContinue: shouldContinue,
+    );
+    if (!submitted) return false;
     await refresh();
+    return true;
   }
 
   Future<bool> startDownload({bool allowMetered = false}) =>
@@ -82,10 +91,27 @@ final class GameResourceCacheController extends ChangeNotifier {
     }
   }
 
-  Future<void> refresh() async {
-    _status = await _port.status();
-    _updatePolling();
-    notifyListeners();
+  Future<void> refresh() {
+    final active = _refreshFuture;
+    if (active != null) {
+      _refreshPending = true;
+      return active;
+    }
+    late final Future<void> future;
+    future = _refreshLoop().whenComplete(() {
+      if (identical(_refreshFuture, future)) _refreshFuture = null;
+    });
+    _refreshFuture = future;
+    return future;
+  }
+
+  Future<void> _refreshLoop() async {
+    do {
+      _refreshPending = false;
+      _status = await _port.status();
+      _updatePolling();
+      notifyListeners();
+    } while (_refreshPending);
   }
 
   void setPageVisible(bool visible) {

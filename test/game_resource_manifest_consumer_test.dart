@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -83,6 +84,66 @@ void main() {
     consumer.dispose();
     controller.dispose();
   });
+
+  test('rapid mode changes build only the latest manifest', () async {
+    final port = RecordingPort();
+    final controller = GameResourceCacheController(
+      store: MemoryStore(GameResourceCacheMode.light),
+      port: port,
+    );
+    await controller.initialize();
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    final consumer = GameResourceManifestConsumer(
+      controller: controller,
+      ownedShipMasterIds: () => const <int>{1},
+      ownedSlotItemMasterIds: () => const <int>{100},
+      staticUrlsLoader: () async => const <String>['/kcs2/js/main.js'],
+      waitForGameState: () async {
+        if (!entered.isCompleted) entered.complete();
+        await release.future;
+      },
+    );
+    final start2 = <String, Object?>{
+      'api_mst_shipgraph': <Object?>[
+        <String, Object?>{
+          'api_id': 1,
+          'api_filename': 'ship_a',
+          'api_version': <Object?>['2', '3', '4'],
+        },
+      ],
+      'api_mst_ship': <Object?>[
+        <String, Object?>{'api_id': 1, 'api_name': 'A'},
+      ],
+      'api_mst_slotitem': <Object?>[
+        <String, Object?>{'api_id': 100, 'api_version': '5'},
+      ],
+    };
+    consumer.accept(
+      CapturedApiEvent(
+        path: '/kcsapi/api_start2/getData',
+        responseBody: jsonEncode(<String, Object?>{
+          'api_result': 1,
+          'api_data': start2,
+        }),
+        decodedEnvelope: <String, Object?>{'api_result': 1, 'api_data': start2},
+        source: CaptureSource.xhr,
+        sourceOrigin: 'https://w01y.kancolle-server.com',
+        capturedAt: DateTime.utc(2026),
+      ),
+    );
+    await entered.future;
+
+    await controller.setMode(GameResourceCacheMode.full);
+    await controller.setMode(GameResourceCacheMode.light);
+    release.complete();
+    await consumer.idle;
+
+    expect(port.manifests, hasLength(1));
+    expect(port.manifests.single.profile, 'light');
+    consumer.dispose();
+    controller.dispose();
+  });
 }
 
 final class MemoryStore implements GameResourceCacheStore {
@@ -102,7 +163,11 @@ final class RecordingPort implements GameResourceCachePort {
   Future<GameResourceCacheStatus> status() async =>
       GameResourceCacheStatus.empty;
   @override
-  Future<bool> setManifest(GameResourceManifest manifest) async {
+  Future<bool> setManifest(
+    GameResourceManifest manifest, {
+    bool Function()? shouldContinue,
+  }) async {
+    if (shouldContinue?.call() == false) return false;
     manifests.add(manifest);
     return true;
   }
