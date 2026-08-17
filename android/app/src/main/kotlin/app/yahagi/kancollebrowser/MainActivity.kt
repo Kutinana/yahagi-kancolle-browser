@@ -46,6 +46,11 @@ import app.yahagi.kancollebrowser.browser.GameFrameRateManager
 import app.yahagi.kancollebrowser.browser.GameFrameRateBridge
 import app.yahagi.kancollebrowser.browser.GameFrameRateMode
 import app.yahagi.kancollebrowser.browser.AndroidGameFrameRateSystemConstraints
+import app.yahagi.kancollebrowser.browser.GameResourceCacheEngine
+import app.yahagi.kancollebrowser.browser.GameResourceCacheIndex
+import app.yahagi.kancollebrowser.browser.GameResourceCacheMode
+import app.yahagi.kancollebrowser.browser.GameResourceCacheStore
+import app.yahagi.kancollebrowser.browser.HttpUrlConnectionGameResourceFetcher
 import app.yahagi.kancollebrowser.capture.GameCaptureBridge
 import app.yahagi.kancollebrowser.capture.ScreenshotCaptureAttempt
 import app.yahagi.kancollebrowser.capture.ScreenshotCapturePolicy
@@ -134,6 +139,9 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     private var webViewProxyManager: WebViewProxyManager? = null
     private var gadgetBypassManager: GadgetBypassManager? = null
     private var gameFrameRateManager: GameFrameRateManager? = null
+    private var gameResourceCacheEngine: GameResourceCacheEngine? = null
+    @Volatile
+    private var gameResourceCacheMode: GameResourceCacheMode = GameResourceCacheMode.NONE
     private var diagnosticPlatformHandler: DiagnosticPlatformHandler? = null
     private val diagnosticDirectoryPickerUi by lazy {
         DiagnosticDirectoryPickerUi(
@@ -192,6 +200,18 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             flutterEngine.dartExecutor.binaryMessenger,
             PROXY_CHANNEL,
         ).setMethodCallHandler(webViewProxyManager)
+        val resourceCacheRoot = File(filesDir, "game_resource_cache")
+        gameResourceCacheEngine = GameResourceCacheEngine(
+            GameResourceCacheStore(
+                resourceCacheRoot,
+                GameResourceCacheIndex(File(resourceCacheRoot, "index.json")),
+            ),
+            HttpUrlConnectionGameResourceFetcher(
+                proxyProvider = {
+                    webViewProxyManager?.currentNativeProxy() ?: java.net.Proxy.NO_PROXY
+                },
+            ),
+        ) { gameResourceCacheMode }
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -355,6 +375,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         webViewProxyManager?.dispose()
         webViewProxyManager = null
         gadgetBypassManager = null
+        gameResourceCacheEngine = null
         gameFrameRateManager?.dispose()
         gameFrameRateManager = null
         diagnosticPlatformHandler?.dispose()
@@ -429,7 +450,9 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         if (enabled) {
             installGadgetBypassLayoutListener()
             ensureGadgetBypassWrap()
-        } else if (gameFrameRateManager?.mainScriptTickerMode == null) {
+        } else if (gameFrameRateManager?.mainScriptTickerMode == null &&
+            gameResourceCacheMode == GameResourceCacheMode.NONE
+        ) {
             restoreGadgetBypassClient()
             removeGadgetBypassLayoutListener()
         }
@@ -445,7 +468,9 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         if (mode.mainScriptTickerMode != null) {
             installGadgetBypassLayoutListener()
             ensureGadgetBypassWrap()
-        } else if (gadgetBypassManager?.enabled != true) {
+        } else if (gadgetBypassManager?.enabled != true &&
+            gameResourceCacheMode == GameResourceCacheMode.NONE
+        ) {
             restoreGadgetBypassClient()
             removeGadgetBypassLayoutListener()
         }
@@ -455,7 +480,9 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = gadgetBypassManager ?: return
         val frameRateManager = gameFrameRateManager
-        if (!manager.enabled && frameRateManager?.mainScriptTickerMode == null) return
+        if (!manager.enabled && frameRateManager?.mainScriptTickerMode == null &&
+            gameResourceCacheMode == GameResourceCacheMode.NONE
+        ) return
 
         val webViews = mutableListOf<WebView>()
         collectWebViews(window.decorView, webViews)
@@ -473,8 +500,22 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 isEnabled = { manager.enabled },
                 endpoint = { manager.endpoint },
                 mainScriptTickerMode = { frameRateManager?.mainScriptTickerMode },
+                gameResourceEngine = gameResourceCacheEngine,
             ),
         )
+    }
+
+    private fun onGameResourceCacheModeChanged(mode: GameResourceCacheMode) {
+        gameResourceCacheMode = mode
+        if (mode != GameResourceCacheMode.NONE) {
+            installGadgetBypassLayoutListener()
+            ensureGadgetBypassWrap()
+        } else if (gadgetBypassManager?.enabled != true &&
+            gameFrameRateManager?.mainScriptTickerMode == null
+        ) {
+            restoreGadgetBypassClient()
+            removeGadgetBypassLayoutListener()
+        }
     }
 
     private fun restoreGadgetBypassClient() {

@@ -57,6 +57,44 @@ class GadgetBypassWebViewClientTest {
         assertTrue(bytes!!.size > 100)
     }
 
+    @Test
+    fun gameResourceCacheServesOfficialStaticAssetBeforeOriginalClient() {
+        val sentinel = WebResourceResponse(
+            "text/plain",
+            "utf-8",
+            ByteArrayInputStream("original".toByteArray()),
+        )
+        val original = RecordingClient(sentinel)
+        val root = File(cacheDir, "game-resources")
+        val resourceEngine = GameResourceCacheEngine(
+            GameResourceCacheStore(root, GameResourceCacheIndex(File(root, "index.json")), 10_000),
+            GameResourceFetcher { _, _, _ ->
+                GameResourceFetchResult(200, "OK", mapOf("Content-Type" to "image/png"), "cached".toByteArray())
+            },
+        ) { GameResourceCacheMode.LIGHT }
+        val wrapper = GadgetBypassWebViewClient(
+            original = original,
+            engine = GadgetBypassEngine(GadgetBypassCache(cacheDir)),
+            isEnabled = { false },
+            endpoint = { GadgetBypassRules.DEFAULT_ENDPOINT },
+            gameResourceEngine = resourceEngine,
+        )
+        val actual = AtomicReference<WebResourceResponse?>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val webView = WebView(ApplicationProvider.getApplicationContext())
+            actual.set(
+                wrapper.shouldInterceptRequest(
+                    webView,
+                    "https://w17k.kancolle-server.com/kcs2/resources/ship/full/a.png?version=1",
+                ),
+            )
+            webView.destroy()
+        }
+
+        assertEquals("cached", actual.get()!!.data.bufferedReader().readText())
+        assertEquals(0, original.interceptCalls)
+    }
+
     private fun assertDelegates(enabled: Boolean, url: String) {
         val sentinel = WebResourceResponse(
             "text/plain",

@@ -29,6 +29,7 @@ class GadgetBypassWebViewClient(
     private val endpoint: () -> String,
     private val mainScriptTickerMode: () -> GameMainScriptTickerMode? = { null },
     private val mainScriptFetcher: GameMainScriptFetcher = GameMainScriptFetcher(),
+    private val gameResourceEngine: GameResourceCacheEngine? = null,
 ) : WebViewClient() {
 
     private companion object {
@@ -53,6 +54,7 @@ class GadgetBypassWebViewClient(
         if (isEnabled() && GadgetBypassRules.shouldIntercept(url, request.method)) {
             return serveFromBypass(url) ?: original.shouldInterceptRequest(view, request)
         }
+        serveFromGameCache(url, request.requestHeaders)?.let { return it }
         return original.shouldInterceptRequest(view, request)
     }
 
@@ -69,6 +71,7 @@ class GadgetBypassWebViewClient(
         if (isEnabled() && GadgetBypassRules.shouldIntercept(url, "GET")) {
             return serveFromBypass(url) ?: original.shouldInterceptRequest(view, url)
         }
+        serveFromGameCache(url)?.let { return it }
         return original.shouldInterceptRequest(view, url)
     }
 
@@ -80,7 +83,8 @@ class GadgetBypassWebViewClient(
         val originalBytes = if (isEnabled() && GadgetBypassRules.shouldIntercept(url, "GET")) {
             engine.fetch(url, endpoint())
         } else {
-            mainScriptFetcher.fetch(url, requestHeaders)
+            gameResourceEngine?.fetch(url, requestHeaders)?.bytes
+                ?: mainScriptFetcher.fetch(url, requestHeaders)
         } ?: return null
         val originalScript = originalBytes.toString(Charsets.UTF_8)
         val patchedScript = GameMainScriptPatcher.patch(originalScript, tickerMode)
@@ -108,6 +112,23 @@ class GadgetBypassWebViewClient(
             // Any interception failure must degrade to the default loading path.
             null
         }
+    }
+
+    private fun serveFromGameCache(
+        url: String,
+        requestHeaders: Map<String, String> = emptyMap(),
+    ): WebResourceResponse? = try {
+        val response = gameResourceEngine?.fetch(url, requestHeaders) ?: return null
+        WebResourceResponse(
+            response.mimeType,
+            response.encoding,
+            response.statusCode,
+            response.reasonPhrase,
+            response.headers,
+            ByteArrayInputStream(response.bytes),
+        )
+    } catch (_: Exception) {
+        null
     }
 
     @Deprecated("Deprecated in WebView")
