@@ -45,6 +45,7 @@ import app.yahagi.kancollebrowser.browser.FixedCanvasScalePolicy
 import app.yahagi.kancollebrowser.browser.GameFrameRateManager
 import app.yahagi.kancollebrowser.browser.GameFrameRateBridge
 import app.yahagi.kancollebrowser.browser.GameFrameRateMode
+import app.yahagi.kancollebrowser.browser.AndroidGameFrameRateSystemConstraints
 import app.yahagi.kancollebrowser.capture.GameCaptureBridge
 import app.yahagi.kancollebrowser.capture.ScreenshotCaptureAttempt
 import app.yahagi.kancollebrowser.capture.ScreenshotCapturePolicy
@@ -334,6 +335,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         val frameRateManager = GameFrameRateManager(
             this,
             GameFrameRateBridge(this),
+            AndroidGameFrameRateSystemConstraints(this),
         )
         gameFrameRateManager = frameRateManager
         MethodChannel(
@@ -434,6 +436,12 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     }
 
     override fun onFrameRateModeChanged(mode: GameFrameRateMode) {
+        val attributes = window.attributes
+        val preferredRefreshRate = if (mode == GameFrameRateMode.HIGH_REFRESH) 0f else 60f
+        if (attributes.preferredRefreshRate != preferredRefreshRate) {
+            attributes.preferredRefreshRate = preferredRefreshRate
+            window.attributes = attributes
+        }
         if (mode.mainScriptTickerMode != null) {
             installGadgetBypassLayoutListener()
             ensureGadgetBypassWrap()

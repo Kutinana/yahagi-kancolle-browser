@@ -25,6 +25,7 @@ enum class GameFrameRateMode(val wireName: String) {
 class GameFrameRateManager(
     private val host: Host,
     private val bridge: GameFrameRateBridge,
+    private val systemConstraints: GameFrameRateSystemConstraintSource,
 ) : MethodChannel.MethodCallHandler {
     interface Host {
         fun onFrameRateModeChanged(mode: GameFrameRateMode)
@@ -34,6 +35,11 @@ class GameFrameRateManager(
     var mode: GameFrameRateMode = GameFrameRateMode.AUTO
         private set
     private var configured = false
+    private var requestedTarget = GameFrameRateTarget.FPS_60
+
+    init {
+        systemConstraints.start(::onSystemStateChanged)
+    }
 
     val mainScriptTickerMode: GameMainScriptTickerMode?
         get() = if (configured) mode.mainScriptTickerMode else null
@@ -48,7 +54,15 @@ class GameFrameRateManager(
                     call.argument<String>("mode"),
                 )
                 try {
-                    bridge.configure(requestedMode.initialTarget)
+                    val initialTarget = requestedMode.initialTarget
+                    bridge.configure(
+                        GameFrameRateSystemPolicy.effectiveTarget(
+                            requestedMode,
+                            initialTarget,
+                            systemConstraints.state,
+                        ),
+                    )
+                    requestedTarget = initialTarget
                     mode = requestedMode
                     configured = true
                     host.onFrameRateModeChanged(mode)
@@ -64,7 +78,8 @@ class GameFrameRateManager(
                 if (target == null) {
                     result.error("invalid_frame_rate_target", "Unknown frame-rate target.", null)
                 } else {
-                    bridge.apply(target)
+                    requestedTarget = target
+                    bridge.apply(effectiveTarget())
                     result.success(null)
                 }
             }
@@ -74,10 +89,23 @@ class GameFrameRateManager(
     }
 
     fun dispose() {
+        systemConstraints.dispose()
         bridge.dispose()
         configured = false
         mode = GameFrameRateMode.AUTO
+        requestedTarget = GameFrameRateTarget.FPS_60
     }
+
+    private fun onSystemStateChanged(@Suppress("UNUSED_PARAMETER") state: GameFrameRateSystemState) {
+        if (configured) bridge.apply(effectiveTarget())
+    }
+
+    private fun effectiveTarget(): GameFrameRateTarget =
+        GameFrameRateSystemPolicy.effectiveTarget(
+            mode,
+            requestedTarget,
+            systemConstraints.state,
+        )
 }
 
 private val GameFrameRateMode.initialTarget: GameFrameRateTarget
