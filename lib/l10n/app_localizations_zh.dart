@@ -1705,6 +1705,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameResourceCacheDamaged => '损坏';
 
   @override
+  String get gameResourceCacheOutdated => '过期';
+
+  @override
   String get gameResourceCacheItems => '项';
 
   @override
@@ -3434,6 +3437,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameResourceCacheDamaged => '損壞';
+
+  @override
+  String get gameResourceCacheOutdated => '過期';
 
   @override
   String get gameResourceCacheItems => '項';

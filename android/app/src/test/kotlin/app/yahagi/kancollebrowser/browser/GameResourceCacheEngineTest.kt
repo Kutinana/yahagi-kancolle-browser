@@ -97,19 +97,46 @@ class GameResourceCacheEngineTest {
         assertEquals(0, fetcher.calls.get())
     }
 
+    @Test
+    fun `unversioned resource revalidates after ttl and keeps 304 cache`() {
+        var now = 1L
+        val fetcher = QueueFetcher(
+            result(byteArrayOf(1)),
+            result(byteArrayOf(), statusCode = 304),
+        )
+        val engine = engine(fetcher, clock = { now })
+        val url = official("/kcs2/resources/a.png")
+
+        engine.fetch(url)
+        engine.fetch(url)
+        assertEquals(1, fetcher.calls.get())
+
+        now += GameResourceCacheEngine.UNVERSIONED_TTL_MS
+        val revalidated = engine.fetch(url)
+
+        assertEquals(2, fetcher.calls.get())
+        assertEquals(GameResourceResponseSource.CACHE, revalidated?.source)
+    }
+
     private fun engine(
         fetcher: GameResourceFetcher,
         mode: GameResourceCacheMode = GameResourceCacheMode.LIGHT,
+        clock: () -> Long = System::currentTimeMillis,
     ): GameResourceCacheEngine {
         val root = temporaryFolder.newFolder()
-        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 10_000)
-        return GameResourceCacheEngine(store, fetcher) { mode }
+        val store = GameResourceCacheStore(
+            root,
+            GameResourceCacheIndex(root.resolve("index.json")),
+            10_000,
+            clock,
+        )
+        return GameResourceCacheEngine(store, fetcher, clock) { mode }
     }
 
     private fun official(path: String) = "https://w17k.kancolle-server.com$path"
 
-    private fun result(bytes: ByteArray) = GameResourceFetchResult(
-        statusCode = 200,
+    private fun result(bytes: ByteArray, statusCode: Int = 200) = GameResourceFetchResult(
+        statusCode = statusCode,
         reasonPhrase = "OK",
         headers = mapOf("Content-Type" to "image/png", "Content-Length" to bytes.size.toString()),
         bytes = bytes,

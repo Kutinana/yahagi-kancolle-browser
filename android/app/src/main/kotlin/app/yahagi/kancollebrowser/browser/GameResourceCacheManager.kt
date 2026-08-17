@@ -33,7 +33,7 @@ class GameResourceCacheManager(
                 val targetBytes = (call.argument<Number>("targetBytes"))?.toLong() ?: 0L
                 coordinator.setManifest(profile, urls, targetBytes)
                 if (modeProvider() != GameResourceCacheMode.NONE) {
-                    coordinator.startDownload()
+                    coordinator.startAutoUpdate()
                 }
                 result.success(true)
             }
@@ -79,6 +79,7 @@ class GameResourceCacheManager(
             "remainingSeconds" to status.remainingSeconds,
             "missingCount" to status.missingCount,
             "damagedCount" to status.damagedCount,
+            "outdatedCount" to status.outdatedCount,
             "fileCount" to cache.fileCount,
             "capacityBlocked" to status.capacityBlocked,
             "isMetered" to status.isMetered,

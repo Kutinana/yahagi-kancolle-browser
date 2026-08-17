@@ -239,8 +239,9 @@ final class GameResourceManifestBuilder {
       (301, 327),
     ]) {
       for (var id = range.$1; id <= range.$2; id++) {
-        if (!missingSe.contains(id))
+        if (!missingSe.contains(id)) {
           paths.add(_absolute('/kcs2/resources/se/$id.mp3'));
+        }
       }
     }
     final portBgm = <int>{
@@ -295,8 +296,9 @@ final class GameResourceManifestBuilder {
         : <int>[1, 2, 3, 4, 8, 9, 10, 11, 12, 13];
     final voiceFlags = _int(master['api_voicef']);
     if (full && (voiceFlags & 1) != 0) lines.add(29);
-    if (full && (voiceFlags & 2) != 0)
+    if (full && (voiceFlags & 2) != 0) {
       lines.addAll(<int>[for (var line = 30; line <= 53; line++) line]);
+    }
     if (full && (voiceFlags & 4) != 0) lines.add(129);
     for (final line in lines) {
       final versionIndex = line == 2 || line == 3 ? 2 : 1;

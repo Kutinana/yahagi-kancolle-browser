@@ -1717,6 +1717,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get gameResourceCacheDamaged => '破損';
 
   @override
+  String get gameResourceCacheOutdated => '期限切れ';
+
+  @override
   String get gameResourceCacheItems => '件';
 
   @override

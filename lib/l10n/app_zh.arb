@@ -596,6 +596,7 @@
   "gameResourceCacheIntegrityComplete": "当前缓存完整",
   "gameResourceCacheMissing": "缺失",
   "gameResourceCacheDamaged": "损坏",
+  "gameResourceCacheOutdated": "过期",
   "gameResourceCacheItems": "项",
   "gameResourceCacheDownloadConfirmTitle": "确认下载缓存？",
   "gameResourceCacheDownloadConfirmDesc": "将从官方服务器批量下载所选模式的资源，可随时暂停并继续。",

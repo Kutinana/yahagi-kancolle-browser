@@ -12,12 +12,13 @@ class GameResourceNetworkMonitor(context: Context) {
 
     fun state(): GameResourceNetworkState {
         val network = connectivity.activeNetwork
-            ?: return GameResourceNetworkState(connected = false, metered = false)
+            ?: return GameResourceNetworkState(connected = false, metered = false, wifi = false)
         val capabilities = connectivity.getNetworkCapabilities(network)
         val connected = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         return GameResourceNetworkState(
             connected = connected,
             metered = connectivity.isActiveNetworkMetered,
+            wifi = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true,
         )
     }
 

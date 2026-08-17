@@ -36,6 +36,7 @@ final class GameResourceCacheStatus {
     required this.remainingSeconds,
     required this.missingCount,
     required this.damagedCount,
+    this.outdatedCount = 0,
     required this.fileCount,
     required this.capacityBlocked,
     this.isMetered = false,
@@ -53,6 +54,7 @@ final class GameResourceCacheStatus {
     remainingSeconds: null,
     missingCount: 0,
     damagedCount: 0,
+    outdatedCount: 0,
     fileCount: 0,
     capacityBlocked: false,
     isMetered: false,
@@ -69,6 +71,7 @@ final class GameResourceCacheStatus {
   final int? remainingSeconds;
   final int missingCount;
   final int damagedCount;
+  final int outdatedCount;
   final int fileCount;
   final bool capacityBlocked;
   final bool isMetered;
@@ -97,6 +100,7 @@ final class GameResourceCacheStatus {
           : number('remainingSeconds'),
       missingCount: number('missingCount'),
       damagedCount: number('damagedCount'),
+      outdatedCount: number('outdatedCount'),
       fileCount: number('fileCount'),
       capacityBlocked: map['capacityBlocked'] as bool? ?? false,
       isMetered: map['isMetered'] as bool? ?? false,

@@ -596,6 +596,7 @@
   "gameResourceCacheIntegrityComplete": "目前快取完整",
   "gameResourceCacheMissing": "缺少",
   "gameResourceCacheDamaged": "損壞",
+  "gameResourceCacheOutdated": "過期",
   "gameResourceCacheItems": "項",
   "gameResourceCacheDownloadConfirmTitle": "確認下載快取？",
   "gameResourceCacheDownloadConfirmDesc": "將從官方伺服器批次下載所選模式的資源，可隨時暫停並繼續。",

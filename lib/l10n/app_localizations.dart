@@ -3314,6 +3314,12 @@ abstract class AppLocalizations {
   /// **'损坏'**
   String get gameResourceCacheDamaged;
 
+  /// No description provided for @gameResourceCacheOutdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'过期'**
+  String get gameResourceCacheOutdated;
+
   /// No description provided for @gameResourceCacheItems.
   ///
   /// In zh, this message translates to:

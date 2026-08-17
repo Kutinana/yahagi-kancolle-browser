@@ -11,6 +11,13 @@ data class GameResourceCachedValue(
     val entry: GameResourceCacheEntry,
 )
 
+enum class GameResourceStoredState { MISSING, VALID, DAMAGED }
+
+data class GameResourceStoredInspection(
+    val state: GameResourceStoredState,
+    val entry: GameResourceCacheEntry? = null,
+)
+
 class GameResourceCacheStore(
     private val root: File,
     private val index: GameResourceCacheIndex,
@@ -70,6 +77,7 @@ class GameResourceCacheStore(
             etag = etag,
             lastModified = lastModified,
             lastAccessedAt = clock(),
+            lastValidatedAt = clock(),
             sha256 = checksum,
         )
         index.put(entry)
@@ -120,6 +128,29 @@ class GameResourceCacheStore(
     }
 
     fun entries(): List<GameResourceCacheEntry> = index.snapshot()
+
+    @Synchronized
+    fun inspect(key: GameResourceCacheKey): GameResourceStoredInspection {
+        val entry = index.get(key)
+            ?: return GameResourceStoredInspection(GameResourceStoredState.MISSING)
+        val file = safeFile(entry.fileName)
+        if (file == null || !file.isFile || file.length() != entry.byteLength) {
+            return GameResourceStoredInspection(GameResourceStoredState.DAMAGED)
+        }
+        val bytes = runCatching { file.readBytes() }.getOrNull()
+        if (bytes == null || sha256(bytes) != entry.sha256) {
+            return GameResourceStoredInspection(GameResourceStoredState.DAMAGED)
+        }
+        return GameResourceStoredInspection(GameResourceStoredState.VALID, entry)
+    }
+
+    @Synchronized
+    fun markValidated(key: GameResourceCacheKey) {
+        val entry = index.get(key) ?: return
+        index.put(entry.copy(lastValidatedAt = clock()))
+    }
+
+    fun availableDeviceBytes(): Long = root.usableSpace
 
     private fun invalidate(
         key: GameResourceCacheKey,

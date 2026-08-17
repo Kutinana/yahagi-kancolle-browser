@@ -148,7 +148,9 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                     label: Text(l10n.gameResourceCacheCheck),
                   ),
                   if (_integrityChecked &&
-                      (status.missingCount > 0 || status.damagedCount > 0))
+                      (status.missingCount > 0 ||
+                          status.damagedCount > 0 ||
+                          status.outdatedCount > 0))
                     OutlinedButton.icon(
                       key: const Key('cache-repair'),
                       onPressed: controller.busy
@@ -189,7 +191,10 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
     AppLocalizations l10n,
     GameResourceCacheStatus status,
   ) {
-    final complete = status.missingCount == 0 && status.damagedCount == 0;
+    final complete =
+        status.missingCount == 0 &&
+        status.damagedCount == 0 &&
+        status.outdatedCount == 0;
     return Padding(
       key: const Key('cache-integrity-result'),
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
@@ -199,6 +204,8 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
             : '${l10n.gameResourceCacheMissing} ${status.missingCount} '
                   '${l10n.gameResourceCacheItems} · '
                   '${l10n.gameResourceCacheDamaged} ${status.damagedCount} '
+                  '${l10n.gameResourceCacheItems} · '
+                  '${l10n.gameResourceCacheOutdated} ${status.outdatedCount} '
                   '${l10n.gameResourceCacheItems}',
         style: TextStyle(
           color: complete ? const Color(0xff8bd5a7) : const Color(0xffffca80),

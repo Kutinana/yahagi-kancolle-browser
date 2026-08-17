@@ -15,6 +15,7 @@ data class GameResourceCacheEntry(
     val etag: String?,
     val lastModified: String?,
     val lastAccessedAt: Long,
+    val lastValidatedAt: Long,
     val sha256: String,
 )
 
@@ -65,6 +66,7 @@ class GameResourceCacheIndex(private val indexFile: File) {
                     etag = item.nullableString("etag"),
                     lastModified = item.nullableString("lastModified"),
                     lastAccessedAt = item.getLong("lastAccessedAt"),
+                    lastValidatedAt = item.optLong("lastValidatedAt", 0L),
                     sha256 = item.getString("sha256"),
                 )
                 entries[entry.key] = entry
@@ -88,6 +90,7 @@ class GameResourceCacheIndex(private val indexFile: File) {
                     .put("etag", entry.etag ?: JSONObject.NULL)
                     .put("lastModified", entry.lastModified ?: JSONObject.NULL)
                     .put("lastAccessedAt", entry.lastAccessedAt)
+                    .put("lastValidatedAt", entry.lastValidatedAt)
                     .put("sha256", entry.sha256),
             )
         }

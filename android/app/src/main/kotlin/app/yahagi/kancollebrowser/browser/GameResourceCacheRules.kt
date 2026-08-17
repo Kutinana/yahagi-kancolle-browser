@@ -60,6 +60,9 @@ object GameResourceCacheRules {
 
     fun isAlwaysValidated(url: String): Boolean {
         val key = GameResourceCacheKey.from(url)?.value?.substringBefore('?') ?: return false
+        if (key == "/kcs2/version.json" || key == "/kcs2/index.html" ||
+            key == "/kcs2/js/main.js"
+        ) return true
         if (!key.startsWith("/gadget_html5/")) return false
         return key.endsWith(".html", ignoreCase = true) ||
             key.endsWith(".js", ignoreCase = true) ||

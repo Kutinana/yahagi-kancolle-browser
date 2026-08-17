@@ -596,6 +596,7 @@
   "gameResourceCacheIntegrityComplete": "現在のキャッシュは完全です",
   "gameResourceCacheMissing": "不足",
   "gameResourceCacheDamaged": "破損",
+  "gameResourceCacheOutdated": "期限切れ",
   "gameResourceCacheItems": "件",
   "gameResourceCacheDownloadConfirmTitle": "キャッシュをダウンロードしますか？",
   "gameResourceCacheDownloadConfirmDesc": "選択したモードのリソースを公式サーバーから一括取得します。いつでも一時停止・再開できます。",
