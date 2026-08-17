@@ -104,10 +104,7 @@ void main() {
     await fixture.settings.setMode(GameFrameRateMode.highRefresh);
     await fixture.runtime.idle;
 
-    expect(
-      fixture.port.appliedTargets.last,
-      GameFrameRateTarget.highRefresh,
-    );
+    expect(fixture.port.appliedTargets.last, GameFrameRateTarget.highRefresh);
     expect(fixture.timer!.isActive, isFalse);
   });
 
@@ -123,10 +120,7 @@ void main() {
 
     fixture.runtime.onLifecycleChanged(AppLifecycleState.resumed);
     await fixture.runtime.idle;
-    expect(
-      fixture.port.appliedTargets.last,
-      GameFrameRateTarget.highRefresh,
-    );
+    expect(fixture.port.appliedTargets.last, GameFrameRateTarget.highRefresh);
   });
 
   test('dispose cancels timers and unregisters the timings callback', () async {

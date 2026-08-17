@@ -115,9 +115,8 @@ final class GameFrameRateRuntimeController {
     if (_ready) _enqueue(_applyCurrentLifecycleTarget);
   }
 
-  Future<void> _applyCurrentLifecycleTarget() => _foreground
-      ? _applySelectedMode()
-      : _applyBackgroundTarget();
+  Future<void> _applyCurrentLifecycleTarget() =>
+      _foreground ? _applySelectedMode() : _applyBackgroundTarget();
 
   Future<void> _applyBackgroundTarget() async {
     if (_disposed || !_ready) return;

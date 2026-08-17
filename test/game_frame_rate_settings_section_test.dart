@@ -30,10 +30,7 @@ void main() {
   );
 
   for (final localeCase in <({Locale locale, List<String> texts})>[
-    (
-      locale: const Locale('zh'),
-      texts: <String>['游戏帧率', '自动', '省电', '高刷'],
-    ),
+    (locale: const Locale('zh'), texts: <String>['游戏帧率', '自动', '省电', '高刷']),
     (
       locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
       texts: <String>['遊戲幀率', '自動', '省電', '高刷'],
