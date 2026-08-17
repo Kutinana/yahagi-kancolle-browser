@@ -3257,7 +3257,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheFullDesc.
   ///
   /// In zh, this message translates to:
-  /// **'预下载全部已知舰娘、装备、家具、地图和音效，体积与耗时较大。'**
+  /// **'预下载固定基础资源清单（约 5.8 GB）；新内容会在游玩时自动缓存。'**
   String get gameResourceCacheFullDesc;
 
   /// No description provided for @gameResourceCacheStart.
@@ -3365,7 +3365,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheCapacityBlocked.
   ///
   /// In zh, this message translates to:
-  /// **'缓存已达到 10 GB 上限，完整缓存下载已暂停。'**
+  /// **'可用存储空间不足，或本地游戏资源缓存已达到 50 GB 上限。'**
   String get gameResourceCacheCapacityBlocked;
 
   /// No description provided for @gameResourceCacheActionFailed.

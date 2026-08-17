@@ -586,7 +586,7 @@
   "gameResourceCacheLight": "轻度缓存",
   "gameResourceCacheLightDesc": "缓存启动文件、常用 UI、已持有舰娘立绘和装备资源。",
   "gameResourceCacheFull": "完整缓存",
-  "gameResourceCacheFullDesc": "预下载全部已知舰娘、装备、家具、地图和音效，体积与耗时较大。",
+  "gameResourceCacheFullDesc": "预下载固定基础资源清单（约 5.8 GB）；新内容会在游玩时自动缓存。",
   "gameResourceCacheStart": "开始下载",
   "gameResourceCachePause": "暂停下载",
   "gameResourceCacheResume": "继续下载",
@@ -604,6 +604,6 @@
   "gameResourceCacheWaitingForWifi": "正在等待 Wi-Fi，连接后会自动继续下载。",
   "gameResourceCacheClearConfirmTitle": "清除游戏资源缓存？",
   "gameResourceCacheClearConfirmDesc": "将删除已下载的游戏资源；模式设置会保留。",
-  "gameResourceCacheCapacityBlocked": "缓存已达到 10 GB 上限，完整缓存下载已暂停。",
+  "gameResourceCacheCapacityBlocked": "可用存储空间不足，或本地游戏资源缓存已达到 50 GB 上限。",
   "gameResourceCacheActionFailed": "缓存操作未完成，请稍后重试。"
 }

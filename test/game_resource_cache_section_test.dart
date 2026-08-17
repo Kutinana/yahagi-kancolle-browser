@@ -26,6 +26,8 @@ void main() {
     expect(find.byKey(const Key('cache-mode-none')), findsOneWidget);
     expect(find.byKey(const Key('cache-mode-light')), findsOneWidget);
     expect(find.byKey(const Key('cache-mode-full')), findsOneWidget);
+    expect(find.textContaining('固定基础资源清单'), findsOneWidget);
+    expect(find.textContaining('游玩时自动缓存'), findsOneWidget);
     expect(find.text('6.84 GB / 8.12 GB（84.2%）'), findsOneWidget);
     expect(find.textContaining('1,284'), findsNothing);
   });

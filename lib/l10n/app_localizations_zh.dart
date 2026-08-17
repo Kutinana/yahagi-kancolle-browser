@@ -1675,7 +1675,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameResourceCacheFull => '完整缓存';
 
   @override
-  String get gameResourceCacheFullDesc => '预下载全部已知舰娘、装备、家具、地图和音效，体积与耗时较大。';
+  String get gameResourceCacheFullDesc => '预下载固定基础资源清单（约 5.8 GB）；新内容会在游玩时自动缓存。';
 
   @override
   String get gameResourceCacheStart => '开始下载';
@@ -1731,7 +1731,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameResourceCacheClearConfirmDesc => '将删除已下载的游戏资源；模式设置会保留。';
 
   @override
-  String get gameResourceCacheCapacityBlocked => '缓存已达到 10 GB 上限，完整缓存下载已暂停。';
+  String get gameResourceCacheCapacityBlocked =>
+      '可用存储空间不足，或本地游戏资源缓存已达到 50 GB 上限。';
 
   @override
   String get gameResourceCacheActionFailed => '缓存操作未完成，请稍后重试。';
@@ -3409,7 +3410,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameResourceCacheFull => '完整快取';
 
   @override
-  String get gameResourceCacheFullDesc => '預先下載全部已知艦娘、裝備、家具、地圖與音效，容量與耗時較大。';
+  String get gameResourceCacheFullDesc =>
+      '預先下載固定基礎資源清單（約 5.8 GB）；新內容會在遊玩時自動快取。';
 
   @override
   String get gameResourceCacheStart => '開始下載';
@@ -3465,7 +3467,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameResourceCacheClearConfirmDesc => '將刪除已下載的遊戲資源；模式設定會保留。';
 
   @override
-  String get gameResourceCacheCapacityBlocked => '快取已達 10 GB 上限，完整快取下載已暫停。';
+  String get gameResourceCacheCapacityBlocked =>
+      '可用儲存空間不足，或本機遊戲資源快取已達 50 GB 上限。';
 
   @override
   String get gameResourceCacheActionFailed => '快取操作未完成，請稍後重試。';

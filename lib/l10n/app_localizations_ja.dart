@@ -1687,7 +1687,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get gameResourceCacheFullDesc =>
-      '既知の艦娘、装備、家具、マップ、音声をすべて事前取得します。容量と時間を多く使います。';
+      '固定の基本リソース一覧（約 5.8 GB）を事前取得します。新しい内容はプレイ中に自動保存されます。';
 
   @override
   String get gameResourceCacheStart => 'ダウンロード開始';
@@ -1745,7 +1745,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get gameResourceCacheCapacityBlocked =>
-      'キャッシュが 10 GB の上限に達したため、完全キャッシュの取得を停止しました。';
+      '空き容量が不足しているか、ゲームリソースキャッシュが 50 GB の上限に達しています。';
 
   @override
   String get gameResourceCacheActionFailed =>
