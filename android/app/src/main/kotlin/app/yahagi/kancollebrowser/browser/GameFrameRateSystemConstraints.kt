@@ -8,13 +8,16 @@ import android.os.Build
 import android.os.PowerManager
 import androidx.core.content.ContextCompat
 
+private const val THERMAL_STATUS_NONE_COMPAT = 0
+private const val THERMAL_STATUS_MODERATE_COMPAT = 2
+
 data class GameFrameRateSystemState(
     val powerSaveEnabled: Boolean = false,
-    val thermalStatus: Int = PowerManager.THERMAL_STATUS_NONE,
+    val thermalStatus: Int = THERMAL_STATUS_NONE_COMPAT,
 ) {
     val shouldConservePower: Boolean
         get() = powerSaveEnabled ||
-            thermalStatus >= PowerManager.THERMAL_STATUS_MODERATE
+            thermalStatus >= THERMAL_STATUS_MODERATE_COMPAT
 }
 
 object GameFrameRateSystemPolicy {
@@ -75,7 +78,7 @@ class AndroidGameFrameRateSystemConstraints(context: Context) :
             thermalStatus = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 powerManager.currentThermalStatus
             } else {
-                PowerManager.THERMAL_STATUS_NONE
+                THERMAL_STATUS_NONE_COMPAT
             },
         )
         registerPowerSaveReceiver()
