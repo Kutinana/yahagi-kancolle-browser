@@ -83,6 +83,11 @@ class GameResourceCacheEngine(
 
     fun entries(): List<GameResourceCacheEntry> = store.entries()
 
+    fun hasCached(url: String): Boolean {
+        val key = GameResourceCacheKey.from(url) ?: return false
+        return store.read(key) != null
+    }
+
     private fun GameResourceCachedValue.toResponse(): GameResourceResponse {
         val mime = entry.mimeType
         val encoding = if (mime.startsWith("text/") || mime.contains("javascript") || mime.contains("json")) "utf-8" else null

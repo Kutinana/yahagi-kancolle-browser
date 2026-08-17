@@ -51,6 +51,8 @@ import app.yahagi.kancollebrowser.browser.GameResourceCacheIndex
 import app.yahagi.kancollebrowser.browser.GameResourceCacheMode
 import app.yahagi.kancollebrowser.browser.GameResourceCacheStore
 import app.yahagi.kancollebrowser.browser.HttpUrlConnectionGameResourceFetcher
+import app.yahagi.kancollebrowser.browser.GameResourceCacheManager
+import app.yahagi.kancollebrowser.browser.GameResourceDownloadCoordinator
 import app.yahagi.kancollebrowser.capture.GameCaptureBridge
 import app.yahagi.kancollebrowser.capture.ScreenshotCaptureAttempt
 import app.yahagi.kancollebrowser.capture.ScreenshotCapturePolicy
@@ -131,6 +133,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         const val BATTLE_DAMAGE_ALERT_CHANNEL = "app.yahagi.kancollebrowser/battle_damage_alert"
         const val DIAGNOSTICS_CHANNEL = "app.yahagi.kancollebrowser/diagnostics"
         const val GAME_ENVIRONMENT_CHANNEL = "app.yahagi.kancollebrowser/game_environment"
+        const val GAME_RESOURCE_CACHE_CHANNEL = "app.yahagi.kancollebrowser/game_resource_cache"
         const val SCREENSHOT_PERMISSION_REQUEST = 2406
         const val DIAGNOSTIC_DIRECTORY_REQUEST = 2407
     }
@@ -140,6 +143,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     private var gadgetBypassManager: GadgetBypassManager? = null
     private var gameFrameRateManager: GameFrameRateManager? = null
     private var gameResourceCacheEngine: GameResourceCacheEngine? = null
+    private var gameResourceCacheManager: GameResourceCacheManager? = null
     @Volatile
     private var gameResourceCacheMode: GameResourceCacheMode = GameResourceCacheMode.NONE
     private var diagnosticPlatformHandler: DiagnosticPlatformHandler? = null
@@ -201,7 +205,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             PROXY_CHANNEL,
         ).setMethodCallHandler(webViewProxyManager)
         val resourceCacheRoot = File(filesDir, "game_resource_cache")
-        gameResourceCacheEngine = GameResourceCacheEngine(
+        val resourceEngine = GameResourceCacheEngine(
             GameResourceCacheStore(
                 resourceCacheRoot,
                 GameResourceCacheIndex(File(resourceCacheRoot, "index.json")),
@@ -212,6 +216,23 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 },
             ),
         ) { gameResourceCacheMode }
+        gameResourceCacheEngine = resourceEngine
+        val resourceCoordinator = GameResourceDownloadCoordinator(
+            resourceEngine,
+            { gameResourceCacheMode },
+            File(resourceCacheRoot, "download_state.json"),
+        )
+        val resourceManager = GameResourceCacheManager(
+            resourceEngine,
+            resourceCoordinator,
+            { gameResourceCacheMode },
+            ::onGameResourceCacheModeChanged,
+        )
+        gameResourceCacheManager = resourceManager
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            GAME_RESOURCE_CACHE_CHANNEL,
+        ).setMethodCallHandler(resourceManager)
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -375,6 +396,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         webViewProxyManager?.dispose()
         webViewProxyManager = null
         gadgetBypassManager = null
+        gameResourceCacheManager?.dispose()
+        gameResourceCacheManager = null
         gameResourceCacheEngine = null
         gameFrameRateManager?.dispose()
         gameFrameRateManager = null
