@@ -1230,22 +1230,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get gameFrameRateAutomatic => '自動';
 
   @override
-  String get gameFrameRateStable30 => '安定 30 FPS';
+  String get gameFrameRatePowerSaving => '省電';
 
   @override
-  String get gameFrameRatePrefer60 => '60 FPS 優先';
+  String get gameFrameRateHighRefresh => '高リフレッシュレート';
 
   @override
   String get gameFrameRateAutomaticDesc =>
-      'ゲーム準備後は 60 FPS を優先し、この起動中に不安定な状態が続いた場合は自動的に 30 FPS へ下げます。';
+      '上限を 60 FPS とし、動作が不安定な場合や省電力モード、端末の発熱時には自動的に 30 FPS へ下げます。';
 
   @override
-  String get gameFrameRateStable30Desc =>
-      '30 FPS に固定し、フレーム落ち・発熱・消費電力の低減を優先します。';
+  String get gameFrameRatePowerSavingDesc => '30 FPS に固定し、発熱と消費電力の低減を優先します。';
 
   @override
-  String get gameFrameRatePrefer60Desc =>
-      '60 FPS の維持を優先し、自動では下げません。発熱や消費電力が増える場合があります。';
+  String get gameFrameRateHighRefreshDesc =>
+      '端末のリフレッシュレートに追従し、90/120 FPS に達する場合があります。発熱と消費電力が大きく増加します。';
 
   @override
   String get gameFrameRateUnsupported =>

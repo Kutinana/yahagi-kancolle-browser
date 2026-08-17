@@ -2396,35 +2396,35 @@ abstract class AppLocalizations {
   /// **'自动'**
   String get gameFrameRateAutomatic;
 
-  /// No description provided for @gameFrameRateStable30.
+  /// No description provided for @gameFrameRatePowerSaving.
   ///
   /// In zh, this message translates to:
-  /// **'稳定 30 FPS'**
-  String get gameFrameRateStable30;
+  /// **'省电'**
+  String get gameFrameRatePowerSaving;
 
-  /// No description provided for @gameFrameRatePrefer60.
+  /// No description provided for @gameFrameRateHighRefresh.
   ///
   /// In zh, this message translates to:
-  /// **'优先 60 FPS'**
-  String get gameFrameRatePrefer60;
+  /// **'高刷'**
+  String get gameFrameRateHighRefresh;
 
   /// No description provided for @gameFrameRateAutomaticDesc.
   ///
   /// In zh, this message translates to:
-  /// **'游戏就绪后优先以 60 FPS 运行；若本次运行持续不稳定，将自动降至 30 FPS。'**
+  /// **'封顶 60 FPS；若持续不稳定、系统开启节能或设备发热，将自动降至 30 FPS。'**
   String get gameFrameRateAutomaticDesc;
 
-  /// No description provided for @gameFrameRateStable30Desc.
+  /// No description provided for @gameFrameRatePowerSavingDesc.
   ///
   /// In zh, this message translates to:
-  /// **'固定以 30 FPS 运行，优先降低掉帧、发热和耗电。'**
-  String get gameFrameRateStable30Desc;
+  /// **'固定 30 FPS，优先降低发热和耗电。'**
+  String get gameFrameRatePowerSavingDesc;
 
-  /// No description provided for @gameFrameRatePrefer60Desc.
+  /// No description provided for @gameFrameRateHighRefreshDesc.
   ///
   /// In zh, this message translates to:
-  /// **'优先保持 60 FPS，不自动降档；可能增加发热和耗电。'**
-  String get gameFrameRatePrefer60Desc;
+  /// **'跟随设备刷新率运行，可能达到 90/120 FPS，并显著增加发热和耗电。'**
+  String get gameFrameRateHighRefreshDesc;
 
   /// No description provided for @gameFrameRateUnsupported.
   ///

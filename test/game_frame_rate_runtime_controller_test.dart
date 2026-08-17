@@ -111,6 +111,24 @@ void main() {
     expect(fixture.timer!.isActive, isFalse);
   });
 
+  test('leaving the foreground lowers load and resume restores mode', () async {
+    final fixture = await _Fixture.create();
+    addTearDown(fixture.dispose);
+    await fixture.settings.setMode(GameFrameRateMode.highRefresh);
+    await fixture.runtime.onPageReady();
+
+    fixture.runtime.onLifecycleChanged(AppLifecycleState.paused);
+    await fixture.runtime.idle;
+    expect(fixture.port.appliedTargets.last, GameFrameRateTarget.fps30);
+
+    fixture.runtime.onLifecycleChanged(AppLifecycleState.resumed);
+    await fixture.runtime.idle;
+    expect(
+      fixture.port.appliedTargets.last,
+      GameFrameRateTarget.highRefresh,
+    );
+  });
+
   test('dispose cancels timers and unregisters the timings callback', () async {
     final fixture = await _Fixture.create();
     await fixture.runtime.onPageReady();

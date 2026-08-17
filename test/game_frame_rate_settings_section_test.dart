@@ -17,10 +17,10 @@ void main() {
 
       expect(find.byType(SegmentedButton<GameFrameRateMode>), findsOneWidget);
       expect(find.text('自动'), findsOneWidget);
-      expect(find.text('稳定 30 FPS'), findsOneWidget);
-      expect(find.text('优先 60 FPS'), findsOneWidget);
+      expect(find.text('省电'), findsOneWidget);
+      expect(find.text('高刷'), findsOneWidget);
 
-      await tester.tap(find.text('稳定 30 FPS'));
+      await tester.tap(find.text('省电'));
       await tester.pumpAndSettle();
 
       expect(controller.mode, GameFrameRateMode.stable30);
@@ -32,15 +32,15 @@ void main() {
   for (final localeCase in <({Locale locale, List<String> texts})>[
     (
       locale: const Locale('zh'),
-      texts: <String>['游戏帧率', '自动', '稳定 30 FPS', '优先 60 FPS'],
+      texts: <String>['游戏帧率', '自动', '省电', '高刷'],
     ),
     (
       locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
-      texts: <String>['遊戲幀率', '自動', '穩定 30 FPS', '優先 60 FPS'],
+      texts: <String>['遊戲幀率', '自動', '省電', '高刷'],
     ),
     (
       locale: const Locale('ja'),
-      texts: <String>['ゲームフレームレート', '自動', '安定 30 FPS', '60 FPS 優先'],
+      texts: <String>['ゲームフレームレート', '自動', '省電', '高リフレッシュレート'],
     ),
   ]) {
     testWidgets('localizes all modes for ${localeCase.locale}', (tester) async {

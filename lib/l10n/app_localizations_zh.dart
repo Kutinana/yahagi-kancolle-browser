@@ -1222,20 +1222,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameFrameRateAutomatic => '自动';
 
   @override
-  String get gameFrameRateStable30 => '稳定 30 FPS';
+  String get gameFrameRatePowerSaving => '省电';
 
   @override
-  String get gameFrameRatePrefer60 => '优先 60 FPS';
+  String get gameFrameRateHighRefresh => '高刷';
 
   @override
   String get gameFrameRateAutomaticDesc =>
-      '游戏就绪后优先以 60 FPS 运行；若本次运行持续不稳定，将自动降至 30 FPS。';
+      '封顶 60 FPS；若持续不稳定、系统开启节能或设备发热，将自动降至 30 FPS。';
 
   @override
-  String get gameFrameRateStable30Desc => '固定以 30 FPS 运行，优先降低掉帧、发热和耗电。';
+  String get gameFrameRatePowerSavingDesc => '固定 30 FPS，优先降低发热和耗电。';
 
   @override
-  String get gameFrameRatePrefer60Desc => '优先保持 60 FPS，不自动降档；可能增加发热和耗电。';
+  String get gameFrameRateHighRefreshDesc =>
+      '跟随设备刷新率运行，可能达到 90/120 FPS，并显著增加发热和耗电。';
 
   @override
   String get gameFrameRateUnsupported =>
@@ -2872,20 +2873,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameFrameRateAutomatic => '自動';
 
   @override
-  String get gameFrameRateStable30 => '穩定 30 FPS';
+  String get gameFrameRatePowerSaving => '省電';
 
   @override
-  String get gameFrameRatePrefer60 => '優先 60 FPS';
+  String get gameFrameRateHighRefresh => '高刷';
 
   @override
   String get gameFrameRateAutomaticDesc =>
-      '遊戲就緒後優先以 60 FPS 執行；若本次執行持續不穩定，將自動降至 30 FPS。';
+      '上限為 60 FPS；若持續不穩定、系統開啟省電或裝置發熱，將自動降至 30 FPS。';
 
   @override
-  String get gameFrameRateStable30Desc => '固定以 30 FPS 執行，優先降低掉幀、發熱與耗電。';
+  String get gameFrameRatePowerSavingDesc => '固定 30 FPS，優先降低發熱與耗電。';
 
   @override
-  String get gameFrameRatePrefer60Desc => '優先維持 60 FPS，不自動降檔；可能增加發熱與耗電。';
+  String get gameFrameRateHighRefreshDesc =>
+      '跟隨裝置更新率執行，可能達到 90/120 FPS，並顯著增加發熱與耗電。';
 
   @override
   String get gameFrameRateUnsupported =>

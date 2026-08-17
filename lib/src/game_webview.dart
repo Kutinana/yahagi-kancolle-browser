@@ -72,7 +72,7 @@ class GameWebView extends StatefulWidget {
   State<GameWebView> createState() => _GameWebViewState();
 }
 
-class _GameWebViewState extends State<GameWebView> {
+class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   late final WebViewController _webViewController;
   late final Future<void> _compatibilityReady;
   late final Future<void> _frameRateReady;
@@ -101,6 +101,7 @@ class _GameWebViewState extends State<GameWebView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.networkSettingsController.addListener(_onNetworkSettingsChanged);
     _activeCaptureMode = widget.captureModeController.mode;
     _gameCapturePort = createPlatformGameCapturePort();
@@ -202,6 +203,11 @@ class _GameWebViewState extends State<GameWebView> {
       );
 
     _executeStartupSequence();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _frameRateRuntimeController?.onLifecycleChanged(state);
   }
 
   Future<void> _executeStartupSequence() async {
@@ -372,10 +378,15 @@ class _GameWebViewState extends State<GameWebView> {
       await controller.attachPort(createPlatformGameFrameRatePort());
       if (!mounted) return;
       if (controller.supported != true) return;
-      _frameRateRuntimeController = GameFrameRateRuntimeController(
+      final runtimeController = GameFrameRateRuntimeController(
         settings: controller,
         port: createGameFrameRateRuntimePort(_webViewController),
       );
+      _frameRateRuntimeController = runtimeController;
+      final lifecycleState = WidgetsBinding.instance.lifecycleState;
+      if (lifecycleState != null) {
+        runtimeController.onLifecycleChanged(lifecycleState);
+      }
     } catch (error) {
       debugPrint('Frame-rate runtime unavailable: $error');
     }
@@ -497,6 +508,7 @@ class _GameWebViewState extends State<GameWebView> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _frameRateRuntimeController?.dispose();
     widget.captureModeController.removeListener(_onCaptureModeChanged);
     widget.networkSettingsController.removeListener(_onNetworkSettingsChanged);

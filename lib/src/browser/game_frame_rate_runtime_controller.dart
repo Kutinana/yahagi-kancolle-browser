@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
 
 import '../settings/game_frame_rate_settings.dart';
 import 'game_frame_rate_policy.dart';
@@ -50,6 +51,7 @@ final class GameFrameRateRuntimeController {
   Future<void> _queue = Future<void>.value();
   Timer? _sampleTimer;
   bool _ready = false;
+  bool _foreground = true;
   bool _disposed = false;
   int _sampleTicks = 0;
   late final TimingsCallback _timingsCallback = _onFrameTimings;
@@ -71,8 +73,19 @@ final class GameFrameRateRuntimeController {
     policy.resetWindow();
     _sampleTicks = 0;
     if (!samplingEnabled) return;
-    _enqueue(_applySelectedMode);
+    _enqueue(_applyCurrentLifecycleTarget);
     await idle;
+  }
+
+  void onLifecycleChanged(AppLifecycleState state) {
+    if (_disposed) return;
+    final foreground = state == AppLifecycleState.resumed;
+    if (_foreground == foreground) return;
+    _foreground = foreground;
+    _stopTimer();
+    policy.resetWindow();
+    _sampleTicks = 0;
+    if (_ready) _enqueue(_applyCurrentLifecycleTarget);
   }
 
   void recordFlutterFrame(Duration totalSpan) {
@@ -90,6 +103,7 @@ final class GameFrameRateRuntimeController {
   bool get _canSample =>
       !_disposed &&
       _ready &&
+      _foreground &&
       settings.mode == GameFrameRateMode.automatic &&
       !policy.isLockedTo30;
 
@@ -98,11 +112,24 @@ final class GameFrameRateRuntimeController {
     policy.setMode(settings.mode);
     _sampleTicks = 0;
     _stopTimer();
-    if (_ready) _enqueue(_applySelectedMode);
+    if (_ready) _enqueue(_applyCurrentLifecycleTarget);
+  }
+
+  Future<void> _applyCurrentLifecycleTarget() => _foreground
+      ? _applySelectedMode()
+      : _applyBackgroundTarget();
+
+  Future<void> _applyBackgroundTarget() async {
+    if (_disposed || !_ready) return;
+    try {
+      await port.apply(GameFrameRateTarget.fps30);
+    } catch (_) {
+      // Background throttling is best-effort; WebView also throttles hidden RAF.
+    }
   }
 
   Future<void> _applySelectedMode() async {
-    if (_disposed || !_ready) return;
+    if (_disposed || !_ready || !_foreground) return;
     final target = switch (settings.mode) {
       GameFrameRateMode.stable30 => GameFrameRateTarget.fps30,
       GameFrameRateMode.automatic when policy.isLockedTo30 =>
