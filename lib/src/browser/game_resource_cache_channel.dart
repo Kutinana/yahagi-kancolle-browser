@@ -47,7 +47,7 @@ final class GameResourceCacheStatus {
     mode: GameResourceCacheMode.none,
     state: GameResourceCacheState.idle,
     cachedBytes: 0,
-    maxBytes: 10000000000,
+    maxBytes: 50000000000,
     targetBytes: 0,
     downloadedBytes: 0,
     bytesPerSecond: 0,

@@ -14,6 +14,8 @@ object GameResourceCacheRules {
         "/kcs2/css/",
         "/kcs/sound/",
         "/gadget_html5/",
+        "/html/",
+        "/kcscontents/",
     )
     private val allowedExactPaths = setOf("/kcs2/version.json", "/kcs2/index.html")
     private val allowedExtensions = setOf(

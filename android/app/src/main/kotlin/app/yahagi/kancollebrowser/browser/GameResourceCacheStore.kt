@@ -93,7 +93,7 @@ class GameResourceCacheStore(
         requiredBytes > maxBytes || totalBytes() > maxBytes - requiredBytes
 
     @Synchronized
-    fun evictLightToFit(
+    fun evictToFit(
         requiredBytes: Long,
         protectedKeys: Set<GameResourceCacheKey> = emptySet(),
     ): List<GameResourceCacheKey> {
@@ -188,6 +188,6 @@ class GameResourceCacheStore(
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     companion object {
-        const val DEFAULT_MAX_BYTES: Long = 10_000_000_000L
+        const val DEFAULT_MAX_BYTES: Long = 50_000_000_000L
     }
 }

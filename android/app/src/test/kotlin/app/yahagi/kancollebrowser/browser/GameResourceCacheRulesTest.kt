@@ -50,6 +50,18 @@ class GameResourceCacheRulesTest {
                 "GET",
             ),
         )
+        assertTrue(
+            GameResourceCacheRules.shouldCache(
+                "https://w00g.kancolle-server.com/html/maintenance.html",
+                "GET",
+            ),
+        )
+        assertTrue(
+            GameResourceCacheRules.shouldCache(
+                "https://w00g.kancolle-server.com/kcscontents/image/banner.png",
+                "GET",
+            ),
+        )
     }
 
     @Test

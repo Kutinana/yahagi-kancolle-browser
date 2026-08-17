@@ -59,9 +59,7 @@ class GameResourceCacheEngine(
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
                 ?: mimeInfo.mime
-            if (mode == GameResourceCacheMode.LIGHT) {
-                store.evictLightToFit(fetched.bytes.size.toLong())
-            }
+            store.evictToFit(fetched.bytes.size.toLong())
             if (!store.wouldExceedCapacity(fetched.bytes.size.toLong())) {
                 store.commit(
                     key = key,

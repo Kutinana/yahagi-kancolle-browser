@@ -14,8 +14,8 @@ class GameResourceCacheStoreTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
-    fun `default capacity is ten decimal gigabytes`() {
-        assertEquals(10_000_000_000L, GameResourceCacheStore.DEFAULT_MAX_BYTES)
+    fun `default capacity is fifty decimal gigabytes`() {
+        assertEquals(50_000_000_000L, GameResourceCacheStore.DEFAULT_MAX_BYTES)
     }
 
     @Test
@@ -55,7 +55,7 @@ class GameResourceCacheStoreTest {
     }
 
     @Test
-    fun `light eviction removes least recently used unprotected files`() {
+    fun `eviction removes least recently used unprotected files`() {
         var now = 1L
         val root = temporaryFolder.newFolder("cache")
         val store = GameResourceCacheStore(
@@ -69,7 +69,7 @@ class GameResourceCacheStoreTest {
         store.commit(oldest, byteArrayOf(1, 2, 3), mimeType = "image/png")
         store.commit(protected, byteArrayOf(4, 5, 6), mimeType = "image/png")
 
-        val removed = store.evictLightToFit(requiredBytes = 3, protectedKeys = setOf(protected))
+        val removed = store.evictToFit(requiredBytes = 3, protectedKeys = setOf(protected))
 
         assertEquals(listOf(oldest), removed)
         assertNull(store.read(oldest))
@@ -78,14 +78,14 @@ class GameResourceCacheStoreTest {
     }
 
     @Test
-    fun `full mode capacity check reports overflow without deleting`() {
+    fun `eviction applies independently of cache profile`() {
         val root = temporaryFolder.newFolder("cache")
         val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 5)
         val key = GameResourceCacheKey("/kcs2/resources/a.png")
         store.commit(key, byteArrayOf(1, 2, 3), mimeType = "image/png")
 
-        assertTrue(store.wouldExceedCapacity(3))
-        assertTrue(store.contains(key))
-        assertEquals(3, store.totalBytes())
+        assertEquals(listOf(key), store.evictToFit(3))
+        assertFalse(store.contains(key))
+        assertFalse(store.wouldExceedCapacity(3))
     }
 }

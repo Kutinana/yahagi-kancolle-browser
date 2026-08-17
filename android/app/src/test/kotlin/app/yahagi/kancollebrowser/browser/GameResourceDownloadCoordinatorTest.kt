@@ -67,19 +67,43 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     @Test
-    fun `full mode blocks at capacity without deleting cached files`() {
+    fun `full mode uses lru eviction and continues downloading`() {
         val fixture = fixture(
             mode = GameResourceCacheMode.FULL,
-            maxBytes = 1,
+            maxBytes = 3,
             fetcher = GameResourceFetcher { _, _, _ -> response(byteArrayOf(1, 2)) },
         )
+        val old = official("/kcs2/resources/old.png")
         val url = official("/kcs2/resources/a.png")
+        fixture.engine.fetch(old)
         fixture.coordinator.setManifest("full", listOf(url), 2)
 
-        assertFalse(fixture.coordinator.startDownload())
-        assertEquals(GameResourceDownloadState.CAPACITY_BLOCKED, fixture.coordinator.status().state)
-        assertTrue(fixture.coordinator.status().capacityBlocked)
-        assertEquals(0, fixture.engine.status().fileCount)
+        assertTrue(fixture.coordinator.startDownload())
+        awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
+        assertFalse(fixture.engine.hasCached(old))
+        assertTrue(fixture.engine.hasCached(url))
+        assertFalse(fixture.coordinator.status().capacityBlocked)
+        fixture.coordinator.dispose()
+    }
+
+    @Test
+    fun `missing resource is skipped silently while later resources download`() {
+        val missing = official("/kcs2/resources/missing.png")
+        val available = official("/kcs2/resources/available.png")
+        val fixture = fixture(fetcher = GameResourceFetcher { url, _, _ ->
+            if (url == missing) {
+                GameResourceFetchResult(404, "Not Found", emptyMap(), byteArrayOf())
+            } else {
+                response(byteArrayOf(1))
+            }
+        })
+        fixture.coordinator.setManifest("full", listOf(missing, available), 2)
+
+        assertTrue(fixture.coordinator.startDownload())
+        awaitState(fixture.coordinator, GameResourceDownloadState.IDLE)
+
+        assertEquals(1, fixture.coordinator.status().missingCount)
+        assertTrue(fixture.engine.hasCached(available))
         fixture.coordinator.dispose()
     }
 

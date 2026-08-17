@@ -235,12 +235,6 @@ class GameResourceDownloadCoordinator(
         val mode = modeProvider()
         ensureManifestLoaded()
         if (mode == GameResourceCacheMode.NONE || urls.isEmpty()) return false
-        if (mode == GameResourceCacheMode.FULL && targetBytes > engine.status().maxBytes) {
-            state = GameResourceDownloadState.CAPACITY_BLOCKED
-            pauseRequested = true
-            persist()
-            return false
-        }
         val remainingEstimate = (targetBytes - cachedManifestBytes()).coerceAtLeast(0L)
         if (remainingEstimate > engine.availableDeviceBytes()) {
             state = GameResourceDownloadState.CAPACITY_BLOCKED
@@ -374,7 +368,6 @@ class GameResourceDownloadCoordinator(
                     return
                 }
                 if (engine.hasCached(url)) continue
-                val before = engine.status()
                 val response = try {
                     engine.fetch(url)
                 } catch (_: Exception) {
@@ -392,19 +385,6 @@ class GameResourceDownloadCoordinator(
                 if (inspection.state == GameResourceInspectionState.VALID) {
                     synchronized(this) { validByteLengths[url] = inspection.byteLength }
                 }
-                val after = engine.status()
-                if (modeProvider() == GameResourceCacheMode.FULL &&
-                    after.fileCount == before.fileCount &&
-                    before.usedBytes + response.bytes.size > before.maxBytes
-                ) {
-                    synchronized(this) {
-                        state = GameResourceDownloadState.CAPACITY_BLOCKED
-                        pauseRequested = true
-                        missingCount = urls.count { !engine.hasCached(it) }
-                        persist()
-                    }
-                    return
-                }
                 synchronized(this) { persist() }
             }
             synchronized(this) {
@@ -413,7 +393,7 @@ class GameResourceDownloadCoordinator(
                     state = if (missingCount == 0 && damagedCount == 0 && outdatedCount == 0) {
                         GameResourceDownloadState.COMPLETE
                     } else {
-                        GameResourceDownloadState.ERROR
+                        GameResourceDownloadState.IDLE
                     }
                     persist()
                 }
