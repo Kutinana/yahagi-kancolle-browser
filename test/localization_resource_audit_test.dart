@@ -128,6 +128,8 @@ void main() {
       'notCompleted',
       // “分享” is the standard action label in both Chinese scripts.
       'diagnosticShareAction',
+      // “高刷” is the concise product label in both Chinese scripts.
+      'gameFrameRateHighRefresh',
       // “升序/降序” are standard sorting terms in both Chinese scripts.
       'sortAscending',
       'sortDescending',
