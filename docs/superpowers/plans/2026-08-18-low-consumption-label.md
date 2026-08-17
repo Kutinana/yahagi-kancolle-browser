@@ -96,13 +96,13 @@ flutter gen-l10n
 flutter test --reporter compact test\game_frame_rate_settings_section_test.dart
 ```
 
-预期：PASS，4 个 widget tests 全部通过。
+预期：PASS，文件中的 widget tests 全部通过。
 
 - [ ] **步骤 5：提交用户可见文案变更**
 
 ```powershell
 git add -- test/game_frame_rate_settings_section_test.dart lib/l10n/app_zh.arb lib/l10n/app_zh_Hant.arb lib/l10n/app_localizations.dart lib/l10n/app_localizations_zh.dart
-git commit -m "feat(帧率): 将中文省电档改为低耗"
+git commit -m "feat(帧率): 将中文省电档改为低耗（任务1）"
 ```
 
 ### 任务 2：登记共享术语并完成验证
@@ -155,7 +155,7 @@ git diff --stat
 
 ```powershell
 git add -- test/localization_resource_audit_test.dart
-git commit -m "test(本地化): 登记低耗档位术语"
+git commit -m "test(本地化): 登记低耗档位术语（任务2）"
 ```
 
 - [ ] **步骤 6：确认工作树跟踪文件干净**
