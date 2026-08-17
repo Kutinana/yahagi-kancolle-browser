@@ -28,6 +28,10 @@ class WebViewProxyManager(private val context: Context) : MethodChannel.MethodCa
     private val mainScope = CoroutineScope(Dispatchers.Main + Job())
     private val ioScope = CoroutineScope(Dispatchers.IO + Job())
     private val proxyMutex = Mutex()
+    @Volatile
+    private var nativeProxy: Proxy = Proxy.NO_PROXY
+
+    fun currentNativeProxy(): Proxy = nativeProxy
 
     fun dispose() {
         mainScope.cancel()
@@ -111,6 +115,7 @@ class WebViewProxyManager(private val context: Context) : MethodChannel.MethodCa
                 }
                 val elapsedMs = System.currentTimeMillis() - startTime
                 if (completed) {
+                    nativeProxy = proxyFromUrl(proxyUrl)
                     result.success(
                         mapOf("success" to true, "code" to "ok", "message" to "代理设置成功", "elapsedMs" to elapsedMs)
                     )
@@ -156,6 +161,7 @@ class WebViewProxyManager(private val context: Context) : MethodChannel.MethodCa
                 }
                 val elapsedMs = System.currentTimeMillis() - startTime
                 if (completed) {
+                    nativeProxy = Proxy.NO_PROXY
                     result.success(
                         mapOf("success" to true, "code" to "ok", "message" to "系统网络已恢复", "elapsedMs" to elapsedMs)
                     )
@@ -189,6 +195,12 @@ class WebViewProxyManager(private val context: Context) : MethodChannel.MethodCa
             }
             true
         } ?: false
+    }
+
+    private fun proxyFromUrl(proxyUrl: String): Proxy {
+        val uri = java.net.URI(proxyUrl)
+        val type = if (uri.scheme.equals("socks", ignoreCase = true)) Proxy.Type.SOCKS else Proxy.Type.HTTP
+        return Proxy(type, InetSocketAddress(uri.host, uri.port))
     }
 
     private fun runNetworkDiagnostic(mode: String, host: String, port: Int, result: MethodChannel.Result) {

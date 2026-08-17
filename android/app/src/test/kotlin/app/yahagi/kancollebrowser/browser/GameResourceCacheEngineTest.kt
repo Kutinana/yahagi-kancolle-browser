@@ -1,0 +1,131 @@
+package app.yahagi.kancollebrowser.browser
+
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+class GameResourceCacheEngineTest {
+    @get:Rule
+    val temporaryFolder = TemporaryFolder()
+
+    @Test
+    fun `second exact request is served from disk`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(1, 2, 3)))
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/a.png?version=21")
+
+        val first = engine.fetch(url)
+        val second = engine.fetch(url)
+
+        assertArrayEquals(first?.bytes, second?.bytes)
+        assertEquals(1, fetcher.calls.get())
+        assertEquals(GameResourceResponseSource.NETWORK, first?.source)
+        assertEquals(GameResourceResponseSource.CACHE, second?.source)
+    }
+
+    @Test
+    fun `query version change downloads a new asset`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(1)), result(byteArrayOf(2)))
+        val engine = engine(fetcher)
+
+        val first = engine.fetch(official("/kcs2/resources/a.png?version=1"))
+        val second = engine.fetch(official("/kcs2/resources/a.png?version=2"))
+
+        assertArrayEquals(byteArrayOf(1), first?.bytes)
+        assertArrayEquals(byteArrayOf(2), second?.bytes)
+        assertEquals(2, fetcher.calls.get())
+    }
+
+    @Test
+    fun `concurrent requests for one key download once`() {
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val fetcher = object : GameResourceFetcher {
+            val calls = AtomicInteger()
+            override fun fetch(
+                url: String,
+                requestHeaders: Map<String, String>,
+                cached: GameResourceCacheEntry?,
+            ): GameResourceFetchResult {
+                calls.incrementAndGet()
+                started.countDown()
+                release.await(5, TimeUnit.SECONDS)
+                return result(byteArrayOf(7))
+            }
+        }
+        val engine = engine(fetcher)
+        val pool = Executors.newFixedThreadPool(2)
+        val first = pool.submit<GameResourceResponse?> { engine.fetch(official("/kcs2/resources/a.png")) }
+        assertTrue(started.await(5, TimeUnit.SECONDS))
+        val second = pool.submit<GameResourceResponse?> { engine.fetch(official("/kcs2/resources/a.png")) }
+        release.countDown()
+
+        assertArrayEquals(byteArrayOf(7), first.get(5, TimeUnit.SECONDS)?.bytes)
+        assertArrayEquals(byteArrayOf(7), second.get(5, TimeUnit.SECONDS)?.bytes)
+        assertEquals(1, fetcher.calls.get())
+        pool.shutdownNow()
+    }
+
+    @Test
+    fun `failed strict revalidation keeps exact cached file`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(4)), null)
+        val engine = engine(fetcher)
+        val url = official("/gadget_html5/js/kcs_const.js?version=8")
+
+        assertArrayEquals(byteArrayOf(4), engine.fetch(url)?.bytes)
+        val fallback = engine.fetch(url)
+
+        assertArrayEquals(byteArrayOf(4), fallback?.bytes)
+        assertEquals(GameResourceResponseSource.CACHE, fallback?.source)
+        assertEquals(2, fetcher.calls.get())
+    }
+
+    @Test
+    fun `none mode bypasses engine without network`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(1)))
+        val engine = engine(fetcher, mode = GameResourceCacheMode.NONE)
+
+        assertNull(engine.fetch(official("/kcs2/resources/a.png")))
+        assertEquals(0, fetcher.calls.get())
+    }
+
+    private fun engine(
+        fetcher: GameResourceFetcher,
+        mode: GameResourceCacheMode = GameResourceCacheMode.LIGHT,
+    ): GameResourceCacheEngine {
+        val root = temporaryFolder.newFolder()
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 10_000)
+        return GameResourceCacheEngine(store, fetcher) { mode }
+    }
+
+    private fun official(path: String) = "https://w17k.kancolle-server.com$path"
+
+    private fun result(bytes: ByteArray) = GameResourceFetchResult(
+        statusCode = 200,
+        reasonPhrase = "OK",
+        headers = mapOf("Content-Type" to "image/png", "Content-Length" to bytes.size.toString()),
+        bytes = bytes,
+    )
+
+    private class QueueFetcher(vararg results: GameResourceFetchResult?) : GameResourceFetcher {
+        private val queue = ArrayDeque(results.toList())
+        val calls = AtomicInteger()
+
+        override fun fetch(
+            url: String,
+            requestHeaders: Map<String, String>,
+            cached: GameResourceCacheEntry?,
+        ): GameResourceFetchResult? {
+            calls.incrementAndGet()
+            return if (queue.isEmpty()) null else queue.removeFirst()
+        }
+    }
+}
