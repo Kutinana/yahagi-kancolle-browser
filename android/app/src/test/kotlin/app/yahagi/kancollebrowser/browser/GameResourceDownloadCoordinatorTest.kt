@@ -100,6 +100,13 @@ class GameResourceDownloadCoordinatorTest {
         assertEquals(GameResourceDownloadState.PAUSED, status.state)
         assertEquals(1, status.missingCount)
         assertEquals(9, status.targetBytes)
+        restored.setManifest(
+            "light",
+            listOf(official("/kcs2/resources/a.png")),
+            9,
+        )
+        assertFalse(restored.startAutoUpdate())
+        assertEquals(GameResourceDownloadState.PAUSED, restored.status().state)
         restored.dispose()
     }
 

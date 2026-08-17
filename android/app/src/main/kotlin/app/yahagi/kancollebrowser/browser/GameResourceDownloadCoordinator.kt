@@ -56,6 +56,7 @@ class GameResourceDownloadCoordinator(
     @Volatile private var pauseRequested = false
     @Volatile private var networkPaused = false
     @Volatile private var allowMetered = false
+    @Volatile private var userPaused = false
     private var profile = "none"
     private var urls = emptyList<String>()
     private var targetBytes = 0L
@@ -83,14 +84,19 @@ class GameResourceDownloadCoordinator(
             .toList()
         this.targetBytes = targetBytes.coerceAtLeast(0)
         downloadedBytes = 0
-        if (profileChanged) preloadAuthorized = false
+        if (profileChanged) {
+            preloadAuthorized = false
+            userPaused = false
+        }
         refreshInspectionCounts()
-        state = if (missingCount == 0 && damagedCount == 0 && outdatedCount == 0 && urls.isNotEmpty()) {
+        state = if (userPaused) {
+            GameResourceDownloadState.PAUSED
+        } else if (missingCount == 0 && damagedCount == 0 && outdatedCount == 0 && urls.isNotEmpty()) {
             GameResourceDownloadState.COMPLETE
         } else {
             GameResourceDownloadState.IDLE
         }
-        pauseRequested = false
+        pauseRequested = userPaused
         networkPaused = false
         allowMetered = false
         persist()
@@ -99,12 +105,13 @@ class GameResourceDownloadCoordinator(
     @Synchronized
     fun startDownload(allowMetered: Boolean = false): Boolean {
         preloadAuthorized = true
+        userPaused = false
         return startDownloadInternal(allowMetered)
     }
 
     @Synchronized
     fun startAutoUpdate(): Boolean {
-        if (!preloadAuthorized) return false
+        if (!preloadAuthorized || userPaused) return false
         return startDownloadInternal(allowMetered = false)
     }
 
@@ -146,6 +153,7 @@ class GameResourceDownloadCoordinator(
 
     @Synchronized
     fun pauseDownload(): Boolean {
+        userPaused = true
         networkPaused = false
         pauseRequested = true
         state = GameResourceDownloadState.PAUSED
@@ -221,7 +229,13 @@ class GameResourceDownloadCoordinator(
     }
 
     fun dispose() {
-        pauseDownload()
+        synchronized(this) {
+            pauseRequested = true
+            if (state == GameResourceDownloadState.DOWNLOADING) {
+                state = GameResourceDownloadState.PAUSED
+            }
+            persist()
+        }
         executor.shutdownNow()
     }
 
@@ -329,6 +343,7 @@ class GameResourceDownloadCoordinator(
             .put("damagedCount", damagedCount)
             .put("outdatedCount", outdatedCount)
             .put("preloadAuthorized", preloadAuthorized)
+            .put("userPaused", userPaused)
             .put("state", state.wireName)
         val temporary = File(stateFile.parentFile ?: return, "${stateFile.name}.tmp")
         temporary.writeText(json.toString())
@@ -352,6 +367,7 @@ class GameResourceDownloadCoordinator(
             damagedCount = json.optInt("damagedCount")
             outdatedCount = json.optInt("outdatedCount")
             preloadAuthorized = json.optBoolean("preloadAuthorized", false)
+            userPaused = json.optBoolean("userPaused", false)
             val restored = json.optString("state")
             state = if (restored == GameResourceDownloadState.COMPLETE.wireName) {
                 GameResourceDownloadState.COMPLETE

@@ -69,5 +69,11 @@ object GameResourceCacheRules {
             key.endsWith(".css", ignoreCase = true)
     }
 
+    fun requiresStrictValidation(url: String): Boolean {
+        val key = GameResourceCacheKey.from(url)?.value?.substringBefore('?') ?: return false
+        return key == "/kcs2/version.json" || key == "/kcs2/index.html" ||
+            key == "/kcs2/js/main.js"
+    }
+
     fun mimeTypeFor(url: String): GadgetBypassRules.MimeInfo = GadgetBypassRules.mimeTypeFor(url)
 }

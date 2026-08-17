@@ -37,16 +37,21 @@ class GameResourceCacheEngine(
                 (cached != null && cached.entry.version == null &&
                     clock() - cached.entry.lastValidatedAt >= UNVERSIONED_TTL_MS)
             if (cached != null && !mustValidate) return cached.toResponse()
+            val strictValidation = GameResourceCacheRules.requiresStrictValidation(url)
 
             val fetched = runCatching { fetcher.fetch(url, requestHeaders, cached?.entry) }.getOrNull()
-                ?: return cached?.toResponse()
+                ?: return if (strictValidation) null else cached?.toResponse()
             if (fetched.statusCode == HttpURLConnection.HTTP_NOT_MODIFIED) {
                 store.markValidated(key)
                 return store.read(key)?.toResponse() ?: cached?.toResponse()
             }
-            if (fetched.statusCode !in 200..299) return cached?.toResponse()
+            if (fetched.statusCode !in 200..299) {
+                return if (strictValidation) null else cached?.toResponse()
+            }
             val declaredLength = fetched.headers.value("Content-Length")?.toLongOrNull()
-            if (declaredLength != null && declaredLength != fetched.bytes.size.toLong()) return cached?.toResponse()
+            if (declaredLength != null && declaredLength != fetched.bytes.size.toLong()) {
+                return if (strictValidation) null else cached?.toResponse()
+            }
 
             val mimeInfo = GameResourceCacheRules.mimeTypeFor(url)
             val mimeType = fetched.headers.value("Content-Type")

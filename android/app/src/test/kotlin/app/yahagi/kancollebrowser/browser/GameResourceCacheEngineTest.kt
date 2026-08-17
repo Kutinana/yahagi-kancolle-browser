@@ -118,6 +118,17 @@ class GameResourceCacheEngineTest {
         assertEquals(GameResourceResponseSource.CACHE, revalidated?.source)
     }
 
+    @Test
+    fun `critical entry does not fall back to stale cache when validation fails`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(1)), null)
+        val engine = engine(fetcher)
+        val url = official("/kcs2/version.json")
+
+        assertArrayEquals(byteArrayOf(1), engine.fetch(url)?.bytes)
+        assertNull(engine.fetch(url))
+        assertEquals(1, engine.entries().size)
+    }
+
     private fun engine(
         fetcher: GameResourceFetcher,
         mode: GameResourceCacheMode = GameResourceCacheMode.LIGHT,
