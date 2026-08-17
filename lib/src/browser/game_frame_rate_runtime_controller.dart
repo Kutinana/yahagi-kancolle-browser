@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
 
 import '../settings/game_frame_rate_settings.dart';
 import 'game_frame_rate_policy.dart';
