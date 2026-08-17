@@ -86,6 +86,7 @@ flutter:
     - assets/data/quests-meta.json
     - assets/data/improvement/
     - assets/data/game_resource_static_catalog.json
+    - assets/data/game_resource_baseline_manifest.json.gz
 
   # To add assets to your application, add an assets section, like this:
   # assets:

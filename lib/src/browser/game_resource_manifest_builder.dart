@@ -20,53 +20,31 @@ final class GameResourceManifestBuilder {
     shipIds: ownedShipMasterIds,
     slotItemIds: ownedSlotItemMasterIds,
     staticUrls: staticUrls,
-    full: false,
-  );
-
-  GameResourceManifest buildFull({
-    required Map<String, Object?> start2,
-    required List<String> staticUrls,
-  }) => _build(
-    profile: 'full',
-    start2: start2,
-    shipIds: null,
-    slotItemIds: null,
-    staticUrls: staticUrls,
-    full: true,
   );
 
   GameResourceManifest _build({
     required String profile,
     required Map<String, Object?> start2,
-    required Set<int>? shipIds,
-    required Set<int>? slotItemIds,
+    required Set<int> shipIds,
+    required Set<int> slotItemIds,
     required List<String> staticUrls,
-    required bool full,
   }) {
     final paths = <String>{...staticUrls.map(_absolute)};
-    final ships = _maps(start2['api_mst_shipgraph'])
-        .where(
-          (ship) => shipIds == null || shipIds.contains(_int(ship['api_id'])),
-        )
-        .toList();
+    final ships = _maps(
+      start2['api_mst_shipgraph'],
+    ).where((ship) => shipIds.contains(_int(ship['api_id']))).toList();
     final masterShips = <int, Map<String, Object?>>{
       for (final ship in _maps(start2['api_mst_ship']))
         _int(ship['api_id']): ship,
     };
     for (final graph in ships) {
-      _addShip(paths, graph, masterShips[_int(graph['api_id'])], full: full);
+      _addShip(paths, graph, masterShips[_int(graph['api_id'])]);
     }
 
     for (final item in _maps(start2['api_mst_slotitem'])) {
       final id = _int(item['api_id']);
-      if (slotItemIds != null && !slotItemIds.contains(id)) continue;
-      _addSlotItem(paths, item, full: full);
-    }
-
-    if (full) {
-      _addFurniture(paths, _maps(start2['api_mst_furniture']));
-      _addMaps(paths, _maps(start2['api_mst_mapinfo']));
-      _addSounds(paths, start2);
+      if (!slotItemIds.contains(id)) continue;
+      _addSlotItem(paths, item);
     }
 
     final urls = paths.toList()..sort();
@@ -80,71 +58,36 @@ final class GameResourceManifestBuilder {
   void _addShip(
     Set<String> paths,
     Map<String, Object?> graph,
-    Map<String, Object?>? master, {
-    required bool full,
-  }) {
+    Map<String, Object?>? master,
+  ) {
     final id = _int(graph['api_id']);
     final fileName = _string(graph['api_filename']);
     if (id <= 0 || fileName.isEmpty) return;
     final versions = _list(graph['api_version']);
     final imageVersion = _version(versions.isEmpty ? null : versions.first);
-    final types = full
-        ? const <String>[
-            'card',
-            'card_dmg',
-            'banner',
-            'banner_dmg',
-            'banner_g_dmg',
-            'banner2',
-            'banner2_dmg',
-            'character_full',
-            'character_full_dmg',
-            'character_up',
-            'character_up_dmg',
-            'remodel',
-            'remodel_dmg',
-            'supply_character',
-            'supply_character_dmg',
-            'album_status',
-          ]
-        : const <String>['card', 'banner', 'character_full', 'character_up'];
+    const types = <String>['card', 'banner', 'character_full', 'character_up'];
     for (final type in types) {
       paths.add(
         _absolute('${_keyedPath(id, 'ship', type, 'png')}$imageVersion'),
       );
     }
-    for (final type
-        in full ? const <String>['full', 'full_dmg'] : const <String>['full']) {
+    for (final type in const <String>['full']) {
       paths.add(
         _absolute(
           '${_keyedPath(id, 'ship', type, 'png', fileName: fileName)}$imageVersion',
         ),
       );
     }
-    if (master != null && (full || master.isNotEmpty)) {
-      _addShipVoices(paths, graph, master, full: full);
+    if (master != null && master.isNotEmpty) {
+      _addShipVoices(paths, graph);
     }
   }
 
-  void _addSlotItem(
-    Set<String> paths,
-    Map<String, Object?> item, {
-    required bool full,
-  }) {
+  void _addSlotItem(Set<String> paths, Map<String, Object?> item) {
     final id = _int(item['api_id']);
     if (id <= 0) return;
     final version = _version(item['api_version']);
-    final types = full
-        ? const <String>[
-            'card',
-            'card_t',
-            'item_character',
-            'item_on',
-            'item_up',
-            'remodel',
-            'statustop_item',
-          ]
-        : const <String>['card', 'item_on', 'item_up', 'statustop_item'];
+    const types = <String>['card', 'item_on', 'item_up', 'statustop_item'];
     for (final type in types) {
       if (id == 42 && type == 'item_character') continue;
       paths.add(_absolute('${_keyedPath(id, 'slot', type, 'png')}$version'));
@@ -161,145 +104,11 @@ final class GameResourceManifestBuilder {
     }
   }
 
-  void _addFurniture(Set<String> paths, List<Map<String, Object?>> furniture) {
-    for (final item in furniture) {
-      final id = _int(item['api_id']);
-      final version = _version(item['api_version']);
-      if (_int(item['api_active_flag']) == 1) {
-        for (final spec in const <(String, String)>[
-          ('scripts', 'json'),
-          ('movable', 'json'),
-          ('movable', 'png'),
-          ('thumbnail', 'png'),
-        ]) {
-          paths.add(
-            _absolute(
-              '${_keyedPath(id, 'furniture', spec.$1, spec.$2)}$version',
-            ),
-          );
-        }
-      } else {
-        paths.add(
-          _absolute('${_keyedPath(id, 'furniture', 'normal', 'png')}$version'),
-        );
-      }
-    }
-  }
-
-  void _addMaps(Set<String> paths, List<Map<String, Object?>> maps) {
-    for (final map in maps) {
-      final area = _int(map['api_maparea_id']).toString().padLeft(3, '0');
-      final number = _int(map['api_no']).toString().padLeft(2, '0');
-      for (final suffix in <String>[
-        '.png',
-        '_info.json',
-        '_image.json',
-        '_image.png',
-      ]) {
-        paths.add(_absolute('/kcs2/resources/map/$area/$number$suffix'));
-      }
-      if (map.containsKey('api_required_defeat_count') ||
-          map.containsKey('api_max_maphp')) {
-        paths.add(_absolute('/kcs2/resources/gauge/$area$number.json'));
-      }
-    }
-  }
-
-  void _addSounds(Set<String> paths, Map<String, Object?> start2) {
-    for (var id = 1; id <= 86; id++) {
-      paths.add(
-        _absolute(
-          '/kcs2/resources/voice/titlecall_1/${id.toString().padLeft(3, '0')}.mp3',
-        ),
-      );
-    }
-    for (var id = 1; id <= 49; id++) {
-      paths.add(
-        _absolute(
-          '/kcs2/resources/voice/titlecall_2/${id.toString().padLeft(3, '0')}.mp3',
-        ),
-      );
-    }
-    const missingSe = <int>{
-      119,
-      232,
-      233,
-      234,
-      236,
-      251,
-      259,
-      260,
-      261,
-      262,
-      263,
-    };
-    for (final range in const <(int, int)>[
-      (101, 120),
-      (201, 264),
-      (301, 327),
-    ]) {
-      for (var id = range.$1; id <= range.$2; id++) {
-        if (!missingSe.contains(id)) {
-          paths.add(_absolute('/kcs2/resources/se/$id.mp3'));
-        }
-      }
-    }
-    final portBgm = <int>{
-      for (var id = 101; id <= 143; id++) id,
-      for (var id = 201; id <= 249; id++) id,
-      for (final item in _maps(start2['api_mst_bgm'])) _int(item['api_id']),
-    }..removeWhere((id) => id <= 0);
-    for (final id in portBgm) {
-      paths.add(_absolute(_keyedPath(id, 'bgm', 'port', 'mp3')));
-    }
-  }
-
-  void _addShipVoices(
-    Set<String> paths,
-    Map<String, Object?> graph,
-    Map<String, Object?> master, {
-    required bool full,
-  }) {
+  void _addShipVoices(Set<String> paths, Map<String, Object?> graph) {
     final id = _int(graph['api_id']);
     final fileName = _string(graph['api_filename']);
     final versions = _list(graph['api_version']);
-    final lines = full
-        ? <int>[
-            1,
-            25,
-            2,
-            3,
-            4,
-            28,
-            24,
-            8,
-            13,
-            9,
-            10,
-            26,
-            27,
-            11,
-            12,
-            5,
-            7,
-            14,
-            15,
-            16,
-            18,
-            17,
-            23,
-            19,
-            20,
-            21,
-            22,
-          ]
-        : <int>[1, 2, 3, 4, 8, 9, 10, 11, 12, 13];
-    final voiceFlags = _int(master['api_voicef']);
-    if (full && (voiceFlags & 1) != 0) lines.add(29);
-    if (full && (voiceFlags & 2) != 0) {
-      lines.addAll(<int>[for (var line = 30; line <= 53; line++) line]);
-    }
-    if (full && (voiceFlags & 4) != 0) lines.add(129);
+    const lines = <int>[1, 2, 3, 4, 8, 9, 10, 11, 12, 13];
     for (final line in lines) {
       final versionIndex = line == 2 || line == 3 ? 2 : 1;
       final version = _version(
