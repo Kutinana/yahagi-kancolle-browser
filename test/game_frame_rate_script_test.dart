@@ -10,11 +10,21 @@ void main() {
     expect(script, contains('framerate=30'));
   });
 
-  test('60 FPS script uses CreateJS RAF without replacing global RAF', () {
+  test('60 FPS script uses capped CreateJS RAF synchronization', () {
     final script = gameFrameRateApplyScript(GameFrameRateTarget.fps60);
     expect(script, contains('createjs.Ticker'));
-    expect(script, contains('RAF'));
+    expect(script, contains('RAF_SYNCHED'));
+    expect(script, contains('TIMEOUT'));
     expect(script, contains('framerate=60'));
+    expect(script, isNot(contains('ticker.timingMode=ticker.RAF;')));
+    expect(script, isNot(contains('requestAnimationFrame=')));
+  });
+
+  test('high refresh script uses unthrottled CreateJS RAF', () {
+    final script = gameFrameRateApplyScript(GameFrameRateTarget.highRefresh);
+    expect(script, contains('createjs.Ticker'));
+    expect(script, contains('ticker.timingMode=ticker.RAF;'));
+    expect(script, isNot(contains('RAF_SYNCHED')));
     expect(script, isNot(contains('requestAnimationFrame=')));
   });
 
@@ -27,6 +37,7 @@ void main() {
     final scripts = <String>[
       gameFrameRateApplyScript(GameFrameRateTarget.fps30),
       gameFrameRateApplyScript(GameFrameRateTarget.fps60),
+      gameFrameRateApplyScript(GameFrameRateTarget.highRefresh),
       gameFrameRateMeasurementScript,
     ];
     for (final script in scripts) {

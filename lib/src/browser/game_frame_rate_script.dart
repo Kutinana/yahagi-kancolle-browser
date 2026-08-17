@@ -11,10 +11,14 @@ String gameFrameRateApplyScript(GameFrameRateTarget target) {
       '''
       if (typeof ticker.RAF_SYNCHED !== 'undefined') {
         ticker.timingMode=ticker.RAF_SYNCHED;
-      } else if (typeof ticker.RAF !== 'undefined') {
-        ticker.timingMode=ticker.RAF;
+      } else if (typeof ticker.TIMEOUT !== 'undefined') {
+        ticker.timingMode=ticker.TIMEOUT;
       }
       ticker.framerate=60;
+    ''',
+    GameFrameRateTarget.highRefresh =>
+      '''
+      if (typeof ticker.RAF !== 'undefined') ticker.timingMode=ticker.RAF;
     ''',
   };
   return '''

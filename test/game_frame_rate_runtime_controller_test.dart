@@ -96,6 +96,21 @@ void main() {
     expect(fixture.timer!.isActive, isFalse);
   });
 
+  test('high refresh mode applies the unthrottled target', () async {
+    final fixture = await _Fixture.create();
+    addTearDown(fixture.dispose);
+    await fixture.runtime.onPageReady();
+
+    await fixture.settings.setMode(GameFrameRateMode.highRefresh);
+    await fixture.runtime.idle;
+
+    expect(
+      fixture.port.appliedTargets.last,
+      GameFrameRateTarget.highRefresh,
+    );
+    expect(fixture.timer!.isActive, isFalse);
+  });
+
   test('dispose cancels timers and unregisters the timings callback', () async {
     final fixture = await _Fixture.create();
     await fixture.runtime.onPageReady();

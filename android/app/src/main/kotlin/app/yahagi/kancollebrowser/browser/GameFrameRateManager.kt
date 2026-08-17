@@ -7,10 +7,14 @@ import io.flutter.plugin.common.MethodChannel
 enum class GameFrameRateMode(val wireName: String) {
     AUTO("auto"),
     STABLE_30("stable30"),
-    PREFER_60("prefer60");
+    HIGH_REFRESH("prefer60");
 
-    val patchesMainScript: Boolean
-        get() = this != STABLE_30
+    val mainScriptTickerMode: GameMainScriptTickerMode?
+        get() = when (this) {
+            AUTO -> GameMainScriptTickerMode.CAPPED_60
+            STABLE_30 -> null
+            HIGH_REFRESH -> GameMainScriptTickerMode.HIGH_REFRESH
+        }
 
     companion object {
         fun fromWireName(value: String?): GameFrameRateMode =
@@ -31,8 +35,8 @@ class GameFrameRateManager(
         private set
     private var configured = false
 
-    val patchesMainScript: Boolean
-        get() = configured && mode.patchesMainScript
+    val mainScriptTickerMode: GameMainScriptTickerMode?
+        get() = if (configured) mode.mainScriptTickerMode else null
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
@@ -77,8 +81,8 @@ class GameFrameRateManager(
 }
 
 private val GameFrameRateMode.initialTarget: GameFrameRateTarget
-    get() = if (this == GameFrameRateMode.STABLE_30) {
-        GameFrameRateTarget.FPS_30
-    } else {
-        GameFrameRateTarget.FPS_60
+    get() = when (this) {
+        GameFrameRateMode.STABLE_30 -> GameFrameRateTarget.FPS_30
+        GameFrameRateMode.AUTO -> GameFrameRateTarget.FPS_60
+        GameFrameRateMode.HIGH_REFRESH -> GameFrameRateTarget.HIGH_REFRESH
     }

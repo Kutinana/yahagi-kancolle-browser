@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum GameFrameRateMode {
   automatic('auto'),
   stable30('stable30'),
-  prefer60('prefer60');
+  highRefresh('prefer60');
 
   const GameFrameRateMode(this.wireName);
 
@@ -47,12 +47,13 @@ final class SharedPreferencesGameFrameRateSettingsStore
     if (oldBoolean != null) {
       return _persistMigration(
         preferences,
-        oldBoolean ? GameFrameRateMode.prefer60 : GameFrameRateMode.stable30,
+        oldBoolean ? GameFrameRateMode.highRefresh : GameFrameRateMode.stable30,
       );
     }
 
     final legacyMode = switch (preferences.getString(_legacyModeKey)) {
-      'max60' || 'followDisplay' => GameFrameRateMode.prefer60,
+      'max60' => GameFrameRateMode.automatic,
+      'followDisplay' => GameFrameRateMode.highRefresh,
       'off' => GameFrameRateMode.stable30,
       _ => null,
     };

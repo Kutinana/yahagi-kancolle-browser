@@ -427,14 +427,14 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         if (enabled) {
             installGadgetBypassLayoutListener()
             ensureGadgetBypassWrap()
-        } else if (gameFrameRateManager?.patchesMainScript != true) {
+        } else if (gameFrameRateManager?.mainScriptTickerMode == null) {
             restoreGadgetBypassClient()
             removeGadgetBypassLayoutListener()
         }
     }
 
     override fun onFrameRateModeChanged(mode: GameFrameRateMode) {
-        if (mode.patchesMainScript) {
+        if (mode.mainScriptTickerMode != null) {
             installGadgetBypassLayoutListener()
             ensureGadgetBypassWrap()
         } else if (gadgetBypassManager?.enabled != true) {
@@ -447,7 +447,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = gadgetBypassManager ?: return
         val frameRateManager = gameFrameRateManager
-        if (!manager.enabled && frameRateManager?.patchesMainScript != true) return
+        if (!manager.enabled && frameRateManager?.mainScriptTickerMode == null) return
 
         val webViews = mutableListOf<WebView>()
         collectWebViews(window.decorView, webViews)
@@ -464,7 +464,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 engine = manager.engine,
                 isEnabled = { manager.enabled },
                 endpoint = { manager.endpoint },
-                shouldPatchMainScript = { frameRateManager?.patchesMainScript == true },
+                mainScriptTickerMode = { frameRateManager?.mainScriptTickerMode },
             ),
         )
     }

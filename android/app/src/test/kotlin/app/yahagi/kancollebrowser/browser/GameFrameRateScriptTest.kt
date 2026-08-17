@@ -10,15 +10,18 @@ class GameFrameRateScriptTest {
     fun mapsWireModesAndFallsBackToAuto() {
         assertEquals(GameFrameRateMode.AUTO, GameFrameRateMode.fromWireName("auto"))
         assertEquals(GameFrameRateMode.STABLE_30, GameFrameRateMode.fromWireName("stable30"))
-        assertEquals(GameFrameRateMode.PREFER_60, GameFrameRateMode.fromWireName("prefer60"))
+        assertEquals(GameFrameRateMode.HIGH_REFRESH, GameFrameRateMode.fromWireName("prefer60"))
         assertEquals(GameFrameRateMode.AUTO, GameFrameRateMode.fromWireName("future-mode"))
     }
 
     @Test
-    fun onlyAutoAndPrefer60PatchTheRemoteMainScript() {
-        assertTrue(GameFrameRateMode.AUTO.patchesMainScript)
-        assertFalse(GameFrameRateMode.STABLE_30.patchesMainScript)
-        assertTrue(GameFrameRateMode.PREFER_60.patchesMainScript)
+    fun eachModeChoosesTheExpectedRemoteMainScriptTicker() {
+        assertEquals(GameMainScriptTickerMode.CAPPED_60, GameFrameRateMode.AUTO.mainScriptTickerMode)
+        assertEquals(null, GameFrameRateMode.STABLE_30.mainScriptTickerMode)
+        assertEquals(
+            GameMainScriptTickerMode.HIGH_REFRESH,
+            GameFrameRateMode.HIGH_REFRESH.mainScriptTickerMode,
+        )
     }
 
     @Test
@@ -41,18 +44,30 @@ class GameFrameRateScriptTest {
     }
 
     @Test
-    fun patchesCreateJsTickerToUnthrottledRafLikeGotoBrowser() {
+    fun patchesCreateJsTickerToCapped60ForAutomaticMode() {
+        val original = "createjs.Ticker.timingMode=createjs.Ticker.TIMEOUT,b=1;"
+        assertEquals(
+            "createjs.Ticker.timingMode=createjs.Ticker.RAF_SYNCHED,b=1;",
+            GameMainScriptPatcher.patch(original, GameMainScriptTickerMode.CAPPED_60),
+        )
+    }
+
+    @Test
+    fun patchesCreateJsTickerToUnthrottledRafForHighRefreshMode() {
         val original = "createjs.Ticker.timingMode=createjs.Ticker.TIMEOUT,b=1;"
         assertEquals(
             "createjs.Ticker.timingMode=createjs.Ticker.RAF,b=1;",
-            GameMainScriptPatcher.patch(original),
+            GameMainScriptPatcher.patch(original, GameMainScriptTickerMode.HIGH_REFRESH),
         )
     }
 
     @Test
     fun unmatchedScriptIsReturnedUnchanged() {
         val original = "console.log('main');"
-        assertEquals(original, GameMainScriptPatcher.patch(original))
+        assertEquals(
+            original,
+            GameMainScriptPatcher.patch(original, GameMainScriptTickerMode.CAPPED_60),
+        )
     }
 
     @Test
@@ -64,6 +79,8 @@ class GameFrameRateScriptTest {
         assertTrue(script.contains("bridge.onmessage"))
         assertTrue(script.contains("createjs.Ticker"))
         assertTrue(script.contains("getMeasuredFPS"))
+        assertTrue(script.contains("highRefresh"))
+        assertTrue(script.contains("ticker.RAF_SYNCHED"))
         assertTrue(script.contains("ticker.RAF"))
         assertTrue(script.contains("ticker.TIMEOUT"))
         assertFalse(script.contains("fetch("))

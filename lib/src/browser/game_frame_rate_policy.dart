@@ -62,7 +62,7 @@ final class GameFrameRatePolicy {
       resetWindow();
       return FrameRateDecision.lock30;
     }
-    if (mode == GameFrameRateMode.prefer60) {
+    if (mode == GameFrameRateMode.highRefresh) {
       resetWindow();
       _consecutiveUnstableWindows = 0;
       return FrameRateDecision.keep60;

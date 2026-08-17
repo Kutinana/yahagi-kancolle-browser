@@ -80,7 +80,7 @@ void main() {
   test('manual modes never trigger an automatic downgrade', () {
     for (final mode in <GameFrameRateMode>[
       GameFrameRateMode.stable30,
-      GameFrameRateMode.prefer60,
+      GameFrameRateMode.highRefresh,
     ]) {
       final policy = GameFrameRatePolicy(mode: mode);
       _addUnstableCreateJsWindow(policy);

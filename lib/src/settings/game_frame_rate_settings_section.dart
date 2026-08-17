@@ -39,7 +39,7 @@ class GameFrameRateSettingsSection extends StatelessWidget {
                   label: Text(l10n.gameFrameRateStable30),
                 ),
                 ButtonSegment<GameFrameRateMode>(
-                  value: GameFrameRateMode.prefer60,
+                  value: GameFrameRateMode.highRefresh,
                   label: Text(l10n.gameFrameRatePrefer60),
                 ),
               ],
@@ -59,7 +59,7 @@ class GameFrameRateSettingsSection extends StatelessWidget {
                         l10n.gameFrameRateAutomaticDesc,
                       GameFrameRateMode.stable30 =>
                         l10n.gameFrameRateStable30Desc,
-                      GameFrameRateMode.prefer60 =>
+                      GameFrameRateMode.highRefresh =>
                         l10n.gameFrameRatePrefer60Desc,
                     },
               style: Theme.of(

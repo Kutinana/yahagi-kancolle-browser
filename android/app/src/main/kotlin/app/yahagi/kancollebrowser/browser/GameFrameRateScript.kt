@@ -6,6 +6,11 @@ import java.net.URI
 import java.net.URL
 import java.util.Locale
 
+enum class GameMainScriptTickerMode(val createJsConstant: String) {
+    CAPPED_60("RAF_SYNCHED"),
+    HIGH_REFRESH("RAF"),
+}
+
 object GameMainScriptPatcher {
     private val tickerPattern = Regex("(createjs[^,;=]{0,40})(=createjs[^,;=]{0,40}),")
 
@@ -22,9 +27,9 @@ object GameMainScriptPatcher {
         return uri.path?.endsWith("/kcs2/js/main.js") == true
     }
 
-    fun patch(mainScript: String): String = tickerPattern.replaceFirst(
+    fun patch(mainScript: String, mode: GameMainScriptTickerMode): String = tickerPattern.replaceFirst(
         mainScript,
-        "\$1=createjs.Ticker.RAF,",
+        "\$1=createjs.Ticker.${mode.createJsConstant},",
     )
 }
 
