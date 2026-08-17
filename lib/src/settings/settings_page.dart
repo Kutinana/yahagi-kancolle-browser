@@ -4,6 +4,7 @@ import '../audio/game_audio_controller.dart';
 import '../browser/gadget_bypass_controller.dart';
 import '../browser/game_browser_controller.dart';
 import '../browser/game_toolbar_display_controller.dart';
+import '../browser/game_resource_cache_controller.dart';
 import '../capture/capture_mode_controller.dart';
 import '../capture/game_capture_controller.dart';
 import '../diagnostics/diagnostic_controller.dart';
@@ -40,6 +41,7 @@ class SettingsPage extends StatelessWidget {
     required this.gameCaptureController,
     required this.prototypeStatusController,
     required this.gameStateController,
+    this.gameResourceCacheController,
     required this.safetySettingsController,
     required this.currentVersion,
     this.releaseChecker,
@@ -68,6 +70,7 @@ class SettingsPage extends StatelessWidget {
   final GameCaptureController gameCaptureController;
   final PrototypeStatusController prototypeStatusController;
   final GameStateController gameStateController;
+  final GameResourceCacheController? gameResourceCacheController;
   final SafetySettingsController safetySettingsController;
   final bool showTitle;
   final String currentVersion;
@@ -116,6 +119,7 @@ class SettingsPage extends StatelessWidget {
           gameCaptureController: gameCaptureController,
           prototypeStatusController: prototypeStatusController,
           gameStateController: gameStateController,
+          gameResourceCacheController: gameResourceCacheController,
           diagnosticController: diagnosticController,
           showDeveloperDiagnostics: showDeveloperDiagnostics,
           gameRenderingModeController: gameRenderingModeController,

@@ -356,6 +356,7 @@ Future<void> main() async {
       gameCaptureController: gameCaptureController,
       gameApiEventPipeline: gameApiEventPipeline,
       gameStateController: gameStateController,
+      gameResourceCacheController: gameResourceCacheController,
       senkaController: senkaController,
       battleController: battleController,
       fcdMapController: fcdMapController,
@@ -392,6 +393,7 @@ class YahagiApp extends StatelessWidget {
     required this.gameCaptureController,
     this.gameApiEventPipeline,
     required this.gameStateController,
+    this.gameResourceCacheController,
     this.senkaController,
     required this.battleController,
     this.fcdMapController,
@@ -423,6 +425,7 @@ class YahagiApp extends StatelessWidget {
   final GameCaptureController gameCaptureController;
   final GameApiEventPipeline? gameApiEventPipeline;
   final GameStateController gameStateController;
+  final GameResourceCacheController? gameResourceCacheController;
   final SenkaController? senkaController;
   final BattleController battleController;
   final FcdMapController? fcdMapController;
@@ -501,6 +504,7 @@ class YahagiApp extends StatelessWidget {
                 toolbarController: toolbarController,
                 gameCaptureController: gameCaptureController,
                 gameStateController: gameStateController,
+                gameResourceCacheController: gameResourceCacheController,
                 senkaController: senkaController,
                 battleController: battleController,
                 fcdMapController: fcdMapController,
@@ -610,6 +614,7 @@ class YahagiShell extends StatefulWidget {
     required this.gameSurface,
     required this.gameCaptureController,
     required this.gameStateController,
+    this.gameResourceCacheController,
     this.senkaController,
     required this.battleController,
     required this.currentVersion,
@@ -640,6 +645,7 @@ class YahagiShell extends StatefulWidget {
   final Widget gameSurface;
   final GameCaptureController gameCaptureController;
   final GameStateController gameStateController;
+  final GameResourceCacheController? gameResourceCacheController;
   final SenkaController? senkaController;
   final BattleController battleController;
   final FcdMapController? fcdMapController;
@@ -1220,6 +1226,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             gameCaptureController: widget.gameCaptureController,
                             prototypeStatusController: widget.controller,
                             gameStateController: widget.gameStateController,
+                            gameResourceCacheController:
+                                widget.gameResourceCacheController,
                             safetySettingsController:
                                 widget.safetySettingsController,
                             battlePredictionSettingsController:

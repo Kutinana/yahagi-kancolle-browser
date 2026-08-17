@@ -1662,4 +1662,89 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get notCompleted => '未達成';
+
+  @override
+  String get gameResourceCacheTitle => 'ゲームリソースのローカルキャッシュ';
+
+  @override
+  String get gameResourceCacheDesc =>
+      '艦隊これくしょんの公式サーバーから取得します。モードを切り替えても既存キャッシュは残ります。';
+
+  @override
+  String get gameResourceCacheNone => 'ローカルキャッシュなし';
+
+  @override
+  String get gameResourceCacheNoneDesc => '事前ダウンロードを行いません。既存のキャッシュは保持します。';
+
+  @override
+  String get gameResourceCacheLight => '軽量キャッシュ';
+
+  @override
+  String get gameResourceCacheLightDesc => '起動ファイル、主要 UI、保有艦娘と装備のリソースを保存します。';
+
+  @override
+  String get gameResourceCacheFull => '完全キャッシュ';
+
+  @override
+  String get gameResourceCacheFullDesc =>
+      '既知の艦娘、装備、家具、マップ、音声をすべて事前取得します。容量と時間を多く使います。';
+
+  @override
+  String get gameResourceCacheStart => 'ダウンロード開始';
+
+  @override
+  String get gameResourceCachePause => '一時停止';
+
+  @override
+  String get gameResourceCacheResume => '再開';
+
+  @override
+  String get gameResourceCacheCheck => '整合性を確認';
+
+  @override
+  String get gameResourceCacheRepair => '不足・破損を修復';
+
+  @override
+  String get gameResourceCacheClear => 'ローカルキャッシュを削除';
+
+  @override
+  String get gameResourceCacheIntegrityComplete => '現在のキャッシュは完全です';
+
+  @override
+  String get gameResourceCacheMissing => '不足';
+
+  @override
+  String get gameResourceCacheDamaged => '破損';
+
+  @override
+  String get gameResourceCacheItems => '件';
+
+  @override
+  String get gameResourceCacheDownloadConfirmTitle => 'キャッシュをダウンロードしますか？';
+
+  @override
+  String get gameResourceCacheDownloadConfirmDesc =>
+      '選択したモードのリソースを公式サーバーから一括取得します。いつでも一時停止・再開できます。';
+
+  @override
+  String get gameResourceCacheMobileConfirmDesc =>
+      '現在モバイル回線を使用しています。通信量を消費して今回のダウンロードを続けますか？';
+
+  @override
+  String get gameResourceCacheWaitingForWifi => 'Wi-Fi を待機しています。接続後に自動で再開します。';
+
+  @override
+  String get gameResourceCacheClearConfirmTitle => 'ゲームリソースキャッシュを削除しますか？';
+
+  @override
+  String get gameResourceCacheClearConfirmDesc =>
+      'ダウンロード済みリソースを削除します。モード設定は保持されます。';
+
+  @override
+  String get gameResourceCacheCapacityBlocked =>
+      'キャッシュが 10 GB の上限に達したため、完全キャッシュの取得を停止しました。';
+
+  @override
+  String get gameResourceCacheActionFailed =>
+      'キャッシュ操作を完了できませんでした。しばらくしてからお試しください。';
 }

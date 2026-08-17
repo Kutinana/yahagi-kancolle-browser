@@ -3211,6 +3211,162 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未完成'**
   String get notCompleted;
+
+  /// No description provided for @gameResourceCacheTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'游戏资源本地缓存'**
+  String get gameResourceCacheTitle;
+
+  /// No description provided for @gameResourceCacheDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源从舰队 Collection 官方服务器获取；切换模式不会删除已有缓存。'**
+  String get gameResourceCacheDesc;
+
+  /// No description provided for @gameResourceCacheNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'无本地缓存'**
+  String get gameResourceCacheNone;
+
+  /// No description provided for @gameResourceCacheNoneDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'不预下载资源，已缓存的文件仍会保留。'**
+  String get gameResourceCacheNoneDesc;
+
+  /// No description provided for @gameResourceCacheLight.
+  ///
+  /// In zh, this message translates to:
+  /// **'轻度缓存'**
+  String get gameResourceCacheLight;
+
+  /// No description provided for @gameResourceCacheLightDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存启动文件、常用 UI、已持有舰娘立绘和装备资源。'**
+  String get gameResourceCacheLightDesc;
+
+  /// No description provided for @gameResourceCacheFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'完整缓存'**
+  String get gameResourceCacheFull;
+
+  /// No description provided for @gameResourceCacheFullDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'预下载全部已知舰娘、装备、家具、地图和音效，体积与耗时较大。'**
+  String get gameResourceCacheFullDesc;
+
+  /// No description provided for @gameResourceCacheStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始下载'**
+  String get gameResourceCacheStart;
+
+  /// No description provided for @gameResourceCachePause.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停下载'**
+  String get gameResourceCachePause;
+
+  /// No description provided for @gameResourceCacheResume.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续下载'**
+  String get gameResourceCacheResume;
+
+  /// No description provided for @gameResourceCacheCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查完整性'**
+  String get gameResourceCacheCheck;
+
+  /// No description provided for @gameResourceCacheRepair.
+  ///
+  /// In zh, this message translates to:
+  /// **'补齐或修复'**
+  String get gameResourceCacheRepair;
+
+  /// No description provided for @gameResourceCacheClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除本地缓存'**
+  String get gameResourceCacheClear;
+
+  /// No description provided for @gameResourceCacheIntegrityComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前缓存完整'**
+  String get gameResourceCacheIntegrityComplete;
+
+  /// No description provided for @gameResourceCacheMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺失'**
+  String get gameResourceCacheMissing;
+
+  /// No description provided for @gameResourceCacheDamaged.
+  ///
+  /// In zh, this message translates to:
+  /// **'损坏'**
+  String get gameResourceCacheDamaged;
+
+  /// No description provided for @gameResourceCacheItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'项'**
+  String get gameResourceCacheItems;
+
+  /// No description provided for @gameResourceCacheDownloadConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认下载缓存？'**
+  String get gameResourceCacheDownloadConfirmTitle;
+
+  /// No description provided for @gameResourceCacheDownloadConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'将从官方服务器批量下载所选模式的资源，可随时暂停并继续。'**
+  String get gameResourceCacheDownloadConfirmDesc;
+
+  /// No description provided for @gameResourceCacheMobileConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前正在使用移动网络。继续将消耗移动数据流量，是否允许本次下载？'**
+  String get gameResourceCacheMobileConfirmDesc;
+
+  /// No description provided for @gameResourceCacheWaitingForWifi.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在等待 Wi-Fi，连接后会自动继续下载。'**
+  String get gameResourceCacheWaitingForWifi;
+
+  /// No description provided for @gameResourceCacheClearConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除游戏资源缓存？'**
+  String get gameResourceCacheClearConfirmTitle;
+
+  /// No description provided for @gameResourceCacheClearConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'将删除已下载的游戏资源；模式设置会保留。'**
+  String get gameResourceCacheClearConfirmDesc;
+
+  /// No description provided for @gameResourceCacheCapacityBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存已达到 10 GB 上限，完整缓存下载已暂停。'**
+  String get gameResourceCacheCapacityBlocked;
+
+  /// No description provided for @gameResourceCacheActionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存操作未完成，请稍后重试。'**
+  String get gameResourceCacheActionFailed;
 }
 
 class _AppLocalizationsDelegate

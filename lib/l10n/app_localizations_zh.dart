@@ -1652,6 +1652,86 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notCompleted => '未完成';
+
+  @override
+  String get gameResourceCacheTitle => '游戏资源本地缓存';
+
+  @override
+  String get gameResourceCacheDesc => '资源从舰队 Collection 官方服务器获取；切换模式不会删除已有缓存。';
+
+  @override
+  String get gameResourceCacheNone => '无本地缓存';
+
+  @override
+  String get gameResourceCacheNoneDesc => '不预下载资源，已缓存的文件仍会保留。';
+
+  @override
+  String get gameResourceCacheLight => '轻度缓存';
+
+  @override
+  String get gameResourceCacheLightDesc => '缓存启动文件、常用 UI、已持有舰娘立绘和装备资源。';
+
+  @override
+  String get gameResourceCacheFull => '完整缓存';
+
+  @override
+  String get gameResourceCacheFullDesc => '预下载全部已知舰娘、装备、家具、地图和音效，体积与耗时较大。';
+
+  @override
+  String get gameResourceCacheStart => '开始下载';
+
+  @override
+  String get gameResourceCachePause => '暂停下载';
+
+  @override
+  String get gameResourceCacheResume => '继续下载';
+
+  @override
+  String get gameResourceCacheCheck => '检查完整性';
+
+  @override
+  String get gameResourceCacheRepair => '补齐或修复';
+
+  @override
+  String get gameResourceCacheClear => '清除本地缓存';
+
+  @override
+  String get gameResourceCacheIntegrityComplete => '当前缓存完整';
+
+  @override
+  String get gameResourceCacheMissing => '缺失';
+
+  @override
+  String get gameResourceCacheDamaged => '损坏';
+
+  @override
+  String get gameResourceCacheItems => '项';
+
+  @override
+  String get gameResourceCacheDownloadConfirmTitle => '确认下载缓存？';
+
+  @override
+  String get gameResourceCacheDownloadConfirmDesc =>
+      '将从官方服务器批量下载所选模式的资源，可随时暂停并继续。';
+
+  @override
+  String get gameResourceCacheMobileConfirmDesc =>
+      '当前正在使用移动网络。继续将消耗移动数据流量，是否允许本次下载？';
+
+  @override
+  String get gameResourceCacheWaitingForWifi => '正在等待 Wi-Fi，连接后会自动继续下载。';
+
+  @override
+  String get gameResourceCacheClearConfirmTitle => '清除游戏资源缓存？';
+
+  @override
+  String get gameResourceCacheClearConfirmDesc => '将删除已下载的游戏资源；模式设置会保留。';
+
+  @override
+  String get gameResourceCacheCapacityBlocked => '缓存已达到 10 GB 上限，完整缓存下载已暂停。';
+
+  @override
+  String get gameResourceCacheActionFailed => '缓存操作未完成，请稍后重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3303,4 +3383,84 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notCompleted => '未完成';
+
+  @override
+  String get gameResourceCacheTitle => '遊戲資源本機快取';
+
+  @override
+  String get gameResourceCacheDesc => '資源從艦隊 Collection 官方伺服器取得；切換模式不會刪除既有快取。';
+
+  @override
+  String get gameResourceCacheNone => '無本機快取';
+
+  @override
+  String get gameResourceCacheNoneDesc => '不預先下載資源，已快取的檔案仍會保留。';
+
+  @override
+  String get gameResourceCacheLight => '輕度快取';
+
+  @override
+  String get gameResourceCacheLightDesc => '快取啟動檔案、常用 UI、已持有艦娘立繪與裝備資源。';
+
+  @override
+  String get gameResourceCacheFull => '完整快取';
+
+  @override
+  String get gameResourceCacheFullDesc => '預先下載全部已知艦娘、裝備、家具、地圖與音效，容量與耗時較大。';
+
+  @override
+  String get gameResourceCacheStart => '開始下載';
+
+  @override
+  String get gameResourceCachePause => '暫停下載';
+
+  @override
+  String get gameResourceCacheResume => '繼續下載';
+
+  @override
+  String get gameResourceCacheCheck => '檢查完整性';
+
+  @override
+  String get gameResourceCacheRepair => '補齊或修復';
+
+  @override
+  String get gameResourceCacheClear => '清除本機快取';
+
+  @override
+  String get gameResourceCacheIntegrityComplete => '目前快取完整';
+
+  @override
+  String get gameResourceCacheMissing => '缺少';
+
+  @override
+  String get gameResourceCacheDamaged => '損壞';
+
+  @override
+  String get gameResourceCacheItems => '項';
+
+  @override
+  String get gameResourceCacheDownloadConfirmTitle => '確認下載快取？';
+
+  @override
+  String get gameResourceCacheDownloadConfirmDesc =>
+      '將從官方伺服器批次下載所選模式的資源，可隨時暫停並繼續。';
+
+  @override
+  String get gameResourceCacheMobileConfirmDesc =>
+      '目前正在使用行動網路。繼續將消耗行動數據，是否允許本次下載？';
+
+  @override
+  String get gameResourceCacheWaitingForWifi => '正在等待 Wi-Fi，連線後會自動繼續下載。';
+
+  @override
+  String get gameResourceCacheClearConfirmTitle => '清除遊戲資源快取？';
+
+  @override
+  String get gameResourceCacheClearConfirmDesc => '將刪除已下載的遊戲資源；模式設定會保留。';
+
+  @override
+  String get gameResourceCacheCapacityBlocked => '快取已達 10 GB 上限，完整快取下載已暫停。';
+
+  @override
+  String get gameResourceCacheActionFailed => '快取操作未完成，請稍後重試。';
 }

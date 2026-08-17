@@ -38,6 +38,8 @@ final class GameResourceCacheStatus {
     required this.damagedCount,
     required this.fileCount,
     required this.capacityBlocked,
+    this.isMetered = false,
+    this.waitingForWifi = false,
   });
 
   static const empty = GameResourceCacheStatus(
@@ -53,6 +55,8 @@ final class GameResourceCacheStatus {
     damagedCount: 0,
     fileCount: 0,
     capacityBlocked: false,
+    isMetered: false,
+    waitingForWifi: false,
   );
 
   final GameResourceCacheMode mode;
@@ -67,6 +71,8 @@ final class GameResourceCacheStatus {
   final int damagedCount;
   final int fileCount;
   final bool capacityBlocked;
+  final bool isMetered;
+  final bool waitingForWifi;
 
   bool get isRunning =>
       state == GameResourceCacheState.downloading ||
@@ -93,6 +99,8 @@ final class GameResourceCacheStatus {
       damagedCount: number('damagedCount'),
       fileCount: number('fileCount'),
       capacityBlocked: map['capacityBlocked'] as bool? ?? false,
+      isMetered: map['isMetered'] as bool? ?? false,
+      waitingForWifi: map['waitingForWifi'] as bool? ?? false,
     );
   }
 }
@@ -101,10 +109,10 @@ abstract interface class GameResourceCachePort {
   Future<bool> configure(GameResourceCacheMode mode);
   Future<GameResourceCacheStatus> status();
   Future<bool> setManifest(GameResourceManifest manifest);
-  Future<bool> startDownload();
+  Future<bool> startDownload({bool allowMetered = false});
   Future<bool> pauseDownload();
   Future<GameResourceCacheStatus> checkIntegrity();
-  Future<bool> repair();
+  Future<bool> repair({bool allowMetered = false});
   Future<bool> clear();
 }
 
@@ -139,8 +147,11 @@ final class MethodChannelGameResourceCachePort
       false;
 
   @override
-  Future<bool> startDownload() async =>
-      await channel.invokeMethod<bool>('startDownload') ?? false;
+  Future<bool> startDownload({bool allowMetered = false}) async =>
+      await channel.invokeMethod<bool>('startDownload', <String, Object?>{
+        'allowMetered': allowMetered,
+      }) ??
+      false;
 
   @override
   Future<bool> pauseDownload() async =>
@@ -152,8 +163,11 @@ final class MethodChannelGameResourceCachePort
   );
 
   @override
-  Future<bool> repair() async =>
-      await channel.invokeMethod<bool>('repair') ?? false;
+  Future<bool> repair({bool allowMetered = false}) async =>
+      await channel.invokeMethod<bool>('repair', <String, Object?>{
+        'allowMetered': allowMetered,
+      }) ??
+      false;
 
   @override
   Future<bool> clear() async =>

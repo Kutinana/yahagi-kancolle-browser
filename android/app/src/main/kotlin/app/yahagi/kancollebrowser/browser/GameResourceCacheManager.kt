@@ -14,6 +14,7 @@ class GameResourceCacheManager(
     private val coordinator: GameResourceDownloadCoordinator,
     private val modeProvider: () -> GameResourceCacheMode,
     private val onModeChanged: (GameResourceCacheMode) -> Unit,
+    private val networkMonitor: GameResourceNetworkMonitor? = null,
 ) : MethodChannel.MethodCallHandler {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
@@ -31,9 +32,14 @@ class GameResourceCacheManager(
                 val urls = call.argument<List<*>>("urls")?.filterIsInstance<String>().orEmpty()
                 val targetBytes = (call.argument<Number>("targetBytes"))?.toLong() ?: 0L
                 coordinator.setManifest(profile, urls, targetBytes)
+                if (modeProvider() != GameResourceCacheMode.NONE) {
+                    coordinator.startDownload()
+                }
                 result.success(true)
             }
-            "startDownload" -> result.success(coordinator.startDownload())
+            "startDownload" -> result.success(
+                coordinator.startDownload(call.argument<Boolean>("allowMetered") == true),
+            )
             "pauseDownload" -> result.success(coordinator.pauseDownload())
             "checkIntegrity" -> runIo(result) {
                 coordinator.checkIntegrity()
@@ -41,7 +47,7 @@ class GameResourceCacheManager(
             }
             "repair" -> runIo(result) {
                 coordinator.checkIntegrity()
-                coordinator.startDownload()
+                coordinator.startDownload(call.argument<Boolean>("allowMetered") == true)
             }
             "clear" -> runIo(result) {
                 coordinator.pauseDownload()
@@ -55,6 +61,7 @@ class GameResourceCacheManager(
 
     fun dispose() {
         coordinator.dispose()
+        networkMonitor?.dispose()
         scope.cancel()
     }
 
@@ -74,6 +81,8 @@ class GameResourceCacheManager(
             "damagedCount" to status.damagedCount,
             "fileCount" to cache.fileCount,
             "capacityBlocked" to status.capacityBlocked,
+            "isMetered" to status.isMetered,
+            "waitingForWifi" to status.waitingForWifi,
         )
     }
 

@@ -53,6 +53,7 @@ import app.yahagi.kancollebrowser.browser.GameResourceCacheStore
 import app.yahagi.kancollebrowser.browser.HttpUrlConnectionGameResourceFetcher
 import app.yahagi.kancollebrowser.browser.GameResourceCacheManager
 import app.yahagi.kancollebrowser.browser.GameResourceDownloadCoordinator
+import app.yahagi.kancollebrowser.browser.GameResourceNetworkMonitor
 import app.yahagi.kancollebrowser.capture.GameCaptureBridge
 import app.yahagi.kancollebrowser.capture.ScreenshotCaptureAttempt
 import app.yahagi.kancollebrowser.capture.ScreenshotCapturePolicy
@@ -217,17 +218,21 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             ),
         ) { gameResourceCacheMode }
         gameResourceCacheEngine = resourceEngine
+        val resourceNetworkMonitor = GameResourceNetworkMonitor(context)
         val resourceCoordinator = GameResourceDownloadCoordinator(
             resourceEngine,
             { gameResourceCacheMode },
             File(resourceCacheRoot, "download_state.json"),
+            resourceNetworkMonitor::state,
         )
         val resourceManager = GameResourceCacheManager(
             resourceEngine,
             resourceCoordinator,
             { gameResourceCacheMode },
             ::onGameResourceCacheModeChanged,
+            resourceNetworkMonitor,
         )
+        resourceNetworkMonitor.start(resourceCoordinator::onNetworkChanged)
         gameResourceCacheManager = resourceManager
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,

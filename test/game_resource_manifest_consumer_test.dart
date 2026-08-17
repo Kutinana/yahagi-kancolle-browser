@@ -108,14 +108,14 @@ final class RecordingPort implements GameResourceCachePort {
   }
 
   @override
-  Future<bool> startDownload() async => true;
+  Future<bool> startDownload({bool allowMetered = false}) async => true;
   @override
   Future<bool> pauseDownload() async => true;
   @override
   Future<GameResourceCacheStatus> checkIntegrity() async =>
       GameResourceCacheStatus.empty;
   @override
-  Future<bool> repair() async => true;
+  Future<bool> repair({bool allowMetered = false}) async => true;
   @override
   Future<bool> clear() async => true;
 }

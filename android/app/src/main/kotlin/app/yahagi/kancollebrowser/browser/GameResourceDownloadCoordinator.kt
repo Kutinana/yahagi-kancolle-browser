@@ -28,18 +28,30 @@ data class GameResourceDownloadStatus(
     val missingCount: Int,
     val damagedCount: Int,
     val capacityBlocked: Boolean,
+    val isMetered: Boolean,
+    val waitingForWifi: Boolean,
+)
+
+data class GameResourceNetworkState(
+    val connected: Boolean,
+    val metered: Boolean,
 )
 
 class GameResourceDownloadCoordinator(
     private val engine: GameResourceCacheEngine,
     private val modeProvider: () -> GameResourceCacheMode,
     private val stateFile: File,
+    private val networkProvider: () -> GameResourceNetworkState = {
+        GameResourceNetworkState(connected = true, metered = false)
+    },
 ) {
     private val executor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "game-resource-preloader").apply { isDaemon = true }
     }
     private val workerRunning = AtomicBoolean(false)
     @Volatile private var pauseRequested = false
+    @Volatile private var networkPaused = false
+    @Volatile private var allowMetered = false
     private var profile = "none"
     private var urls = emptyList<String>()
     private var targetBytes = 0L
@@ -70,11 +82,13 @@ class GameResourceDownloadCoordinator(
             GameResourceDownloadState.IDLE
         }
         pauseRequested = false
+        networkPaused = false
+        allowMetered = false
         persist()
     }
 
     @Synchronized
-    fun startDownload(): Boolean {
+    fun startDownload(allowMetered: Boolean = false): Boolean {
         val mode = modeProvider()
         if (mode == GameResourceCacheMode.NONE || urls.isEmpty()) return false
         if (mode == GameResourceCacheMode.FULL && targetBytes > engine.status().maxBytes) {
@@ -83,6 +97,15 @@ class GameResourceDownloadCoordinator(
             persist()
             return false
         }
+        this.allowMetered = allowMetered
+        if (!canUseCurrentNetwork()) {
+            networkPaused = true
+            pauseRequested = true
+            state = GameResourceDownloadState.PAUSED
+            persist()
+            return false
+        }
+        networkPaused = false
         pauseRequested = false
         state = GameResourceDownloadState.DOWNLOADING
         if (startedAt == 0L) startedAt = System.currentTimeMillis()
@@ -93,10 +116,31 @@ class GameResourceDownloadCoordinator(
 
     @Synchronized
     fun pauseDownload(): Boolean {
+        networkPaused = false
         pauseRequested = true
         state = GameResourceDownloadState.PAUSED
         persist()
         return true
+    }
+
+    @Synchronized
+    fun onNetworkChanged() {
+        if (!canUseCurrentNetwork()) {
+            if (state == GameResourceDownloadState.DOWNLOADING) {
+                networkPaused = true
+                pauseRequested = true
+                state = GameResourceDownloadState.PAUSED
+                persist()
+            }
+            return
+        }
+        if (!networkPaused || modeProvider() == GameResourceCacheMode.NONE || urls.isEmpty()) return
+        networkPaused = false
+        pauseRequested = false
+        state = GameResourceDownloadState.DOWNLOADING
+        if (startedAt == 0L) startedAt = System.currentTimeMillis()
+        persist()
+        if (workerRunning.compareAndSet(false, true)) executor.execute(::downloadLoop)
     }
 
     fun checkIntegrity(): GameResourceDownloadStatus {
@@ -138,6 +182,8 @@ class GameResourceDownloadCoordinator(
             missingCount = missingCount,
             damagedCount = damagedCount,
             capacityBlocked = state == GameResourceDownloadState.CAPACITY_BLOCKED,
+            isMetered = networkProvider().metered,
+            waitingForWifi = networkPaused,
         )
     }
 
@@ -150,6 +196,15 @@ class GameResourceDownloadCoordinator(
         try {
             for (url in urls) {
                 if (pauseRequested) return
+                if (!canUseCurrentNetwork()) {
+                    synchronized(this) {
+                        networkPaused = true
+                        pauseRequested = true
+                        state = GameResourceDownloadState.PAUSED
+                        persist()
+                    }
+                    return
+                }
                 if (engine.hasCached(url)) continue
                 val before = engine.status()
                 val response = engine.fetch(url) ?: continue
@@ -184,6 +239,11 @@ class GameResourceDownloadCoordinator(
                 executor.execute(::downloadLoop)
             }
         }
+    }
+
+    private fun canUseCurrentNetwork(): Boolean {
+        val network = networkProvider()
+        return network.connected && (!network.metered || allowMetered)
     }
 
     @Synchronized

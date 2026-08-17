@@ -102,16 +102,59 @@ class GameResourceDownloadCoordinatorTest {
         restored.dispose()
     }
 
+    @Test
+    fun `bulk download waits for wifi and resumes when network changes`() {
+        var network = GameResourceNetworkState(connected = true, metered = true)
+        val fixture = fixture(networkProvider = { network })
+        fixture.coordinator.setManifest(
+            "light",
+            listOf(official("/kcs2/resources/a.png")),
+            1,
+        )
+
+        assertFalse(fixture.coordinator.startDownload())
+        assertTrue(fixture.coordinator.status().waitingForWifi)
+
+        network = GameResourceNetworkState(connected = true, metered = false)
+        fixture.coordinator.onNetworkChanged()
+        awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
+        fixture.coordinator.dispose()
+    }
+
+    @Test
+    fun `confirmed mobile data download is allowed for current run`() {
+        val fixture = fixture(
+            networkProvider = {
+                GameResourceNetworkState(connected = true, metered = true)
+            },
+        )
+        fixture.coordinator.setManifest(
+            "light",
+            listOf(official("/kcs2/resources/a.png")),
+            1,
+        )
+
+        assertTrue(fixture.coordinator.startDownload(allowMetered = true))
+        awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
+        fixture.coordinator.dispose()
+    }
+
     private fun fixture(
         mode: GameResourceCacheMode = GameResourceCacheMode.LIGHT,
         maxBytes: Long = 10_000,
         stateFile: File = temporaryFolder.newFile(),
         fetcher: GameResourceFetcher = GameResourceFetcher { _, _, _ -> response(byteArrayOf(1)) },
+        networkProvider: () -> GameResourceNetworkState = {
+            GameResourceNetworkState(connected = true, metered = false)
+        },
     ): Fixture {
         val root = temporaryFolder.newFolder()
         val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), maxBytes)
         val engine = GameResourceCacheEngine(store, fetcher) { mode }
-        return Fixture(engine, GameResourceDownloadCoordinator(engine, { mode }, stateFile))
+        return Fixture(
+            engine,
+            GameResourceDownloadCoordinator(engine, { mode }, stateFile, networkProvider),
+        )
     }
 
     private fun awaitState(

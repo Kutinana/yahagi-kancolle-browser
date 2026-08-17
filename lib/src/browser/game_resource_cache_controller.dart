@@ -62,9 +62,11 @@ final class GameResourceCacheController extends ChangeNotifier {
     await refresh();
   }
 
-  Future<bool> startDownload() => _action(_port.startDownload);
+  Future<bool> startDownload({bool allowMetered = false}) =>
+      _action(() => _port.startDownload(allowMetered: allowMetered));
   Future<bool> pauseDownload() => _action(_port.pauseDownload);
-  Future<bool> repair() => _action(_port.repair);
+  Future<bool> repair({bool allowMetered = false}) =>
+      _action(() => _port.repair(allowMetered: allowMetered));
   Future<bool> clear() => _action(_port.clear);
 
   Future<GameResourceCacheStatus> checkIntegrity() async {

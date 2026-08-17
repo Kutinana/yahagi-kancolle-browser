@@ -94,7 +94,7 @@ final class FakePort implements GameResourceCachePort {
   Future<bool> setManifest(GameResourceManifest manifest) async => true;
 
   @override
-  Future<bool> startDownload() async => true;
+  Future<bool> startDownload({bool allowMetered = false}) async => true;
 
   @override
   Future<bool> pauseDownload() async => true;
@@ -103,7 +103,7 @@ final class FakePort implements GameResourceCachePort {
   Future<GameResourceCacheStatus> checkIntegrity() async => nextStatus;
 
   @override
-  Future<bool> repair() async => true;
+  Future<bool> repair({bool allowMetered = false}) async => true;
 
   @override
   Future<bool> clear() async {

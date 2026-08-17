@@ -1,0 +1,295 @@
+import 'package:flutter/material.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
+
+import '../browser/game_resource_cache_channel.dart';
+import '../browser/game_resource_cache_controller.dart';
+import '../browser/game_resource_cache_store.dart';
+
+class GameResourceCacheSection extends StatefulWidget {
+  const GameResourceCacheSection({super.key, required this.controller});
+
+  final GameResourceCacheController controller;
+
+  @override
+  State<GameResourceCacheSection> createState() =>
+      _GameResourceCacheSectionState();
+}
+
+class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
+  bool _integrityChecked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.setPageVisible(true);
+  }
+
+  @override
+  void didUpdateWidget(GameResourceCacheSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+    oldWidget.controller.setPageVisible(false);
+    widget.controller.setPageVisible(true);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.setPageVisible(false);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    return AnimatedBuilder(
+      animation: widget.controller,
+      builder: (context, _) {
+        final controller = widget.controller;
+        final status = controller.status;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.storage_outlined),
+              title: Text(l10n.gameResourceCacheTitle),
+              subtitle: Text(l10n.gameResourceCacheDesc),
+            ),
+            RadioGroup<GameResourceCacheMode>(
+              groupValue: controller.mode,
+              onChanged: controller.busy
+                  ? (_) {}
+                  : (value) {
+                      if (value != null) controller.setMode(value);
+                    },
+              child: Column(
+                children: <Widget>[
+                  _modeTile(
+                    mode: GameResourceCacheMode.none,
+                    title: l10n.gameResourceCacheNone,
+                    subtitle: l10n.gameResourceCacheNoneDesc,
+                  ),
+                  _modeTile(
+                    mode: GameResourceCacheMode.light,
+                    title: l10n.gameResourceCacheLight,
+                    subtitle: l10n.gameResourceCacheLightDesc,
+                  ),
+                  _modeTile(
+                    mode: GameResourceCacheMode.full,
+                    title: l10n.gameResourceCacheFull,
+                    subtitle: l10n.gameResourceCacheFullDesc,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Color(0xff294052), height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+              child: Text(
+                controller.completenessLine,
+                key: const Key('cache-completeness-line'),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (status.capacityBlocked)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Text(
+                  l10n.gameResourceCacheCapacityBlocked,
+                  style: const TextStyle(color: Color(0xffffb4a9)),
+                ),
+              ),
+            if (status.waitingForWifi)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Text(
+                  l10n.gameResourceCacheWaitingForWifi,
+                  style: const TextStyle(color: Color(0xff9bc7e4)),
+                ),
+              ),
+            if (_integrityChecked) _integrityResult(l10n, status),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  if (controller.mode != GameResourceCacheMode.none)
+                    FilledButton.icon(
+                      key: const Key('cache-download-toggle'),
+                      onPressed: controller.busy
+                          ? null
+                          : () =>
+                                status.state ==
+                                    GameResourceCacheState.downloading
+                                ? _run(controller.pauseDownload)
+                                : _confirmDownload(l10n),
+                      icon: Icon(
+                        status.state == GameResourceCacheState.downloading
+                            ? Icons.pause
+                            : Icons.download,
+                      ),
+                      label: Text(switch (status.state) {
+                        GameResourceCacheState.downloading =>
+                          l10n.gameResourceCachePause,
+                        GameResourceCacheState.paused =>
+                          l10n.gameResourceCacheResume,
+                        _ => l10n.gameResourceCacheStart,
+                      }),
+                    ),
+                  OutlinedButton.icon(
+                    key: const Key('cache-check-integrity'),
+                    onPressed: controller.busy ? null : _checkIntegrity,
+                    icon: const Icon(Icons.fact_check_outlined),
+                    label: Text(l10n.gameResourceCacheCheck),
+                  ),
+                  if (_integrityChecked &&
+                      (status.missingCount > 0 || status.damagedCount > 0))
+                    OutlinedButton.icon(
+                      key: const Key('cache-repair'),
+                      onPressed: controller.busy
+                          ? null
+                          : () => _confirmRepair(l10n),
+                      icon: const Icon(Icons.build_outlined),
+                      label: Text(l10n.gameResourceCacheRepair),
+                    ),
+                  TextButton.icon(
+                    key: const Key('cache-clear'),
+                    onPressed: controller.busy
+                        ? null
+                        : () => _confirmClear(l10n),
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(l10n.gameResourceCacheClear),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _modeTile({
+    required GameResourceCacheMode mode,
+    required String title,
+    required String subtitle,
+  }) => RadioListTile<GameResourceCacheMode>(
+    key: Key('cache-mode-${mode.name}'),
+    value: mode,
+    title: Text(title),
+    subtitle: Text(subtitle),
+  );
+
+  Widget _integrityResult(
+    AppLocalizations l10n,
+    GameResourceCacheStatus status,
+  ) {
+    final complete = status.missingCount == 0 && status.damagedCount == 0;
+    return Padding(
+      key: const Key('cache-integrity-result'),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+      child: Text(
+        complete
+            ? l10n.gameResourceCacheIntegrityComplete
+            : '${l10n.gameResourceCacheMissing} ${status.missingCount} '
+                  '${l10n.gameResourceCacheItems} · '
+                  '${l10n.gameResourceCacheDamaged} ${status.damagedCount} '
+                  '${l10n.gameResourceCacheItems}',
+        style: TextStyle(
+          color: complete ? const Color(0xff8bd5a7) : const Color(0xffffca80),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _checkIntegrity() async {
+    await widget.controller.checkIntegrity();
+    if (mounted) setState(() => _integrityChecked = true);
+  }
+
+  Future<void> _confirmDownload(AppLocalizations l10n) async {
+    final isMetered = widget.controller.status.isMetered;
+    final confirmed = await _confirm(
+      title: l10n.gameResourceCacheDownloadConfirmTitle,
+      description: isMetered
+          ? l10n.gameResourceCacheMobileConfirmDesc
+          : l10n.gameResourceCacheDownloadConfirmDesc,
+      confirmLabel: l10n.confirm,
+    );
+    if (confirmed) {
+      await _run(
+        () => widget.controller.startDownload(allowMetered: isMetered),
+      );
+    }
+  }
+
+  Future<void> _confirmRepair(AppLocalizations l10n) async {
+    final isMetered = widget.controller.status.isMetered;
+    if (isMetered) {
+      final confirmed = await _confirm(
+        title: l10n.gameResourceCacheDownloadConfirmTitle,
+        description: l10n.gameResourceCacheMobileConfirmDesc,
+        confirmLabel: l10n.confirm,
+      );
+      if (!confirmed) return;
+    }
+    await _run(() => widget.controller.repair(allowMetered: isMetered));
+  }
+
+  Future<void> _confirmClear(AppLocalizations l10n) async {
+    final confirmed = await _confirm(
+      title: l10n.gameResourceCacheClearConfirmTitle,
+      description: l10n.gameResourceCacheClearConfirmDesc,
+      confirmLabel: l10n.gameResourceCacheClear,
+    );
+    if (confirmed) {
+      await _run(widget.controller.clear);
+      if (mounted) setState(() => _integrityChecked = false);
+    }
+  }
+
+  Future<bool> _confirm({
+    required String title,
+    required String description,
+    required String confirmLabel,
+  }) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(title),
+          content: Text(description),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(
+                (AppLocalizations.of(context) ??
+                        lookupAppLocalizations(const Locale('zh')))
+                    .cancel,
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(confirmLabel),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+
+  Future<void> _run(Future<bool> Function() action) async {
+    final succeeded = await action();
+    if (!succeeded && mounted) {
+      final l10n =
+          AppLocalizations.of(context) ??
+          lookupAppLocalizations(const Locale('zh'));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.gameResourceCacheActionFailed)),
+      );
+    }
+  }
+}
