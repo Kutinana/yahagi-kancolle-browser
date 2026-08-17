@@ -1,0 +1,14 @@
+[
+  "https://w00g.kancolle-server.com/gadget_html5/js/kcs_const.js",
+  "https://w00g.kancolle-server.com/gadget_html5/js/kcs_cda.js",
+  "https://w00g.kancolle-server.com/gadget_html5/js/kcs_content.js",
+  "https://w00g.kancolle-server.com/gadget_html5/js/kcs_global.js",
+  "https://w00g.kancolle-server.com/gadget_html5/js/kcs_login.js",
+  "https://w00g.kancolle-server.com/gadget_html5/script/jquery.min.js",
+  "/kcs2/version.json",
+  "/kcs2/js/main.js",
+  "/kcs2/img/common/bg_map/bg_h.png",
+  "/kcs2/img/common/bg_map/bg_y.png",
+  "/kcs2/resources/font/ShipNameFont.woff2",
+  "/kcs2/resources/voice/titlecall_1/001.mp3"
+]

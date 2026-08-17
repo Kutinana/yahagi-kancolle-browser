@@ -22,6 +22,18 @@ class GameResourceCacheRulesTest {
     fun `accepts current images and legacy sounds`() {
         assertTrue(
             GameResourceCacheRules.shouldCache(
+                "https://w01y.kancolle-server.com/kcs2/js/main.js?version=123",
+                "GET",
+            ),
+        )
+        assertTrue(
+            GameResourceCacheRules.shouldCache(
+                "https://w01y.kancolle-server.com/kcs2/version.json",
+                "GET",
+            ),
+        )
+        assertTrue(
+            GameResourceCacheRules.shouldCache(
                 "https://w02k.kancolle-server.com/kcs2/img/common/common.png",
                 "GET",
             ),
@@ -30,6 +42,12 @@ class GameResourceCacheRulesTest {
             GameResourceCacheRules.shouldCache(
                 "http://w10k.kancolle-server.com/kcs/sound/kc123/001.mp3",
                 null,
+            ),
+        )
+        assertTrue(
+            GameResourceCacheRules.shouldCache(
+                "https://w01y.kancolle-server.com/kcs2/resources/ship/full/a.png",
+                "GET",
             ),
         )
     }

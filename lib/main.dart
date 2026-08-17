@@ -31,6 +31,9 @@ import 'src/browser/game_screenshot_controller.dart';
 import 'src/browser/game_surface_boundary.dart';
 import 'src/browser/game_environment_host.dart';
 import 'src/browser/game_application_restart_port.dart';
+import 'src/browser/game_resource_cache_controller.dart';
+import 'src/browser/game_resource_manifest_builder.dart';
+import 'src/browser/game_resource_manifest_consumer.dart';
 import 'src/capture/battle_result_warning_overlay.dart';
 import 'src/capture/capture_mode_controller.dart';
 import 'src/capture/capture_mode_store.dart';
@@ -158,6 +161,8 @@ Future<void> main() async {
     questStore: questStore,
     gameStateStore: gameStateStore,
   );
+  final gameResourceCacheController = GameResourceCacheController();
+  await gameResourceCacheController.initialize();
   final senkaController = SenkaController(
     store: await SharedPreferencesSenkaStore.create(),
   );
@@ -244,9 +249,21 @@ Future<void> main() async {
     predictionMethod: () => battlePredictionSettingsController.method,
   );
   fcdMapController.addListener(battleController.refreshNodeLabel);
+  final gameResourceManifestConsumer = GameResourceManifestConsumer(
+    controller: gameResourceCacheController,
+    ownedShipMasterIds: () => gameStateController.state.ships.values
+        .map((ship) => ship.masterId)
+        .toSet(),
+    ownedSlotItemMasterIds: () => gameStateController.state.slotItems.values
+        .map((item) => item.masterId)
+        .toSet(),
+    staticUrlsLoader: GameResourceStaticCatalog.load,
+    waitForGameState: () => gameStateController.idle,
+  );
   final gameApiEventPipeline = GameApiEventPipeline(
     consumers: <GameApiEventConsumer>[
       gameStateController,
+      gameResourceManifestConsumer,
       senkaController,
       battleController,
     ],
