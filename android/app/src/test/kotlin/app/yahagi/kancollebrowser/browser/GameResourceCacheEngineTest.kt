@@ -141,6 +141,27 @@ class GameResourceCacheEngineTest {
         assertEquals(GameResourceInspectionState.MISSING, engine.inspectMetadata(url).state)
     }
 
+    @Test
+    fun `changed manifest length bypasses stale cache and stores replacement`() {
+        val fetcher = QueueFetcher(
+            result(byteArrayOf(1)),
+            result(byteArrayOf(2, 3)),
+        )
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/a.png")
+
+        engine.fetch(url, expectedLength = 1)
+        val replacement = engine.fetch(url, expectedLength = 2)
+
+        assertArrayEquals(byteArrayOf(2, 3), replacement?.bytes)
+        assertEquals(GameResourceResponseSource.NETWORK, replacement?.source)
+        assertEquals(2, fetcher.calls.get())
+        assertEquals(
+            GameResourceInspectionState.VALID,
+            engine.inspectMetadata(url, expectedLength = 2).state,
+        )
+    }
+
     private fun engine(
         fetcher: GameResourceFetcher,
         mode: GameResourceCacheMode = GameResourceCacheMode.LIGHT,

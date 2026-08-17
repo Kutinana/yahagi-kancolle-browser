@@ -39,6 +39,20 @@ class GameResourceCacheIndexTest {
         assertEquals(listOf(entry(2).key), reloaded.snapshot().map { it.key })
     }
 
+    @Test
+    fun `clear journal prevents old entries from returning after reload`() {
+        val root = temporaryFolder.newFolder()
+        val indexFile = root.resolve("index.json")
+        val index = GameResourceCacheIndex(indexFile)
+        index.put(entry(1))
+        index.put(entry(2))
+
+        index.clear()
+
+        assertTrue(GameResourceCacheIndex(indexFile).snapshot().isEmpty())
+        assertTrue(root.resolve("index.json.journal").readText().contains("\"op\":\"clear\""))
+    }
+
     private fun entry(id: Int) = GameResourceCacheEntry(
         key = "/kcs2/resources/$id.png",
         fileName = "$id.cache",

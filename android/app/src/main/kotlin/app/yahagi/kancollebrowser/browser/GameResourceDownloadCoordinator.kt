@@ -138,7 +138,7 @@ class GameResourceDownloadCoordinator(
         var damaged = 0
         var outdated = 0
         filteredUrls.forEach { url ->
-            val inspection = engine.inspectMetadata(url)
+            val inspection = engine.inspectMetadata(url, filteredExpectedLengths[url])
             when (inspection.state) {
                 GameResourceInspectionState.VALID -> validLengths[url] = inspection.byteLength
                 GameResourceInspectionState.MISSING -> missing++
@@ -405,11 +405,12 @@ class GameResourceDownloadCoordinator(
                     }
                     return
                 }
-                if (engine.hasCachedMetadata(url)) continue
+                val expectedLength = synchronized(this) { expectedByteLengths[url] }
+                if (engine.hasCachedMetadata(url, expectedLength)) continue
                 val response = try {
                     engine.fetch(
                         url,
-                        expectedLength = synchronized(this) { expectedByteLengths[url] },
+                        expectedLength = expectedLength,
                         shouldStore = {
                             workerGeneration == generation.get() &&
                                 modeProvider() != GameResourceCacheMode.NONE
@@ -427,7 +428,7 @@ class GameResourceDownloadCoordinator(
                 if (response.source == GameResourceResponseSource.NETWORK) {
                     synchronized(this) { downloadedBytes += response.bytes.size }
                 }
-                val inspection = engine.inspect(url)
+                val inspection = engine.inspect(url, expectedLength)
                 if (inspection.state == GameResourceInspectionState.VALID) {
                     synchronized(this) {
                         val previousLength = validByteLengths.put(url, inspection.byteLength) ?: 0L
@@ -471,7 +472,12 @@ class GameResourceDownloadCoordinator(
 
     private fun refreshInspectionCounts(verifyChecksum: Boolean = false) {
         val inspections = urls.associateWith { url ->
-            if (verifyChecksum) engine.inspect(url) else engine.inspectMetadata(url)
+            val expectedLength = expectedByteLengths[url]
+            if (verifyChecksum) {
+                engine.inspect(url, expectedLength)
+            } else {
+                engine.inspectMetadata(url, expectedLength)
+            }
         }
         validByteLengths.clear()
         inspections.forEach { (url, inspection) ->

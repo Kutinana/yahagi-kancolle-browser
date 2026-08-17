@@ -151,6 +151,25 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     @Test
+    fun `new expected length marks existing cache outdated and replaces it`() {
+        val url = official("/kcs2/resources/changed.png")
+        val responses = ArrayDeque(
+            listOf(response(byteArrayOf(1)), response(byteArrayOf(2, 3))),
+        )
+        val fixture = fixture(fetcher = GameResourceFetcher { _, _, _ -> responses.removeFirst() })
+        fixture.engine.fetch(url, expectedLength = 1)
+
+        fixture.coordinator.setManifest("full", listOf(url), 2, expectedLengths = listOf(2))
+        assertEquals(1, fixture.coordinator.status().outdatedCount)
+        assertTrue(fixture.coordinator.startDownload())
+        awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
+
+        assertEquals(2, fixture.coordinator.status().cachedBytes)
+        assertEquals(0, fixture.coordinator.status().outdatedCount)
+        fixture.coordinator.dispose()
+    }
+
+    @Test
     fun `paused manifest snapshot is restored`() {
         val stateFile = temporaryFolder.newFile("download-state.json")
         val fixture = fixture(stateFile = stateFile)

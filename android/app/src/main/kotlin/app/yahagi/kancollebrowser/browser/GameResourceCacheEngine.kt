@@ -35,20 +35,25 @@ class GameResourceCacheEngine(
         val lock = locks[(key.hashCode() and Int.MAX_VALUE) % locks.size]
         synchronized(lock) {
             val cached = store.read(key)
+            val cachedLengthMismatch = cached != null && expectedLength != null &&
+                cached.entry.byteLength != expectedLength
             val mustValidate = GameResourceCacheRules.isAlwaysValidated(url) ||
+                cachedLengthMismatch ||
                 (cached != null && cached.entry.version == null &&
                     clock() - cached.entry.lastValidatedAt >= UNVERSIONED_TTL_MS)
             if (cached != null && !mustValidate) return cached.toResponse()
             val strictValidation = GameResourceCacheRules.requiresStrictValidation(url)
 
-            val fetched = runCatching { fetcher.fetch(url, requestHeaders, cached?.entry) }.getOrNull()
-                ?: return if (strictValidation) null else cached?.toResponse()
+            val validationEntry = cached?.entry?.takeUnless { cachedLengthMismatch }
+            val fetched = runCatching { fetcher.fetch(url, requestHeaders, validationEntry) }.getOrNull()
+                ?: return if (strictValidation || cachedLengthMismatch) null else cached?.toResponse()
             if (fetched.statusCode == HttpURLConnection.HTTP_NOT_MODIFIED) {
+                if (cachedLengthMismatch) return null
                 store.markValidated(key)
                 return store.read(key)?.toResponse() ?: cached?.toResponse()
             }
             if (fetched.statusCode !in 200..299) {
-                return if (strictValidation) null else cached?.toResponse()
+                return if (strictValidation || cachedLengthMismatch) null else cached?.toResponse()
             }
             val declaredLength = fetched.headers.value("Content-Length")?.toLongOrNull()
             if (declaredLength != null && declaredLength != fetched.bytes.size.toLong()) {
@@ -99,15 +104,21 @@ class GameResourceCacheEngine(
         return inspect(url).state == GameResourceInspectionState.VALID
     }
 
-    fun hasCachedMetadata(url: String): Boolean {
-        return inspectMetadata(url).state == GameResourceInspectionState.VALID
+    fun hasCachedMetadata(url: String, expectedLength: Long? = null): Boolean {
+        return inspectMetadata(url, expectedLength).state == GameResourceInspectionState.VALID
     }
 
-    fun inspect(url: String): GameResourceInspection = inspect(url, verifyChecksum = true)
+    fun inspect(url: String, expectedLength: Long? = null): GameResourceInspection =
+        inspect(url, verifyChecksum = true, expectedLength = expectedLength)
 
-    fun inspectMetadata(url: String): GameResourceInspection = inspect(url, verifyChecksum = false)
+    fun inspectMetadata(url: String, expectedLength: Long? = null): GameResourceInspection =
+        inspect(url, verifyChecksum = false, expectedLength = expectedLength)
 
-    private fun inspect(url: String, verifyChecksum: Boolean): GameResourceInspection {
+    private fun inspect(
+        url: String,
+        verifyChecksum: Boolean,
+        expectedLength: Long?,
+    ): GameResourceInspection {
         val key = GameResourceCacheKey.from(url)
             ?: return GameResourceInspection(GameResourceInspectionState.MISSING)
         val stored = if (verifyChecksum) store.inspect(key) else store.inspectMetadata(key)
@@ -115,6 +126,8 @@ class GameResourceCacheEngine(
         val state = when {
             stored.state == GameResourceStoredState.MISSING -> GameResourceInspectionState.MISSING
             stored.state == GameResourceStoredState.DAMAGED -> GameResourceInspectionState.DAMAGED
+            entry != null && expectedLength != null && entry.byteLength != expectedLength ->
+                GameResourceInspectionState.OUTDATED
             entry != null && entry.version == null &&
                 clock() - entry.lastValidatedAt >= UNVERSIONED_TTL_MS ->
                 GameResourceInspectionState.OUTDATED

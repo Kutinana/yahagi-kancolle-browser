@@ -54,9 +54,13 @@ class GameResourceCacheIndex(private val indexFile: File) {
     @Synchronized
     fun clear() {
         ensureLoaded()
+        journalFile.parentFile?.mkdirs()
+        journalFile.appendText(JSONObject().put("op", "clear").toString() + "\n")
         entries.clear()
-        save()
-        journalFile.delete()
+        if (journalFile.length() >= MAX_JOURNAL_BYTES) {
+            save()
+            journalFile.delete()
+        }
     }
 
     private fun ensureLoaded() {
@@ -82,6 +86,7 @@ class GameResourceCacheIndex(private val indexFile: File) {
                         entries[it.key] = it
                     }
                     "remove" -> entries.remove(operation.getString("key"))
+                    "clear" -> entries.clear()
                 }
             }
         }
