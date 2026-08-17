@@ -80,3 +80,6 @@ test/fixtures/*
 test/fixtures/poi_ezexped/*
 !test/fixtures/poi_ezexped/expedition_rules.json
 test/*/fixtures/
+
+# Local Git worktrees
+.worktrees/
