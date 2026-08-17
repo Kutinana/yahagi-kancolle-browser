@@ -40,7 +40,7 @@ class GameResourceCacheRulesTest {
         )
         assertTrue(
             GameResourceCacheRules.shouldCache(
-                "http://w10k.kancolle-server.com/kcs/sound/kc123/001.mp3",
+                "https://w10k.kancolle-server.com/kcs/sound/kc123/001.mp3",
                 null,
             ),
         )
@@ -59,6 +59,12 @@ class GameResourceCacheRulesTest {
         assertTrue(
             GameResourceCacheRules.shouldCache(
                 "https://w00g.kancolle-server.com/kcscontents/image/banner.png",
+                "GET",
+            ),
+        )
+        assertTrue(
+            GameResourceCacheRules.shouldCache(
+                "https://w00g.kancolle-server.com/kcs2/hc.html",
                 "GET",
             ),
         )
@@ -102,6 +108,18 @@ class GameResourceCacheRulesTest {
                 "GET",
             ),
         )
+        assertFalse(
+            GameResourceCacheRules.shouldCache(
+                "http://w17k.kancolle-server.com/kcs2/resources/a.png",
+                "GET",
+            ),
+        )
+        assertFalse(
+            GameResourceCacheRules.shouldCache(
+                "https://w17k.kancolle-server.com:8443/kcs2/resources/a.png",
+                "GET",
+            ),
+        )
     }
 
     @Test
@@ -110,7 +128,7 @@ class GameResourceCacheRulesTest {
             "https://w01k.kancolle-server.com/kcs2/resources/a.png?version=1&x=2",
         )
         val second = GameResourceCacheKey.from(
-            "http://w49k.kancolle-server.com/kcs2/resources/a.png?version=1&x=2",
+            "https://w49k.kancolle-server.com/kcs2/resources/a.png?version=1&x=2",
         )
 
         assertEquals(first, second)

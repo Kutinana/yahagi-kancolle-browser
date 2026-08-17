@@ -8,6 +8,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class GameResourceCacheStoreTest {
     @get:Rule
@@ -55,6 +58,18 @@ class GameResourceCacheStoreTest {
     }
 
     @Test
+    fun `metadata inspection avoids checksumming until explicit integrity check`() {
+        val root = temporaryFolder.newFolder("cache")
+        val key = GameResourceCacheKey("/kcs2/resources/a.png")
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 10_000)
+        val entry = store.commit(key, byteArrayOf(1, 2, 3), mimeType = "image/png")
+        root.resolve("files/${entry.fileName}").writeBytes(byteArrayOf(4, 5, 6))
+
+        assertEquals(GameResourceStoredState.VALID, store.inspectMetadata(key).state)
+        assertEquals(GameResourceStoredState.DAMAGED, store.inspect(key).state)
+    }
+
+    @Test
     fun `eviction removes least recently used unprotected files`() {
         var now = 1L
         val root = temporaryFolder.newFolder("cache")
@@ -87,5 +102,33 @@ class GameResourceCacheStoreTest {
         assertEquals(listOf(key), store.evictToFit(3))
         assertFalse(store.contains(key))
         assertFalse(store.wouldExceedCapacity(3))
+    }
+
+    @Test
+    fun `concurrent commits cannot exceed hard capacity`() {
+        val root = temporaryFolder.newFolder("cache")
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 3)
+        val ready = CountDownLatch(2)
+        val release = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(2)
+        val futures = (1..2).map { id ->
+            pool.submit {
+                ready.countDown()
+                release.await(5, TimeUnit.SECONDS)
+                store.commitWithEviction(
+                    GameResourceCacheKey("/kcs2/resources/$id.png"),
+                    byteArrayOf(id.toByte(), id.toByte()),
+                    mimeType = "image/png",
+                )
+            }
+        }
+        assertTrue(ready.await(5, TimeUnit.SECONDS))
+
+        release.countDown()
+        futures.forEach { it.get(5, TimeUnit.SECONDS) }
+
+        assertTrue(store.totalBytes() <= 3)
+        assertEquals(1, store.entries().size)
+        pool.shutdownNow()
     }
 }

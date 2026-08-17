@@ -67,6 +67,29 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     @Test
+    fun `clear cancellation prevents an in flight response from being stored`() {
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val url = official("/kcs2/resources/in-flight.png")
+        val fixture = fixture(fetcher = GameResourceFetcher { _, _, _ ->
+            started.countDown()
+            release.await(5, TimeUnit.SECONDS)
+            response(byteArrayOf(1))
+        })
+        fixture.coordinator.setManifest("light", listOf(url), 1)
+        fixture.coordinator.startDownload()
+        assertTrue(started.await(5, TimeUnit.SECONDS))
+
+        fixture.coordinator.cancelDownload()
+        fixture.engine.clear()
+        release.countDown()
+        awaitState(fixture.coordinator, GameResourceDownloadState.PAUSED)
+
+        assertFalse(fixture.engine.hasCached(url))
+        fixture.coordinator.dispose()
+    }
+
+    @Test
     fun `full mode uses lru eviction and continues downloading`() {
         val fixture = fixture(
             mode = GameResourceCacheMode.FULL,
@@ -98,6 +121,26 @@ class GameResourceDownloadCoordinatorTest {
             }
         })
         fixture.coordinator.setManifest("full", listOf(missing, available), 2)
+
+        assertTrue(fixture.coordinator.startDownload())
+        awaitState(fixture.coordinator, GameResourceDownloadState.IDLE)
+
+        assertEquals(1, fixture.coordinator.status().missingCount)
+        assertTrue(fixture.engine.hasCached(available))
+        fixture.coordinator.dispose()
+    }
+
+    @Test
+    fun `baseline expected length mismatch stays missing without stopping queue`() {
+        val mismatch = official("/kcs2/resources/mismatch.png")
+        val available = official("/kcs2/resources/available.png")
+        val fixture = fixture(fetcher = GameResourceFetcher { _, _, _ -> response(byteArrayOf(1)) })
+        fixture.coordinator.setManifest(
+            "full",
+            listOf(mismatch, available),
+            3,
+            expectedLengths = listOf(2, 1),
+        )
 
         assertTrue(fixture.coordinator.startDownload())
         awaitState(fixture.coordinator, GameResourceDownloadState.IDLE)
@@ -173,6 +216,31 @@ class GameResourceDownloadCoordinatorTest {
 
         assertEquals(1, restored.status().cachedBytes)
         assertEquals(0, restored.status().missingCount)
+        restored.dispose()
+    }
+
+    @Test
+    fun `restart status uses persisted snapshot until explicit integrity check`() {
+        val stateFile = temporaryFolder.newFile("download-state.json")
+        val fixture = fixture(stateFile = stateFile)
+        val url = official("/kcs2/resources/cached.png")
+        fixture.engine.fetch(url)
+        fixture.coordinator.setManifest("light", listOf(url), 1)
+        val entry = fixture.engine.entries().single()
+        fixture.coordinator.dispose()
+        fixture.root.resolve("files/${entry.fileName}").delete()
+
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.LIGHT },
+            stateFile,
+        )
+
+        assertEquals(1, restored.status().cachedBytes)
+        assertEquals(0, restored.status().missingCount)
+        val checked = restored.checkIntegrity()
+        assertEquals(0, checked.cachedBytes)
+        assertEquals(1, checked.damagedCount)
         restored.dispose()
     }
 
@@ -277,8 +345,10 @@ class GameResourceDownloadCoordinatorTest {
         val url = official("/kcs2/resources/a.png?version=1")
         fixture.engine.fetch(url)
         val entry = fixture.engine.entries().single()
-        fixture.root.resolve("files/${entry.fileName}").writeBytes(byteArrayOf(9, 9))
+        fixture.root.resolve("files/${entry.fileName}").writeBytes(byteArrayOf(9))
         fixture.coordinator.setManifest("light", listOf(url), 1)
+
+        assertEquals(0, fixture.coordinator.status().damagedCount)
 
         val status = fixture.coordinator.checkIntegrity()
 
@@ -313,6 +383,7 @@ class GameResourceDownloadCoordinatorTest {
         awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
 
         assertFalse(visited.contains(oldSecond))
+        assertFalse(fixture.engine.hasCached(oldFirst))
         assertTrue(visited.contains(current))
         fixture.coordinator.dispose()
     }

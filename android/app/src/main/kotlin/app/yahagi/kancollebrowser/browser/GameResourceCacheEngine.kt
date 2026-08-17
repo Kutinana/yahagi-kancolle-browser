@@ -26,6 +26,8 @@ class GameResourceCacheEngine(
     fun fetch(
         url: String,
         requestHeaders: Map<String, String> = emptyMap(),
+        expectedLength: Long? = null,
+        shouldStore: () -> Boolean = { true },
     ): GameResourceResponse? {
         val mode = modeProvider()
         if (!mode.readsCache || !GameResourceCacheRules.shouldCache(url, "GET")) return null
@@ -59,9 +61,10 @@ class GameResourceCacheEngine(
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
                 ?: mimeInfo.mime
-            store.evictToFit(fetched.bytes.size.toLong())
-            if (!store.wouldExceedCapacity(fetched.bytes.size.toLong())) {
-                store.commit(
+            val matchesManifest = expectedLength == null ||
+                expectedLength == fetched.bytes.size.toLong()
+            if (matchesManifest && modeProvider().writesCache && shouldStore()) {
+                store.commitWithEviction(
                     key = key,
                     bytes = fetched.bytes,
                     version = runCatching { URI(url).rawQuery }.getOrNull(),
@@ -96,10 +99,18 @@ class GameResourceCacheEngine(
         return inspect(url).state == GameResourceInspectionState.VALID
     }
 
-    fun inspect(url: String): GameResourceInspection {
+    fun hasCachedMetadata(url: String): Boolean {
+        return inspectMetadata(url).state == GameResourceInspectionState.VALID
+    }
+
+    fun inspect(url: String): GameResourceInspection = inspect(url, verifyChecksum = true)
+
+    fun inspectMetadata(url: String): GameResourceInspection = inspect(url, verifyChecksum = false)
+
+    private fun inspect(url: String, verifyChecksum: Boolean): GameResourceInspection {
         val key = GameResourceCacheKey.from(url)
             ?: return GameResourceInspection(GameResourceInspectionState.MISSING)
-        val stored = store.inspect(key)
+        val stored = if (verifyChecksum) store.inspect(key) else store.inspectMetadata(key)
         val entry = stored.entry
         val state = when {
             stored.state == GameResourceStoredState.MISSING -> GameResourceInspectionState.MISSING

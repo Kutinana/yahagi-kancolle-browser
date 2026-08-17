@@ -22,6 +22,20 @@ final class GameResourceBaselineCatalog {
     required Uint8List compressed,
     required String resourceOrigin,
   }) {
+    final resourceUri = Uri.tryParse(resourceOrigin);
+    if (resourceUri == null ||
+        resourceUri.scheme != 'https' ||
+        resourceUri.userInfo.isNotEmpty ||
+        (resourceUri.path.isNotEmpty && resourceUri.path != '/') ||
+        resourceUri.hasQuery ||
+        resourceUri.hasFragment ||
+        (resourceUri.hasPort && resourceUri.port != 443) ||
+        !RegExp(
+          r'^w\d+[a-z]\.kancolle-server\.com$',
+          caseSensitive: false,
+        ).hasMatch(resourceUri.host)) {
+      throw const FormatException('Invalid official resource origin.');
+    }
     final decoded = jsonDecode(utf8.decode(gzip.decode(compressed)));
     if (decoded is! Map) {
       throw const FormatException('Baseline manifest must be a JSON object.');
@@ -44,8 +58,12 @@ final class GameResourceBaselineCatalog {
       throw const FormatException('Baseline manifest entry count mismatch.');
     }
 
-    final resourceBase = resourceOrigin.replaceFirst(RegExp(r'/$'), '');
+    final resourceBase = resourceUri
+        .replace(path: '')
+        .toString()
+        .replaceFirst(RegExp(r'/$'), '');
     final urls = <String>[];
+    final expectedLengths = <int>[];
     var targetBytes = 0;
     for (final rawEntry in rawEntries) {
       if (rawEntry is! List || rawEntry.length != 3) {
@@ -66,6 +84,7 @@ final class GameResourceBaselineCatalog {
           ? resourceBase
           : gadgetOrigin;
       urls.add('$origin$path$version');
+      expectedLengths.add(length);
       targetBytes += length;
     }
     if (_integer(manifest['targetBytes']) != targetBytes) {
@@ -75,6 +94,7 @@ final class GameResourceBaselineCatalog {
       profile: 'full',
       urls: List<String>.unmodifiable(urls),
       targetBytes: targetBytes,
+      expectedLengths: List<int>.unmodifiable(expectedLengths),
     );
   }
 

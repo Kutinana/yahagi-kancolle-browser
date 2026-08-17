@@ -28,6 +28,7 @@ void main() {
 
       expect(manifest.profile, 'full');
       expect(manifest.targetBytes, 28);
+      expect(manifest.expectedLengths, <int>[2, 3, 5, 7, 11]);
       expect(manifest.urls, <String>[
         'https://w17k.kancolle-server.com/kcs2/img/a.png?version=1',
         'https://w17k.kancolle-server.com/kcs/sound/a.mp3',
@@ -55,6 +56,26 @@ void main() {
       ),
       throwsFormatException,
     );
+  });
+
+  test('rejects insecure or non-official resource origins', () {
+    final compressed = _manifestBytes(<Object?>[
+      <Object?>['/kcs2/img/a.png', '', 2],
+    ], targetBytes: 2);
+
+    for (final origin in <String>[
+      'http://w17k.kancolle-server.com',
+      'https://w17k.kancolle-server.com:8443',
+      'https://example.com',
+    ]) {
+      expect(
+        () => GameResourceBaselineCatalog.decode(
+          compressed: compressed,
+          resourceOrigin: origin,
+        ),
+        throwsFormatException,
+      );
+    }
   });
 
   test('bundled baseline has the expected verified totals', () async {

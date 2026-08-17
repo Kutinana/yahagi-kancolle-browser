@@ -45,6 +45,7 @@ class GameResourcePreparedManifest internal constructor(
     val profile: String,
     val urls: List<String>,
     val targetBytes: Long,
+    internal val expectedByteLengths: Map<String, Long>,
     internal val validByteLengths: Map<String, Long>,
     internal val missingCount: Int,
     internal val damagedCount: Int,
@@ -82,12 +83,14 @@ class GameResourceDownloadCoordinator(
         "${stateFile.name}.manifest.json.bak",
     )
     private var targetBytes = 0L
+    private var cachedBytesSnapshot = 0L
     private var downloadedBytes = 0L
     private var startedAt = 0L
     private var missingCount = 0
     private var damagedCount = 0
     private var outdatedCount = 0
     private var validByteLengths = linkedMapOf<String, Long>()
+    private var expectedByteLengths = linkedMapOf<String, Long>()
     private var state = GameResourceDownloadState.IDLE
     private var preloadAuthorized = false
 
@@ -95,8 +98,13 @@ class GameResourceDownloadCoordinator(
         restore()
     }
 
-    fun setManifest(profile: String, candidates: List<String>, targetBytes: Long) {
-        val prepared = prepareManifest(profile, candidates, targetBytes)
+    fun setManifest(
+        profile: String,
+        candidates: List<String>,
+        targetBytes: Long,
+        expectedLengths: List<Long> = emptyList(),
+    ) {
+        val prepared = prepareManifest(profile, candidates, targetBytes, expectedLengths)
         try {
             applyPreparedManifest(prepared)
         } finally {
@@ -108,18 +116,29 @@ class GameResourceDownloadCoordinator(
         profile: String,
         candidates: List<String>,
         targetBytes: Long,
+        expectedLengths: List<Long> = emptyList(),
     ): GameResourcePreparedManifest {
         check(!disposed.get()) { "Resource cache coordinator is disposed" }
-        val filteredUrls = candidates.asSequence()
-            .filter { GameResourceCacheRules.shouldCache(it, "GET") }
-            .distinct()
-            .toList()
+        require(expectedLengths.isEmpty() || expectedLengths.size == candidates.size) {
+            "Expected lengths must align with manifest URLs"
+        }
+        val filteredUrls = mutableListOf<String>()
+        val filteredExpectedLengths = linkedMapOf<String, Long>()
+        val seen = hashSetOf<String>()
+        candidates.forEachIndexed { index, url ->
+            if (GameResourceCacheRules.shouldCache(url, "GET") && seen.add(url)) {
+                filteredUrls += url
+                if (expectedLengths.isNotEmpty()) {
+                    filteredExpectedLengths[url] = expectedLengths[index].coerceAtLeast(0L)
+                }
+            }
+        }
         val validLengths = linkedMapOf<String, Long>()
         var missing = 0
         var damaged = 0
         var outdated = 0
         filteredUrls.forEach { url ->
-            val inspection = engine.inspect(url)
+            val inspection = engine.inspectMetadata(url)
             when (inspection.state) {
                 GameResourceInspectionState.VALID -> validLengths[url] = inspection.byteLength
                 GameResourceInspectionState.MISSING -> missing++
@@ -127,11 +146,17 @@ class GameResourceDownloadCoordinator(
                 GameResourceInspectionState.OUTDATED -> outdated++
             }
         }
-        val temporary = writeManifestTemporary(profile, filteredUrls, targetBytes.coerceAtLeast(0))
+        val temporary = writeManifestTemporary(
+            profile,
+            filteredUrls,
+            targetBytes.coerceAtLeast(0),
+            filteredExpectedLengths,
+        )
         return GameResourcePreparedManifest(
             profile = profile,
             urls = filteredUrls,
             targetBytes = targetBytes.coerceAtLeast(0),
+            expectedByteLengths = filteredExpectedLengths,
             validByteLengths = validLengths,
             missingCount = missing,
             damagedCount = damaged,
@@ -172,6 +197,7 @@ class GameResourceDownloadCoordinator(
             userPaused = false
         }
         validByteLengths = LinkedHashMap(prepared.validByteLengths)
+        cachedBytesSnapshot = validByteLengths.values.sum()
         missingCount = prepared.missingCount
         damagedCount = prepared.damagedCount
         outdatedCount = prepared.outdatedCount
@@ -185,6 +211,7 @@ class GameResourceDownloadCoordinator(
         pauseRequested = userPaused
         networkPaused = false
         allowMetered = false
+        expectedByteLengths = LinkedHashMap(prepared.expectedByteLengths)
         persist()
         if (disposed.get() || !isCurrent()) {
             generation.incrementAndGet()
@@ -236,7 +263,11 @@ class GameResourceDownloadCoordinator(
         ensureManifestLoaded()
         if (mode == GameResourceCacheMode.NONE || urls.isEmpty()) return false
         val remainingEstimate = (targetBytes - cachedManifestBytes()).coerceAtLeast(0L)
-        if (remainingEstimate > engine.availableDeviceBytes()) {
+        val reclaimableBudget = engine.availableDeviceBytes().let { available ->
+            val used = engine.status().usedBytes
+            if (Long.MAX_VALUE - available < used) Long.MAX_VALUE else available + used
+        }
+        if (remainingEstimate > reclaimableBudget) {
             state = GameResourceDownloadState.CAPACITY_BLOCKED
             pauseRequested = true
             persist()
@@ -273,6 +304,13 @@ class GameResourceDownloadCoordinator(
         return true
     }
 
+    @Synchronized
+    fun cancelDownload(): Boolean {
+        if (disposed.get()) return false
+        generation.incrementAndGet()
+        return pauseDownload()
+    }
+
     fun onNetworkChanged() {
         if (disposed.get()) return
         try {
@@ -285,7 +323,7 @@ class GameResourceDownloadCoordinator(
     @Synchronized
     private fun handleNetworkChanged() {
         if (disposed.get()) return
-        ensureManifestLoaded(refreshInspection = true)
+        ensureManifestLoaded()
         if (!canUseCurrentNetwork()) {
             if (preloadAuthorized && !userPaused) {
                 networkPaused = true
@@ -305,7 +343,7 @@ class GameResourceDownloadCoordinator(
             state = GameResourceDownloadState.CHECKING
         }
         synchronized(this) {
-            refreshInspectionCounts()
+            refreshInspectionCounts(verifyChecksum = true)
             state = when {
                 pauseRequested -> GameResourceDownloadState.PAUSED
                 missingCount == 0 && damagedCount == 0 && outdatedCount == 0 && urls.isNotEmpty() ->
@@ -324,7 +362,7 @@ class GameResourceDownloadCoordinator(
 
     @Synchronized
     fun status(): GameResourceDownloadStatus {
-        ensureManifestLoaded(refreshInspection = true)
+        ensureManifestLoaded()
         val cached = cachedManifestBytes()
         val elapsedSeconds = ((System.currentTimeMillis() - startedAt) / 1000).coerceAtLeast(1)
         val speed = if (startedAt == 0L) 0L else downloadedBytes / elapsedSeconds
@@ -367,9 +405,16 @@ class GameResourceDownloadCoordinator(
                     }
                     return
                 }
-                if (engine.hasCached(url)) continue
+                if (engine.hasCachedMetadata(url)) continue
                 val response = try {
-                    engine.fetch(url)
+                    engine.fetch(
+                        url,
+                        expectedLength = synchronized(this) { expectedByteLengths[url] },
+                        shouldStore = {
+                            workerGeneration == generation.get() &&
+                                modeProvider() != GameResourceCacheMode.NONE
+                        },
+                    )
                 } catch (_: Exception) {
                     synchronized(this) {
                         state = GameResourceDownloadState.ERROR
@@ -378,12 +423,16 @@ class GameResourceDownloadCoordinator(
                     }
                     return
                 } ?: continue
+                if (workerGeneration != generation.get() || pauseRequested) return
                 if (response.source == GameResourceResponseSource.NETWORK) {
                     synchronized(this) { downloadedBytes += response.bytes.size }
                 }
                 val inspection = engine.inspect(url)
                 if (inspection.state == GameResourceInspectionState.VALID) {
-                    synchronized(this) { validByteLengths[url] = inspection.byteLength }
+                    synchronized(this) {
+                        val previousLength = validByteLengths.put(url, inspection.byteLength) ?: 0L
+                        cachedBytesSnapshot += inspection.byteLength - previousLength
+                    }
                 }
                 synchronized(this) { persist() }
             }
@@ -420,20 +469,23 @@ class GameResourceDownloadCoordinator(
         return network.connected && (network.wifi || allowMetered)
     }
 
-    private fun refreshInspectionCounts() {
-        val inspections = urls.associateWith(engine::inspect)
+    private fun refreshInspectionCounts(verifyChecksum: Boolean = false) {
+        val inspections = urls.associateWith { url ->
+            if (verifyChecksum) engine.inspect(url) else engine.inspectMetadata(url)
+        }
         validByteLengths.clear()
         inspections.forEach { (url, inspection) ->
             if (inspection.state == GameResourceInspectionState.VALID) {
                 validByteLengths[url] = inspection.byteLength
             }
         }
+        cachedBytesSnapshot = validByteLengths.values.sum()
         missingCount = inspections.values.count { it.state == GameResourceInspectionState.MISSING }
         damagedCount = inspections.values.count { it.state == GameResourceInspectionState.DAMAGED }
         outdatedCount = inspections.values.count { it.state == GameResourceInspectionState.OUTDATED }
     }
 
-    private fun cachedManifestBytes(): Long = validByteLengths.values.sum()
+    private fun cachedManifestBytes(): Long = cachedBytesSnapshot
 
     private fun ensureManifestLoaded(refreshInspection: Boolean = false) {
         if (manifestLoaded) return
@@ -455,12 +507,20 @@ class GameResourceDownloadCoordinator(
             val json = JSONObject(file.readText())
             if (json.optString("profile") != profile) return@runCatching false
             val array = json.optJSONArray("urls") ?: return@runCatching false
-            urls = (0 until array.length())
-                .asSequence()
-                .map(array::getString)
-                .filter { GameResourceCacheRules.shouldCache(it, "GET") }
-                .distinct()
-                .toList()
+            val lengths = json.optJSONArray("expectedLengths")
+            val loadedUrls = mutableListOf<String>()
+            val loadedLengths = linkedMapOf<String, Long>()
+            val seen = hashSetOf<String>()
+            for (index in 0 until array.length()) {
+                val url = array.getString(index)
+                if (!GameResourceCacheRules.shouldCache(url, "GET") || !seen.add(url)) continue
+                loadedUrls += url
+                if (lengths != null && index < lengths.length() && !lengths.isNull(index)) {
+                    loadedLengths[url] = lengths.getLong(index).coerceAtLeast(0L)
+                }
+            }
+            urls = loadedUrls
+            expectedByteLengths = loadedLengths
             targetBytes = json.optLong("targetBytes", targetBytes).coerceAtLeast(0L)
             true
         }.getOrDefault(false)
@@ -470,15 +530,19 @@ class GameResourceDownloadCoordinator(
         profile: String,
         urls: List<String>,
         targetBytes: Long,
+        expectedLengths: Map<String, Long>,
     ): File {
         manifestFile.parentFile?.mkdirs()
         val array = JSONArray()
         urls.forEach(array::put)
+        val lengthArray = JSONArray()
+        urls.forEach { url -> lengthArray.put(expectedLengths[url] ?: JSONObject.NULL) }
         val json = JSONObject()
-            .put("version", 1)
+            .put("version", 2)
             .put("profile", profile)
             .put("targetBytes", targetBytes)
             .put("urls", array)
+            .put("expectedLengths", lengthArray)
         val parent = manifestFile.parentFile ?: File(".")
         val temporary = File.createTempFile("${manifestFile.name}.", ".tmp", parent)
         try {
@@ -531,11 +595,13 @@ class GameResourceDownloadCoordinator(
         urls = urls,
         manifestLoaded = manifestLoaded,
         targetBytes = targetBytes,
+        cachedBytesSnapshot = cachedBytesSnapshot,
         downloadedBytes = downloadedBytes,
         missingCount = missingCount,
         damagedCount = damagedCount,
         outdatedCount = outdatedCount,
         validByteLengths = validByteLengths,
+        expectedByteLengths = expectedByteLengths,
         state = state,
         preloadAuthorized = preloadAuthorized,
         pauseRequested = pauseRequested,
@@ -549,11 +615,13 @@ class GameResourceDownloadCoordinator(
         urls = snapshot.urls
         manifestLoaded = snapshot.manifestLoaded
         targetBytes = snapshot.targetBytes
+        cachedBytesSnapshot = snapshot.cachedBytesSnapshot
         downloadedBytes = snapshot.downloadedBytes
         missingCount = snapshot.missingCount
         damagedCount = snapshot.damagedCount
         outdatedCount = snapshot.outdatedCount
         validByteLengths = snapshot.validByteLengths
+        expectedByteLengths = snapshot.expectedByteLengths
         state = snapshot.state
         preloadAuthorized = snapshot.preloadAuthorized
         pauseRequested = snapshot.pauseRequested
@@ -569,6 +637,7 @@ class GameResourceDownloadCoordinator(
             .put("version", 2)
             .put("profile", profile)
             .put("targetBytes", targetBytes)
+            .put("cachedBytes", cachedBytesSnapshot)
             .put("downloadedBytes", downloadedBytes)
             .put("missingCount", missingCount)
             .put("damagedCount", damagedCount)
@@ -597,6 +666,7 @@ class GameResourceDownloadCoordinator(
             urls = emptyList()
             manifestLoaded = false
             targetBytes = json.optLong("targetBytes")
+            cachedBytesSnapshot = json.optLong("cachedBytes")
             downloadedBytes = json.optLong("downloadedBytes")
             missingCount = json.optInt("missingCount", urls.size)
             damagedCount = json.optInt("damagedCount")
@@ -623,11 +693,13 @@ class GameResourceDownloadCoordinator(
         val urls: List<String>,
         val manifestLoaded: Boolean,
         val targetBytes: Long,
+        val cachedBytesSnapshot: Long,
         val downloadedBytes: Long,
         val missingCount: Int,
         val damagedCount: Int,
         val outdatedCount: Int,
         val validByteLengths: LinkedHashMap<String, Long>,
+        val expectedByteLengths: LinkedHashMap<String, Long>,
         val state: GameResourceDownloadState,
         val preloadAuthorized: Boolean,
         val pauseRequested: Boolean,

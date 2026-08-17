@@ -17,7 +17,11 @@ object GameResourceCacheRules {
         "/html/",
         "/kcscontents/",
     )
-    private val allowedExactPaths = setOf("/kcs2/version.json", "/kcs2/index.html")
+    private val allowedExactPaths = setOf(
+        "/kcs2/version.json",
+        "/kcs2/index.html",
+        "/kcs2/hc.html",
+    )
     private val allowedExtensions = setOf(
         "html", "htm", "js", "mjs", "css", "json", "svg",
         "png", "jpg", "jpeg", "gif", "webp",
@@ -36,7 +40,8 @@ object GameResourceCacheRules {
     }
 
     internal fun isOfficialStaticUri(uri: URI): Boolean {
-        if (uri.scheme?.lowercase(Locale.ROOT) !in setOf("http", "https")) return false
+        if (!uri.scheme.equals("https", ignoreCase = true)) return false
+        if (uri.port !in setOf(-1, 443)) return false
         if (uri.userInfo != null || !officialHost.matches(uri.host.orEmpty())) return false
         val path = uri.rawPath ?: return false
         if (path.startsWith("/kcsapi/", ignoreCase = true)) return false

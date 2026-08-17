@@ -59,11 +59,24 @@ class GameResourceCacheManager(
             "appendManifest" -> {
                 val transactionId = call.argument<String>("transactionId")
                 val urls = call.argument<List<*>>("urls")?.filterIsInstance<String>().orEmpty()
+                val rawLengths = call.argument<List<*>>("expectedLengths")
+                val lengths = rawLengths?.mapNotNull { (it as? Number)?.toLong() }
                 val appended = synchronized(pendingManifestLock) {
-                    pendingManifest
-                        ?.takeIf { it.transactionId == transactionId }
-                        ?.urls
-                        ?.addAll(urls) != null
+                    val pending = pendingManifest?.takeIf { it.transactionId == transactionId }
+                    if (pending == null || (rawLengths != null && lengths?.size != urls.size) ||
+                        (pending.urls.isNotEmpty() && (pending.expectedLengths == null) != (lengths == null))
+                    ) {
+                        false
+                    } else {
+                        pending.urls.addAll(urls)
+                        if (lengths != null) {
+                            val destination = pending.expectedLengths ?: mutableListOf<Long>().also {
+                                pending.expectedLengths = it
+                            }
+                            destination.addAll(lengths)
+                        }
+                        true
+                    }
                 }
                 result.success(appended)
             }
@@ -83,6 +96,7 @@ class GameResourceCacheManager(
                             manifest.profile,
                             manifest.urls,
                             manifest.targetBytes,
+                            manifest.expectedLengths.orEmpty(),
                         )
                         try {
                             val applied = coordinator.applyPreparedManifestIf(prepared) {
@@ -113,11 +127,19 @@ class GameResourceCacheManager(
             "setManifest" -> {
                 val profile = call.argument<String>("profile") ?: modeProvider().wireName
                 val urls = call.argument<List<*>>("urls")?.filterIsInstance<String>().orEmpty()
+                val expectedLengths = call.argument<List<*>>("expectedLengths")
+                    ?.mapNotNull { (it as? Number)?.toLong() }
+                    .orEmpty()
                 val targetBytes = (call.argument<Number>("targetBytes"))?.toLong() ?: 0L
                 val capturedEpoch = modeEpoch.get()
                 runIo(result) {
                     val expectedMode = GameResourceCacheMode.fromWireName(profile)
-                    val prepared = coordinator.prepareManifest(profile, urls, targetBytes)
+                    val prepared = coordinator.prepareManifest(
+                        profile,
+                        urls,
+                        targetBytes,
+                        expectedLengths,
+                    )
                     try {
                         val applied = coordinator.applyPreparedManifestIf(prepared) {
                             modeEpoch.get() == capturedEpoch && modeProvider() == expectedMode
@@ -144,7 +166,7 @@ class GameResourceCacheManager(
                 coordinator.startDownload(call.argument<Boolean>("allowMetered") == true)
             }
             "clear" -> runIo(result) {
-                coordinator.pauseDownload()
+                coordinator.cancelDownload()
                 engine.clear()
                 coordinator.checkIntegrity()
                 true
@@ -196,5 +218,6 @@ class GameResourceCacheManager(
         val targetBytes: Long,
         val modeEpoch: Long,
         val urls: MutableList<String> = mutableListOf(),
+        var expectedLengths: MutableList<Long>? = null,
     )
 }

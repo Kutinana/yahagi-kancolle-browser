@@ -24,7 +24,12 @@ void main() {
     );
 
     final result = await port.setManifest(
-      GameResourceManifest(profile: 'full', urls: urls, targetBytes: 123456789),
+      GameResourceManifest(
+        profile: 'full',
+        urls: urls,
+        targetBytes: 123456789,
+        expectedLengths: List<int>.generate(1201, (index) => index + 1),
+      ),
     );
 
     expect(result, isTrue);
@@ -45,6 +50,18 @@ void main() {
         .toList();
     expect(batches.map((batch) => batch.length), <int>[500, 500, 201]);
     expect(batches.expand((batch) => batch), urls);
+    final lengthBatches = calls
+        .where((call) => call.method == 'appendManifest')
+        .map(
+          (call) =>
+              (call.arguments as Map<Object?, Object?>)['expectedLengths']!
+                  as List<Object?>,
+        )
+        .toList();
+    expect(lengthBatches.map((batch) => batch.length), <int>[500, 500, 201]);
+    expect(lengthBatches.expand((batch) => batch), <int>[
+      for (var index = 1; index <= 1201; index++) index,
+    ]);
     final transactionIds = calls
         .map(
           (call) =>

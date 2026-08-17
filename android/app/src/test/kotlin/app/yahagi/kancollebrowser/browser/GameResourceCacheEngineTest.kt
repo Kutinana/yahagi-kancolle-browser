@@ -129,6 +129,18 @@ class GameResourceCacheEngineTest {
         assertEquals(1, engine.entries().size)
     }
 
+    @Test
+    fun `manifest length mismatch is returned but never persisted`() {
+        val engine = engine(QueueFetcher(result(byteArrayOf(1, 2))))
+        val url = official("/kcs2/resources/a.png")
+
+        val response = engine.fetch(url, expectedLength = 3)
+
+        assertArrayEquals(byteArrayOf(1, 2), response?.bytes)
+        assertNull(engine.fetch(url, expectedLength = 3, shouldStore = { false }))
+        assertEquals(GameResourceInspectionState.MISSING, engine.inspectMetadata(url).state)
+    }
+
     private fun engine(
         fetcher: GameResourceFetcher,
         mode: GameResourceCacheMode = GameResourceCacheMode.LIGHT,

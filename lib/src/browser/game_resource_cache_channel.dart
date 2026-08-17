@@ -17,11 +17,16 @@ final class GameResourceManifest {
     required this.profile,
     required this.urls,
     required this.targetBytes,
-  });
+    this.expectedLengths,
+  }) : assert(
+         expectedLengths == null || expectedLengths.length == urls.length,
+         'Expected lengths must align with manifest URLs',
+       );
 
   final String profile;
   final List<String> urls;
   final int targetBytes;
+  final List<int>? expectedLengths;
 }
 
 final class GameResourceCacheStatus {
@@ -176,13 +181,13 @@ final class MethodChannelGameResourceCachePort
           manifest.urls.length,
         );
         final appended =
-            await channel.invokeMethod<bool>(
-              'appendManifest',
-              <String, Object?>{
-                'transactionId': transactionId,
-                'urls': manifest.urls.sublist(offset, end),
-              },
-            ) ??
+            await channel
+                .invokeMethod<bool>('appendManifest', <String, Object?>{
+                  'transactionId': transactionId,
+                  'urls': manifest.urls.sublist(offset, end),
+                  if (manifest.expectedLengths case final lengths?)
+                    'expectedLengths': lengths.sublist(offset, end),
+                }) ??
             false;
         if (!appended) return false;
       }
