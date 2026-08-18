@@ -146,13 +146,15 @@ void main() {
         SharedPreferencesLayoutSettingsStore(),
       );
 
-      expect(controller.headerResourceOrder, hasLength(25));
+      expect(controller.headerResourceOrder, hasLength(27));
       expect(controller.headerResourceOrder.first, headerSenkaId);
       expect(controller.visibleHeaderResourceIds, <String>[
         headerSenkaId,
         'anchorage-timer',
         'material-1',
         'material-2',
+        headerShipCapacityId,
+        headerEquipmentCapacityId,
         'material-3',
         'material-4',
         'material-5',
@@ -175,17 +177,68 @@ void main() {
         SharedPreferencesLayoutSettingsStore(),
       );
 
-      expect(controller.headerResourceOrder.take(4), <String>[
+      expect(controller.headerResourceOrder.take(6), <String>[
         headerSenkaId,
         'anchorage-timer',
         'material-2',
+        headerShipCapacityId,
+        headerEquipmentCapacityId,
         'material-1',
       ]);
       expect(controller.visibleHeaderResourceIds, <String>[
         headerSenkaId,
         'anchorage-timer',
         'material-2',
+        headerShipCapacityId,
+        headerEquipmentCapacityId,
       ]);
+      final material2Index = controller.headerResourceOrder.indexOf(
+        'material-2',
+      );
+      expect(
+        controller.headerResourceOrder.sublist(
+          material2Index + 1,
+          material2Index + 3,
+        ),
+        <String>[headerShipCapacityId, headerEquipmentCapacityId],
+      );
+    },
+  );
+
+  test(
+    'complete legacy header order inserts capacities after ammunition',
+    () async {
+      final legacyOrder = <String>[
+        for (final id in allHeaderResourceIds)
+          if (id != headerShipCapacityId && id != headerEquipmentCapacityId) id,
+      ];
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_header_resource_order': legacyOrder,
+        'layout_visible_header_resource_ids': <String>[
+          headerSenkaId,
+          headerAnchorageTimerId,
+          'material-1',
+          'material-2',
+        ],
+      });
+
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      final material2Index = controller.headerResourceOrder.indexOf(
+        'material-2',
+      );
+      expect(
+        controller.headerResourceOrder.sublist(
+          material2Index + 1,
+          material2Index + 3,
+        ),
+        <String>[headerShipCapacityId, headerEquipmentCapacityId],
+      );
+      expect(
+        controller.headerResourceOrder.where(legacyOrder.contains),
+        legacyOrder,
+      );
     },
   );
 
@@ -208,5 +261,33 @@ void main() {
     expect(controller.headerResourceOrder.first, 'useitem-68');
     expect(controller.visibleHeaderResourceIds, contains('useitem-68'));
     expect(controller.visibleHeaderResourceIds, isNot(contains('material-1')));
+
+    await controller.toggleHeaderResourceVisible(headerShipCapacityId);
+    controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(
+      controller.visibleHeaderResourceIds,
+      isNot(contains(headerShipCapacityId)),
+    );
+  });
+
+  test('capacity capsule order persists after customization', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    var controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+
+    await controller.setHeaderResourceOrder(<String>[
+      headerEquipmentCapacityId,
+      ...controller.headerResourceOrder.where(
+        (id) => id != headerEquipmentCapacityId,
+      ),
+    ]);
+    controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+
+    expect(controller.headerResourceOrder.first, headerEquipmentCapacityId);
   });
 }

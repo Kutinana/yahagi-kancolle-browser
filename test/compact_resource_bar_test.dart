@@ -190,6 +190,22 @@ void main() {
       find.byKey(const Key('header-resource-visible-anchorage-timer')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('header-resource-filter-row-ship-capacity')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('header-resource-visible-ship-capacity')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('header-resource-filter-row-equipment-capacity')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('header-resource-visible-equipment-capacity')),
+      findsOneWidget,
+    );
     final firstFilterRow = find.byKey(
       const Key('header-resource-filter-row-material-1'),
     );
@@ -211,12 +227,17 @@ void main() {
 
     await tester.tap(find.byKey(const Key('header-resource-visible-senka')));
     await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('header-resource-visible-ship-capacity')),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const Key('header-resource-filter-done')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('header-resource-edit-done')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('header-senka-summary')), findsNothing);
+    expect(find.byKey(const Key('header-ship-capacity')), findsNothing);
     expect(find.byKey(const Key('header-resource-material-1')), findsOneWidget);
     expect(find.byKey(const Key('header-resource-material-2')), findsOneWidget);
   });

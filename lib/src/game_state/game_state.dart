@@ -619,6 +619,8 @@ class LandBaseState {
 class GameState {
   const GameState({
     this.admiralLevel = 0,
+    this.maxShipCount,
+    this.maxEquipmentCount,
     this.resources = const <GameResourceType, int>{},
     Map<int, int> useItems = const <int, int>{},
     bool hasUseItemData = false,
@@ -661,6 +663,8 @@ class GameState {
   static const GameState empty = GameState();
 
   final int admiralLevel;
+  final int? maxShipCount;
+  final int? maxEquipmentCount;
   final Map<GameResourceType, int> resources;
   final Map<int, int>? _useItems;
   final bool? _hasUseItemData;
@@ -739,6 +743,8 @@ class GameState {
 
   GameState copyWith({
     int? admiralLevel,
+    int? maxShipCount,
+    int? maxEquipmentCount,
     Map<GameResourceType, int>? resources,
     Map<int, int>? useItems,
     bool? hasUseItemData,
@@ -769,6 +775,8 @@ class GameState {
   }) {
     return GameState(
       admiralLevel: admiralLevel ?? this.admiralLevel,
+      maxShipCount: maxShipCount ?? this.maxShipCount,
+      maxEquipmentCount: maxEquipmentCount ?? this.maxEquipmentCount,
       resources: resources ?? this.resources,
       useItems: useItems ?? this.useItems,
       hasUseItemData: hasUseItemData ?? this.hasUseItemData,

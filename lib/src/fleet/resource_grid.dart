@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../game_state/game_state.dart';
 import '../settings/header_resource_settings.dart';
 import '../settings/layout_settings_controller.dart';
@@ -159,7 +160,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
             for (final id in order)
               if (visible.contains(id)) id,
           ];
-
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
     return SizedBox(
       height: 30,
       child: _editing
@@ -247,6 +250,8 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                     message: switch (id) {
                       headerSenkaId => '战果',
                       headerAnchorageTimerId => '泊地修理计时',
+                      headerShipCapacityId => l10n.shipGirl,
+                      headerEquipmentCapacityId => l10n.equipment,
                       _ => headerResourceById[id]!.label,
                     },
                     triggerMode:
@@ -257,6 +262,8 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                       width: switch (id) {
                         headerSenkaId => 142,
                         headerAnchorageTimerId => 128,
+                        headerShipCapacityId => 108,
+                        headerEquipmentCapacityId => 122,
                         _ => 82,
                       },
                       child: _buildDisplayItem(id),
@@ -274,6 +281,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     }
     if (id == headerAnchorageTimerId) {
       return _HeaderAnchorageTimerSummary(elapsed: _anchorageElapsed);
+    }
+    if (id == headerShipCapacityId || id == headerEquipmentCapacityId) {
+      return _buildCapacityPill(id);
     }
     final spec = headerResourceById[id]!;
     return _HeaderResourceItem(spec: spec, value: spec.value(widget.state));
@@ -293,6 +303,13 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
         visible: visible,
       );
     }
+    if (id == headerShipCapacityId || id == headerEquipmentCapacityId) {
+      return _EditableHeaderCapacityItem(
+        width: id == headerShipCapacityId ? 108 : 122,
+        visible: visible,
+        child: _buildCapacityPill(id),
+      );
+    }
     final spec = headerResourceById[id]!;
     return _EditableHeaderResourceItem(
       spec: spec,
@@ -301,7 +318,27 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     );
   }
 
+  Widget _buildCapacityPill(String id) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    final ships = id == headerShipCapacityId;
+    return _HeaderCapacityPill(
+      key: Key(ships ? 'header-ship-capacity' : 'header-equipment-capacity'),
+      label: ships ? l10n.shipGirl : l10n.equipment,
+      current: widget.state.hasPortData
+          ? (ships ? widget.state.ships.length : widget.state.slotItems.length)
+          : null,
+      maximum: ships
+          ? widget.state.maxShipCount
+          : widget.state.maxEquipmentCount,
+    );
+  }
+
   Future<void> _showResourceFilter(LayoutSettingsController controller) async {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
@@ -370,6 +407,22 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                                 controller.toggleHeaderResourceVisible(id),
                           );
                         }
+                        if (id == headerShipCapacityId ||
+                            id == headerEquipmentCapacityId) {
+                          final ships = id == headerShipCapacityId;
+                          return _HeaderCapacityFilterRow(
+                            id: id,
+                            label: ships ? l10n.shipGirl : l10n.equipment,
+                            value:
+                                '${widget.state.hasPortData ? (ships ? widget.state.ships.length : widget.state.slotItems.length) : '—'} / ${ships ? widget.state.maxShipCount ?? '—' : widget.state.maxEquipmentCount ?? '—'}',
+                            icon: ships
+                                ? Icons.directions_boat_filled_rounded
+                                : Icons.build_rounded,
+                            visible: visible.contains(id),
+                            onChanged: () =>
+                                controller.toggleHeaderResourceVisible(id),
+                          );
+                        }
                         final spec = headerResourceById[id]!;
                         return _HeaderResourceFilterRow(
                           spec: spec,
@@ -389,6 +442,42 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
       ),
     );
   }
+}
+
+class _HeaderCapacityPill extends StatelessWidget {
+  const _HeaderCapacityPill({
+    super.key,
+    required this.label,
+    required this.current,
+    required this.maximum,
+  });
+
+  final String label;
+  final int? current;
+  final int? maximum;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 30,
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    decoration: BoxDecoration(
+      color: const Color(0xff142735),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xff315064)),
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      '$label: ${current ?? '—'} / ${maximum ?? '—'}',
+      maxLines: 1,
+      softWrap: false,
+      style: const TextStyle(
+        color: Color(0xffdce6eb),
+        fontSize: 12.5,
+        fontWeight: FontWeight.w700,
+        fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+      ),
+    ),
+  );
 }
 
 String formatAnchorageRepairElapsed(DateTime? startedAt, DateTime now) {
@@ -581,6 +670,86 @@ class _EditableHeaderAnchorageTimerItem extends StatelessWidget {
     child: SizedBox(
       width: 128,
       child: _HeaderAnchorageTimerSummary(elapsed: elapsed),
+    ),
+  );
+}
+
+class _EditableHeaderCapacityItem extends StatelessWidget {
+  const _EditableHeaderCapacityItem({
+    required this.width,
+    required this.visible,
+    required this.child,
+  });
+
+  final double width;
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: visible ? 1 : 0.42,
+    child: SizedBox(width: width, child: child),
+  );
+}
+
+class _HeaderCapacityFilterRow extends StatelessWidget {
+  const _HeaderCapacityFilterRow({
+    required this.id,
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.visible,
+    required this.onChanged,
+  });
+
+  final String id;
+  final String label;
+  final String value;
+  final IconData icon;
+  final bool visible;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    key: Key('header-resource-filter-row-$id'),
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onChanged,
+      child: SizedBox(
+        height: 42,
+        child: Row(
+          children: [
+            Checkbox(
+              key: Key('header-resource-visible-$id'),
+              value: visible,
+              onChanged: (_) => onChanged(),
+              visualDensity: VisualDensity.compact,
+            ),
+            Icon(icon, size: 24, color: const Color(0xff9fb3bf)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xffdce6eb),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Color(0xffdce6eb),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(width: 16),
+          ],
+        ),
+      ),
     ),
   );
 }

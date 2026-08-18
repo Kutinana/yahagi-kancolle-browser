@@ -65,6 +65,47 @@ void main() {
     expect(anchorageTapCount, 1);
   });
 
+  testWidgets(
+    'game workspace shows separate ship and equipment capacity pills',
+    (tester) async {
+      const capacityState = GameState(
+        maxShipCount: 310,
+        maxEquipmentCount: 1499,
+        hasPortData: true,
+        ships: <int, OwnedShip>{
+          1: OwnedShip(id: 1, masterId: 101, level: 1),
+          2: OwnedShip(id: 2, masterId: 102, level: 1),
+        },
+        slotItems: <int, OwnedSlotItem>{
+          1: OwnedSlotItem(id: 1, masterId: 201),
+          2: OwnedSlotItem(id: 2, masterId: 202),
+          3: OwnedSlotItem(id: 3, masterId: 203),
+        },
+      );
+
+      await tester.pumpWidget(
+        _localizedApp(
+          locale: const Locale('zh'),
+          home: const Scaffold(
+            body: WorkspaceContextHeader(
+              workspaceIndex: 0,
+              state: capacityState,
+              selectedFleetId: 1,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('header-ship-capacity')), findsOneWidget);
+      expect(
+        find.byKey(const Key('header-equipment-capacity')),
+        findsOneWidget,
+      );
+      expect(find.text('舰娘: 2 / 310'), findsOneWidget);
+      expect(find.text('装备: 3 / 1499'), findsOneWidget);
+    },
+  );
+
   testWidgets('fleet workspace replaces resources with fleet switches', (
     tester,
   ) async {

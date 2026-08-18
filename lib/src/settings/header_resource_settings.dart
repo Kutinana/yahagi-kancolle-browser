@@ -1,11 +1,15 @@
 const headerSenkaId = 'senka';
 const headerAnchorageTimerId = 'anchorage-timer';
+const headerShipCapacityId = 'ship-capacity';
+const headerEquipmentCapacityId = 'equipment-capacity';
 
 const allHeaderResourceIds = <String>[
   headerSenkaId,
   headerAnchorageTimerId,
   'material-1',
   'material-2',
+  headerShipCapacityId,
+  headerEquipmentCapacityId,
   'material-3',
   'material-4',
   'material-5',
@@ -34,6 +38,8 @@ const defaultVisibleHeaderResourceIds = <String>[
   headerAnchorageTimerId,
   'material-1',
   'material-2',
+  headerShipCapacityId,
+  headerEquipmentCapacityId,
   'material-3',
   'material-4',
   'material-5',
@@ -56,7 +62,24 @@ List<String> normalizeHeaderResourceOrder(Iterable<String>? saved) {
     }
   }
   for (final id in allHeaderResourceIds) {
-    if (!result.contains(id)) result.add(id);
+    if (result.contains(id)) continue;
+    if (id == headerShipCapacityId) {
+      final ammunitionIndex = result.indexOf('material-2');
+      result.insert(
+        ammunitionIndex < 0 ? result.length : ammunitionIndex + 1,
+        id,
+      );
+      continue;
+    }
+    if (id == headerEquipmentCapacityId) {
+      final shipCapacityIndex = result.indexOf(headerShipCapacityId);
+      result.insert(
+        shipCapacityIndex < 0 ? result.length : shipCapacityIndex + 1,
+        id,
+      );
+      continue;
+    }
+    result.add(id);
   }
   return result;
 }

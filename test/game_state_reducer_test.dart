@@ -63,6 +63,20 @@ void main() {
       expect(state.ships[9001]?.range, 4);
     });
 
+    test('basic member data captures ship and equipment capacities', () {
+      final state = GameStateReducer().reduce(
+        GameState.empty,
+        kcsapiEvent('/kcsapi/api_get_member/basic', <String, Object?>{
+          'api_level': 120,
+          'api_max_chara': 310,
+          'api_max_slotitem': 1499,
+        }),
+      );
+
+      expect(state.maxShipCount, 310);
+      expect(state.maxEquipmentCount, 1499);
+    });
+
     test('start2 captures base ASW and resolved per-ship equip types', () {
       final state = GameStateReducer().reduce(
         GameState.empty,
@@ -788,6 +802,64 @@ void main() {
       expect(state.ships[9003]?.level, 1);
       expect(state.slotItems[7100]?.masterId, 201);
       expect(state.constructionDocks.first.isBuilding, isFalse);
+    });
+
+    test('inventory-changing actions update ship and equipment counts', () {
+      const initial = GameState(
+        ships: <int, OwnedShip>{
+          1: OwnedShip(id: 1, masterId: 101, level: 1, slotIds: <int>[11]),
+          2: OwnedShip(id: 2, masterId: 102, level: 1, slotIds: <int>[12]),
+        },
+        slotItems: <int, OwnedSlotItem>{
+          11: OwnedSlotItem(id: 11, masterId: 201),
+          12: OwnedSlotItem(id: 12, masterId: 202),
+        },
+        fleets: <Fleet>[
+          Fleet(id: 1, name: '第一舰队', shipIds: <int>[1, 2]),
+        ],
+      );
+      final reducer = GameStateReducer();
+
+      var state = reducer.reduce(
+        initial,
+        kcsapiEvent(
+          '/kcsapi/api_req_kousyou/createitem',
+          const <String, Object?>{
+            'api_create_flag': 1,
+            'api_get_items': <Object?>[
+              <String, Object?>{'api_id': 13, 'api_slotitem_id': 203},
+            ],
+          },
+        ),
+      );
+      expect(state.slotItems, hasLength(3));
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_kousyou/destroyship',
+          const <String, Object?>{},
+          requestParams: const <String, Object?>{
+            'api_ship_id': '1',
+            'api_slot_dest_flag': '1',
+          },
+        ),
+      );
+      expect(state.ships, hasLength(1));
+      expect(state.slotItems, isNot(contains(11)));
+      expect(state.fleets.single.shipIds, <int>[2]);
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_kaisou/powerup',
+          const <String, Object?>{},
+          requestParams: const <String, Object?>{'api_id_items': '2'},
+        ),
+      );
+      expect(state.ships, isEmpty);
+      expect(state.slotItems, isNot(contains(12)));
+      expect(state.fleets.single.shipIds, isEmpty);
     });
 
     test('slot exchange accepts single and list ship payloads', () {

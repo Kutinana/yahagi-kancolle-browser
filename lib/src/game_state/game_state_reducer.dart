@@ -51,6 +51,12 @@ class GameStateReducer {
         origin,
         hasPortData: true,
       ),
+      '/kcsapi/api_get_member/basic' => _basic(
+        state,
+        _requiredMap(data, 'basic'),
+        event,
+        origin,
+      ),
       '/kcsapi/api_get_member/require_info' => _snapshot(
         state,
         _requiredMap(data, 'require_info'),
@@ -146,6 +152,19 @@ class GameStateReducer {
       ),
       '/kcsapi/api_req_kousyou/createship_speedchange' =>
         _constructionSpeedChange(state, event, origin),
+      '/kcsapi/api_req_kousyou/createitem' => _createSlotItems(
+        state,
+        _requiredMap(data, 'createitem'),
+        event,
+        origin,
+      ),
+      '/kcsapi/api_req_kousyou/destroyship' => _consumeShips(
+        state,
+        _requestIds(event.requestParams['api_ship_id']),
+        removeEquipment: _asInt(event.requestParams['api_slot_dest_flag']) > 0,
+        event: event,
+        origin: origin,
+      ),
       '/kcsapi/api_req_kousyou/destroyitem2' => _destroySlotItems(
         state,
         event,
@@ -170,6 +189,13 @@ class GameStateReducer {
         _requiredMap(data, 'formation preset'),
         event,
         origin,
+      ),
+      '/kcsapi/api_req_kaisou/powerup' => _consumeShips(
+        state,
+        _requestIds(event.requestParams['api_id_items']),
+        removeEquipment: true,
+        event: event,
+        origin: origin,
       ),
       '/kcsapi/api_req_nyukyo/speedchange' => _repairSpeedChange(
         state,
@@ -266,6 +292,72 @@ class GameStateReducer {
       updatedAt: event.capturedAt,
     );
   }
+
+  GameState _createSlotItems(
+    GameState state,
+    Map<String, Object?> data,
+    CapturedApiEvent event,
+    String origin,
+  ) {
+    final rawItems = data['api_get_items'];
+    final parsed = _parseSlotItems(
+      rawItems is List
+          ? List<Object?>.from(rawItems)
+          : <Object?>[data['api_slot_item']],
+    );
+    return state.copyWith(
+      slotItems: Map<int, OwnedSlotItem>.of(state.slotItems)..addAll(parsed),
+      serverOrigin: origin,
+      updatedAt: event.capturedAt,
+    );
+  }
+
+  GameState _consumeShips(
+    GameState state,
+    Set<int> shipIds, {
+    required bool removeEquipment,
+    required CapturedApiEvent event,
+    required String origin,
+  }) {
+    if (shipIds.isEmpty) {
+      return state.copyWith(serverOrigin: origin, updatedAt: event.capturedAt);
+    }
+    final equipmentIds = <int>{
+      if (removeEquipment)
+        for (final shipId in shipIds)
+          if (state.ships[shipId] case final ship?) ...<int>{
+            ...ship.slotIds.where((id) => id > 0),
+            if (ship.extraSlotId > 0) ship.extraSlotId,
+          },
+    };
+    final ships = Map<int, OwnedShip>.of(state.ships)
+      ..removeWhere((id, _) => shipIds.contains(id));
+    final slotItems = Map<int, OwnedSlotItem>.of(state.slotItems)
+      ..removeWhere((id, _) => equipmentIds.contains(id));
+    final fleets = <Fleet>[
+      for (final fleet in state.fleets)
+        Fleet(
+          id: fleet.id,
+          name: fleet.name,
+          shipIds: <int>[
+            for (final shipId in fleet.shipIds)
+              if (!shipIds.contains(shipId)) shipId,
+          ],
+          slotCount: fleet.slotCount,
+          mission: fleet.mission,
+        ),
+    ];
+    return state.copyWith(
+      ships: ships,
+      slotItems: slotItems,
+      fleets: fleets,
+      serverOrigin: origin,
+      updatedAt: event.capturedAt,
+    );
+  }
+
+  Set<int> _requestIds(Object? value) =>
+      value.toString().split(',').map(_asInt).where((id) => id > 0).toSet();
 
   GameState _revalidateF96(GameState state, DateTime updatedAt) {
     final quest = state.quests[_f96QuestId];
@@ -990,6 +1082,27 @@ class GameStateReducer {
     );
   }
 
+  GameState _basic(
+    GameState state,
+    Map<String, Object?> basic,
+    CapturedApiEvent event,
+    String origin,
+  ) => state.copyWith(
+    admiralLevel: _asInt(basic['api_level']),
+    maxShipCount: basic.containsKey('api_max_chara')
+        ? _asInt(basic['api_max_chara'])
+        : null,
+    maxEquipmentCount: basic.containsKey('api_max_slotitem')
+        ? _asInt(basic['api_max_slotitem'])
+        : null,
+    furnitureCoins: basic.containsKey('api_fcoin')
+        ? _asInt(basic['api_fcoin'])
+        : null,
+    hasFurnitureCoinData: basic.containsKey('api_fcoin') ? true : null,
+    serverOrigin: origin,
+    updatedAt: event.capturedAt,
+  );
+
   GameState _snapshot(
     GameState state,
     Map<String, Object?> data,
@@ -1000,6 +1113,12 @@ class GameStateReducer {
     final basic = _optionalMap(data['api_basic']);
     return state.copyWith(
       admiralLevel: basic == null ? null : _asInt(basic['api_level']),
+      maxShipCount: basic?.containsKey('api_max_chara') == true
+          ? _asInt(basic!['api_max_chara'])
+          : null,
+      maxEquipmentCount: basic?.containsKey('api_max_slotitem') == true
+          ? _asInt(basic!['api_max_slotitem'])
+          : null,
       furnitureCoins: basic?.containsKey('api_fcoin') == true
           ? _asInt(basic!['api_fcoin'])
           : null,
