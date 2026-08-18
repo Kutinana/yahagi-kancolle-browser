@@ -250,6 +250,9 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     if (_boundsRetryExhausted && !changed) {
       return;
     }
+    if (!changed && _boundsDrainRunning && _queuedBounds == null) {
+      return;
+    }
     _resendCurrentBoundsToNewSink = false;
     _queuedBounds = bounds;
     _ignoreErrors(_visibility.setSlotAttached(false));
