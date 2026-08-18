@@ -5,6 +5,44 @@ import 'package:flutter/material.dart';
 import 'native_game_surface_visibility.dart';
 import 'native_game_webview_contract.dart';
 
+NativeGameWebViewBounds? readNativeGameSurfaceBounds(
+  RenderObject? renderObject, {
+  required double devicePixelRatio,
+}) {
+  if (renderObject is! RenderBox || !renderObject.attached) {
+    return null;
+  }
+  return nativeGameSurfaceBoundsFromMetrics(
+    size: renderObject.size,
+    offset: renderObject.localToGlobal(Offset.zero),
+    devicePixelRatio: devicePixelRatio,
+  );
+}
+
+NativeGameWebViewBounds? nativeGameSurfaceBoundsFromMetrics({
+  required Size size,
+  required Offset offset,
+  required double devicePixelRatio,
+}) {
+  if (!size.width.isFinite ||
+      !size.height.isFinite ||
+      size.width <= 0 ||
+      size.height <= 0 ||
+      !offset.dx.isFinite ||
+      !offset.dy.isFinite ||
+      !devicePixelRatio.isFinite ||
+      devicePixelRatio <= 0) {
+    return null;
+  }
+  return NativeGameWebViewBounds(
+    left: offset.dx,
+    top: offset.dy,
+    width: size.width,
+    height: size.height,
+    devicePixelRatio: devicePixelRatio,
+  );
+}
+
 /// A transparent Flutter layout slot whose bounds are mirrored to a native
 /// game WebView owned outside of Flutter's widget tree.
 final class NativeGameSurfaceSlot extends StatefulWidget {
@@ -29,6 +67,8 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   RouteObserver<ModalRoute<dynamic>>? _subscribedObserver;
   ModalRoute<dynamic>? _subscribedRoute;
   NativeGameWebViewBounds? _lastBounds;
+  NativeGameWebViewBounds? _pendingBounds;
+  int _boundsRequestId = 0;
   bool _measureScheduled = false;
 
   @override
@@ -36,6 +76,11 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     super.initState();
     _visibility = NativeGameSurfaceVisibility(widget.onVisibilityChanged);
     WidgetsBinding.instance.addObserver(this);
+    _ignoreErrors(
+      _visibility.setAppVisible(
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed,
+      ),
+    );
     _scheduleMeasurement();
   }
 
@@ -50,6 +95,9 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.routeObserver != widget.routeObserver) {
       _subscribeToCurrentRoute();
+    }
+    if (oldWidget.onVisibilityChanged != widget.onVisibilityChanged) {
+      _visibility.updateCallback(widget.onVisibilityChanged);
     }
     _scheduleMeasurement();
   }
@@ -88,6 +136,8 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
 
   @override
   void dispose() {
+    _boundsRequestId++;
+    _pendingBounds = null;
     WidgetsBinding.instance.removeObserver(this);
     _unsubscribeFromRoute();
     _ignoreErrors(_visibility.dispose());
@@ -133,41 +183,59 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   }
 
   void _measureAndReport() {
-    final renderObject = context.findRenderObject();
-    if (renderObject is! RenderBox || !renderObject.attached) {
-      _ignoreErrors(_visibility.setSlotAttached(false));
-      return;
-    }
-
-    final size = renderObject.size;
-    final offset = renderObject.localToGlobal(Offset.zero);
-    final devicePixelRatio = View.of(context).devicePixelRatio;
-    if (!size.width.isFinite ||
-        !size.height.isFinite ||
-        size.width <= 0 ||
-        size.height <= 0 ||
-        !offset.dx.isFinite ||
-        !offset.dy.isFinite ||
-        !devicePixelRatio.isFinite ||
-        devicePixelRatio <= 0) {
-      _ignoreErrors(_visibility.setSlotAttached(false));
-      return;
-    }
-
-    final bounds = NativeGameWebViewBounds(
-      left: offset.dx,
-      top: offset.dy,
-      width: size.width,
-      height: size.height,
-      devicePixelRatio: devicePixelRatio,
+    final bounds = readNativeGameSurfaceBounds(
+      context.findRenderObject(),
+      devicePixelRatio: View.of(context).devicePixelRatio,
     );
+    if (bounds == null) {
+      _invalidatePendingBounds();
+      return;
+    }
+
     if (_sameBounds(bounds, _lastBounds)) {
+      if (_pendingBounds != null && !_sameBounds(bounds, _pendingBounds)) {
+        _boundsRequestId++;
+        _pendingBounds = null;
+      }
       _ignoreErrors(_visibility.setSlotAttached(true));
       return;
     }
+    if (_sameBounds(bounds, _pendingBounds)) {
+      return;
+    }
+
+    final requestId = ++_boundsRequestId;
+    _pendingBounds = bounds;
+    _ignoreErrors(_visibility.setSlotAttached(false));
+    _ignoreErrors(_reportBounds(bounds, requestId));
+  }
+
+  Future<void> _reportBounds(
+    NativeGameWebViewBounds bounds,
+    int requestId,
+  ) async {
+    try {
+      await widget.onBoundsChanged(bounds);
+    } catch (error) {
+      debugPrint('Native game surface bounds callback failed: $error');
+      if (mounted && requestId == _boundsRequestId) {
+        _pendingBounds = null;
+        _ignoreErrors(_visibility.setSlotAttached(false));
+      }
+      return;
+    }
+    if (!mounted || requestId != _boundsRequestId) {
+      return;
+    }
+    _pendingBounds = null;
     _lastBounds = bounds;
-    _ignoreErrors(widget.onBoundsChanged(bounds));
     _ignoreErrors(_visibility.setSlotAttached(true));
+  }
+
+  void _invalidatePendingBounds() {
+    _boundsRequestId++;
+    _pendingBounds = null;
+    _ignoreErrors(_visibility.setSlotAttached(false));
   }
 
   static bool _sameBounds(

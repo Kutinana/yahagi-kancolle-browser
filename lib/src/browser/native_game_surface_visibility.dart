@@ -5,7 +5,7 @@ import 'dart:async';
 final class NativeGameSurfaceVisibility {
   NativeGameSurfaceVisibility(this._onVisibilityChanged);
 
-  final Future<void> Function(bool visible) _onVisibilityChanged;
+  Future<void> Function(bool visible) _onVisibilityChanged;
 
   bool _routeVisible = true;
   bool _appVisible = true;
@@ -30,15 +30,20 @@ final class NativeGameSurfaceVisibility {
 
   Future<void> dispose() => setSlotAttached(false);
 
+  void updateCallback(Future<void> Function(bool visible) callback) {
+    _onVisibilityChanged = callback;
+  }
+
   Future<void> _reportIfChanged() {
     final visible = _routeVisible && _appVisible && _slotAttached;
     if (visible == _lastSentVisible) {
       return _tail;
     }
     _lastSentVisible = visible;
+    final callback = _onVisibilityChanged;
     final report = _tail
         .catchError((Object _) {})
-        .then<void>((_) => _onVisibilityChanged(visible));
+        .then<void>((_) => callback(visible));
     _tail = report.catchError((Object _) {});
     return report;
   }

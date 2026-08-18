@@ -63,6 +63,54 @@ void main() {
 
       expect(reports, <bool>[true, false]);
     });
+
+    test(
+      'reports visible for only the true true true truth-table row',
+      () async {
+        for (final row in <({bool route, bool app, bool attached})>[
+          (route: false, app: false, attached: false),
+          (route: false, app: false, attached: true),
+          (route: false, app: true, attached: false),
+          (route: false, app: true, attached: true),
+          (route: true, app: false, attached: false),
+          (route: true, app: false, attached: true),
+          (route: true, app: true, attached: false),
+          (route: true, app: true, attached: true),
+        ]) {
+          final reports = <bool>[];
+          final visibility = NativeGameSurfaceVisibility((visible) async {
+            reports.add(visible);
+          });
+
+          await visibility.setRouteVisible(row.route);
+          await visibility.setAppVisible(row.app);
+          await visibility.setSlotAttached(row.attached);
+
+          expect(
+            reports,
+            row.route && row.app && row.attached ? <bool>[true] : isEmpty,
+          );
+        }
+      },
+    );
+
+    test('uses an updated callback for subsequent reports', () async {
+      final firstCallbackReports = <bool>[];
+      final secondCallbackReports = <bool>[];
+      final visibility = NativeGameSurfaceVisibility((visible) async {
+        firstCallbackReports.add(visible);
+      });
+
+      await visibility.setSlotAttached(true);
+      visibility.updateCallback((visible) async {
+        secondCallbackReports.add(visible);
+      });
+      await visibility.setRouteVisible(false);
+      await visibility.setRouteVisible(true);
+
+      expect(firstCallbackReports, <bool>[true]);
+      expect(secondCallbackReports, <bool>[false, true]);
+    });
   });
 
   group('NativeGameSurfaceSlot', () {
@@ -92,6 +140,47 @@ void main() {
         });
       },
     );
+
+    testWidgets('starts hidden for every non-resumed lifecycle state', (
+      tester,
+    ) async {
+      addTearDown(() {
+        tester.binding.resetInternalState();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+      });
+      for (final state in <AppLifecycleState>[
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.detached,
+      ]) {
+        final visibility = <bool>[];
+        tester.binding.handleAppLifecycleStateChanged(state);
+
+        await tester.pumpWidget(
+          _slotApp(
+            onVisibilityChanged: (value) async => visibility.add(value),
+            useCurrentLifecycle: true,
+          ),
+        );
+        await tester.pump();
+        expect(visibility, isEmpty, reason: 'initial $state must stay hidden');
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(visibility, <bool>[true]);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+      }
+    });
 
     testWidgets(
       'deduplicates equal bounds and reports changed size position and DPR',
@@ -149,6 +238,232 @@ void main() {
             'devicePixelRatio': 2,
           },
         ]);
+      },
+    );
+
+    testWidgets('coalesces repeated metrics changes in one frame', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final bounds = <NativeGameWebViewBounds>[];
+      await tester.pumpWidget(
+        _slotApp(onBoundsChanged: (value) async => bounds.add(value)),
+      );
+      await tester.pump();
+      tester.view.devicePixelRatio = 2;
+      tester.binding.handleMetricsChanged();
+      tester.binding.handleMetricsChanged();
+      tester.binding.handleMetricsChanged();
+      await tester.pump();
+
+      expect(bounds, hasLength(2));
+    });
+
+    testWidgets('uses a replacement visibility callback after widget update', (
+      tester,
+    ) async {
+      final firstReports = <bool>[];
+      final secondReports = <bool>[];
+      await tester.pumpWidget(
+        _slotApp(onVisibilityChanged: (value) async => firstReports.add(value)),
+      );
+      await tester.pump();
+      await tester.pumpWidget(
+        _slotApp(
+          onVisibilityChanged: (value) async => secondReports.add(value),
+        ),
+      );
+      await tester.pump();
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+
+      expect(firstReports, <bool>[true]);
+      expect(secondReports, <bool>[false, true]);
+    });
+
+    testWidgets('contains bounds and visibility callback errors and recovers', (
+      tester,
+    ) async {
+      final visibility = <bool>[];
+      var boundsCalls = 0;
+      var visibilityCalls = 0;
+      Future<void> onBounds(NativeGameWebViewBounds _) async {
+        boundsCalls++;
+        if (boundsCalls == 2) {
+          throw StateError('expected bounds failure');
+        }
+      }
+
+      await tester.pumpWidget(
+        _slotApp(
+          onBoundsChanged: onBounds,
+          onVisibilityChanged: (value) async {
+            visibilityCalls++;
+            visibility.add(value);
+            if (visibilityCalls == 1) {
+              throw StateError('expected visibility failure');
+            }
+          },
+        ),
+      );
+      await tester.pump();
+      await tester.pumpWidget(
+        _slotApp(
+          width: 120,
+          onBoundsChanged: onBounds,
+          onVisibilityChanged: (value) async {
+            visibilityCalls++;
+            visibility.add(value);
+          },
+        ),
+      );
+      await tester.pump();
+      await tester.pumpWidget(
+        _slotApp(
+          width: 120,
+          onBoundsChanged: onBounds,
+          onVisibilityChanged: (value) async {
+            visibilityCalls++;
+            visibility.add(value);
+          },
+        ),
+      );
+      await tester.pump();
+
+      expect(boundsCalls, 3);
+      expect(visibility, <bool>[true, false, true]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'waits for bounds success before showing and retries failures',
+      (tester) async {
+        final visibility = <bool>[];
+        final firstBounds = Completer<void>();
+        var attempts = 0;
+        await tester.pumpWidget(
+          _slotApp(
+            onBoundsChanged: (_) async {
+              attempts++;
+              if (attempts == 1) {
+                await firstBounds.future;
+                throw StateError('expected bounds failure');
+              }
+            },
+            onVisibilityChanged: (value) async => visibility.add(value),
+          ),
+        );
+        await tester.pump();
+        expect(visibility, isEmpty);
+
+        firstBounds.complete();
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        expect(visibility, isEmpty);
+
+        await tester.pumpWidget(
+          _slotApp(
+            onBoundsChanged: (_) async => attempts++,
+            onVisibilityChanged: (value) async => visibility.add(value),
+          ),
+        );
+        await tester.pump();
+
+        expect(attempts, 2);
+        expect(visibility, <bool>[true]);
+      },
+    );
+
+    testWidgets(
+      'ignores stale bounds completion after layout changes or disposal',
+      (tester) async {
+        final visibility = <bool>[];
+        final staleBounds = Completer<void>();
+        var reports = 0;
+        Future<void> onBounds(NativeGameWebViewBounds _) async {
+          reports++;
+          if (reports == 1) {
+            await staleBounds.future;
+          }
+        }
+
+        await tester.pumpWidget(
+          _slotApp(
+            onBoundsChanged: onBounds,
+            onVisibilityChanged: (value) async => visibility.add(value),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpWidget(
+          _slotApp(
+            width: 120,
+            onBoundsChanged: onBounds,
+            onVisibilityChanged: (value) async => visibility.add(value),
+          ),
+        );
+        await tester.pump();
+        expect(visibility, <bool>[true]);
+
+        staleBounds.complete();
+        await tester.pump();
+        expect(visibility, <bool>[true]);
+
+        final disposeBounds = Completer<void>();
+        await tester.pumpWidget(
+          _slotApp(
+            width: 140,
+            onBoundsChanged: (_) => disposeBounds.future,
+            onVisibilityChanged: (value) async => visibility.add(value),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        disposeBounds.complete();
+        await tester.pump();
+
+        expect(visibility, <bool>[true, false]);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    test(
+      'measurement helper rejects unattached non-box and non-finite values',
+      () {
+        expect(
+          readNativeGameSurfaceBounds(
+            _UnattachedRenderBox(),
+            devicePixelRatio: 1,
+          ),
+          isNull,
+        );
+        expect(
+          readNativeGameSurfaceBounds(
+            _NonBoxRenderObject(),
+            devicePixelRatio: 1,
+          ),
+          isNull,
+        );
+        expect(
+          nativeGameSurfaceBoundsFromMetrics(
+            size: const Size(double.infinity, 1),
+            offset: Offset.zero,
+            devicePixelRatio: 1,
+          ),
+          isNull,
+        );
+        expect(
+          nativeGameSurfaceBoundsFromMetrics(
+            size: const Size(1, 1),
+            offset: const Offset(double.nan, 0),
+            devicePixelRatio: 1,
+          ),
+          isNull,
+        );
       },
     );
 
@@ -212,6 +527,12 @@ void main() {
     testWidgets('maps non-resumed app lifecycle states to hidden', (
       tester,
     ) async {
+      addTearDown(() {
+        tester.binding.resetInternalState();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+      });
       final visibility = <bool>[];
       await tester.pumpWidget(
         _slotApp(onVisibilityChanged: (value) async => visibility.add(value)),
@@ -273,6 +594,31 @@ void main() {
   });
 }
 
+final class _NonBoxRenderObject extends RenderObject {
+  @override
+  Rect get paintBounds => Rect.zero;
+
+  @override
+  Rect get semanticBounds => Rect.zero;
+
+  @override
+  void debugAssertDoesMeetConstraints() {}
+
+  @override
+  void performLayout() {}
+
+  @override
+  void performResize() {}
+
+  @override
+  void paint(PaintingContext context, Offset offset) {}
+}
+
+final class _UnattachedRenderBox extends RenderBox {
+  @override
+  void performLayout() {}
+}
+
 Widget _slotApp({
   double width = 100,
   double height = 50,
@@ -282,7 +628,14 @@ Widget _slotApp({
   Future<void> Function(bool)? onVisibilityChanged,
   GlobalKey<NavigatorState>? navigatorKey,
   RouteObserver<ModalRoute<dynamic>>? observer,
+  bool useCurrentLifecycle = false,
 }) {
+  if (!useCurrentLifecycle &&
+      WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+    WidgetsBinding.instance.handleAppLifecycleStateChanged(
+      AppLifecycleState.resumed,
+    );
+  }
   return MaterialApp(
     navigatorKey: navigatorKey,
     navigatorObservers: observer == null ? const [] : [observer],
