@@ -55,6 +55,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
     if (existing != null) {
       return existing;
     }
+    _pendingNotifications.clear();
     late final Future<int> createFuture;
     createFuture = _create().whenComplete(() {
       if (identical(_createFuture, createFuture)) {
@@ -74,6 +75,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       });
     } catch (error, stackTrace) {
       await _cancelIgnoringError();
+      _pendingNotifications.clear();
       Error.throwWithStackTrace(error, stackTrace);
     }
     if (result is! int || result < 0) {
@@ -81,6 +83,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
         'create must return a non-negative generationId.',
       );
       await _cancelIgnoringError();
+      _pendingNotifications.clear();
       throw error;
     }
     final generationId = result;
@@ -94,6 +97,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       if (errors.hasError) {
         errors.throwFirst();
       }
+      _pendingNotifications.clear();
       throw StateError('Native WebView has been disposed.');
     }
     _generationId = generationId;

@@ -539,4 +539,78 @@ void main() {
       expect(received.last.url, 'https://www.dmm.com/65');
     },
   );
+
+  test('discards early errors from a failed create before retrying', () async {
+    var attempts = 0;
+    final source = StreamController<Object?>.broadcast(sync: true);
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      attempts++;
+      if (attempts == 1) {
+        source.addError(StateError('stale_create_error'));
+        throw PlatformException(code: 'create_failed');
+      }
+      source.add(<String, Object?>{'type': 'created', 'generationId': 18});
+      return 18;
+    });
+    final port = MethodChannelNativeGameWebViewPort(
+      channel: channel,
+      eventStream: source.stream,
+    );
+    addTearDown(source.close);
+    addTearDown(port.dispose);
+
+    await expectLater(port.create(), throwsA(isA<PlatformException>()));
+    await port.create();
+    final received = <Object>[];
+    final subscription = port.events.listen(
+      received.add,
+      onError: (Object error, StackTrace stackTrace) => received.add(error),
+    );
+    addTearDown(subscription.cancel);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(received, hasLength(1));
+    expect(received.single, isA<NativeGameWebViewEvent>());
+  });
+
+  test(
+    'discards failed-attempt data and errors when a generation is reused',
+    () async {
+      var attempts = 0;
+      final source = StreamController<Object?>.broadcast(sync: true);
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        attempts++;
+        if (attempts == 1) {
+          source
+            ..add(<String, Object?>{'type': 'created', 'generationId': 19})
+            ..add(<String, Object?>{'type': 'created', 'generationId': -1});
+          return -1;
+        }
+        source.add(<String, Object?>{'type': 'created', 'generationId': 19});
+        return 19;
+      });
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+      );
+      addTearDown(source.close);
+      addTearDown(port.dispose);
+
+      await expectLater(
+        port.create(),
+        throwsA(isA<NativeGameWebViewSchemaException>()),
+      );
+      await port.create();
+      final received = <Object>[];
+      final subscription = port.events.listen(
+        received.add,
+        onError: (Object error, StackTrace stackTrace) => received.add(error),
+      );
+      addTearDown(subscription.cancel);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, hasLength(1));
+      expect(received.single, isA<NativeGameWebViewEvent>());
+    },
+  );
 }
