@@ -75,6 +75,18 @@ class NativeGameWebViewBoundsTest {
         assertEquals(13, bounds.height)
     }
 
+    @Test
+    fun physicalBoundsRejectInvalidOrOverflowProneExtremes() {
+        val largest = PhysicalBounds(0, 0, Int.MAX_VALUE, Int.MAX_VALUE)
+
+        assertEquals(Int.MAX_VALUE, largest.width)
+        assertEquals(Int.MAX_VALUE, largest.height)
+        assertIllegalArgument { PhysicalBounds(-1, 0, 1, 1) }
+        assertIllegalArgument { PhysicalBounds(0, -1, 1, 1) }
+        assertIllegalArgument { PhysicalBounds(0, 0, 0, 1) }
+        assertIllegalArgument { PhysicalBounds(0, 0, 1, 0) }
+    }
+
     private fun assertIllegalArgument(block: () -> Unit) {
         try {
             block()

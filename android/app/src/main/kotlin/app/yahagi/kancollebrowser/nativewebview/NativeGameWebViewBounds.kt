@@ -48,20 +48,40 @@ data class NativeGameWebViewBounds(
     }
 }
 
-data class PhysicalBounds(
+class PhysicalBounds internal constructor(
     val left: Int,
     val top: Int,
     val right: Int,
     val bottom: Int,
 ) {
     init {
+        require(left >= 0)
+        require(top >= 0)
         require(right > left)
         require(bottom > top)
+        require(right.toLong() - left.toLong() <= Int.MAX_VALUE.toLong())
+        require(bottom.toLong() - top.toLong() <= Int.MAX_VALUE.toLong())
     }
 
     val width: Int
-        get() = right - left
+        get() = (right.toLong() - left.toLong()).toInt()
 
     val height: Int
-        get() = bottom - top
+        get() = (bottom.toLong() - top.toLong()).toInt()
+
+    override fun equals(other: Any?): Boolean =
+        other is PhysicalBounds &&
+            left == other.left &&
+            top == other.top &&
+            right == other.right &&
+            bottom == other.bottom
+
+    override fun hashCode(): Int {
+        var result = left
+        result = 31 * result + top
+        result = 31 * result + right
+        return 31 * result + bottom
+    }
+
+    override fun toString(): String = "PhysicalBounds(left=$left, top=$top, right=$right, bottom=$bottom)"
 }
