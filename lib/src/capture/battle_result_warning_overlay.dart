@@ -32,6 +32,7 @@ class BattleResultWarningOverlay extends StatefulWidget {
     required this.safetySettingsController,
     required this.damageAlertPort,
     required this.child,
+    this.reminderAsDialog = false,
   });
 
   final GameCaptureController gameCaptureController;
@@ -39,6 +40,7 @@ class BattleResultWarningOverlay extends StatefulWidget {
   final SafetySettingsController safetySettingsController;
   final BattleDamageAlertPort damageAlertPort;
   final Widget child;
+  final bool reminderAsDialog;
 
   @override
   State<BattleResultWarningOverlay> createState() =>
@@ -135,6 +137,10 @@ class _BattleResultWarningOverlayState
   }
 
   void _showFlashingReminder() {
+    if (widget.reminderAsDialog) {
+      _showWarningDialog();
+      return;
+    }
     _clearReminderOverlay();
     final overlayState = Overlay.of(context, rootOverlay: true);
     _reminderOverlayEntry = OverlayEntry(

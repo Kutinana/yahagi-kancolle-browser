@@ -17,6 +17,7 @@ class DiagnosticDeviceSnapshotTest {
             screenWidthPx = 2400,
             screenHeightPx = 1080,
             webViewVersion = "139",
+            previousExitReason = "unavailable",
         ).toMap()
 
         assertEquals(
@@ -30,6 +31,7 @@ class DiagnosticDeviceSnapshotTest {
                 "screenWidthPx",
                 "screenHeightPx",
                 "webViewVersion",
+                "previousExitReason",
             ),
             values.keys,
         )

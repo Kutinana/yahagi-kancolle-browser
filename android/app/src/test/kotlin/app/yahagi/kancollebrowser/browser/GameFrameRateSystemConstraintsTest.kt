@@ -2,6 +2,7 @@ package app.yahagi.kancollebrowser.browser
 
 import android.os.PowerManager
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class GameFrameRateSystemConstraintsTest {
@@ -58,6 +59,41 @@ class GameFrameRateSystemConstraintsTest {
                 mode = GameFrameRateMode.AUTO,
                 requestedTarget = GameFrameRateTarget.HIGH_REFRESH,
                 state = GameFrameRateSystemState(),
+            ),
+        )
+    }
+
+    @Test
+    fun automaticModeSuppressesRuntimeSamplesWhileConservingPower() {
+        assertNull(
+            GameFrameRateSystemPolicy.runtimeSample(
+                mode = GameFrameRateMode.AUTO,
+                state = GameFrameRateSystemState(powerSaveEnabled = true),
+                measuredFps = 29.0,
+            ),
+        )
+    }
+
+    @Test
+    fun automaticModeRestoresRuntimeSamplesAfterConservationEnds() {
+        assertEquals(
+            60.0,
+            GameFrameRateSystemPolicy.runtimeSample(
+                mode = GameFrameRateMode.AUTO,
+                state = GameFrameRateSystemState(),
+                measuredFps = 60.0,
+            ),
+        )
+    }
+
+    @Test
+    fun manualModesKeepRuntimeSamplesUnderSystemConstraints() {
+        assertEquals(
+            120.0,
+            GameFrameRateSystemPolicy.runtimeSample(
+                mode = GameFrameRateMode.HIGH_REFRESH,
+                state = GameFrameRateSystemState(powerSaveEnabled = true),
+                measuredFps = 120.0,
             ),
         )
     }

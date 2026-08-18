@@ -306,11 +306,30 @@ Future<void> main() async {
     );
   }
 
+  var diagnosticNativeWebViewGeneration = -1;
   final diagnosticPerformanceMonitor = DiagnosticPerformanceMonitor(
     recorder: diagnosticRecorder,
     platform: diagnosticPlatform,
     pendingApiEvents: () => gameApiEventPipeline.pendingEventCount,
     databaseBytes: LogbookDatabase.instance.diagnosticFileSizeBytes,
+    webViewHost: () {
+      final mode = gameRenderingModeController.mode;
+      if (!mode.usesActivityWebView) {
+        return DiagnosticWebViewHost.flutterPlatformView;
+      }
+      return diagnosticNativeWebViewGeneration >= 0
+          ? DiagnosticWebViewHost.activityDirect
+          : DiagnosticWebViewHost.absent;
+    },
+    renderer: () {
+      final mode = gameRenderingModeController.mode;
+      return mode.usesCanvasRenderer
+          ? DiagnosticGameRenderer.canvas
+          : DiagnosticGameRenderer.webgl;
+    },
+    generationId: () => diagnosticNativeWebViewGeneration < 0
+        ? 0
+        : diagnosticNativeWebViewGeneration,
   );
   final diagnosticController = DiagnosticController(
     settings: SharedPreferencesDiagnosticSettingsStore(),
@@ -367,6 +386,9 @@ Future<void> main() async {
       releaseChecker: releaseChecker,
       screenAwakeController: screenAwakeController,
       diagnosticController: diagnosticController,
+      nativeWebViewGenerationSink: (value) {
+        diagnosticNativeWebViewGeneration = value;
+      },
     ),
   );
   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -377,6 +399,14 @@ Future<void> main() async {
 
 final RouteObserver<ModalRoute<dynamic>> yahagiGameRouteObserver =
     RouteObserver<ModalRoute<dynamic>>();
+
+bool shouldUsePersistentGameToolbar({
+  required GameToolbarDisplayMode? displayMode,
+  required GameRenderingMode? renderingMode,
+}) {
+  return displayMode == GameToolbarDisplayMode.persistent ||
+      (renderingMode?.usesActivityWebView ?? false);
+}
 
 Widget buildGameSurfaceForRenderingMode({
   required GameRenderingMode mode,
@@ -425,6 +455,7 @@ class YahagiApp extends StatelessWidget {
     this.showDeveloperDiagnostics = false,
     this.diagnosticController,
     this.gameRouteObserver,
+    this.nativeWebViewGenerationSink,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -458,6 +489,7 @@ class YahagiApp extends StatelessWidget {
   final bool showDeveloperDiagnostics;
   final DiagnosticController? diagnosticController;
   final RouteObserver<ModalRoute<dynamic>>? gameRouteObserver;
+  final void Function(int)? nativeWebViewGenerationSink;
 
   @override
   Widget build(BuildContext context) {
@@ -548,11 +580,14 @@ class YahagiApp extends StatelessWidget {
   }
 
   Widget _buildGameSurface() {
+    final nativeActivityMode =
+        gameRenderingModeController?.mode.usesActivityWebView ?? false;
     Widget withBattleWarning(Widget child) => BattleResultWarningOverlay(
       gameCaptureController: gameCaptureController,
       battleController: battleController,
       safetySettingsController: safetySettingsController,
       damageAlertPort: const MethodChannelBattleDamageAlertPort(),
+      reminderAsDialog: nativeActivityMode,
       child: child,
     );
 
@@ -587,6 +622,7 @@ class YahagiApp extends StatelessWidget {
 
   Widget _buildNativeActivityGameSurface(Key key) => NativeActivityGameSurface(
     key: key,
+    onGenerationChanged: nativeWebViewGenerationSink,
     statusController: controller,
     browserController: browserController,
     toolbarController: toolbarController,
@@ -935,8 +971,13 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                           .clamp(0.5, 0.75);
                                 final gameFlex = (gameAreaRatio * 1000).round();
                                 final persistentToolbar =
-                                    widget.toolbarDisplayController?.mode ==
-                                    GameToolbarDisplayMode.persistent;
+                                    shouldUsePersistentGameToolbar(
+                                      displayMode:
+                                          widget.toolbarDisplayController?.mode,
+                                      renderingMode: widget
+                                          .gameRenderingModeController
+                                          ?.mode,
+                                    );
                                 final gameSurfaceWrapper = ColoredBox(
                                   color: const Color(0xff0a1823),
                                   child: Center(

@@ -101,6 +101,36 @@ void main() {
   });
 
   test(
+    'attach and live mode changes run on the same serialized queue',
+    () async {
+      final controller = await GameFrameRateSettingsController.load(
+        MemoryGameFrameRateSettingsStore(),
+      );
+      addTearDown(controller.dispose);
+      final port = _GatedFrameRatePort();
+
+      final attach = controller.attachPort(port);
+      await Future<void>.delayed(Duration.zero);
+      expect(port.events, <String>['supported.start']);
+
+      final change = controller.setMode(GameFrameRateMode.stable30);
+      await Future<void>.delayed(Duration.zero);
+      expect(port.events, <String>['supported.start']);
+
+      port.supportGate.complete();
+      await Future.wait<void>(<Future<void>>[attach, change]);
+
+      expect(port.events, <String>[
+        'supported.start',
+        'supported.end',
+        'configure:auto',
+        'configure:stable30',
+      ]);
+      expect(controller.mode, GameFrameRateMode.stable30);
+    },
+  );
+
+  test(
     'rapid mode changes finish in the order selected by the player',
     () async {
       final store = _DelayedFrameRateSettingsStore();
@@ -141,6 +171,24 @@ final class _RecordingFrameRatePort implements GameFrameRatePort {
   Future<void> configure(GameFrameRateMode mode) async {
     if (throwOnConfigure) throw StateError('configure failed');
     configuredModes.add(mode);
+  }
+}
+
+final class _GatedFrameRatePort implements GameFrameRatePort {
+  final Completer<void> supportGate = Completer<void>();
+  final List<String> events = <String>[];
+
+  @override
+  Future<bool> isSupported() async {
+    events.add('supported.start');
+    await supportGate.future;
+    events.add('supported.end');
+    return true;
+  }
+
+  @override
+  Future<void> configure(GameFrameRateMode mode) async {
+    events.add('configure:${mode.wireName}');
   }
 }
 

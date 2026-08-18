@@ -41,6 +41,36 @@ void main() {
     expect(encoded, isNot(contains('src/foo.dart')));
   });
 
+  test('performance sample keeps host renderer and memory classifications', () {
+    final event = DiagnosticEvent.performanceSample(
+      occurredAt: DateTime.utc(2026, 8, 13),
+      uptimeMs: 60000,
+      pssKb: 900000,
+      javaHeapKb: 120000,
+      nativeHeapKb: 80000,
+      graphicsKb: 210000,
+      privateOtherKb: 70000,
+      systemAvailableKb: 1800000,
+      webViewHost: DiagnosticWebViewHost.activityDirect,
+      renderer: DiagnosticGameRenderer.webgl,
+      generationId: 17,
+      totalFrames: 3600,
+      over16Ms: 120,
+      over33Ms: 40,
+      over100Ms: 6,
+      maxFrameMicros: 120000,
+      pendingApiEvents: 3,
+      databaseBytes: 8192,
+    );
+
+    final encoded = jsonEncode(event.toJson());
+    expect(encoded, contains('activityDirect'));
+    expect(encoded, contains('webgl'));
+    expect(encoded, contains('"generationId":17'));
+    expect(encoded, contains('"graphicsKb":210000'));
+    expect(encoded, isNot(contains('"previousExitReason"')));
+  });
+
   test('event fields are immutable', () {
     final event = DiagnosticEvent.lifecycle(
       occurredAt: DateTime.utc(2026, 8, 13),

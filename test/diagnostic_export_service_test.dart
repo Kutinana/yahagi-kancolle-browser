@@ -168,6 +168,7 @@ final class FakeDiagnosticPlatformPort implements DiagnosticPlatformPort {
         screenWidthPx: 2400,
         screenHeightPx: 1080,
         webViewVersion: '139',
+        previousExitReason: 'unavailable',
       );
 
   @override
@@ -176,6 +177,9 @@ final class FakeDiagnosticPlatformPort implements DiagnosticPlatformPort {
         pssKb: 1,
         javaHeapKb: 1,
         nativeHeapKb: 1,
+        graphicsKb: 1,
+        privateOtherKb: 1,
+        systemAvailableKb: 1,
         lowMemory: false,
       );
 

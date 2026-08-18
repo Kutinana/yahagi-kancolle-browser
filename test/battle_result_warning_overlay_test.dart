@@ -75,6 +75,21 @@ void main() {
     });
   }
 
+  testWidgets('native direct reminder mode uses a dialog instead of overlay', (
+    tester,
+  ) async {
+    final fixture = await _WarningOverlayFixture.create(
+      mode: BattleWarningMode.reminder,
+    );
+    addTearDown(fixture.dispose);
+
+    await fixture.pump(tester, reminderAsDialog: true);
+    await fixture.showWarning(tester);
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('warning does not vibrate while damage vibration is disabled', (
     tester,
   ) async {
@@ -135,17 +150,19 @@ final class _WarningOverlayFixture {
     );
   }
 
-  Future<void> pump(WidgetTester tester) => tester.pumpWidget(
-    MaterialApp(
-      home: BattleResultWarningOverlay(
-        gameCaptureController: captureController,
-        battleController: battleController,
-        safetySettingsController: settingsController,
-        damageAlertPort: alerts,
-        child: const SizedBox.expand(),
-      ),
-    ),
-  );
+  Future<void> pump(WidgetTester tester, {bool reminderAsDialog = false}) =>
+      tester.pumpWidget(
+        MaterialApp(
+          home: BattleResultWarningOverlay(
+            gameCaptureController: captureController,
+            battleController: battleController,
+            safetySettingsController: settingsController,
+            damageAlertPort: alerts,
+            reminderAsDialog: reminderAsDialog,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
 
   Future<void> showWarning(WidgetTester tester) async {
     battleController

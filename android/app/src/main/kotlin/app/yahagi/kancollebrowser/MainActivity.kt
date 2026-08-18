@@ -222,6 +222,10 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                     ensureGadgetBypassWrap()
                 }
 
+                override fun onPageStarted() {
+                    releaseFixedCanvasScaling(nativePresentationMethodResult)
+                }
+
                 override fun onPageFinished() {
                     nativeWebViewStartup?.onPageFinished()
                 }
@@ -566,7 +570,10 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         try {
             nativeChannel.attachHost(
                 nativeAttachment,
-                ActivityNativeGameWebViewHostOperations(host),
+                ActivityNativeGameWebViewHostOperations(
+                    host,
+                    ::applyNativeGamePresentation,
+                ),
             )
             nativeGameWebViewHost = host
         } catch (error: Exception) {
@@ -1298,6 +1305,35 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 ?.isVisible(WindowInsetsCompat.Type.ime()) == true,
         ) ?: return
         webView.setInitialScale(scalePercent)
+    }
+
+    private val nativePresentationMethodResult = object : MethodChannel.Result {
+        override fun success(result: Any?) = Unit
+
+        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+            Log.d("NativeGamePresentation", "$errorCode: $errorMessage")
+        }
+
+        override fun notImplemented() {
+            Log.d("NativeGamePresentation", "notImplemented")
+        }
+    }
+
+    private fun applyNativeGamePresentation(hasGameSurface: Boolean) {
+        if (isFinishing || isDestroyed) return
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            nativeWebViewHandler.post { applyNativeGamePresentation(hasGameSurface) }
+            return
+        }
+        if (hasGameSurface) {
+            setFixedCanvasScaling(
+                fixedCanvasContentWidth,
+                fixedCanvasContentHeight,
+                nativePresentationMethodResult,
+            )
+        } else {
+            releaseFixedCanvasScaling(nativePresentationMethodResult)
+        }
     }
 
     private fun releaseFixedCanvasScaling(result: MethodChannel.Result) {

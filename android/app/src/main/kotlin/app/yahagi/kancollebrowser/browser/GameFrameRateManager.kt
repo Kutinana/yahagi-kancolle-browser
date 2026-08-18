@@ -83,7 +83,13 @@ class GameFrameRateManager(
                     result.success(null)
                 }
             }
-            "measuredFps" -> result.success(bridge.measuredFps())
+            "measuredFps" -> result.success(
+                GameFrameRateSystemPolicy.runtimeSample(
+                    mode,
+                    systemConstraints.state,
+                    bridge.measuredFps(),
+                ),
+            )
             else -> result.notImplemented()
         }
     }

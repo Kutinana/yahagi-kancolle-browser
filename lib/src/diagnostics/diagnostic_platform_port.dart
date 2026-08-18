@@ -15,6 +15,7 @@ final class DiagnosticDeviceSnapshot {
     required this.screenWidthPx,
     required this.screenHeightPx,
     required this.webViewVersion,
+    required this.previousExitReason,
   });
 
   final String manufacturer;
@@ -26,6 +27,7 @@ final class DiagnosticDeviceSnapshot {
   final int screenWidthPx;
   final int screenHeightPx;
   final String webViewVersion;
+  final String previousExitReason;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'manufacturer': manufacturer,
@@ -37,6 +39,7 @@ final class DiagnosticDeviceSnapshot {
     'screenWidthPx': screenWidthPx,
     'screenHeightPx': screenHeightPx,
     'webViewVersion': webViewVersion,
+    'previousExitReason': previousExitReason,
   };
 }
 
@@ -45,12 +48,18 @@ final class DiagnosticRuntimeSnapshot {
     required this.pssKb,
     required this.javaHeapKb,
     required this.nativeHeapKb,
+    required this.graphicsKb,
+    required this.privateOtherKb,
+    required this.systemAvailableKb,
     required this.lowMemory,
   });
 
   final int pssKb;
   final int javaHeapKb;
   final int nativeHeapKb;
+  final int graphicsKb;
+  final int privateOtherKb;
+  final int systemAvailableKb;
   final bool lowMemory;
 }
 
@@ -84,11 +93,15 @@ final class MethodChannelDiagnosticPlatformPort
     'screenWidthPx',
     'screenHeightPx',
     'webViewVersion',
+    'previousExitReason',
   };
   static const Set<String> _runtimeKeys = <String>{
     'pssKb',
     'javaHeapKb',
     'nativeHeapKb',
+    'graphicsKb',
+    'privateOtherKb',
+    'systemAvailableKb',
     'lowMemory',
   };
 
@@ -106,6 +119,7 @@ final class MethodChannelDiagnosticPlatformPort
       screenWidthPx: _int(map, 'screenWidthPx'),
       screenHeightPx: _int(map, 'screenHeightPx'),
       webViewVersion: _string(map, 'webViewVersion'),
+      previousExitReason: _string(map, 'previousExitReason'),
     );
   }
 
@@ -119,6 +133,9 @@ final class MethodChannelDiagnosticPlatformPort
       pssKb: _int(map, 'pssKb'),
       javaHeapKb: _int(map, 'javaHeapKb'),
       nativeHeapKb: _int(map, 'nativeHeapKb'),
+      graphicsKb: _int(map, 'graphicsKb'),
+      privateOtherKb: _int(map, 'privateOtherKb'),
+      systemAvailableKb: _int(map, 'systemAvailableKb'),
       lowMemory: lowMemory,
     );
   }

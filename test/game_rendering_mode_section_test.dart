@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode.dart';
@@ -106,6 +107,29 @@ void main() {
     expect(find.textContaining('内存稳定性'), findsOneWidget);
     expect(find.textContaining('华为'), findsNothing);
     expect(find.textContaining('荣耀'), findsNothing);
+  });
+
+  testWidgets('native activity mode is hidden on non-Android platforms', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final state = await createController();
+      addTearDown(state.controller.dispose);
+
+      await tester.pumpWidget(app(state.controller));
+
+      expect(
+        find.byKey(const Key('rendering-mode-native-activity')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('rendering-mode-compatibility')),
+        findsOneWidget,
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('cancel keeps the current mode', (tester) async {

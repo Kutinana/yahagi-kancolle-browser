@@ -54,6 +54,7 @@ internal class DiagnosticPlatformHandler(
             screenHeightPx = metrics.heightPixels,
             webViewVersion = (WebViewCompat.getCurrentWebViewPackage(context)?.versionName ?: "unknown")
                 .take(64),
+            previousExitReason = previousExitReason(),
         )
     }
 
@@ -64,13 +65,37 @@ internal class DiagnosticPlatformHandler(
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val systemInfo = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(systemInfo)
-        return linkedMapOf(
+        val graphicsKb = processInfo.getMemoryStat("summary.graphics")
+            ?.toIntOrNull()
+            ?.coerceAtLeast(0) ?: 0
+        val privateOtherKb = processInfo.getMemoryStat("summary.private-other")
+            ?.toIntOrNull()
+            ?.coerceAtLeast(0) ?: 0
+        return linkedMapOf<String, Any>(
             "pssKb" to processInfo.totalPss.coerceAtLeast(0),
             "javaHeapKb" to ((runtime.totalMemory() - runtime.freeMemory()) / 1024L)
                 .coerceAtLeast(0L),
             "nativeHeapKb" to (Debug.getNativeHeapAllocatedSize() / 1024L).coerceAtLeast(0L),
+            "graphicsKb" to graphicsKb,
+            "privateOtherKb" to privateOtherKb,
+            "systemAvailableKb" to (systemInfo.availMem / 1024L).coerceAtLeast(0L),
             "lowMemory" to systemInfo.lowMemory,
         )
+    }
+
+    private fun previousExitReason(): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return "unavailable"
+        }
+        val activityManager =
+            context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return runCatching {
+            val reason = activityManager
+                .getHistoricalProcessExitReasons(context.packageName, 0, 1)
+                .firstOrNull()
+                ?.reason
+            DiagnosticPreviousExitReasonMapper.map(reason)
+        }.getOrElse { "unavailable" }
     }
 
     private fun saveJson(path: String?, result: MethodChannel.Result) {

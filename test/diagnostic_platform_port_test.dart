@@ -25,6 +25,7 @@ void main() {
             'screenWidthPx': 2400,
             'screenHeightPx': 1080,
             'webViewVersion': '139.0.0',
+            'previousExitReason': 'unavailable',
           },
         );
     final port = MethodChannelDiagnosticPlatformPort(channel);
@@ -49,12 +50,59 @@ void main() {
             'screenWidthPx': 2400,
             'screenHeightPx': 1080,
             'webViewVersion': '139.0.0',
+            'previousExitReason': 'unavailable',
             'androidId': 'TEST_ONLY_SECRET_DO_NOT_USE',
           },
         );
 
     expect(
       MethodChannelDiagnosticPlatformPort(channel).deviceSnapshot,
+      throwsA(isA<DiagnosticPlatformSchemaException>()),
+    );
+  });
+
+  test('accepts exactly the approved runtime memory fields', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          channel,
+          (call) async => <String, Object?>{
+            'pssKb': 900000,
+            'javaHeapKb': 120000,
+            'nativeHeapKb': 80000,
+            'graphicsKb': 210000,
+            'privateOtherKb': 70000,
+            'systemAvailableKb': 1800000,
+            'lowMemory': false,
+          },
+        );
+    final port = MethodChannelDiagnosticPlatformPort(channel);
+
+    final snapshot = await port.runtimeSnapshot();
+
+    expect(snapshot.graphicsKb, 210000);
+    expect(snapshot.privateOtherKb, 70000);
+    expect(snapshot.systemAvailableKb, 1800000);
+    expect(snapshot.lowMemory, isFalse);
+  });
+
+  test('rejects an unexpected native runtime field', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          channel,
+          (call) async => <String, Object?>{
+            'pssKb': 1,
+            'javaHeapKb': 1,
+            'nativeHeapKb': 1,
+            'graphicsKb': 1,
+            'privateOtherKb': 1,
+            'systemAvailableKb': 1,
+            'lowMemory': false,
+            'processList': 'TEST_ONLY_SECRET_DO_NOT_USE',
+          },
+        );
+
+    expect(
+      MethodChannelDiagnosticPlatformPort(channel).runtimeSnapshot,
       throwsA(isA<DiagnosticPlatformSchemaException>()),
     );
   });

@@ -62,16 +62,31 @@ final class DiagnosticPerformanceMonitor with WidgetsBindingObserver {
     required this.platform,
     required this.pendingApiEvents,
     required this.databaseBytes,
+    DiagnosticWebViewHost Function()? webViewHost,
+    DiagnosticGameRenderer Function()? renderer,
+    int Function()? generationId,
     this.sampleInterval = const Duration(seconds: 60),
     DateTime Function()? now,
     Stopwatch? uptime,
-  }) : _now = now ?? DateTime.now,
+  }) : webViewHost = webViewHost ?? _platformViewHost,
+       renderer = renderer ?? _unknownRenderer,
+       generationId = generationId ?? _zeroGeneration,
+       _now = now ?? DateTime.now,
        _uptime = uptime ?? (Stopwatch()..start());
+
+  static DiagnosticWebViewHost _platformViewHost() =>
+      DiagnosticWebViewHost.flutterPlatformView;
+  static DiagnosticGameRenderer _unknownRenderer() =>
+      DiagnosticGameRenderer.unknown;
+  static int _zeroGeneration() => 0;
 
   final DiagnosticRecorder recorder;
   final DiagnosticPlatformPort platform;
   final int Function() pendingApiEvents;
   final Future<int> Function() databaseBytes;
+  final DiagnosticWebViewHost Function() webViewHost;
+  final DiagnosticGameRenderer Function() renderer;
+  final int Function() generationId;
   final Duration sampleInterval;
   final DateTime Function() _now;
   final Stopwatch _uptime;
@@ -117,6 +132,12 @@ final class DiagnosticPerformanceMonitor with WidgetsBindingObserver {
           pssKb: runtime.pssKb,
           javaHeapKb: runtime.javaHeapKb,
           nativeHeapKb: runtime.nativeHeapKb,
+          graphicsKb: runtime.graphicsKb,
+          privateOtherKb: runtime.privateOtherKb,
+          systemAvailableKb: runtime.systemAvailableKb,
+          webViewHost: webViewHost(),
+          renderer: renderer(),
+          generationId: generationId(),
           totalFrames: frames.totalFrames,
           over16Ms: frames.over16Ms,
           over33Ms: frames.over33Ms,

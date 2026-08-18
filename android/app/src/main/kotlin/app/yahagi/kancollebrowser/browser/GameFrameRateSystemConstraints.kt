@@ -21,6 +21,17 @@ data class GameFrameRateSystemState(
 }
 
 object GameFrameRateSystemPolicy {
+    fun runtimeSample(
+        mode: GameFrameRateMode,
+        state: GameFrameRateSystemState,
+        measuredFps: Double?,
+    ): Double? {
+        if (mode == GameFrameRateMode.AUTO && state.shouldConservePower) {
+            return null
+        }
+        return measuredFps
+    }
+
     fun effectiveTarget(
         mode: GameFrameRateMode,
         requestedTarget: GameFrameRateTarget,

@@ -132,7 +132,13 @@ final class GameFrameRateSettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> attachPort(GameFrameRatePort port) async {
+  Future<void> attachPort(GameFrameRatePort port) {
+    final operation = _modeChangeQueue.then((_) => _attachPort(port));
+    _modeChangeQueue = operation.catchError((_) {});
+    return operation;
+  }
+
+  Future<void> _attachPort(GameFrameRatePort port) async {
     _port = port;
     try {
       _supported = await port.isSupported();

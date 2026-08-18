@@ -36,6 +36,7 @@ internal interface NativeGameWebViewHostOperations {
 
 internal class ActivityNativeGameWebViewHostOperations(
     private val host: ActivityWebViewHost,
+    private val onPresentationStateChanged: (Boolean) -> Unit = {},
 ) : NativeGameWebViewHostOperations {
     override val currentGeneration: Long?
         get() = host.currentGeneration
@@ -77,7 +78,10 @@ internal class ActivityNativeGameWebViewHostOperations(
     }
 
     override fun fitGameScreen(javascript: String) {
-        requireWebView().evaluateJavascript(javascript, null)
+        val webView = requireWebView()
+        webView.evaluateJavascript(javascript) { rawResult ->
+            onPresentationStateChanged(isGameSurfaceResult(rawResult))
+        }
     }
 
     override fun clearCache() {
@@ -107,6 +111,10 @@ internal class ActivityNativeGameWebViewHostOperations(
         "Native game WebView is not ready"
     }
 
+    private fun isGameSurfaceResult(rawResult: String?): Boolean {
+        return rawResult?.trim()?.equals("true", ignoreCase = true) == true
+    }
+
     private companion object {
         const val LOCAL_HOME_BASE_URL = "https://localhost/"
     }
@@ -114,6 +122,7 @@ internal class ActivityNativeGameWebViewHostOperations(
 
 internal interface NativeGameWebViewLifecycleObserver {
     fun onCreated() = Unit
+    fun onPageStarted() = Unit
     fun onPageFinished() = Unit
     fun onRenderProcessGone() = Unit
     fun onCreateFailed() = Unit
@@ -217,6 +226,7 @@ internal class NativeWebViewActivityStartupCoordinator(
 
     fun close() {
         cancelScheduledTimeout()
+        runCatching { guard.cancelAttempt() }
     }
 
     private fun schedule(delayMs: Long) {
@@ -883,9 +893,9 @@ internal class NativeGameWebViewChannel(
     }
 
     private fun handlePageStarted(attachmentId: Long, generation: Long, url: String) {
-        emitForGeneration(
-            attachmentId,
-            generation,
+        val binding = bindingForAcceptedEvent(attachmentId, generation) ?: return
+        safeObserverCall(binding.lifecycleObserver::onPageStarted)
+        emit(
             mapOf("type" to "pageStarted", "generationId" to generation, "url" to url),
         )
     }

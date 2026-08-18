@@ -17,6 +17,20 @@ enum DiagnosticErrorCode {
   renderProcessGone,
 }
 
+enum DiagnosticWebViewHost { flutterPlatformView, activityDirect, absent }
+
+enum DiagnosticGameRenderer { webgl, canvas, unknown }
+
+enum DiagnosticPreviousExitReason {
+  lowMemory,
+  crash,
+  anr,
+  userRequested,
+  systemUpdate,
+  unknown,
+  unavailable,
+}
+
 final class DiagnosticEvent {
   DiagnosticEvent._({
     required this.occurredAt,
@@ -87,6 +101,12 @@ final class DiagnosticEvent {
     required int pssKb,
     required int javaHeapKb,
     required int nativeHeapKb,
+    required int graphicsKb,
+    required int privateOtherKb,
+    required int systemAvailableKb,
+    required DiagnosticWebViewHost webViewHost,
+    required DiagnosticGameRenderer renderer,
+    required int generationId,
     required int totalFrames,
     required int over16Ms,
     required int over33Ms,
@@ -102,6 +122,12 @@ final class DiagnosticEvent {
       'pssKb': pssKb,
       'javaHeapKb': javaHeapKb,
       'nativeHeapKb': nativeHeapKb,
+      'graphicsKb': graphicsKb,
+      'privateOtherKb': privateOtherKb,
+      'systemAvailableKb': systemAvailableKb,
+      'webViewHost': webViewHost.name,
+      'renderer': renderer.name,
+      'generationId': generationId,
       'totalFrames': totalFrames,
       'over16Ms': over16Ms,
       'over33Ms': over33Ms,

@@ -1,10 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+
+import '../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import 'audio/game_audio_controller.dart';
 import 'browser/game_browser_controller.dart';
+import 'browser/game_frame_rate_policy.dart';
+import 'browser/game_frame_rate_port.dart';
+import 'browser/game_frame_rate_runtime_controller.dart';
 import 'browser/game_launch_config.dart';
 import 'browser/game_toolbar_controller.dart';
 import 'browser/native_game_surface_slot.dart';
@@ -95,11 +100,13 @@ final class NativeActivityGameSurface extends StatefulWidget {
     required this.browserController,
     required this.toolbarController,
     required this.routeObserver,
+    this.onGenerationChanged,
     this.networkSettingsController,
     this.captureModeController,
     this.audioController,
     this.gameCaptureController,
     this.frameRateSettingsController,
+    this.frameRateRuntimePortFactory,
     this.portFactory,
     this.startupOrchestrator,
     this.cleanupTimeout,
@@ -120,11 +127,13 @@ final class NativeActivityGameSurface extends StatefulWidget {
   final GameBrowserController browserController;
   final GameToolbarController toolbarController;
   final RouteObserver<ModalRoute<dynamic>> routeObserver;
+  final void Function(int)? onGenerationChanged;
   final NetworkSettingsController? networkSettingsController;
   final CaptureModeController? captureModeController;
   final GameAudioController? audioController;
   final GameCaptureController? gameCaptureController;
   final GameFrameRateSettingsController? frameRateSettingsController;
+  final GameFrameRateRuntimePort Function()? frameRateRuntimePortFactory;
   final NativeActivityGameWebViewPortFactory? portFactory;
   final GameSurfaceStartupOrchestrator? startupOrchestrator;
   final Duration? cleanupTimeout;
@@ -135,7 +144,8 @@ final class NativeActivityGameSurface extends StatefulWidget {
 }
 
 final class _NativeActivityGameSurfaceState
-    extends State<NativeActivityGameSurface> {
+    extends State<NativeActivityGameSurface>
+    with WidgetsBindingObserver {
   NativeActivityGameWebViewPort? _port;
   StreamSubscription<NativeGameWebViewEvent>? _eventSubscription;
   late GameSurfaceStartupOrchestrator _startupOrchestrator;
@@ -166,6 +176,9 @@ final class _NativeActivityGameSurfaceState
   bool _navigationAcknowledged = false;
   Uri? _navigationTarget;
   bool _pageReady = false;
+  bool _renderProcessRecoveryAvailable = false;
+  String? _lastFinishedPageUrl;
+  GameFrameRateRuntimeController? _frameRateRuntimeController;
   Future<void>? _navigationFuture;
   Future<void>? _bootstrapTail;
   bool _visibilityFatalCleanupStarted = false;
@@ -177,6 +190,7 @@ final class _NativeActivityGameSurfaceState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _boundsSink = _onBoundsChanged;
     _visibilitySink = _onVisibilityChanged;
     _cleanupTimeout = widget.cleanupTimeout ?? const Duration(seconds: 2);
@@ -247,6 +261,8 @@ final class _NativeActivityGameSurfaceState
 
     if (_startupDependenciesChanged(oldWidget, widget)) {
       final previous = _startupOrchestrator;
+      _frameRateRuntimeController?.dispose();
+      _frameRateRuntimeController = null;
       _invalidateOperations(fatal: false);
       _startupOrchestrator = _createStartupOrchestrator(widget);
       unawaited(
@@ -268,6 +284,11 @@ final class _NativeActivityGameSurfaceState
         );
       }
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _frameRateRuntimeController?.onLifecycleChanged(state);
   }
 
   bool _startupDependenciesChanged(
@@ -311,6 +332,7 @@ final class _NativeActivityGameSurfaceState
       final generationId = await port.create().timeout(_cleanupTimeout);
       if (!_matchesAttempt(port, operationEpoch)) return;
       _generationId = generationId;
+      widget.onGenerationChanged?.call(generationId);
       widget.browserController.attachPort(port);
       _replayPendingEvents(port, generationId);
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
@@ -361,15 +383,39 @@ final class _NativeActivityGameSurfaceState
 
       await WidgetsBinding.instance.endOfFrame;
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
+      var frameRateSupported = false;
       try {
-        await orchestrator.attachFrameRatePlatformPort().timeout(
-          _cleanupTimeout,
-        );
+        frameRateSupported = await orchestrator
+            .attachFrameRatePlatformPort()
+            .timeout(_cleanupTimeout);
       } catch (error, stackTrace) {
         debugPrint('Frame-rate platform port unavailable: $error\n$stackTrace');
       }
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
-
+      final frameRateSettings = widget.frameRateSettingsController;
+      if (frameRateSupported && frameRateSettings != null) {
+        final runtimeController = GameFrameRateRuntimeController(
+          settings: frameRateSettings,
+          port:
+              widget.frameRateRuntimePortFactory?.call() ??
+              const MethodChannelGameFrameRateRuntimePort(),
+        );
+        _frameRateRuntimeController = runtimeController;
+        final lifecycleState = WidgetsBinding.instance.lifecycleState;
+        if (lifecycleState != null) {
+          runtimeController.onLifecycleChanged(lifecycleState);
+        }
+        final finishedPageUrl = _lastFinishedPageUrl;
+        if (_pageReady && finishedPageUrl != null) {
+          await runtimeController.onPageReady(
+            samplingEnabled:
+                widget.browserController.mode !=
+                    GameBrowserMode.localPrototype &&
+                isGameFrameRateSamplingPage(finishedPageUrl),
+          );
+        }
+      }
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
       final result = await orchestrator.applyNetworkSettings().timeout(
         _cleanupTimeout,
       );
@@ -398,7 +444,12 @@ final class _NativeActivityGameSurfaceState
                 _matchesGeneration(port, generationId, operationEpoch),
             navigate: () async {
               if (_matchesGeneration(port, generationId, operationEpoch)) {
-                await _navigateInitialPage(port, initialAddress);
+                await _navigateInitialPage(
+                  port,
+                  initialAddress,
+                  generationId: generationId,
+                  operationEpoch: operationEpoch,
+                );
               }
             },
           )
@@ -420,8 +471,10 @@ final class _NativeActivityGameSurfaceState
 
   Future<void> _navigateInitialPage(
     NativeActivityGameWebViewPort port,
-    Uri address,
-  ) {
+    Uri address, {
+    required int generationId,
+    required int operationEpoch,
+  }) {
     if (_navigationAcknowledged || _navigationIssued) {
       return _navigationFuture ?? Future<void>.value();
     }
@@ -441,6 +494,9 @@ final class _NativeActivityGameSurfaceState
           },
         )
         .catchError((Object error, StackTrace stackTrace) {
+          if (!_isCurrentNavigationAttempt(port, generationId)) {
+            return;
+          }
           if (_navigationAcknowledged) return;
           if (!responseTimedOut) {
             _navigationIssued = false;
@@ -502,6 +558,7 @@ final class _NativeActivityGameSurfaceState
       case NativeGameWebViewEventType.created:
         return;
       case NativeGameWebViewEventType.pageStarted:
+        _frameRateRuntimeController?.onPageStarted();
         final startedUri = event.navigationUri;
         if (_navigationIssued &&
             startedUri != null &&
@@ -524,12 +581,13 @@ final class _NativeActivityGameSurfaceState
       case NativeGameWebViewEventType.pageFinished:
         if (_awaitingNewPageStart) return;
         final url = event.url!;
+        _lastFinishedPageUrl = url;
         widget.statusController.onPageFinished(url);
         widget.browserController.onPageFinished(url);
         final port = _port;
         if (port != null) {
           unawaited(
-            _finishPage(port, generationId, _operationEpoch, _pageEpoch),
+            _finishPage(port, generationId, _operationEpoch, _pageEpoch, url),
           );
         }
         return;
@@ -542,11 +600,13 @@ final class _NativeActivityGameSurfaceState
         );
         return;
       case NativeGameWebViewEventType.renderProcessGone:
+        _renderProcessRecoveryAvailable = true;
         _setFatalError('游戏渲染进程已退出。');
         return;
       case NativeGameWebViewEventType.destroyed:
         _invalidateOperations(fatal: true);
         _generationId = null;
+        widget.onGenerationChanged?.call(-1);
         final port = _port;
         if (port != null) {
           try {
@@ -558,7 +618,9 @@ final class _NativeActivityGameSurfaceState
             );
           }
         }
-        _notifyFatalError('原生 WebView 已销毁。');
+        if (!_renderProcessRecoveryAvailable) {
+          _notifyFatalError('原生 WebView 已销毁。');
+        }
         return;
     }
   }
@@ -568,6 +630,7 @@ final class _NativeActivityGameSurfaceState
     int generationId,
     int operationEpoch,
     int pageEpoch,
+    String url,
   ) async {
     try {
       await port.fitGameScreen().timeout(_cleanupTimeout);
@@ -584,6 +647,11 @@ final class _NativeActivityGameSurfaceState
       }
       _pageReady = true;
       _setStartupState(GameStartupState.ready);
+      await _frameRateRuntimeController?.onPageReady(
+        samplingEnabled:
+            widget.browserController.mode != GameBrowserMode.localPrototype &&
+            isGameFrameRateSamplingPage(url),
+      );
     } catch (error, stackTrace) {
       debugPrint('Native game surface page finish failed: $error\n$stackTrace');
       if (_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
@@ -604,6 +672,7 @@ final class _NativeActivityGameSurfaceState
   }
 
   void _reportPageError(String message) {
+    _frameRateRuntimeController?.onPageStarted();
     _invalidateOperations(fatal: false);
     _pageReady = false;
     _awaitingNewPageStart = true;
@@ -621,6 +690,7 @@ final class _NativeActivityGameSurfaceState
   }
 
   void _setFatalError(String message) {
+    _frameRateRuntimeController?.onPageStarted();
     _pageReady = false;
     _invalidateOperations(fatal: true);
     _notifyFatalError(message);
@@ -663,6 +733,17 @@ final class _NativeActivityGameSurfaceState
         );
       }),
     );
+  }
+
+  bool _isCurrentNavigationAttempt(
+    NativeActivityGameWebViewPort port,
+    int generationId,
+  ) {
+    return _active &&
+        mounted &&
+        !_fatal &&
+        identical(_port, port) &&
+        _generationId == generationId;
   }
 
   bool _matchesAttempt(NativeActivityGameWebViewPort port, int operationEpoch) {
@@ -804,6 +885,7 @@ final class _NativeActivityGameSurfaceState
     debugPrint('Native game surface could not be hidden: $error\n$stackTrace');
     _setFatalError('原生 WebView 无法安全隐藏，已终止该模式。');
     _generationId = null;
+    widget.onGenerationChanged?.call(-1);
     _port = null;
     try {
       widget.browserController.detachPort(port);
@@ -969,23 +1051,71 @@ final class _NativeActivityGameSurfaceState
   }
 
   Widget _buildStartupOverlay() {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
     if (_startupState == GameStartupState.error) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Text(
-          _startupErrorMessage,
-          key: const Key('native-game-surface-error'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.redAccent),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              _startupErrorMessage,
+              key: const Key('native-game-surface-error'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+            if (_renderProcessRecoveryAvailable) ...<Widget>[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                key: const Key('native-game-surface-reload'),
+                onPressed: _reloadAfterRenderProcessGone,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.reload),
+              ),
+            ],
+          ],
         ),
       );
     }
     return const CircularProgressIndicator(color: Color(0xffd4a85f));
   }
 
+  void _reloadAfterRenderProcessGone() {
+    if (!_renderProcessRecoveryAvailable || !mounted || !_active) return;
+    if (_generationId != null) return;
+    final port = _port;
+    if (port == null) return;
+    _renderProcessRecoveryAvailable = false;
+    _fatal = false;
+    _pageReady = false;
+    _generationId = null;
+    widget.onGenerationChanged?.call(-1);
+    _pendingEvents.clear();
+    _navigationIssued = false;
+    _navigationAcknowledged = false;
+    _navigationTarget = null;
+    _navigationFuture = null;
+    _bootstrapTail = null;
+    _setStartupState(GameStartupState.applyingNetwork);
+    unawaited(
+      _start(port).catchError((Object error, StackTrace stackTrace) {
+        debugPrint(
+          'Native game surface renderer reload failed: '
+          '$error\n$stackTrace',
+        );
+      }),
+    );
+  }
+
   @override
   void dispose() {
     _active = false;
+    WidgetsBinding.instance.removeObserver(this);
+    widget.onGenerationChanged?.call(-1);
+    _frameRateRuntimeController?.dispose();
+    _frameRateRuntimeController = null;
     _invalidateOperations(fatal: true);
     _desiredVisible = false;
     widget.networkSettingsController?.removeListener(_onNetworkSettingsChanged);

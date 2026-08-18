@@ -22,6 +22,7 @@ import 'package:yahagi_kancolle_browser/src/game_webview.dart';
 import 'package:yahagi_kancolle_browser/src/native_activity_game_surface.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_toolbar_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_frame_rate_runtime_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_frame_rate_settings.dart';
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
@@ -170,6 +171,54 @@ void main() {
       fixture.toolbarController.collapse();
     },
   );
+
+  testWidgets('native surface drives the frame-rate runtime on game pages', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    final frameRateSettings = await GameFrameRateSettingsController.load(
+      MemoryGameFrameRateSettingsStore(),
+    );
+    final frameRatePort = _FakeNativeFrameRateRuntimePort();
+    addTearDown(() async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      frameRateSettings.dispose();
+      await fixture.dispose();
+    });
+    await fixture.pump(
+      tester,
+      frameRateSettingsController: frameRateSettings,
+      frameRateRuntimePortFactory: () => frameRatePort,
+    );
+    await tester.pump();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://osapi.dmm.com/game'),
+    );
+    fixture.port.addEvent(
+      _event(
+        'pageFinished',
+        generationId: 7,
+        url: 'https://osapi.dmm.com/game',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    fixture.toolbarController.collapse();
+
+    expect(frameRatePort.appliedTargets, contains(GameFrameRateTarget.fps60));
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    await tester.pump();
+    expect(frameRatePort.appliedTargets.last, GameFrameRateTarget.fps30);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump();
+    expect(frameRatePort.appliedTargets.last, GameFrameRateTarget.fps60);
+  });
 
   testWidgets('native visibility follows readiness instead of slot desire', (
     tester,
@@ -1049,6 +1098,37 @@ void main() {
     await tester.pump();
     expect(fixture.port.calls, contains('visible:true'));
     fixture.toolbarController.collapse();
+  });
+
+  testWidgets('renderer recovery reload creates one new generation', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+
+    fixture.port.addEvent(
+      _event('renderProcessGone', generationId: 7, didCrash: true),
+    );
+    await tester.pump();
+    fixture.port.addEvent(_event('destroyed', generationId: 7));
+    await tester.pump();
+
+    expect(find.byKey(const Key('native-game-surface-reload')), findsOneWidget);
+    final createsBefore = fixture.port.calls.where((call) => call == 'create');
+    expect(createsBefore, hasLength(1));
+
+    await tester.tap(find.byKey(const Key('native-game-surface-reload')));
+    await _pumpUntil(
+      tester,
+      () => fixture.port.calls.where((call) => call == 'create').length == 2,
+    );
+    await _pumpUntil(
+      tester,
+      () => fixture.port.calls.any((call) => call.startsWith('load:')),
+    );
+    expect(fixture.port.calls.where((call) => call == 'create'), hasLength(2));
   });
 
   testWidgets(
@@ -1966,6 +2046,19 @@ final class _BlockingAudioPort implements GameAudioPort {
   Future<void> setMuted(bool muted) async {}
 }
 
+final class _FakeNativeFrameRateRuntimePort
+    implements GameFrameRateRuntimePort {
+  final List<GameFrameRateTarget> appliedTargets = <GameFrameRateTarget>[];
+
+  @override
+  Future<void> apply(GameFrameRateTarget target) async {
+    appliedTargets.add(target);
+  }
+
+  @override
+  Future<double?> measuredFps() async => 60;
+}
+
 final class _RecordingFrameRatePort implements GameFrameRatePort {
   _RecordingFrameRatePort(this.calls);
 
@@ -2031,6 +2124,8 @@ final class _SurfaceFixture {
     CaptureModeController? captureModeController,
     GameBrowserController? browserController,
     GameSurfaceStartupOrchestrator? startupOrchestrator,
+    GameFrameRateSettingsController? frameRateSettingsController,
+    GameFrameRateRuntimePort Function()? frameRateRuntimePortFactory,
   }) {
     if (tester.binding.lifecycleState != AppLifecycleState.resumed) {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
@@ -2051,6 +2146,8 @@ final class _SurfaceFixture {
             captureModeController: captureModeController,
             portFactory: injectPort ? () => port : null,
             startupOrchestrator: startupOrchestrator ?? orchestrator,
+            frameRateSettingsController: frameRateSettingsController,
+            frameRateRuntimePortFactory: frameRateRuntimePortFactory,
             cleanupTimeout: cleanupTimeout,
           ),
         ),

@@ -328,11 +328,13 @@ class NativeGameWebViewChannelTest {
         firstSink.navigationBlocked(0, "intent")
         firstSink.renderProcessGone(0, true)
         firstSink.destroyed(0)
+        secondSink.pageStarted(0, "https://new.example/start")
         secondSink.pageFinished(0, "https://new.example/finish")
 
         assertSuccess(channel, "reload", generation(0), null)
         assertEquals(1, secondHost.reloadCalls)
         assertEquals(1, observer.createdCalls)
+        assertEquals(1, observer.pageStartedCalls)
         assertEquals(1, observer.pageFinishedCalls)
         assertEquals(0, observer.renderProcessGoneCalls)
         assertEquals(
@@ -340,6 +342,11 @@ class NativeGameWebViewChannelTest {
                 mapOf("type" to "created", "generationId" to 0L),
                 mapOf("type" to "destroyed", "generationId" to 0L),
                 mapOf("type" to "created", "generationId" to 0L),
+                mapOf(
+                    "type" to "pageStarted",
+                    "generationId" to 0L,
+                    "url" to "https://new.example/start",
+                ),
                 mapOf(
                     "type" to "pageFinished",
                     "generationId" to 0L,
@@ -969,6 +976,32 @@ class NativeGameWebViewChannelTest {
     }
 
     @Test
+    fun normalActivityCloseCancelsAnUnfinishedStartupAttempt() {
+        val store = CountingStore(
+            NativeWebViewStartupSnapshot(
+                0,
+                5L,
+                NativeWebViewProcessSessionId("a"),
+                "nativeActivityExperimental",
+            ),
+        )
+        val coordinator = NativeWebViewActivityStartupCoordinator(
+            guard = NativeWebViewStartupGuard(store, NativeWebViewProcessSessionId("a")),
+            nowMs = { 5L },
+            scheduleTimeout = { _, _ -> },
+            cancelTimeout = {},
+            requestRestart = {},
+        )
+
+        coordinator.close()
+
+        assertEquals(
+            NativeWebViewStartupSnapshot(0, null, null, "nativeActivityExperimental"),
+            store.snapshot,
+        )
+    }
+
+    @Test
     fun startupPersistenceFailuresBecomeImmediateBrokerErrorsInsteadOfRebindWaits() {
         listOf(
             NativeWebViewStartupWriteResult.Failed,
@@ -1212,11 +1245,16 @@ class NativeGameWebViewChannelTest {
 
     private class RecordingLifecycleObserver : NativeGameWebViewLifecycleObserver {
         var createdCalls = 0
+        var pageStartedCalls = 0
         var pageFinishedCalls = 0
         var renderProcessGoneCalls = 0
 
         override fun onCreated() {
             createdCalls++
+        }
+
+        override fun onPageStarted() {
+            pageStartedCalls++
         }
 
         override fun onPageFinished() {
