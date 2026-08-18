@@ -111,7 +111,6 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                   style: const TextStyle(color: Color(0xff9bc7e4)),
                 ),
               ),
-            if (_integrityChecked) _integrityResult(l10n, status),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               child: Wrap(
@@ -186,33 +185,6 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
     title: Text(title),
     subtitle: Text(subtitle),
   );
-
-  Widget _integrityResult(
-    AppLocalizations l10n,
-    GameResourceCacheStatus status,
-  ) {
-    final complete =
-        status.missingCount == 0 &&
-        status.damagedCount == 0 &&
-        status.outdatedCount == 0;
-    return Padding(
-      key: const Key('cache-integrity-result'),
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
-      child: Text(
-        complete
-            ? l10n.gameResourceCacheIntegrityComplete
-            : '${l10n.gameResourceCacheMissing} ${status.missingCount} '
-                  '${l10n.gameResourceCacheItems} · '
-                  '${l10n.gameResourceCacheDamaged} ${status.damagedCount} '
-                  '${l10n.gameResourceCacheItems} · '
-                  '${l10n.gameResourceCacheOutdated} ${status.outdatedCount} '
-                  '${l10n.gameResourceCacheItems}',
-        style: TextStyle(
-          color: complete ? const Color(0xff8bd5a7) : const Color(0xffffca80),
-        ),
-      ),
-    );
-  }
 
   Future<void> _checkIntegrity() async {
     await widget.controller.checkIntegrity();

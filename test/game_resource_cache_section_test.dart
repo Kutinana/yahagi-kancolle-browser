@@ -28,11 +28,12 @@ void main() {
     expect(find.byKey(const Key('cache-mode-full')), findsOneWidget);
     expect(find.textContaining('固定基础资源清单'), findsOneWidget);
     expect(find.textContaining('游玩时自动缓存'), findsOneWidget);
-    expect(find.text('6.84 GB / 8.12 GB（84.2%）'), findsOneWidget);
+    expect(find.text('6.84 GB（84.2%）'), findsOneWidget);
+    expect(find.textContaining('/ 8.12 GB'), findsNothing);
     expect(find.textContaining('1,284'), findsNothing);
   });
 
-  testWidgets('integrity check reports missing and damaged resources', (
+  testWidgets('integrity check hides diagnostics but keeps repair action', (
     tester,
   ) async {
     final port = _FakePort();
@@ -52,9 +53,10 @@ void main() {
     await tester.pump();
 
     expect(port.integrityCalls, 1);
-    expect(find.byKey(const Key('cache-integrity-result')), findsOneWidget);
-    expect(find.textContaining('缺失 3'), findsOneWidget);
-    expect(find.textContaining('损坏 1'), findsOneWidget);
+    expect(find.byKey(const Key('cache-integrity-result')), findsNothing);
+    expect(find.textContaining('缺失 3'), findsNothing);
+    expect(find.textContaining('损坏 1'), findsNothing);
+    expect(find.textContaining('过期 0'), findsNothing);
     expect(find.byKey(const Key('cache-repair')), findsOneWidget);
   });
 
