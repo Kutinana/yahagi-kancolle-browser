@@ -50,6 +50,7 @@ final class NativeGameSurfaceSlot extends StatefulWidget {
     required this.onBoundsChanged,
     required this.onVisibilityChanged,
     this.routeObserver,
+    this.boundsSinkIdentity,
     this.boundsRetryLimit = 3,
     super.key,
   }) : assert(boundsRetryLimit > 0);
@@ -57,6 +58,7 @@ final class NativeGameSurfaceSlot extends StatefulWidget {
   final Future<void> Function(NativeGameWebViewBounds bounds) onBoundsChanged;
   final Future<void> Function(bool visible) onVisibilityChanged;
   final RouteObserver<ModalRoute<dynamic>>? routeObserver;
+  final Object? boundsSinkIdentity;
   final int boundsRetryLimit;
 
   @override
@@ -80,6 +82,9 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   bool _resendCurrentBoundsToNewSink = false;
   bool _measureScheduled = false;
   bool _synchronizingRouteSubscription = false;
+
+  Object get _effectiveBoundsSinkIdentity =>
+      widget.boundsSinkIdentity ?? widget.onBoundsChanged;
 
   @override
   void initState() {
@@ -106,9 +111,16 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     if (oldWidget.onVisibilityChanged != widget.onVisibilityChanged) {
       _visibility.updateCallback(widget.onVisibilityChanged);
     }
-    if (oldWidget.onBoundsChanged != widget.onBoundsChanged &&
+    final oldBoundsSinkIdentity =
+        oldWidget.boundsSinkIdentity ?? oldWidget.onBoundsChanged;
+    if (oldBoundsSinkIdentity != _effectiveBoundsSinkIdentity &&
         _currentBounds != null) {
-      _resendCurrentBoundsToNewSink = true;
+      _boundsGeneration++;
+      _lastBounds = null;
+      _resendCurrentBoundsToNewSink = false;
+      _queuedBounds = _currentBounds;
+      _ignoreErrors(_visibility.setSlotAttached(false));
+      _drainBounds();
     }
     if (oldWidget.routeObserver != widget.routeObserver) {
       _subscribeToCurrentRoute();
@@ -282,11 +294,12 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
           }
           return;
         }
-        _lastBounds = bounds;
         _retryBounds = null;
         _boundsRetryAttempts = 0;
         if (generation == _boundsGeneration &&
-            _sameBounds(bounds, _currentBounds)) {
+            _sameBounds(bounds, _currentBounds) &&
+            _queuedBounds == null) {
+          _lastBounds = bounds;
           _ignoreErrors(_visibility.setSlotAttached(true));
         }
       }

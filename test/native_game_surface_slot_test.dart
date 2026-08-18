@@ -410,11 +410,17 @@ void main() {
       final firstSink = <NativeGameWebViewBounds>[];
       final secondSink = <NativeGameWebViewBounds>[];
       await tester.pumpWidget(
-        _slotApp(onBoundsChanged: (bounds) async => firstSink.add(bounds)),
+        _slotApp(
+          boundsSinkIdentity: firstSink,
+          onBoundsChanged: (bounds) async => firstSink.add(bounds),
+        ),
       );
       await tester.pump();
       await tester.pumpWidget(
-        _slotApp(onBoundsChanged: (bounds) async => secondSink.add(bounds)),
+        _slotApp(
+          boundsSinkIdentity: secondSink,
+          onBoundsChanged: (bounds) async => secondSink.add(bounds),
+        ),
       );
       await tester.pump();
       await tester.pump();
@@ -888,6 +894,7 @@ Widget _slotApp({
   RouteObserver<ModalRoute<dynamic>>? observer,
   bool useCurrentLifecycle = false,
   int boundsRetryLimit = 3,
+  Object? boundsSinkIdentity,
 }) {
   if (!useCurrentLifecycle &&
       WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
@@ -910,6 +917,8 @@ Widget _slotApp({
             onVisibilityChanged: onVisibilityChanged ?? _ignoreVisibility,
             routeObserver: observer,
             boundsRetryLimit: boundsRetryLimit,
+            boundsSinkIdentity:
+                boundsSinkIdentity ?? _defaultBoundsSinkIdentity,
           ),
         ),
       ),
@@ -920,3 +929,5 @@ Widget _slotApp({
 Future<void> _ignoreVisibility(bool _) async {}
 
 Future<void> _ignoreBounds(NativeGameWebViewBounds _) async {}
+
+final Object _defaultBoundsSinkIdentity = Object();
