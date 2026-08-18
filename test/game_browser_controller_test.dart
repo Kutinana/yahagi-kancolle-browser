@@ -125,6 +125,45 @@ void main() {
 
     expect(port.fitGameScreenCalls, 1);
   });
+
+  test(
+    'detaches ports by identity without disconnecting a replacement',
+    () async {
+      final first = FakeGameBrowserPort();
+      final second = FakeGameBrowserPort();
+      final controller = GameBrowserController(port: first);
+      controller.attachPort(second);
+
+      controller.detachPort(first);
+      await controller.reload();
+
+      expect(second.reloadCalls, 1);
+      controller.detachPort(second);
+      await controller.reload();
+      expect(controller.errorMessage, 'WebView 尚未就绪');
+      expect(second.reloadCalls, 1);
+    },
+  );
+
+  test(
+    'reloading a replacement port does not await an old port request',
+    () async {
+      final first = FakeGameBrowserPort()..reloadCompleter = Completer<void>();
+      final second = FakeGameBrowserPort();
+      final controller = GameBrowserController(port: first);
+
+      final oldReload = controller.reload();
+      await Future<void>.delayed(Duration.zero);
+      controller.attachPort(second);
+      controller.detachPort(first);
+      final replacementReload = controller.reload();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(second.reloadCalls, 1);
+      first.reloadCompleter!.complete();
+      await Future.wait(<Future<void>>[oldReload, replacementReload]);
+    },
+  );
 }
 
 final class FakeGameBrowserPort implements GameBrowserPort {

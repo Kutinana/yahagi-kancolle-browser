@@ -49,6 +49,14 @@ final class GameBrowserController extends ChangeNotifier {
 
   void attachPort(GameBrowserPort port) {
     _port = port;
+    _reloadInFlight = null;
+  }
+
+  void detachPort(GameBrowserPort port) {
+    if (identical(_port, port)) {
+      _port = null;
+      _reloadInFlight = null;
+    }
   }
 
   Future<void> enterDmmLoginTest() async {
