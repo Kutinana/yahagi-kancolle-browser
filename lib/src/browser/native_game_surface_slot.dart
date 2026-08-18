@@ -70,6 +70,7 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   NativeGameWebViewBounds? _pendingBounds;
   int _boundsRequestId = 0;
   bool _measureScheduled = false;
+  bool _synchronizingRouteSubscription = false;
 
   @override
   void initState() {
@@ -116,6 +117,9 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
 
   @override
   void didPush() {
+    if (_synchronizingRouteSubscription) {
+      return;
+    }
     _ignoreErrors(_visibility.setRouteVisible(true));
   }
 
@@ -156,11 +160,18 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     }
     _unsubscribeFromRoute();
     if (observer == null || route == null) {
+      _ignoreErrors(_visibility.setRouteVisible(true));
       return;
     }
-    observer.subscribe(this, route);
+    _synchronizingRouteSubscription = true;
+    try {
+      observer.subscribe(this, route);
+    } finally {
+      _synchronizingRouteSubscription = false;
+    }
     _subscribedObserver = observer;
     _subscribedRoute = route;
+    _ignoreErrors(_visibility.setRouteVisible(route.isCurrent));
   }
 
   void _unsubscribeFromRoute() {

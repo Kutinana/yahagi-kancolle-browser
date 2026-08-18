@@ -524,6 +524,64 @@ void main() {
       expect(visibility, <bool>[true, false, true]);
     });
 
+    testWidgets('calibrates route visibility when its observer changes', (
+      tester,
+    ) async {
+      final firstObserver = RouteObserver<ModalRoute<dynamic>>();
+      final secondObserver = RouteObserver<ModalRoute<dynamic>>();
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final visibility = <bool>[];
+
+      await tester.pumpWidget(
+        _slotApp(
+          navigatorKey: navigatorKey,
+          observer: firstObserver,
+          onVisibilityChanged: (value) async => visibility.add(value),
+        ),
+      );
+      await tester.pump();
+      unawaited(
+        navigatorKey.currentState!.push<void>(
+          MaterialPageRoute<void>(builder: (_) => const SizedBox.expand()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(visibility, <bool>[true, false]);
+
+      await tester.pumpWidget(
+        _slotApp(
+          navigatorKey: navigatorKey,
+          observer: secondObserver,
+          onVisibilityChanged: (value) async => visibility.add(value),
+        ),
+      );
+      await tester.pump();
+      expect(visibility, <bool>[true, false]);
+
+      await tester.pumpWidget(
+        _slotApp(
+          navigatorKey: navigatorKey,
+          onVisibilityChanged: (value) async => visibility.add(value),
+        ),
+      );
+      await tester.pump();
+      expect(visibility, <bool>[true, false, true]);
+
+      await tester.pumpWidget(
+        _slotApp(
+          navigatorKey: navigatorKey,
+          observer: secondObserver,
+          onVisibilityChanged: (value) async => visibility.add(value),
+        ),
+      );
+      await tester.pump();
+      expect(visibility, <bool>[true, false, true, false]);
+
+      navigatorKey.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(visibility, <bool>[true, false, true, false, true]);
+    });
+
     testWidgets('maps non-resumed app lifecycle states to hidden', (
       tester,
     ) async {
