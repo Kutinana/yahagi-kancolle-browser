@@ -1,0 +1,72 @@
+final class QuestTranslationFallback {
+  const QuestTranslationFallback({this.name, this.description});
+
+  final String? name;
+  final String? description;
+}
+
+const questTranslationFallbacks = <int, QuestTranslationFallback>{
+  365: QuestTranslationFallback(
+    description:
+        '“佐世保之时雨”练度提升任务：编成包含驱逐舰“时雨”以及第二十七驱逐队（白露、有明、夕暮）至少1艘僚舰的演习舰队，'
+        '在今天之内取得5次以上演习【S评价】胜利！“佐世保之时雨”演习开始！',
+  ),
+  380: QuestTranslationFallback(
+    name: '【期间限定任务】登陆船团护卫演习',
+    description:
+        '实施登陆船团护卫演习！以包含至少1艘登陆舰及至少2艘护卫海防舰的舰队，或包含至少3艘海防舰的舰队，'
+        '在今天之内取得3次以上演习【A评价】胜利！演习，开始！',
+  ),
+  381: QuestTranslationFallback(
+    name: '【期间限定任务】秋月型演习任务',
+    description:
+        '【期间限定演习】编成包含秋月型或“秋云”“秋霜”“秋津洲”合计3艘以上的演习舰队。'
+        '以该舰队在今天之内取得3次以上演习【A评价】胜利！秋月型驱逐舰等，演习，开始！',
+  ),
+  450: QuestTranslationFallback(
+    name: '【期间限定：扩张任务】水雷战队远征作战！',
+    description:
+        '【期间限定】扩张作战：实施“海上护卫任务”“资源运输任务”“油轮护卫任务”“兵站强化任务”“包围陆战队撤收作战”远征，并全部成功完成！',
+  ),
+  640: QuestTranslationFallback(
+    name: '初夏的整理整顿',
+    description: '废弃多件不需要的装备，为迎接夏天做好准备吧！',
+  ),
+  997: QuestTranslationFallback(
+    description:
+        '海上护卫任务：以包含3艘海防舰，或4艘驱逐舰，或2艘水上机母舰的舰队，反复出击炼油厂地带沿岸、镇守府近海、'
+        '镇守府近海航路、西南诸岛巴士海峡！确保重要的海上补给线！',
+  ),
+  1001: QuestTranslationFallback(
+    description:
+        '以改夕云型驱逐舰“清霜改二/丁”为核心，并从“霞”“朝霜”“大淀”“足柄”中选2艘作为僚舰。'
+        '以该舰队出击巴士海峡、东部奥廖尔海、冲之岛海域、昭南本土航路！歼灭各海域敌方战力！',
+  ),
+  1019: QuestTranslationFallback(
+    name: '激斗！“第三战队”精锐第二小队！',
+    description:
+        '以“比睿改二丙”“雾岛改二丙”为基干，僚舰含有夕云型2艘以上或白露型2艘以上的舰队，'
+        '部署于三文鱼海域北方、KW环礁近海海域、咖喱洋利兰加岛近海！通过反复出击歼灭敌人！',
+  ),
+  1020: QuestTranslationFallback(
+    name: '【期间限定任务】“第三战队”紧急展开！',
+    description:
+        '以包含第三战队“金刚”“比睿”“榛名”“雾岛”中2艘以上的高速战舰部队，出击西南诸岛防卫线、西南诸岛近海、'
+        '巴士海峡、咖喱洋海域！捕捉各海域敌军，将其击溃！',
+  ),
+  1036: QuestTranslationFallback(name: '输送船团护卫部队，出击！'),
+  1037: QuestTranslationFallback(
+    name: '【期间限定任务】秋季旗舰是……我！',
+    description:
+        '将“秋云”“秋霜”“秋月”“秋津洲”任一舰配置为旗舰！以该舰队反复出击炼油厂地带沿岸、镇守府近海、'
+        '西南诸岛防卫线、西南诸岛近海！为迎接秋季正式到来，严密巡逻近海及西南诸岛！',
+  ),
+  1130: QuestTranslationFallback(
+    description:
+        '工厂事前准备任务：废弃“机枪”“轮机强化”“装甲板”系装备各×3。准备油桶（运输用）×3、铝土2,700及钢材5,500！'
+        '（任务完成后，准备的资源等将被消耗）',
+  ),
+  1152: QuestTranslationFallback(name: '【强化反潜战力】强化海防舰反潜兵装'),
+  1153: QuestTranslationFallback(name: '【续：强化反潜战力】进一步扩充反潜兵装'),
+  1154: QuestTranslationFallback(name: '【新型反潜兵装开发】开发反潜喷进爆雷炮'),
+};
