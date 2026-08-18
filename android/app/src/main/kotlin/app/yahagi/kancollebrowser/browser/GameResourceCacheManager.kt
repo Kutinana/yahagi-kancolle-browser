@@ -32,7 +32,7 @@ class GameResourceCacheManager(
                 }
                 onModeChanged(mode)
                 runIo(result) {
-                    coordinator.configureModeChange(mode == GameResourceCacheMode.NONE) {
+                    coordinator.configureModeChange(mode.wireName, mode == GameResourceCacheMode.NONE) {
                         modeEpoch.get() == capturedEpoch && modeProvider() == mode
                     }
                 }

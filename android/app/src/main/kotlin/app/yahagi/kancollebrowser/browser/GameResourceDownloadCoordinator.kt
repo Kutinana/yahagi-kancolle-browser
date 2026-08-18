@@ -228,9 +228,31 @@ class GameResourceDownloadCoordinator(
     }
 
     @Synchronized
-    fun configureModeChange(isDisabled: Boolean, isCurrent: () -> Boolean): Boolean {
+    fun configureModeChange(
+        profile: String,
+        isDisabled: Boolean,
+        isCurrent: () -> Boolean,
+    ): Boolean {
         if (disposed.get() || !isCurrent()) return false
         generation.incrementAndGet()
+        if (this.profile != profile) {
+            this.profile = profile
+            manifestFile.delete()
+            manifestBackupFile.delete()
+            urls = emptyList()
+            manifestLoaded = true
+            targetBytes = 0L
+            cachedBytesSnapshot = 0L
+            downloadedBytes = 0L
+            startedAt = 0L
+            missingCount = 0
+            damagedCount = 0
+            outdatedCount = 0
+            validByteLengths.clear()
+            expectedByteLengths.clear()
+            preloadAuthorized = false
+            userPaused = isDisabled
+        }
         pauseRequested = true
         networkPaused = false
         if (isDisabled) {

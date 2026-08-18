@@ -35,6 +35,78 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     @Test
+    fun `mode change stops exposing the previous manifest totals`() {
+        val url = official("/kcs2/resources/a.png")
+        val fixture = fixture(fetcher = GameResourceFetcher { _, _, _ -> response(byteArrayOf(1)) })
+        fixture.engine.fetch(url)
+        fixture.coordinator.setManifest("light", listOf(url), 580_000_000)
+        assertEquals(580_000_000, fixture.coordinator.status().targetBytes)
+
+        assertTrue(
+            fixture.coordinator.configureModeChange(
+                profile = "full",
+                isDisabled = false,
+            ) { true },
+        )
+
+        val pendingFull = fixture.coordinator.status()
+        assertEquals(0, pendingFull.targetBytes)
+        assertEquals(0, pendingFull.cachedBytes)
+        assertEquals(0, pendingFull.missingCount)
+        assertTrue(fixture.engine.hasCached(url))
+        fixture.coordinator.dispose()
+    }
+
+    @Test
+    fun `same mode configuration keeps the restored manifest totals`() {
+        val fixture = fixture()
+        fixture.coordinator.setManifest(
+            "light",
+            listOf(official("/kcs2/resources/a.png")),
+            580_000_000,
+        )
+
+        assertTrue(
+            fixture.coordinator.configureModeChange(
+                profile = "light",
+                isDisabled = false,
+            ) { true },
+        )
+
+        assertEquals(580_000_000, fixture.coordinator.status().targetBytes)
+        assertEquals(1, fixture.coordinator.status().missingCount)
+        fixture.coordinator.dispose()
+    }
+
+    @Test
+    fun `mode change does not revive an old backup manifest after restart`() {
+        val stateFile = temporaryFolder.newFile("mode-change-state.json")
+        val fixture = fixture(stateFile = stateFile)
+        val url = official("/kcs2/resources/a.png")
+        fixture.engine.fetch(url)
+        fixture.coordinator.setManifest("full", listOf(url), 5_800_000_000)
+        fixture.coordinator.setManifest("light", listOf(url), 580_000_000)
+        assertTrue(
+            fixture.coordinator.configureModeChange(
+                profile = "full",
+                isDisabled = false,
+            ) { true },
+        )
+        fixture.coordinator.dispose()
+
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.FULL },
+            stateFile,
+        )
+
+        assertEquals(0, restored.status().targetBytes)
+        assertEquals(0, restored.status().cachedBytes)
+        assertTrue(fixture.engine.hasCached(url))
+        restored.dispose()
+    }
+
+    @Test
     fun `pause finishes active item but does not take another until resume`() {
         val firstStarted = CountDownLatch(1)
         val releaseFirst = CountDownLatch(1)
@@ -454,7 +526,12 @@ class GameResourceDownloadCoordinatorTest {
             1,
         )
 
-        assertFalse(fixture.coordinator.configureModeChange(isDisabled = true) { false })
+        assertFalse(
+            fixture.coordinator.configureModeChange(
+                profile = "none",
+                isDisabled = true,
+            ) { false },
+        )
 
         assertEquals(GameResourceDownloadState.IDLE, fixture.coordinator.status().state)
         assertTrue(fixture.coordinator.startDownload())
