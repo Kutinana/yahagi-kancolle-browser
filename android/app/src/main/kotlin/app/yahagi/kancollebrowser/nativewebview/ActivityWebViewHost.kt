@@ -93,9 +93,13 @@ class ActivityWebViewHost internal constructor(
         }
 
         val generation = state.beginCreate()
-        var resources: OwnedWebViewResources? = null
+        val resources = OwnedWebViewResources(generation)
+        // Publish a token before any allocation or hierarchy operation can throw.
+        ownedResources = resources
         try {
-            val createdOverlay = FrameLayout(context).apply {
+            val createdOverlay = FrameLayout(context)
+            resources.overlay = createdOverlay
+            createdOverlay.apply {
                 visibility = View.INVISIBLE
                 setBackgroundColor(Color.TRANSPARENT)
                 clipChildren = true
@@ -108,9 +112,6 @@ class ActivityWebViewHost internal constructor(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 ),
             )
-            resources = OwnedWebViewResources(generation, createdOverlay)
-            // Publish ownership before callback-capable work. CREATING rejects ordinary use.
-            ownedResources = resources
             val createdWebView = webViewFactory(context)
             if (!isCurrentCreate(resources)) {
                 cleanupStandaloneWebView(createdWebView)
@@ -149,7 +150,7 @@ class ActivityWebViewHost internal constructor(
             runCatching { eventSink.created(generation) }
             return generation.takeIf { isCurrentReady(resources) }
         } catch (_: Throwable) {
-            resources?.let(::rollbackCreate)
+            rollbackCreate(resources)
             return null
         }
     }
@@ -281,7 +282,7 @@ class ActivityWebViewHost internal constructor(
             bestEffort { activeWebView?.let(webViewCleanup::clearHistory) }
             bestEffort { activeWebView?.let(webViewCleanup::removeAllViews) }
         }
-        bestEffort { activeOverlay.removeView(activeWebView) }
+        bestEffort { activeOverlay?.removeView(activeWebView) }
         bestEffort { contentRoot.removeView(activeOverlay) }
         if (!rendererGone) {
             bestEffort { activeWebView?.let(webViewCleanup::clearWebChromeClient) }
@@ -308,7 +309,7 @@ class ActivityWebViewHost internal constructor(
 
     private class OwnedWebViewResources(
         val generation: Long,
-        val overlay: FrameLayout,
+        var overlay: FrameLayout? = null,
         var webView: WebView? = null,
         var cleaned: Boolean = false,
     )

@@ -294,6 +294,28 @@ class ActivityWebViewHostTest {
     }
 
     @Test
+    fun rollsBackWhenRootThrowsAfterAddingOverlayAndAllowsAnotherCreate() = onMain {
+        val root = sizedRoot()
+        root.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
+            override fun onChildViewAdded(parent: View?, child: View?) {
+                throw IllegalStateException("root add failure")
+            }
+
+            override fun onChildViewRemoved(parent: View?, child: View?) = Unit
+        })
+        host = ActivityWebViewHost(context, root, recordingSink(mutableListOf()))
+
+        assertNull(host!!.create())
+        assertEquals(0, root.childCount)
+        assertNull(host!!.currentGeneration)
+        assertNull(host!!.currentWebView)
+
+        root.setOnHierarchyChangeListener(null)
+        assertNotNull(host!!.create())
+        assertEquals(1, root.childCount)
+    }
+
+    @Test
     fun rollsBackConfigurationFailureWithoutLeakingTheWebView() = onMain {
         val root = sizedRoot()
         val events = mutableListOf<String>()
