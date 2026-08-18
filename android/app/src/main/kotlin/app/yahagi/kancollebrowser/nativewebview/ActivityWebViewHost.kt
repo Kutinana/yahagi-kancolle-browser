@@ -9,7 +9,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 
-interface NativeGameWebViewCleanup {
+internal interface NativeGameWebViewCleanup {
     fun stopLoading(webView: WebView)
     fun loadBlank(webView: WebView)
     fun clearHistory(webView: WebView)
@@ -45,14 +45,31 @@ internal object AndroidNativeGameWebViewCleanup : NativeGameWebViewCleanup {
  * All public methods must be called on the Android main thread. Calls from a
  * background thread fail fast to keep View ownership and generation changes atomic.
  */
-class ActivityWebViewHost(
+class ActivityWebViewHost internal constructor(
     private val context: Context,
     private val contentRoot: FrameLayout,
     private val eventSink: NativeGameWebViewEventSink,
-    private val webViewFactory: (Context) -> WebView = { WebView(it) },
-    private val configureWebView: (WebView, WebViewClient) -> Unit = NativeGameWebViewConfigurator::configure,
+    private val webViewFactory: (Context) -> WebView = { context -> WebView(context) },
+    private val configureWebView: (WebView, WebViewClient) -> Unit = { webView, client ->
+        NativeGameWebViewConfigurator.configure(webView, client)
+    },
     private val webViewCleanup: NativeGameWebViewCleanup = AndroidNativeGameWebViewCleanup,
 ) {
+    constructor(
+        context: Context,
+        contentRoot: FrameLayout,
+        eventSink: NativeGameWebViewEventSink,
+    ) : this(
+        context = context,
+        contentRoot = contentRoot,
+        eventSink = eventSink,
+        webViewFactory = { factoryContext -> WebView(factoryContext) },
+        configureWebView = { webView, client ->
+            NativeGameWebViewConfigurator.configure(webView, client)
+        },
+        webViewCleanup = AndroidNativeGameWebViewCleanup,
+    )
+
     private val state = NativeGameWebViewHostState()
     private var overlay: FrameLayout? = null
     private var webView: WebView? = null

@@ -1,6 +1,5 @@
 package app.yahagi.kancollebrowser.nativewebview
 
-import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Build
 import android.webkit.RenderProcessGoneDetail
@@ -122,7 +121,6 @@ class NativeGameWebViewClient(
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean =
         delegate.shouldOverrideUrlLoading(request?.url?.toString())
 
-    @SuppressLint("NewApi") // didCrash is reached only after the API 26 guard below.
     override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean =
         delegate.renderProcessGone(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) detail?.didCrash() == true else false,
