@@ -7,152 +7,155 @@ import org.junit.Test
 
 class NativeWebViewStartupGuardTest {
     @Test
-    fun firstFailureIsRecordedWithOneAtomicWrite() {
-        val store = FakeStore()
-        val guard = NativeWebViewStartupGuard(store, "session-a")
+    fun sameProcessSessionSurvivesActivityRecreationWithoutCountingFailure() {
+        val store = FakeStore(snapshot = snapshot(attemptStartedAtMs = 100, attemptSessionId = session("a")))
 
-        assertEquals(NativeWebViewStartupDecision.Started(false), guard.beginAttempt(100))
-        assertEquals(NativeWebViewStartupDecision.FailureRecorded, guard.recordRenderProcessGone())
-        assertEquals(NativeWebViewStartupSnapshot(1, null, null, null), store.snapshot)
-        assertEquals(2, store.writes.size)
+        assertEquals(NativeWebViewStartupDecision.AlreadyInProgress(29_999), guard(store, "a").beginAttempt(101))
+        assertEquals(NativeWebViewStartupDecision.AlreadyInProgress(29_999), guard(store, "a").beginAttempt(101))
+        assertEquals(0, store.writes.size)
     }
 
     @Test
-    fun secondFailureTriggersFallbackOnceInOneAtomicWrite() {
-        val store = FakeStore(NativeWebViewStartupSnapshot(1, 0, "session-a", null))
-        val guard = NativeWebViewStartupGuard(store, "session-a")
+    fun differentProcessSessionImmediatelyCountsOldAttemptAndStartsAtomically() {
+        val store = FakeStore(snapshot = snapshot(attemptStartedAtMs = 100, attemptSessionId = session("old")))
 
-        val decision = guard.recordRenderProcessGone()
+        assertEquals(NativeWebViewStartupDecision.Started(true), guard(store, "new").beginAttempt(101))
+        assertEquals(snapshot(failures = 1, attemptStartedAtMs = 101, attemptSessionId = session("new")), store.snapshot)
+        assertEquals(1, store.writes.size)
+    }
 
-        assertEquals(NativeWebViewStartupDecision.FallbackTriggered, decision)
-        assertTrue(decision.shouldFallback)
-        assertEquals(
-            NativeWebViewStartupSnapshot(0, null, null, NativeWebViewStartupGuard.FALLBACK_RENDERING_MODE),
-            store.snapshot,
+    @Test
+    fun currentSessionTimeoutReplacesAttemptInOneDurableWrite() {
+        val store = FakeStore(snapshot = snapshot(attemptStartedAtMs = 100, attemptSessionId = session("a")))
+
+        assertEquals(NativeWebViewStartupDecision.Started(true), guard(store, "a").beginAttempt(30_100))
+        assertEquals(snapshot(failures = 1, attemptStartedAtMs = 30_100, attemptSessionId = session("a")), store.snapshot)
+        assertEquals(1, store.writes.size)
+    }
+
+    @Test
+    fun sameSessionClockRollbackStartsCleanAttemptWithoutFailure() {
+        val store = FakeStore(snapshot = snapshot(failures = 1, attemptStartedAtMs = 1_000, attemptSessionId = session("a")))
+
+        assertEquals(NativeWebViewStartupDecision.Started(false), guard(store, "a").beginAttempt(999))
+        assertEquals(snapshot(failures = 1, attemptStartedAtMs = 999, attemptSessionId = session("a")), store.snapshot)
+    }
+
+    @Test
+    fun fallbackClosesFurtherStartsForSameAndNewGuardWithoutWriting() {
+        val store = FakeStore(snapshot = snapshot(failures = 1, attemptStartedAtMs = 0, attemptSessionId = session("a")))
+        val firstGuard = guard(store, "a")
+
+        assertEquals(NativeWebViewStartupDecision.FallbackTriggered, firstGuard.recordRenderProcessGone())
+        val writeCount = store.writes.size
+        assertEquals(NativeWebViewStartupDecision.FallbackActive, firstGuard.beginAttempt(1))
+        assertEquals(NativeWebViewStartupDecision.FallbackActive, guard(store, "new").beginAttempt(1))
+        assertEquals(writeCount, store.writes.size)
+    }
+
+    @Test
+    fun pageFinishedRenderGoneAndTimeoutIgnoreOldSessionEvents() {
+        val old = snapshot(failures = 1, attemptStartedAtMs = 100, attemptSessionId = session("old"))
+        val pageStore = FakeStore(snapshot = old)
+        val renderStore = FakeStore(snapshot = old)
+        val timeoutStore = FakeStore(snapshot = old)
+
+        assertEquals(NativeWebViewStartupDecision.NoActiveAttempt, guard(pageStore, "new").recordPageFinished())
+        assertEquals(NativeWebViewStartupDecision.NoActiveAttempt, guard(renderStore, "new").recordRenderProcessGone())
+        assertEquals(NativeWebViewStartupDecision.NoActiveAttempt, guard(timeoutStore, "new").recordStartupTimeout(30_100))
+        assertTrue(pageStore.writes.isEmpty() && renderStore.writes.isEmpty() && timeoutStore.writes.isEmpty())
+    }
+
+    @Test
+    fun timeoutReportsRemainingThenRecordsFailure() {
+        val store = FakeStore(snapshot = snapshot(attemptStartedAtMs = 100, attemptSessionId = session("a")))
+        val guard = guard(store, "a")
+
+        assertEquals(NativeWebViewStartupDecision.NotTimedOut(1), guard.recordStartupTimeout(30_099))
+        assertEquals(NativeWebViewStartupDecision.FailureRecorded, guard.recordStartupTimeout(30_100))
+        assertEquals(snapshot(failures = 1), store.snapshot)
+    }
+
+    @Test
+    fun cancelClearsAnyMarkerWithoutRecordingFailure() {
+        val store = FakeStore(snapshot = snapshot(failures = 1, attemptStartedAtMs = 10, attemptSessionId = session("old")))
+
+        assertEquals(NativeWebViewStartupDecision.Cancelled, guard(store, "new").cancelAttempt())
+        assertEquals(snapshot(failures = 1), store.snapshot)
+    }
+
+    @Test
+    fun failedWriteReturnsPersistenceFailedAndDoesNotClaimStart() {
+        val original = snapshot()
+        val store = FakeStore(snapshot = original, writeResult = NativeWebViewStartupWriteResult.Failed)
+
+        val decision = guard(store, "a").beginAttempt(0)
+
+        assertEquals(NativeWebViewStartupDecision.PersistenceFailed, decision)
+        assertFalse(decision.shouldStart || decision.shouldFallback)
+        assertEquals(original, store.snapshot)
+    }
+
+    @Test
+    fun indeterminateWriteFailsClosedEvenWhenMemoryMayHaveChanged() {
+        val store = FakeStore(
+            snapshot = snapshot(),
+            writeResult = NativeWebViewStartupWriteResult.Indeterminate,
+            applyIndeterminateInMemory = true,
         )
-        assertEquals(1, store.writes.size)
-        assertEquals(NativeWebViewStartupDecision.NoActiveAttempt, guard.recordRenderProcessGone())
+
+        val decision = guard(store, "a").beginAttempt(0)
+
+        assertEquals(NativeWebViewStartupDecision.PersistenceIndeterminate, decision)
+        assertFalse(decision.shouldStart || decision.shouldFallback)
+        assertEquals(snapshot(attemptStartedAtMs = 0, attemptSessionId = session("a")), store.snapshot)
     }
 
     @Test
-    fun currentSessionInProgressReportsRemainingTimeWithoutWriting() {
-        val store = FakeStore(NativeWebViewStartupSnapshot(0, 100, "session-a", null))
-        val guard = NativeWebViewStartupGuard(store, "session-a")
+    fun unavailableAndThrowingReadsFailWithoutThrowing() {
+        val unavailable = FakeStore(readResult = NativeWebViewStartupReadResult.Unavailable)
+        val throwing = FakeStore(throwOnRead = true)
 
-        val decision = guard.beginAttempt(30_099)
-
-        assertEquals(NativeWebViewStartupDecision.AlreadyInProgress(1), decision)
-        assertFalse(decision.shouldStart)
-        assertTrue(store.writes.isEmpty())
+        assertEquals(NativeWebViewStartupDecision.PersistenceFailed, guard(unavailable, "a").beginAttempt(0))
+        assertEquals(NativeWebViewStartupDecision.PersistenceFailed, guard(throwing, "a").beginAttempt(0))
     }
 
     @Test
-    fun currentSessionTimeoutRecordsFailureAndStartsReplacementAtomically() {
-        val store = FakeStore(NativeWebViewStartupSnapshot(0, 100, "session-a", null))
-        val guard = NativeWebViewStartupGuard(store, "session-a")
+    fun throwingWriteIsIndeterminateAndDoesNotThrow() {
+        val store = FakeStore(throwOnWrite = true)
 
-        assertEquals(NativeWebViewStartupDecision.Started(true), guard.beginAttempt(30_100))
-        assertEquals(NativeWebViewStartupSnapshot(1, 30_100, "session-a", null), store.snapshot)
-        assertEquals(1, store.writes.size)
+        assertEquals(NativeWebViewStartupDecision.PersistenceIndeterminate, guard(store, "a").beginAttempt(0))
     }
 
     @Test
-    fun fastRestartInAnotherSessionRecordsFailureEvenBeforeTimeout() {
-        val store = FakeStore(NativeWebViewStartupSnapshot(0, 100, "session-old", null))
-        val guard = NativeWebViewStartupGuard(store, "session-new")
+    fun negativeFailuresAreNormalizedAndLargeCountFallsBack() {
+        val negativeStore = FakeStore(snapshot = snapshot(failures = -20, attemptStartedAtMs = 0, attemptSessionId = session("a")))
+        val largeStore = FakeStore(snapshot = snapshot(failures = Int.MAX_VALUE, attemptStartedAtMs = 0, attemptSessionId = session("a")))
 
-        assertEquals(NativeWebViewStartupDecision.Started(true), guard.beginAttempt(101))
-        assertEquals(NativeWebViewStartupSnapshot(1, 101, "session-new", null), store.snapshot)
-        assertEquals(1, store.writes.size)
+        assertEquals(NativeWebViewStartupDecision.FailureRecorded, guard(negativeStore, "a").recordRenderProcessGone())
+        assertEquals(1, negativeStore.snapshot.consecutiveFailures)
+        assertEquals(NativeWebViewStartupDecision.FallbackTriggered, guard(largeStore, "a").recordRenderProcessGone())
+        assertEquals(0, largeStore.snapshot.consecutiveFailures)
     }
 
     @Test
-    fun crossBootSmallerNowStillTreatsOtherSessionAsStale() {
-        val store = FakeStore(NativeWebViewStartupSnapshot(0, 99_000, "session-old", null))
-
-        assertEquals(NativeWebViewStartupDecision.Started(true), NativeWebViewStartupGuard(store, "session-new").beginAttempt(5))
-        assertEquals(NativeWebViewStartupSnapshot(1, 5, "session-new", null), store.snapshot)
+    fun rejectsInvalidNowAndEmptyProcessSession() {
+        assertIllegalArgument { NativeWebViewProcessSessionId("") }
+        assertIllegalArgument { guard(FakeStore(), "a").beginAttempt(-1) }
+        assertIllegalArgument { guard(FakeStore(), "a").recordStartupTimeout(-1) }
     }
 
-    @Test
-    fun clockRollbackInSameSessionStartsCleanAttemptWithoutFailure() {
-        val store = FakeStore(NativeWebViewStartupSnapshot(1, 1_000, "session-a", null))
+    private fun guard(store: NativeWebViewStartupStore, sessionId: String): NativeWebViewStartupGuard =
+        NativeWebViewStartupGuard(store, session(sessionId))
 
-        assertEquals(NativeWebViewStartupDecision.Started(false), NativeWebViewStartupGuard(store, "session-a").beginAttempt(999))
-        assertEquals(NativeWebViewStartupSnapshot(1, 999, "session-a", null), store.snapshot)
-    }
+    private fun session(value: String) = NativeWebViewProcessSessionId(value)
 
-    @Test
-    fun corruptAttemptTimeOrMissingSessionIsHandledAsStale() {
-        val corruptTimeStore = FakeStore(NativeWebViewStartupSnapshot(0, -1, "session-old", null))
-        val missingSessionStore = FakeStore(NativeWebViewStartupSnapshot(0, 1, null, null))
-
-        assertEquals(NativeWebViewStartupDecision.Started(true), NativeWebViewStartupGuard(corruptTimeStore, "new").beginAttempt(2))
-        assertEquals(NativeWebViewStartupSnapshot(1, 2, "new", null), corruptTimeStore.snapshot)
-        assertEquals(NativeWebViewStartupDecision.Started(true), NativeWebViewStartupGuard(missingSessionStore, "new").beginAttempt(2))
-        assertEquals(NativeWebViewStartupSnapshot(1, 2, "new", null), missingSessionStore.snapshot)
-    }
-
-    @Test
-    fun pageFinishedClearsFailuresOnlyForCurrentSession() {
-        val currentStore = FakeStore(NativeWebViewStartupSnapshot(1, 10, "session-a", null))
-        val oldStore = FakeStore(NativeWebViewStartupSnapshot(1, 10, "session-old", null))
-
-        assertEquals(NativeWebViewStartupDecision.Succeeded, NativeWebViewStartupGuard(currentStore, "session-a").recordPageFinished())
-        assertEquals(NativeWebViewStartupSnapshot(0, null, null, null), currentStore.snapshot)
-        assertEquals(NativeWebViewStartupDecision.NoActiveAttempt, NativeWebViewStartupGuard(oldStore, "session-a").recordPageFinished())
-        assertEquals(NativeWebViewStartupSnapshot(1, 10, "session-old", null), oldStore.snapshot)
-    }
-
-    @Test
-    fun timeoutOnlyProcessesCurrentSessionAndReportsRemainingTime() {
-        val currentStore = FakeStore(NativeWebViewStartupSnapshot(0, 100, "session-a", null))
-        val oldStore = FakeStore(NativeWebViewStartupSnapshot(0, 100, "session-old", null))
-        val currentGuard = NativeWebViewStartupGuard(currentStore, "session-a")
-
-        assertEquals(NativeWebViewStartupDecision.NotTimedOut(1), currentGuard.recordStartupTimeout(30_099))
-        assertEquals(NativeWebViewStartupDecision.FailureRecorded, currentGuard.recordStartupTimeout(30_100))
-        assertEquals(NativeWebViewStartupDecision.NoActiveAttempt, NativeWebViewStartupGuard(oldStore, "session-a").recordStartupTimeout(30_100))
-        assertTrue(oldStore.writes.isEmpty())
-    }
-
-    @Test
-    fun cancelClearsAnyActiveMarkerWithoutAddingFailure() {
-        val store = FakeStore(NativeWebViewStartupSnapshot(1, 10, "session-old", null))
-
-        assertEquals(NativeWebViewStartupDecision.Cancelled, NativeWebViewStartupGuard(store, "session-a").cancelAttempt())
-        assertEquals(NativeWebViewStartupSnapshot(1, null, null, null), store.snapshot)
-    }
-
-    @Test
-    fun readAndWriteFailuresDoNotPretendSuccessOrPartiallyUpdate() {
-        val readFailureStore = FakeStore(initialSnapshot = null)
-        val writeFailureSnapshot = NativeWebViewStartupSnapshot(0, null, null, null)
-        val writeFailureStore = FakeStore(writeFailureSnapshot, failWrites = true)
-
-        assertEquals(NativeWebViewStartupDecision.PersistenceFailed, NativeWebViewStartupGuard(readFailureStore, "a").beginAttempt(0))
-        assertEquals(NativeWebViewStartupDecision.PersistenceFailed, NativeWebViewStartupGuard(writeFailureStore, "a").beginAttempt(0))
-        assertEquals(writeFailureSnapshot, writeFailureStore.snapshot)
-        assertEquals(1, writeFailureStore.writes.size)
-    }
-
-    @Test
-    fun negativeFailuresAreNormalizedAndCannotOverflow() {
-        val negativeStore = FakeStore(NativeWebViewStartupSnapshot(-20, 0, "a", null))
-        val largeStore = FakeStore(NativeWebViewStartupSnapshot(Int.MAX_VALUE, 0, "a", null))
-
-        assertEquals(NativeWebViewStartupDecision.FailureRecorded, NativeWebViewStartupGuard(negativeStore, "a").recordRenderProcessGone())
-        assertEquals(1, negativeStore.snapshot!!.consecutiveFailures)
-        assertEquals(NativeWebViewStartupDecision.FallbackTriggered, NativeWebViewStartupGuard(largeStore, "a").recordRenderProcessGone())
-        assertEquals(0, largeStore.snapshot!!.consecutiveFailures)
-    }
-
-    @Test
-    fun rejectsInvalidNowAndEmptySession() {
-        assertIllegalArgument { NativeWebViewStartupGuard(FakeStore(), "") }
-        assertIllegalArgument { NativeWebViewStartupGuard(FakeStore(), "a").beginAttempt(-1) }
-        assertIllegalArgument { NativeWebViewStartupGuard(FakeStore(), "a").recordStartupTimeout(-1) }
-    }
+    private fun snapshot(
+        failures: Int = 0,
+        attemptStartedAtMs: Long? = null,
+        attemptSessionId: NativeWebViewProcessSessionId? = null,
+        renderingMode: String? = null,
+    ) = NativeWebViewStartupSnapshot(failures, attemptStartedAtMs, attemptSessionId, renderingMode)
 
     private fun assertIllegalArgument(block: () -> Unit) {
         try {
@@ -164,21 +167,27 @@ class NativeWebViewStartupGuardTest {
     }
 
     private class FakeStore(
-        initialSnapshot: NativeWebViewStartupSnapshot? = NativeWebViewStartupSnapshot(0, null, null, null),
-        private val failWrites: Boolean = false,
+        var snapshot: NativeWebViewStartupSnapshot = NativeWebViewStartupSnapshot(0, null, null, null),
+        private var readResult: NativeWebViewStartupReadResult? = null,
+        private val writeResult: NativeWebViewStartupWriteResult = NativeWebViewStartupWriteResult.Durable,
+        private val applyIndeterminateInMemory: Boolean = false,
+        private val throwOnRead: Boolean = false,
+        private val throwOnWrite: Boolean = false,
     ) : NativeWebViewStartupStore {
-        var snapshot: NativeWebViewStartupSnapshot? = initialSnapshot
         val writes = mutableListOf<NativeWebViewStartupSnapshot>()
 
-        override fun read(): NativeWebViewStartupSnapshot? = snapshot
+        override fun read(): NativeWebViewStartupReadResult {
+            if (throwOnRead) error("read failure")
+            return readResult ?: NativeWebViewStartupReadResult.Success(snapshot)
+        }
 
-        override fun write(nextSnapshot: NativeWebViewStartupSnapshot): Boolean {
+        override fun write(nextSnapshot: NativeWebViewStartupSnapshot): NativeWebViewStartupWriteResult {
+            if (throwOnWrite) error("write failure")
             writes += nextSnapshot
-            if (failWrites) {
-                return false
+            if (writeResult == NativeWebViewStartupWriteResult.Durable || applyIndeterminateInMemory) {
+                snapshot = nextSnapshot
             }
-            snapshot = nextSnapshot
-            return true
+            return writeResult
         }
     }
 }

@@ -1,17 +1,52 @@
 package app.yahagi.kancollebrowser.nativewebview
 
+@JvmInline
+value class NativeWebViewProcessSessionId(
+    val value: String,
+) {
+    init {
+        require(value.isNotEmpty()) { "session id must not be empty" }
+    }
+}
+
 data class NativeWebViewStartupSnapshot(
     val consecutiveFailures: Int,
     val attemptStartedAtMs: Long?,
-    val attemptSessionId: String?,
+    val attemptSessionId: NativeWebViewProcessSessionId?,
     val storedRenderingMode: String?,
 )
 
-interface NativeWebViewStartupStore {
-    fun read(): NativeWebViewStartupSnapshot?
+sealed interface NativeWebViewStartupReadResult {
+    data class Success(
+        val snapshot: NativeWebViewStartupSnapshot,
+    ) : NativeWebViewStartupReadResult
 
-    /** A failed write must leave the stored snapshot unchanged. */
-    fun write(nextSnapshot: NativeWebViewStartupSnapshot): Boolean
+    data object Unavailable : NativeWebViewStartupReadResult
+}
+
+sealed interface NativeWebViewStartupWriteResult {
+    data object Durable : NativeWebViewStartupWriteResult
+
+    /** The process may have observed the update, but its durable state is unknown. */
+    data object Indeterminate : NativeWebViewStartupWriteResult
+
+    /** The adapter knows that it did not commit the update. */
+    data object Failed : NativeWebViewStartupWriteResult
+}
+
+interface NativeWebViewStartupStore {
+    /**
+     * Reads one complete snapshot. Adapters must return [NativeWebViewStartupReadResult.Unavailable]
+     * rather than leak storage exceptions.
+     */
+    fun read(): NativeWebViewStartupReadResult
+
+    /**
+     * Atomically writes one complete snapshot. If a backing commit returns false, return
+     * [NativeWebViewStartupWriteResult.Indeterminate], poison this process's subsequent reads as
+     * unavailable, and let a new process reload disk state.
+     */
+    fun write(nextSnapshot: NativeWebViewStartupSnapshot): NativeWebViewStartupWriteResult
 }
 
 sealed interface NativeWebViewStartupDecision {
@@ -33,7 +68,6 @@ sealed interface NativeWebViewStartupDecision {
     ) : NativeWebViewStartupDecision
 
     data object Succeeded : NativeWebViewStartupDecision
-
     data object FailureRecorded : NativeWebViewStartupDecision
 
     data object FallbackTriggered : NativeWebViewStartupDecision {
@@ -41,8 +75,10 @@ sealed interface NativeWebViewStartupDecision {
             get() = true
     }
 
-    data object Cancelled : NativeWebViewStartupDecision
+    /** Compatibility fallback is already durable; do not restart native WebView startup. */
+    data object FallbackActive : NativeWebViewStartupDecision
 
+    data object Cancelled : NativeWebViewStartupDecision
     data object NoActiveAttempt : NativeWebViewStartupDecision
 
     data class NotTimedOut(
@@ -50,35 +86,34 @@ sealed interface NativeWebViewStartupDecision {
     ) : NativeWebViewStartupDecision
 
     data object PersistenceFailed : NativeWebViewStartupDecision
+    data object PersistenceIndeterminate : NativeWebViewStartupDecision
 }
 
 class NativeWebViewStartupGuard(
     private val store: NativeWebViewStartupStore,
-    private val sessionId: String,
+    /** Process-scoped token: reuse for Activity recreation; generate a new value after process restart. */
+    private val sessionId: NativeWebViewProcessSessionId,
 ) {
-    init {
-        require(sessionId.isNotEmpty()) { "sessionId must not be empty" }
-    }
-
     fun beginAttempt(nowMs: Long): NativeWebViewStartupDecision {
         requireValidNow(nowMs)
-        val snapshot = store.read() ?: return NativeWebViewStartupDecision.PersistenceFailed
+        val snapshot = readSnapshot() ?: return NativeWebViewStartupDecision.PersistenceFailed
+        if (snapshot.storedRenderingMode == FALLBACK_RENDERING_MODE) {
+            return NativeWebViewStartupDecision.FallbackActive
+        }
         val startedAtMs = snapshot.attemptStartedAtMs
         if (startedAtMs == null) {
             return writeStarted(snapshot, nowMs, previousFailureRecorded = false)
         }
 
         if (snapshot.attemptSessionId == sessionId && startedAtMs >= 0L && nowMs >= startedAtMs) {
-            // These timestamps come from one process session's monotonic clock only.
+            // These timestamps come from a single process session's monotonic clock only.
             val elapsedMs = nowMs - startedAtMs
             if (elapsedMs < STARTUP_TIMEOUT_MS) {
                 return NativeWebViewStartupDecision.AlreadyInProgress(STARTUP_TIMEOUT_MS - elapsedMs)
             }
             return writeFailureAndStart(snapshot, nowMs)
         }
-
         if (snapshot.attemptSessionId == sessionId) {
-            // Same-session clock rollback/corruption: recover without charging a failure.
             return writeStarted(snapshot, nowMs, previousFailureRecorded = false)
         }
 
@@ -87,101 +122,68 @@ class NativeWebViewStartupGuard(
     }
 
     fun recordPageFinished(): NativeWebViewStartupDecision {
-        val snapshot = store.read() ?: return NativeWebViewStartupDecision.PersistenceFailed
-        if (!isCurrentAttempt(snapshot)) {
-            return NativeWebViewStartupDecision.NoActiveAttempt
-        }
-
-        val nextSnapshot = snapshot.copy(
-            consecutiveFailures = 0,
-            attemptStartedAtMs = null,
-            attemptSessionId = null,
+        val snapshot = readSnapshot() ?: return NativeWebViewStartupDecision.PersistenceFailed
+        if (!isCurrentAttempt(snapshot)) return NativeWebViewStartupDecision.NoActiveAttempt
+        return write(
+            snapshot.copy(consecutiveFailures = 0, attemptStartedAtMs = null, attemptSessionId = null),
+            NativeWebViewStartupDecision.Succeeded,
         )
-        return write(nextSnapshot, NativeWebViewStartupDecision.Succeeded)
     }
 
     fun recordRenderProcessGone(): NativeWebViewStartupDecision {
-        val snapshot = store.read() ?: return NativeWebViewStartupDecision.PersistenceFailed
-        if (!isCurrentAttempt(snapshot)) {
-            return NativeWebViewStartupDecision.NoActiveAttempt
-        }
-
+        val snapshot = readSnapshot() ?: return NativeWebViewStartupDecision.PersistenceFailed
+        if (!isCurrentAttempt(snapshot)) return NativeWebViewStartupDecision.NoActiveAttempt
         return writeFailure(snapshot)
     }
 
     fun recordStartupTimeout(nowMs: Long): NativeWebViewStartupDecision {
         requireValidNow(nowMs)
-        val snapshot = store.read() ?: return NativeWebViewStartupDecision.PersistenceFailed
-        if (!isCurrentAttempt(snapshot)) {
-            return NativeWebViewStartupDecision.NoActiveAttempt
-        }
-
+        val snapshot = readSnapshot() ?: return NativeWebViewStartupDecision.PersistenceFailed
+        if (!isCurrentAttempt(snapshot)) return NativeWebViewStartupDecision.NoActiveAttempt
         val startedAtMs = snapshot.attemptStartedAtMs!!
-        if (nowMs < startedAtMs) {
-            return NativeWebViewStartupDecision.NotTimedOut(STARTUP_TIMEOUT_MS)
-        }
+        if (nowMs < startedAtMs) return NativeWebViewStartupDecision.NotTimedOut(STARTUP_TIMEOUT_MS)
         val elapsedMs = nowMs - startedAtMs
-        if (elapsedMs < STARTUP_TIMEOUT_MS) {
-            return NativeWebViewStartupDecision.NotTimedOut(STARTUP_TIMEOUT_MS - elapsedMs)
-        }
+        if (elapsedMs < STARTUP_TIMEOUT_MS) return NativeWebViewStartupDecision.NotTimedOut(STARTUP_TIMEOUT_MS - elapsedMs)
         return writeFailure(snapshot)
     }
 
     fun cancelAttempt(): NativeWebViewStartupDecision {
-        val snapshot = store.read() ?: return NativeWebViewStartupDecision.PersistenceFailed
+        val snapshot = readSnapshot() ?: return NativeWebViewStartupDecision.PersistenceFailed
         if (snapshot.attemptStartedAtMs == null && snapshot.attemptSessionId == null) {
             return NativeWebViewStartupDecision.NoActiveAttempt
         }
-
-        val nextSnapshot = snapshot.copy(attemptStartedAtMs = null, attemptSessionId = null)
-        return write(nextSnapshot, NativeWebViewStartupDecision.Cancelled)
+        return write(snapshot.copy(attemptStartedAtMs = null, attemptSessionId = null), NativeWebViewStartupDecision.Cancelled)
     }
 
-    private fun writeStarted(
-        snapshot: NativeWebViewStartupSnapshot,
-        nowMs: Long,
-        previousFailureRecorded: Boolean,
-    ): NativeWebViewStartupDecision {
-        val nextSnapshot = snapshot.copy(
-            consecutiveFailures = normalizedFailures(snapshot),
-            attemptStartedAtMs = nowMs,
-            attemptSessionId = sessionId,
+    private fun writeStarted(snapshot: NativeWebViewStartupSnapshot, nowMs: Long, previousFailureRecorded: Boolean) =
+        write(
+            snapshot.copy(
+                consecutiveFailures = normalizedFailures(snapshot),
+                attemptStartedAtMs = nowMs,
+                attemptSessionId = sessionId,
+            ),
+            NativeWebViewStartupDecision.Started(previousFailureRecorded),
         )
-        return write(nextSnapshot, NativeWebViewStartupDecision.Started(previousFailureRecorded))
-    }
 
-    private fun writeFailureAndStart(
-        snapshot: NativeWebViewStartupSnapshot,
-        nowMs: Long,
-    ): NativeWebViewStartupDecision {
+    private fun writeFailureAndStart(snapshot: NativeWebViewStartupSnapshot, nowMs: Long): NativeWebViewStartupDecision {
         val failures = normalizedFailures(snapshot)
-        if (failures >= FAILURE_THRESHOLD - 1) {
-            return writeFallback(snapshot)
-        }
-
-        val nextSnapshot = snapshot.copy(
-            consecutiveFailures = failures + 1,
-            attemptStartedAtMs = nowMs,
-            attemptSessionId = sessionId,
+        if (failures >= FAILURE_THRESHOLD - 1) return writeFallback(snapshot)
+        return write(
+            snapshot.copy(consecutiveFailures = failures + 1, attemptStartedAtMs = nowMs, attemptSessionId = sessionId),
+            NativeWebViewStartupDecision.Started(previousFailureRecorded = true),
         )
-        return write(nextSnapshot, NativeWebViewStartupDecision.Started(previousFailureRecorded = true))
     }
 
     private fun writeFailure(snapshot: NativeWebViewStartupSnapshot): NativeWebViewStartupDecision {
         val failures = normalizedFailures(snapshot)
-        if (failures >= FAILURE_THRESHOLD - 1) {
-            return writeFallback(snapshot)
-        }
-
-        val nextSnapshot = snapshot.copy(
-            consecutiveFailures = failures + 1,
-            attemptStartedAtMs = null,
-            attemptSessionId = null,
+        if (failures >= FAILURE_THRESHOLD - 1) return writeFallback(snapshot)
+        return write(
+            snapshot.copy(consecutiveFailures = failures + 1, attemptStartedAtMs = null, attemptSessionId = null),
+            NativeWebViewStartupDecision.FailureRecorded,
         )
-        return write(nextSnapshot, NativeWebViewStartupDecision.FailureRecorded)
     }
 
-    private fun writeFallback(snapshot: NativeWebViewStartupSnapshot): NativeWebViewStartupDecision =
+    private fun writeFallback(snapshot: NativeWebViewStartupSnapshot) =
         write(
             snapshot.copy(
                 consecutiveFailures = 0,
@@ -192,17 +194,28 @@ class NativeWebViewStartupGuard(
             NativeWebViewStartupDecision.FallbackTriggered,
         )
 
-    private fun write(
-        nextSnapshot: NativeWebViewStartupSnapshot,
-        successDecision: NativeWebViewStartupDecision,
-    ): NativeWebViewStartupDecision =
-        if (store.write(nextSnapshot)) successDecision else NativeWebViewStartupDecision.PersistenceFailed
+    private fun readSnapshot(): NativeWebViewStartupSnapshot? =
+        try {
+            (store.read() as? NativeWebViewStartupReadResult.Success)?.snapshot
+        } catch (_: Throwable) {
+            null
+        }
 
-    private fun isCurrentAttempt(snapshot: NativeWebViewStartupSnapshot): Boolean =
+    private fun write(nextSnapshot: NativeWebViewStartupSnapshot, success: NativeWebViewStartupDecision): NativeWebViewStartupDecision =
+        try {
+            when (store.write(nextSnapshot)) {
+                NativeWebViewStartupWriteResult.Durable -> success
+                NativeWebViewStartupWriteResult.Failed -> NativeWebViewStartupDecision.PersistenceFailed
+                NativeWebViewStartupWriteResult.Indeterminate -> NativeWebViewStartupDecision.PersistenceIndeterminate
+            }
+        } catch (_: Throwable) {
+            NativeWebViewStartupDecision.PersistenceIndeterminate
+        }
+
+    private fun isCurrentAttempt(snapshot: NativeWebViewStartupSnapshot) =
         snapshot.attemptStartedAtMs != null && snapshot.attemptSessionId == sessionId
 
-    private fun normalizedFailures(snapshot: NativeWebViewStartupSnapshot): Int =
-        snapshot.consecutiveFailures.coerceAtLeast(0)
+    private fun normalizedFailures(snapshot: NativeWebViewStartupSnapshot) = snapshot.consecutiveFailures.coerceAtLeast(0)
 
     private fun requireValidNow(nowMs: Long) {
         require(nowMs >= 0L) { "nowMs must be non-negative" }
