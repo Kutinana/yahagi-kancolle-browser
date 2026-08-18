@@ -310,6 +310,109 @@ final class GameWebViewBindingCoordinator {
   }
 }
 
+@visibleForTesting
+final class GameWebViewCaptureUpdateCoordinator {
+  int _revision = 0;
+  int _processedRevision = 0;
+  Future<void>? _drainFuture;
+  _GameWebViewCaptureUpdate? _latest;
+  final Map<int, Completer<void>> _waiters = <int, Completer<void>>{};
+  bool _disposed = false;
+
+  Future<void> request({
+    required Future<void> Function() configure,
+    required Future<void> Function() reload,
+    required bool Function() isActive,
+    required void Function(Object error, StackTrace stackTrace) onError,
+  }) {
+    if (_disposed) return Future<void>.value();
+    final revision = ++_revision;
+    final waiter = Completer<void>();
+    _waiters[revision] = waiter;
+    late final Future<void> configuration;
+    try {
+      configuration = Future<void>.sync(configure);
+    } catch (error, stackTrace) {
+      configuration = Future<void>.error(error, stackTrace);
+    }
+    _latest = _GameWebViewCaptureUpdate(
+      revision: revision,
+      configuration: configuration,
+      reload: reload,
+      isActive: isActive,
+      onError: onError,
+    );
+    _ensureDrain();
+    return waiter.future;
+  }
+
+  void _ensureDrain() {
+    if (_drainFuture != null || _disposed) return;
+    final operation = _drain();
+    _drainFuture = operation;
+    unawaited(
+      operation.whenComplete(() {
+        if (identical(_drainFuture, operation)) _drainFuture = null;
+        if (!_disposed && _processedRevision < _revision) _ensureDrain();
+      }),
+    );
+  }
+
+  Future<void> _drain() async {
+    while (!_disposed && _processedRevision < _revision) {
+      final update = _latest!;
+      try {
+        await update.configuration;
+        if (_disposed) return;
+        if (update.revision != _revision) {
+          _completeThrough(update.revision);
+          continue;
+        }
+        if (update.isActive()) await update.reload();
+      } catch (error, stackTrace) {
+        if (!_disposed && update.revision == _revision && update.isActive()) {
+          update.onError(error, stackTrace);
+        }
+      }
+      _processedRevision = update.revision;
+      _completeThrough(update.revision);
+    }
+  }
+
+  void _completeThrough(int revision) {
+    final keys = _waiters.keys.where((key) => key <= revision).toList();
+    for (final key in keys) {
+      _waiters.remove(key)?.complete();
+    }
+  }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _revision += 1;
+    for (final waiter in _waiters.values) {
+      waiter.complete();
+    }
+    _waiters.clear();
+  }
+}
+
+final class _GameWebViewCaptureUpdate {
+  const _GameWebViewCaptureUpdate({
+    required this.revision,
+    required this.configuration,
+    required this.reload,
+    required this.isActive,
+    required this.onError,
+  });
+
+  final int revision;
+  final Future<void> configuration;
+  final Future<void> Function() reload;
+  final bool Function() isActive;
+  final void Function(Object error, StackTrace stackTrace) onError;
+}
+
 class GameWebView extends StatefulWidget {
   const GameWebView({
     super.key,
@@ -347,6 +450,8 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   late final WebViewGameBrowserPort _browserPort;
   late final GameWebViewBindingCoordinator _bindings;
   final GameNavigationPolicy _navigationPolicy = GameNavigationPolicy();
+  final GameWebViewCaptureUpdateCoordinator _captureUpdates =
+      GameWebViewCaptureUpdateCoordinator();
   late CaptureMode _activeCaptureMode;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
   static const _scaleChannel = MethodChannel(
@@ -369,7 +474,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   }
 
   void _handleCaptureModeChanged() {
-    unawaited(_onCaptureModeChanged());
+    _onCaptureModeChanged();
   }
 
   GameSurfaceStartupOrchestrator _createStartupOrchestrator(
@@ -691,7 +796,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
 
   bool _isCurrentNavigation(int epoch) => mounted && epoch == _navigationEpoch;
 
-  Future<void> _onCaptureModeChanged() async {
+  void _onCaptureModeChanged() {
     final nextMode = widget.captureModeController.mode;
     if (nextMode == _activeCaptureMode) {
       return;
@@ -699,16 +804,19 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     _activeCaptureMode = nextMode;
     final bindingEpoch = _bindingEpoch;
     final orchestrator = _bindings.startupOrchestrator;
-    try {
-      await orchestrator.prepareCapture();
-      if (!_isCurrentBinding(bindingEpoch, orchestrator)) return;
-      await _webViewController.reload();
-    } catch (error, stackTrace) {
-      debugPrint('Game WebView capture update failed: $error\n$stackTrace');
-      if (_isCurrentBinding(bindingEpoch, orchestrator)) {
-        _reportRecoverableError('抓包模式更新失败：$error');
-      }
-    }
+    unawaited(
+      _captureUpdates.request(
+        configure: orchestrator.prepareCapture,
+        reload: _webViewController.reload,
+        isActive: () => _isCurrentBinding(bindingEpoch, orchestrator),
+        onError: (error, stackTrace) {
+          debugPrint('Game WebView capture update failed: $error\n$stackTrace');
+          if (_isCurrentBinding(bindingEpoch, orchestrator)) {
+            _reportRecoverableError('抓包模式更新失败：$error');
+          }
+        },
+      ),
+    );
   }
 
   Future<void> _prepareCapture() async {
@@ -911,6 +1019,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     _startupEpoch += 1;
     _bindingEpoch += 1;
     _navigationEpoch += 1;
+    _captureUpdates.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _frameRateRuntimeController?.dispose();
     unawaited(_bindings.dispose());

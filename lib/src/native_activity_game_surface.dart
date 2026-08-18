@@ -159,8 +159,12 @@ final class _NativeActivityGameSurfaceState
   Future<void>? _captureReconfigureFuture;
   int _captureRevision = 0;
   int _visibilityRevision = 0;
+  int _processedVisibilityRevision = 0;
   bool _actualVisible = false;
   bool _forceVisibilityWrite = false;
+  bool _hasNavigated = false;
+  bool _visibilityFatalCleanupStarted = false;
+  int _processedCaptureRevision = 0;
   CaptureMode? _activeCaptureMode;
   GameStartupState _startupState = GameStartupState.loadingSettings;
   String _startupErrorMessage = '';
@@ -243,6 +247,16 @@ final class _NativeActivityGameSurfaceState
       unawaited(
         _disposeStartupOrchestrator(previous, timeout: _cleanupTimeout),
       );
+      final generationId = _generationId;
+      if (port != null && generationId != null) {
+        unawaited(
+          _restartBootstrapAfterDependencyChange(
+            port,
+            generationId,
+            _operationEpoch,
+          ),
+        );
+      }
     }
   }
 
@@ -291,6 +305,21 @@ final class _NativeActivityGameSurfaceState
       _replayPendingEvents(port, generationId);
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
 
+      await _runPostCreateBootstrap(port, generationId, operationEpoch);
+    } catch (error, stackTrace) {
+      debugPrint('Native game surface startup failed: $error\n$stackTrace');
+      if (_matchesAttempt(port, operationEpoch)) {
+        _setFatalError('原生 WebView 启动失败：${error.runtimeType}');
+      }
+    }
+  }
+
+  Future<void> _runPostCreateBootstrap(
+    NativeActivityGameWebViewPort port,
+    int generationId,
+    int operationEpoch,
+  ) async {
+    try {
       final bounds = _latestBounds;
       if (bounds != null) await port.setBounds(bounds);
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
@@ -330,6 +359,9 @@ final class _NativeActivityGameSurfaceState
         isActive: () => _matchesGeneration(port, generationId, operationEpoch),
         navigate: () async {
           if (_matchesGeneration(port, generationId, operationEpoch)) {
+            // Record the navigation side effect before awaiting its platform
+            // response so a dependency hot-swap cannot issue it twice.
+            _hasNavigated = true;
             await port.loadUri(initialAddress);
           }
         },
@@ -339,6 +371,39 @@ final class _NativeActivityGameSurfaceState
       debugPrint('Native game surface startup failed: $error\n$stackTrace');
       if (_matchesAttempt(port, operationEpoch)) {
         _setFatalError('原生 WebView 启动失败：${error.runtimeType}');
+      }
+    }
+  }
+
+  Future<void> _restartBootstrapAfterDependencyChange(
+    NativeActivityGameWebViewPort port,
+    int generationId,
+    int operationEpoch,
+  ) async {
+    try {
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
+      if (!_hasNavigated) {
+        _setStartupState(GameStartupState.applyingNetwork);
+        await _runPostCreateBootstrap(port, generationId, operationEpoch);
+        return;
+      }
+      try {
+        await _startupOrchestrator.attachFrameRatePlatformPort();
+      } catch (error, stackTrace) {
+        debugPrint('Frame-rate platform port unavailable: $error\n$stackTrace');
+      }
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
+      await _startupOrchestrator.prepareCapture();
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
+      if (_startupState == GameStartupState.ready) {
+        await _startupOrchestrator.attachAudioPortOnce();
+      }
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Native game surface dependency update failed: $error\n$stackTrace',
+      );
+      if (_matchesGeneration(port, generationId, operationEpoch)) {
+        _reportPageError('游戏页面依赖更新失败：${error.runtimeType}');
       }
     }
   }
@@ -523,7 +588,18 @@ final class _NativeActivityGameSurfaceState
       _startupState = state;
       if (errorMessage != null) _startupErrorMessage = errorMessage;
     });
-    unawaited(_requestVisibility());
+    _observeVisibilityUpdate(_requestVisibility());
+  }
+
+  void _observeVisibilityUpdate(Future<void> operation) {
+    unawaited(
+      operation.catchError((Object error, StackTrace stackTrace) {
+        debugPrint(
+          'Native game surface visibility update failed: '
+          '$error\n$stackTrace',
+        );
+      }),
+    );
   }
 
   bool _matchesAttempt(NativeActivityGameWebViewPort port, int operationEpoch) {
@@ -574,22 +650,38 @@ final class _NativeActivityGameSurfaceState
     final operation = _drainVisibility();
     _visibilitySyncFuture = operation;
     unawaited(
-      operation.whenComplete(() {
-        if (identical(_visibilitySyncFuture, operation)) {
-          _visibilitySyncFuture = null;
-        }
-      }),
+      operation.then<void>(
+        (_) => _finishVisibilityDrain(operation),
+        onError: (Object _, StackTrace _) => _finishVisibilityDrain(operation),
+      ),
     );
     return operation;
   }
 
+  void _finishVisibilityDrain(Future<void> operation) {
+    if (identical(_visibilitySyncFuture, operation)) {
+      _visibilitySyncFuture = null;
+    }
+    if (_active &&
+        !_visibilityFatalCleanupStarted &&
+        (_forceVisibilityWrite ||
+            _processedVisibilityRevision < _visibilityRevision)) {
+      _observeVisibilityUpdate(_requestVisibility());
+    }
+  }
+
   Future<void> _drainVisibility() async {
+    Object? pendingError;
+    StackTrace? pendingStackTrace;
     while (true) {
       final revision = _visibilityRevision;
       final force = _forceVisibilityWrite;
       _forceVisibilityWrite = false;
       final port = _port;
-      if (port == null || _generationId == null) return;
+      if (port == null || _generationId == null) {
+        _processedVisibilityRevision = revision;
+        return;
+      }
       final target =
           _active &&
           !_fatal &&
@@ -597,19 +689,71 @@ final class _NativeActivityGameSurfaceState
           _latestBounds != null &&
           _startupState == GameStartupState.ready;
       if (force || target != _actualVisible) {
-        try {
-          await port.setVisible(target);
-          if (!identical(_port, port)) return;
-          _actualVisible = target;
-        } catch (error, stackTrace) {
-          debugPrint(
-            'Native game surface visibility update failed: '
-            '$error\n$stackTrace',
-          );
+        Object? lastError;
+        StackTrace? lastStackTrace;
+        for (var attempt = 0; attempt < 3; attempt++) {
+          try {
+            await port.setVisible(target);
+            if (!identical(_port, port)) return;
+            _actualVisible = target;
+            lastError = null;
+            break;
+          } catch (error, stackTrace) {
+            lastError = error;
+            lastStackTrace = stackTrace;
+            if (revision != _visibilityRevision || !identical(_port, port)) {
+              break;
+            }
+          }
+        }
+        if (lastError != null && revision == _visibilityRevision) {
+          if (!target) {
+            await _terminateUnsafeNativeOverlay(
+              port,
+              lastError,
+              lastStackTrace!,
+            );
+            Error.throwWithStackTrace(lastError, lastStackTrace);
+          }
+          pendingError = lastError;
+          pendingStackTrace = lastStackTrace;
+          _reportPageError('原生 WebView 显示失败：${lastError.runtimeType}');
+          _forceVisibilityWrite = true;
+          continue;
         }
       }
-      if (revision == _visibilityRevision) return;
+      if (revision == _visibilityRevision) {
+        _processedVisibilityRevision = revision;
+        if (pendingError != null) {
+          Error.throwWithStackTrace(pendingError, pendingStackTrace!);
+        }
+        return;
+      }
     }
+  }
+
+  Future<void> _terminateUnsafeNativeOverlay(
+    NativeActivityGameWebViewPort port,
+    Object error,
+    StackTrace stackTrace,
+  ) async {
+    if (_visibilityFatalCleanupStarted || !identical(_port, port)) return;
+    _visibilityFatalCleanupStarted = true;
+    debugPrint('Native game surface could not be hidden: $error\n$stackTrace');
+    _setFatalError('原生 WebView 无法安全隐藏，已终止该模式。');
+    _generationId = null;
+    _port = null;
+    try {
+      widget.browserController.detachPort(port);
+    } catch (detachError, detachStackTrace) {
+      debugPrint(
+        'Native game surface controller detach failed: '
+        '$detachError\n$detachStackTrace',
+      );
+    }
+    final subscription = _eventSubscription;
+    _eventSubscription = null;
+    await _disposeNativeResources(subscription, port);
   }
 
   void _onNetworkSettingsChanged() {
@@ -679,16 +823,29 @@ final class _NativeActivityGameSurfaceState
     if (controller == null || controller.mode == _activeCaptureMode) return;
     _activeCaptureMode = controller.mode;
     _captureRevision += 1;
+    _ensureCaptureReconfiguration();
+  }
+
+  void _ensureCaptureReconfiguration() {
     if (_captureReconfigureFuture != null) return;
     final operation = _drainCaptureReconfiguration();
     _captureReconfigureFuture = operation;
     unawaited(
-      operation.whenComplete(() {
-        if (identical(_captureReconfigureFuture, operation)) {
-          _captureReconfigureFuture = null;
-        }
-      }),
+      operation.then<void>(
+        (_) => _finishCaptureReconfiguration(operation),
+        onError: (Object _, StackTrace _) =>
+            _finishCaptureReconfiguration(operation),
+      ),
     );
+  }
+
+  void _finishCaptureReconfiguration(Future<void> operation) {
+    if (identical(_captureReconfigureFuture, operation)) {
+      _captureReconfigureFuture = null;
+    }
+    if (_active && !_fatal && _processedCaptureRevision < _captureRevision) {
+      _ensureCaptureReconfiguration();
+    }
   }
 
   Future<void> _drainCaptureReconfiguration() async {
@@ -696,7 +853,10 @@ final class _NativeActivityGameSurfaceState
       final revision = _captureRevision;
       final generationId = _generationId;
       final port = _port;
-      if (generationId == null || port == null) return;
+      if (generationId == null || port == null) {
+        _processedCaptureRevision = revision;
+        return;
+      }
       final operationEpoch = _operationEpoch;
       try {
         await _startupOrchestrator.prepareCapture();
@@ -713,9 +873,13 @@ final class _NativeActivityGameSurfaceState
             revision == _captureRevision) {
           _reportPageError('捕获模式切换失败：${error.runtimeType}');
         }
+        _processedCaptureRevision = revision;
         return;
       }
-      if (revision == _captureRevision) return;
+      if (revision == _captureRevision) {
+        _processedCaptureRevision = revision;
+        return;
+      }
     }
   }
 
@@ -766,12 +930,14 @@ final class _NativeActivityGameSurfaceState
     final port = _port;
     _port = null;
     if (port == null) {
-      unawaited(
-        _disposeStartupOrchestrator(
-          _startupOrchestrator,
-          timeout: _cleanupTimeout,
-        ),
-      );
+      if (!_visibilityFatalCleanupStarted) {
+        unawaited(
+          _disposeStartupOrchestrator(
+            _startupOrchestrator,
+            timeout: _cleanupTimeout,
+          ),
+        );
+      }
     } else {
       _sendHideIntent(port);
       try {

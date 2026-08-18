@@ -75,6 +75,59 @@ void main() {
     });
 
     test(
+      'late old-port completion is followed by the latest port mode',
+      () async {
+        final blocked = Completer<void>();
+        final oldPort = _FakeGameCapturePort(
+          supported: true,
+          configureBlocker: blocked,
+        );
+        final newPort = _FakeGameCapturePort(supported: true);
+        final controller = GameCaptureController();
+        addTearDown(() async {
+          controller.dispose();
+          await oldPort.close();
+          await newPort.close();
+        });
+
+        final oldAttach = controller.attach(oldPort, enabled: true);
+        await Future<void>.delayed(Duration.zero);
+        final newAttach = controller.attach(newPort, enabled: false);
+        blocked.complete();
+        await Future.wait(<Future<void>>[oldAttach, newAttach]);
+
+        expect(oldPort.configurations, <bool>[true]);
+        expect(newPort.configurations, <bool>[false]);
+        expect(controller.state, GameCaptureState.disabled);
+      },
+    );
+
+    test(
+      'rapid same-port changes replay the latest mode after a late call',
+      () async {
+        final blocked = Completer<void>();
+        final port = _FakeGameCapturePort(
+          supported: true,
+          configureBlocker: blocked,
+        );
+        final controller = GameCaptureController();
+        addTearDown(() async {
+          controller.dispose();
+          await port.close();
+        });
+
+        final attach = controller.attach(port, enabled: true);
+        await Future<void>.delayed(Duration.zero);
+        final disable = controller.configure(enabled: false);
+        blocked.complete();
+        await Future.wait(<Future<void>>[attach, disable]);
+
+        expect(port.configurations, <bool>[true, false]);
+        expect(controller.state, GameCaptureState.disabled);
+      },
+    );
+
+    test(
       'retains only the latest event and exposes a lightweight count',
       () async {
         final port = _FakeGameCapturePort(supported: true);
@@ -143,9 +196,10 @@ CapturedApiEvent _event({required int sequence, String body = '{}'}) {
 }
 
 final class _FakeGameCapturePort implements GameCapturePort {
-  _FakeGameCapturePort({required this.supported});
+  _FakeGameCapturePort({required this.supported, this.configureBlocker});
 
   final bool supported;
+  final Completer<void>? configureBlocker;
   final StreamController<CapturedApiEvent> _events =
       StreamController<CapturedApiEvent>.broadcast();
 
@@ -160,6 +214,7 @@ final class _FakeGameCapturePort implements GameCapturePort {
     required String script,
   }) async {
     configurations.add(enabled);
+    if (configurations.length == 1) await configureBlocker?.future;
   }
 
   @override

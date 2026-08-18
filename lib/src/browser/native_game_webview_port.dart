@@ -12,6 +12,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   MethodChannelNativeGameWebViewPort({
     MethodChannel? channel,
     Stream<Object?>? eventStream,
+    this.eventCancellationTimeout = const Duration(seconds: 2),
   }) : _channel =
            channel ?? const MethodChannel(nativeGameWebViewMethodChannelName),
        _eventStream =
@@ -27,6 +28,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
 
   final MethodChannel _channel;
   final Stream<Object?> _eventStream;
+  final Duration eventCancellationTimeout;
 
   StreamSubscription<Object?>? _eventSubscription;
   Future<void>? _eventCancellation;
@@ -34,6 +36,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   Future<void>? _disposeFuture;
   int? _generationId;
   bool _disposed = false;
+  bool _eventsClosed = false;
   final List<_NativeGameWebViewNotification> _pendingNotifications =
       <_NativeGameWebViewNotification>[];
   final List<_NativeGameWebViewNotification> _initialNotifications =
@@ -91,7 +94,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       final errors = _CleanupErrors();
       final eventCancellation = _eventCancellation;
       if (eventCancellation != null) {
-        await errors.run(() => eventCancellation);
+        await errors.run(() => _awaitCancellation(eventCancellation));
       }
       await errors.run(() => _destroy(generationId));
       if (errors.hasError) {
@@ -114,7 +117,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
 
   Future<void> _cancelIgnoringError() async {
     try {
-      await _cancelEventSubscription();
+      await _awaitCancellation(_cancelEventSubscription());
     } catch (_) {
       // The create result remains the first meaningful error.
     }
@@ -175,7 +178,15 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       onError: (Object error, StackTrace stackTrace) {
         _onNativeError(error, stackTrace);
       },
+      onDone: _onNativeDone,
     );
+  }
+
+  Future<void> _awaitCancellation(Future<void> cancellation) {
+    // Keep an explicit error listener attached after timeout so a cancellation
+    // failure that arrives late can never escape as an unhandled async error.
+    unawaited(cancellation.catchError((Object _) {}));
+    return cancellation.timeout(eventCancellationTimeout);
   }
 
   Future<void> _cancelEventSubscription() {
@@ -269,7 +280,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
 
   Future<void> _dispose() async {
     final errors = _CleanupErrors();
-    await errors.run(_cancelEventSubscription);
+    await errors.run(() => _awaitCancellation(_cancelEventSubscription()));
     final generationId = _generationId;
     _generationId = null;
     if (generationId != null) {
@@ -295,11 +306,19 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   }
 
   void _closeEvents(_CleanupErrors errors) {
+    if (_eventsClosed) return;
+    _eventsClosed = true;
     try {
       unawaited(_events.close());
     } catch (error, stackTrace) {
       errors.capture(error, stackTrace);
     }
+  }
+
+  void _onNativeDone() {
+    if (_disposed || _eventsClosed) return;
+    _eventsClosed = true;
+    unawaited(_events.close());
   }
 
   void _onNativeEvent(Object? raw) {

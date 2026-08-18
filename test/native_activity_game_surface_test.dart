@@ -289,6 +289,87 @@ void main() {
     fixture.toolbarController.collapse();
   });
 
+  testWidgets('show failure retries, keeps an error overlay, and can recover', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.visibilityFailuresRemaining = 3;
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      fixture.port.calls.where((call) => call == 'visible:true'),
+      hasLength(3),
+    );
+    expect(find.byKey(const Key('native-game-surface-error')), findsOneWidget);
+    expect(fixture.port.calls, isNot(contains('destroy')));
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/retry'),
+    );
+    fixture.port.addEvent(
+      _event(
+        'pageFinished',
+        generationId: 7,
+        url: 'https://game.example/retry',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(fixture.port.calls.last, 'visible:true');
+    expect(find.byKey(const Key('native-game-surface-error')), findsNothing);
+    fixture.toolbarController.collapse();
+  });
+
+  testWidgets('exhausted hide retries destroy the native overlay host', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+    fixture.port.visibilityFailuresRemaining = 3;
+
+    fixture.port.addEvent(
+      _event(
+        'mainFrameError',
+        generationId: 7,
+        errorCode: -2,
+        description: 'failed',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      fixture.port.calls.where((call) => call == 'visible:false'),
+      hasLength(greaterThanOrEqualTo(3)),
+    );
+    expect(fixture.port.calls, contains('destroy'));
+    expect(find.byKey(const Key('native-game-surface-error')), findsOneWidget);
+    fixture.toolbarController.collapse();
+  });
+
   testWidgets('an unexpected event-stream close fails and hides the surface', (
     tester,
   ) async {
@@ -387,6 +468,9 @@ void main() {
       tester,
       () => fixture.port.calls.any((call) => call.startsWith('load:')),
     );
+    final loadCallsBeforeUpdate = fixture.port.calls
+        .where((call) => call.startsWith('load:'))
+        .length;
     final oldFinish = Completer<void>();
     fixture.orchestrator.prepareCaptureCompleter = oldFinish;
     fixture.port.addEvent(
@@ -409,9 +493,73 @@ void main() {
     );
     await tester.pump();
     await tester.pump();
-    expect(nextOrchestrator.prepareCaptureCalls, 1);
+    expect(nextOrchestrator.prepareCaptureCalls, 2);
+    expect(
+      fixture.port.calls.where((call) => call.startsWith('load:')),
+      hasLength(loadCallsBeforeUpdate),
+    );
     expect(fixture.statusController.loadState, WebViewLoadState.ready);
     fixture.toolbarController.collapse();
+  });
+
+  testWidgets(
+    'hot update restarts bootstrap when old network work is pending',
+    (tester) async {
+      final fixture = _SurfaceFixture();
+      addTearDown(fixture.dispose);
+      final oldNetwork = Completer<GameSurfaceNetworkResult>();
+      fixture.orchestrator.networkCompleter = oldNetwork;
+      await fixture.pump(tester);
+      await _pumpUntil(
+        tester,
+        () => fixture.orchestrator.applyNetworkCalls == 1,
+      );
+      final nextOrchestrator = _FakeStartupOrchestrator();
+
+      await fixture.pump(tester, startupOrchestrator: nextOrchestrator);
+      oldNetwork.complete(const GameSurfaceNetworkResult.success());
+      await _pumpUntil(tester, () => nextOrchestrator.applyNetworkCalls == 1);
+      await _pumpUntil(
+        tester,
+        () => fixture.port.calls.any((call) => call.startsWith('load:')),
+      );
+
+      expect(nextOrchestrator.prepareCaptureCalls, 1);
+      expect(fixture.orchestrator.disposeCalls, 1);
+    },
+  );
+
+  testWidgets('hot update replays a pending capture revision', (tester) async {
+    final captureModeController = await CaptureModeController.load(
+      const _GameCaptureModeStore(),
+    );
+    addTearDown(captureModeController.dispose);
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester, captureModeController: captureModeController);
+    await _pumpUntil(
+      tester,
+      () => fixture.port.calls.any((call) => call.startsWith('load:')),
+    );
+    fixture.port.calls.clear();
+    final oldCapture = Completer<void>();
+    fixture.orchestrator.prepareCaptureCompleter = oldCapture;
+    await captureModeController.setMode(CaptureMode.browserOnly);
+    await tester.pump();
+    final nextOrchestrator = _FakeStartupOrchestrator();
+
+    await fixture.pump(
+      tester,
+      captureModeController: captureModeController,
+      startupOrchestrator: nextOrchestrator,
+    );
+    await captureModeController.setMode(CaptureMode.game);
+    oldCapture.complete();
+    await tester.pump();
+    await tester.pump();
+
+    expect(nextOrchestrator.prepareCaptureCalls, greaterThanOrEqualTo(2));
+    expect(fixture.port.calls.where((call) => call == 'reload'), hasLength(1));
   });
 
   testWidgets(
@@ -1609,6 +1757,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Object? reloadFailure;
   int successfulReloadCalls = 0;
   final List<Completer<void>> visibilityCompleters = <Completer<void>>[];
+  int visibilityFailuresRemaining = 0;
   bool failHide = false;
   final List<NativeGameWebViewEvent> eventsDuringCreate =
       <NativeGameWebViewEvent>[];
@@ -1639,6 +1788,10 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
     calls.add('visible:$visible');
     if (visibilityCompleters.isNotEmpty) {
       await visibilityCompleters.removeAt(0).future;
+    }
+    if (visibilityFailuresRemaining > 0) {
+      visibilityFailuresRemaining -= 1;
+      throw StateError('visibility failed');
     }
     if (!visible && failHide) throw StateError('hide failed');
   }

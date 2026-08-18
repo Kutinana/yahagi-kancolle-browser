@@ -324,6 +324,52 @@ void main() {
     await expectLater(port.reload(), throwsStateError);
   });
 
+  test(
+    'destroy is not blocked by event cancellation that never completes',
+    () async {
+      final calls = <String>[];
+      final cancellation = Completer<void>();
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call.method);
+        return call.method == 'create' ? 51 : null;
+      });
+      final source = StreamController<Object?>(
+        onCancel: () => cancellation.future,
+      );
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+        eventCancellationTimeout: const Duration(milliseconds: 1),
+      );
+      await port.create();
+
+      await expectLater(port.dispose(), throwsA(isA<TimeoutException>()));
+
+      expect(calls, <String>['create', 'destroy']);
+      cancellation.completeError(StateError('late cancellation failure'));
+      await Future<void>.delayed(Duration.zero);
+    },
+  );
+
+  test('upstream event completion closes the public event stream', () async {
+    messenger.setMockMethodCallHandler(
+      channel,
+      (call) async => call.method == 'create' ? 52 : null,
+    );
+    final source = StreamController<Object?>();
+    final port = MethodChannelNativeGameWebViewPort(
+      channel: channel,
+      eventStream: source.stream,
+    );
+    await port.create();
+    final done = Completer<void>();
+    port.events.listen(null, onDone: done.complete);
+
+    await source.close();
+    await done.future;
+    await port.dispose();
+  });
+
   test('rejects a non-boolean canGoBack result', () async {
     messenger.setMockMethodCallHandler(channel, (call) async {
       return call.method == 'create' ? 1 : 'yes';

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -27,6 +29,66 @@ import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/safety_settings_store.dart';
 
 void main() {
+  test('GameWebView capture updates reload only the final revision', () async {
+    final configuration = Completer<void>();
+    var configureCalls = 0;
+    var reloadCalls = 0;
+    final coordinator = GameWebViewCaptureUpdateCoordinator();
+
+    final first = coordinator.request(
+      configure: () {
+        configureCalls += 1;
+        return configuration.future;
+      },
+      reload: () async => reloadCalls += 1,
+      isActive: () => true,
+      onError: (_, _) {},
+    );
+    final second = coordinator.request(
+      configure: () {
+        configureCalls += 1;
+        return configuration.future;
+      },
+      reload: () async => reloadCalls += 1,
+      isActive: () => true,
+      onError: (_, _) {},
+    );
+    configuration.complete();
+    await Future.wait(<Future<void>>[first, second]);
+
+    expect(configureCalls, 2);
+    expect(reloadCalls, 1);
+  });
+
+  test('GameWebView capture updates ignore an inactive old binding', () async {
+    final oldConfiguration = Completer<void>();
+    final newConfiguration = Completer<void>();
+    var oldActive = true;
+    var oldReloads = 0;
+    var newReloads = 0;
+    final coordinator = GameWebViewCaptureUpdateCoordinator();
+
+    final old = coordinator.request(
+      configure: () => oldConfiguration.future,
+      reload: () async => oldReloads += 1,
+      isActive: () => oldActive,
+      onError: (_, _) {},
+    );
+    oldActive = false;
+    final current = coordinator.request(
+      configure: () => newConfiguration.future,
+      reload: () async => newReloads += 1,
+      isActive: () => true,
+      onError: (_, _) {},
+    );
+    newConfiguration.complete();
+    oldConfiguration.complete();
+    await Future.wait(<Future<void>>[old, current]);
+
+    expect(oldReloads, 0);
+    expect(newReloads, 1);
+  });
+
   test('GameWebView hot-update bindings migrate identities safely', () async {
     final oldBrowser = GameBrowserController();
     final nextBrowser = GameBrowserController();
