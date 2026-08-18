@@ -183,6 +183,118 @@ void main() {
     },
   );
 
+  test(
+    'forwards current destroyed and clears generation before listeners recreate',
+    () async {
+      final calls = <MethodCall>[];
+      var generationId = 40;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        if (call.method == 'create') return generationId++;
+        return null;
+      });
+      final source = StreamController<Object?>.broadcast(sync: true);
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+      );
+      addTearDown(source.close);
+      addTearDown(port.dispose);
+      expect(await port.create(), 40);
+
+      final received = <NativeGameWebViewEvent>[];
+      final recreated = Completer<int>();
+      final subscription = port.events.listen((event) {
+        received.add(event);
+        if (event.type == NativeGameWebViewEventType.destroyed) {
+          port.create().then(
+            recreated.complete,
+            onError: recreated.completeError,
+          );
+        }
+      });
+      addTearDown(subscription.cancel);
+
+      source.add(<String, Object?>{'type': 'destroyed', 'generationId': 40});
+
+      expect(await recreated.future, 41);
+      expect(received.map((event) => event.type), <NativeGameWebViewEventType>[
+        NativeGameWebViewEventType.destroyed,
+      ]);
+      expect(calls.map((call) => call.method), <String>['create', 'create']);
+    },
+  );
+
+  test(
+    'stale destroyed neither forwards nor clears the current generation',
+    () async {
+      final calls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return 50;
+      });
+      final source = StreamController<Object?>.broadcast(sync: true);
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+      );
+      addTearDown(source.close);
+      addTearDown(port.dispose);
+      await port.create();
+      final received = <NativeGameWebViewEvent>[];
+      final subscription = port.events.listen(received.add);
+      addTearDown(subscription.cancel);
+
+      source.add(<String, Object?>{'type': 'destroyed', 'generationId': 49});
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, isEmpty);
+      await expectLater(port.create(), throwsStateError);
+      expect(calls.map((call) => call.method), <String>['create']);
+    },
+  );
+
+  test(
+    'replays an in-flight destroyed in order and leaves no generation to dispose',
+    () async {
+      final calls = <MethodCall>[];
+      final createResult = Completer<int>();
+      final source = StreamController<Object?>.broadcast(sync: true);
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        if (call.method == 'create') {
+          source.add(<String, Object?>{'type': 'created', 'generationId': 60});
+          source.add(<String, Object?>{
+            'type': 'destroyed',
+            'generationId': 60,
+          });
+          return createResult.future;
+        }
+        return null;
+      });
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+      );
+      addTearDown(source.close);
+      final received = <NativeGameWebViewEvent>[];
+      final subscription = port.events.listen(received.add);
+      addTearDown(subscription.cancel);
+
+      final create = port.create();
+      createResult.complete(60);
+      expect(await create, 60);
+      await Future<void>.delayed(Duration.zero);
+      await port.dispose();
+
+      expect(received.map((event) => event.type), <NativeGameWebViewEventType>[
+        NativeGameWebViewEventType.created,
+        NativeGameWebViewEventType.destroyed,
+      ]);
+      expect(calls.map((call) => call.method), <String>['create']);
+    },
+  );
+
   test('cancels events before destroying and dispose is idempotent', () async {
     final order = <String>[];
     messenger.setMockMethodCallHandler(channel, (call) async {

@@ -1,13 +1,18 @@
 package app.yahagi.kancollebrowser.nativewebview
 
+import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.webkit.CookieManager
 import android.webkit.WebStorage
+import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.lang.ref.WeakReference
 import java.net.URI
 import java.util.UUID
+import java.util.WeakHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal interface NativeGameWebViewHostOperations {
     val currentGeneration: Long?
@@ -23,7 +28,7 @@ internal interface NativeGameWebViewHostOperations {
     fun runJavaScript(javascript: String)
     fun fitGameScreen()
     fun clearCache()
-    fun clearSession()
+    fun clearSession(onComplete: (Exception?) -> Unit)
     fun destroy(generation: Long): Boolean
 }
 
@@ -46,6 +51,7 @@ internal class ActivityNativeGameWebViewHostOperations(
     }
 
     override fun showLocalHome() {
+        // Task 8 replaces this placeholder with the complete offline home document.
         requireWebView().loadDataWithBaseURL(
             LOCAL_HOME_BASE_URL,
             LOCAL_HOME_HTML,
@@ -70,6 +76,7 @@ internal class ActivityNativeGameWebViewHostOperations(
     }
 
     override fun fitGameScreen() {
+        // Task 8 installs the complete fitting script; this only invokes its future hook.
         requireWebView().evaluateJavascript(
             "window.__yahagiMobileSyncPresentation?.();",
             null,
@@ -80,16 +87,20 @@ internal class ActivityNativeGameWebViewHostOperations(
         requireWebView().clearCache(true)
     }
 
-    override fun clearSession() {
-        CookieManager.getInstance().apply {
-            removeAllCookies(null)
-            flush()
-        }
+    override fun clearSession(onComplete: (Exception?) -> Unit) {
         WebStorage.getInstance().deleteAllData()
         requireWebView().apply {
             clearFormData()
             clearHistory()
             clearCache(true)
+        }
+        CookieManager.getInstance().removeAllCookies {
+            try {
+                CookieManager.getInstance().flush()
+                onComplete(null)
+            } catch (error: Exception) {
+                onComplete(error)
+            }
         }
     }
 
@@ -197,142 +208,333 @@ internal class NativeWebViewActivityStartupCoordinator(
     }
 }
 
-internal class NativeGameWebViewChannel(
-    private val dispatchToMain: ((() -> Unit) -> Unit),
-    private val lifecycleObserver: NativeGameWebViewLifecycleObserver =
-        NoOpNativeGameWebViewLifecycleObserver,
-) : MethodChannel.MethodCallHandler,
+internal class NativeGameWebViewActivityAttachment internal constructor(
+    internal val id: Long,
+)
+
+internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
     EventChannel.StreamHandler,
     NativeGameWebViewEventSink {
-    private var host: NativeGameWebViewHostOperations? = null
+    private data class ActivityBinding(
+        val token: NativeGameWebViewActivityAttachment,
+        val dispatchToMain: ((() -> Unit) -> Unit),
+        val lifecycleObserver: NativeGameWebViewLifecycleObserver,
+        var host: NativeGameWebViewHostOperations? = null,
+        var detaching: Boolean = false,
+    )
+
+    private data class ParsedCall(
+        val method: String,
+        val generation: Long? = null,
+        val bounds: NativeGameWebViewBounds? = null,
+        val visible: Boolean? = null,
+        val text: String? = null,
+    )
+
+    private data class PendingCall(
+        val parsed: ParsedCall,
+        val result: MethodChannel.Result,
+    )
+
+    private var activityBinding: ActivityBinding? = null
+    private var nextAttachmentId = 0L
+    private val pendingCalls = ArrayDeque<PendingCall>()
+    private var callRunning = false
+    private var asyncVersion = 0L
     private var eventSink: EventChannel.EventSink? = null
     private var acceptedGeneration: Long? = null
-    private var destroyed = false
+    private var engineDestroyed = false
 
-    fun attachHost(host: NativeGameWebViewHostOperations) {
-        check(!destroyed) { "Native game WebView channel is destroyed" }
-        check(this.host == null) { "Native game WebView host is already attached" }
-        this.host = host
+    fun attachActivity(
+        dispatchToMain: ((() -> Unit) -> Unit),
+        lifecycleObserver: NativeGameWebViewLifecycleObserver =
+            NoOpNativeGameWebViewLifecycleObserver,
+    ): NativeGameWebViewActivityAttachment {
+        check(!engineDestroyed) { "Native game WebView engine channel is destroyed" }
+        activityBinding?.let(::detachBinding)
+        val token = NativeGameWebViewActivityAttachment(nextAttachmentId++)
+        activityBinding = ActivityBinding(token, dispatchToMain, lifecycleObserver)
+        return token
     }
 
-    fun disable() {
-        destroyed = true
+    fun attachHost(
+        attachment: NativeGameWebViewActivityAttachment,
+        host: NativeGameWebViewHostOperations,
+    ) {
+        val binding = activityBinding
+        check(binding?.token === attachment) { "Native game WebView Activity is not attached" }
+        check(!binding.detaching) { "Native game WebView Activity is detaching" }
+        check(binding.host == null) { "Native game WebView host is already attached" }
+        binding.host = host
+    }
+
+    fun detachActivity(attachment: NativeGameWebViewActivityAttachment) {
+        val binding = activityBinding
+        if (binding?.token !== attachment) return
+        detachBinding(binding)
+    }
+
+    private fun detachBinding(binding: ActivityBinding) {
+        binding.detaching = true
+        asyncVersion++
+        pendingCalls.clear()
+        callRunning = false
+        binding.host?.currentGeneration?.let { generation ->
+            try {
+                binding.host?.destroy(generation)
+            } catch (_: Exception) {
+                acceptedGeneration = null
+            }
+        }
+        binding.host = null
         acceptedGeneration = null
-        eventSink = null
+        if (activityBinding === binding) activityBinding = null
     }
+
+    fun shutdownEngine() {
+        if (engineDestroyed) return
+        activityBinding?.let(::detachBinding)
+        engineDestroyed = true
+        acceptedGeneration = null
+        val sink = eventSink
+        eventSink = null
+        try {
+            sink?.endOfStream()
+        } catch (_: Exception) {
+            // A detached Flutter listener must not break engine cleanup.
+        }
+    }
+
+    /** Compatibility alias for tests and explicit permanent teardown. */
+    fun disable() = shutdownEngine()
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         if (call.method !in SUPPORTED_METHODS) {
-            result.notImplemented()
+            safeNotImplemented(result)
             return
         }
+        val parsed = try {
+            parseCall(call)
+        } catch (error: InvalidArgumentsException) {
+            safeError(result, INVALID_ARGUMENT, error.message)
+            return
+        }
+        if (engineDestroyed) {
+            safeError(result, ACTIVITY_DESTROYED, "The Flutter engine has been destroyed.")
+            return
+        }
+        val binding = activityBinding
+        if (binding == null || binding.detaching || binding.host == null) {
+            safeError(result, HOST_UNAVAILABLE, "The native WebView host is unavailable.")
+            return
+        }
+        pendingCalls.addLast(PendingCall(parsed, result))
+        dispatchNext(binding)
+    }
+
+    private fun dispatchNext(binding: ActivityBinding) {
+        if (callRunning || pendingCalls.isEmpty()) return
+        if (activityBinding !== binding || binding.detaching) {
+            pendingCalls.clear()
+            return
+        }
+        callRunning = true
         try {
-            dispatchToMain {
-                if (destroyed) {
-                    result.error(ACTIVITY_DESTROYED, "The Activity has been destroyed.", null)
+            binding.dispatchToMain {
+                if (activityBinding !== binding || binding.detaching || pendingCalls.isEmpty()) {
+                    callRunning = false
                     return@dispatchToMain
                 }
-                val activeHost = host
-                if (activeHost == null) {
-                    result.error(HOST_UNAVAILABLE, "The native WebView host is unavailable.", null)
-                    return@dispatchToMain
-                }
-                try {
-                    handleOnMain(call, result, activeHost)
-                } catch (error: InvalidArgumentsException) {
-                    result.error(INVALID_ARGUMENT, error.message, null)
-                } catch (error: Exception) {
-                    result.error(HOST_ERROR, error.message ?: "Native WebView operation failed.", null)
-                }
+                executeOnMain(binding, pendingCalls.first())
             }
         } catch (error: Exception) {
-            result.error(HOST_ERROR, error.message ?: "Unable to dispatch native WebView operation.", null)
+            val failed = pendingCalls.removeFirstOrNull()
+            callRunning = false
+            failed?.let {
+                safeError(it.result, HOST_ERROR, error.message ?: "Unable to dispatch native WebView operation.")
+            }
+            dispatchNext(binding)
         }
     }
 
-    private fun handleOnMain(
-        call: MethodCall,
-        result: MethodChannel.Result,
-        host: NativeGameWebViewHostOperations,
-    ) {
-        val arguments = strictMap(call.arguments)
-        if (call.method == "create") {
-            requireExactKeys(arguments, setOf("renderer"))
-            if (arguments["renderer"] != "webgl") invalid("renderer must be webgl")
-            host.currentGeneration?.let { oldGeneration ->
-                if (!host.destroy(oldGeneration)) {
-                    throw IllegalStateException("Unable to destroy the previous native WebView")
+    private fun executeOnMain(binding: ActivityBinding, pending: PendingCall) {
+        val host = binding.host
+        if (host == null) {
+            finish(binding, pending) {
+                safeError(pending.result, HOST_UNAVAILABLE, "The native WebView host is unavailable.")
+            }
+            return
+        }
+        val parsed = pending.parsed
+        try {
+            if (parsed.method == "create") {
+                host.currentGeneration?.let { oldGeneration ->
+                    check(host.destroy(oldGeneration)) { "Unable to destroy the previous native WebView" }
+                }
+                val generation = host.create()
+                if (generation == null || generation < 0L) {
+                    safeObserverCall(binding.lifecycleObserver::onCreateFailed)
+                    error("Unable to create the native WebView")
+                }
+                acceptedGeneration = generation
+                finish(binding, pending) { safeSuccess(pending.result, generation) }
+                return
+            }
+
+            val generation = checkNotNull(parsed.generation)
+            if (host.currentGeneration != generation || acceptedGeneration != generation) {
+                finish(binding, pending) {
+                    safeError(pending.result, STALE_GENERATION, "The native WebView generation is stale.")
+                }
+                return
+            }
+
+            when (parsed.method) {
+                "setBounds" -> {
+                    check(host.setBounds(generation, checkNotNull(parsed.bounds))) {
+                        "The native WebView bounds could not be applied"
+                    }
+                    finishSuccess(binding, pending)
+                }
+                "setVisible" -> {
+                    check(host.setVisible(generation, checkNotNull(parsed.visible))) {
+                        "The native WebView visibility could not be applied"
+                    }
+                    finishSuccess(binding, pending)
+                }
+                "loadUri" -> {
+                    host.loadUri(checkNotNull(parsed.text))
+                    finishSuccess(binding, pending)
+                }
+                "showLocalHome" -> {
+                    host.showLocalHome()
+                    finishSuccess(binding, pending)
+                }
+                "reload" -> {
+                    host.reload()
+                    finishSuccess(binding, pending)
+                }
+                "canGoBack" -> finish(binding, pending) {
+                    safeSuccess(pending.result, host.canGoBack())
+                }
+                "goBack" -> {
+                    host.goBack()
+                    finishSuccess(binding, pending)
+                }
+                "runJavaScript" -> {
+                    host.runJavaScript(checkNotNull(parsed.text))
+                    finishSuccess(binding, pending)
+                }
+                "fitGameScreen" -> {
+                    host.fitGameScreen()
+                    finishSuccess(binding, pending)
+                }
+                "clearCache" -> {
+                    host.clearCache()
+                    finishSuccess(binding, pending)
+                }
+                "clearSession" -> startClearSession(binding, pending, host)
+                "destroy" -> {
+                    check(host.destroy(generation)) { "Unable to destroy the native WebView" }
+                    finishSuccess(binding, pending)
                 }
             }
-            val generation = host.create()
-            if (generation == null || generation < 0L) {
-                safeObserverCall(lifecycleObserver::onCreateFailed)
-                throw IllegalStateException("Unable to create the native WebView")
+        } catch (error: Exception) {
+            finish(binding, pending) {
+                safeError(pending.result, HOST_ERROR, error.message ?: "Native WebView operation failed.")
             }
-            acceptedGeneration = generation
-            result.success(generation)
-            return
         }
+    }
 
-        val generation = requireGeneration(arguments)
-        if (host.currentGeneration != generation || acceptedGeneration != generation) {
-            result.error(STALE_GENERATION, "The native WebView generation is stale.", null)
-            return
+    private fun startClearSession(
+        binding: ActivityBinding,
+        pending: PendingCall,
+        host: NativeGameWebViewHostOperations,
+    ) {
+        val callbackConsumed = AtomicBoolean(false)
+        val version = ++asyncVersion
+        val attachmentId = binding.token.id
+        val dispatcher = binding.dispatchToMain
+        try {
+            host.clearSession { error ->
+                if (!callbackConsumed.compareAndSet(false, true)) return@clearSession
+                try {
+                    dispatcher callback@{
+                        val activeBinding = activityBinding
+                        if (
+                            version != asyncVersion ||
+                            activeBinding == null ||
+                            activeBinding.token.id != attachmentId ||
+                            activeBinding.detaching
+                        ) {
+                            return@callback
+                        }
+                        finish(activeBinding, pending) {
+                            if (error == null) safeSuccess(pending.result, null)
+                            else safeError(
+                                pending.result,
+                                HOST_ERROR,
+                                error.message ?: "Unable to clear the native WebView session.",
+                            )
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Detach or dispatcher failure invalidates this Activity's pending result.
+                }
+            }
+        } catch (error: Exception) {
+            if (callbackConsumed.compareAndSet(false, true)) {
+                finish(binding, pending) {
+                    safeError(pending.result, HOST_ERROR, error.message ?: "Unable to clear the native WebView session.")
+                }
+            }
         }
+    }
 
-        when (call.method) {
+    private fun finishSuccess(binding: ActivityBinding, pending: PendingCall) =
+        finish(binding, pending) { safeSuccess(pending.result, null) }
+
+    private fun finish(binding: ActivityBinding, pending: PendingCall, completion: () -> Unit) {
+        if (activityBinding !== binding || binding.detaching || pendingCalls.firstOrNull() !== pending) return
+        pendingCalls.removeFirst()
+        callRunning = false
+        completion()
+        dispatchNext(binding)
+    }
+
+    private fun parseCall(call: MethodCall): ParsedCall {
+        val arguments = strictMap(call.arguments)
+        return when (call.method) {
+            "create" -> {
+                requireExactKeys(arguments, setOf("renderer"))
+                if (arguments["renderer"] != "webgl") invalid("renderer must be webgl")
+                ParsedCall(call.method)
+            }
             "setBounds" -> {
                 requireExactKeys(arguments, setOf("generationId", "bounds"))
-                val bounds = parseBounds(arguments["bounds"])
-                host.setBounds(generation, bounds)
-                result.success(null)
+                ParsedCall(call.method, requireGeneration(arguments), bounds = parseBounds(arguments["bounds"]))
             }
             "setVisible" -> {
                 requireExactKeys(arguments, setOf("generationId", "visible"))
                 val visible = arguments["visible"] as? Boolean ?: invalid("visible must be a boolean")
-                host.setVisible(generation, visible)
-                result.success(null)
+                ParsedCall(call.method, requireGeneration(arguments), visible = visible)
             }
             "loadUri" -> {
                 requireExactKeys(arguments, setOf("generationId", "uri"))
                 val uri = arguments["uri"] as? String ?: invalid("uri must be a string")
                 if (!isSafeWebUri(uri)) invalid("uri must be an absolute HTTP(S) URI")
-                host.loadUri(uri)
-                result.success(null)
+                ParsedCall(call.method, requireGeneration(arguments), text = uri)
             }
-            "showLocalHome" -> exactGenerationOnly(arguments, result) { host.showLocalHome() }
-            "reload" -> exactGenerationOnly(arguments, result) { host.reload() }
-            "canGoBack" -> {
-                requireExactKeys(arguments, setOf("generationId"))
-                result.success(host.canGoBack())
-            }
-            "goBack" -> exactGenerationOnly(arguments, result) { host.goBack() }
             "runJavaScript" -> {
                 requireExactKeys(arguments, setOf("generationId", "javascript"))
-                val javascript = arguments["javascript"] as? String ?:
-                    invalid("javascript must be a string")
-                host.runJavaScript(javascript)
-                result.success(null)
+                val javascript = arguments["javascript"] as? String ?: invalid("javascript must be a string")
+                ParsedCall(call.method, requireGeneration(arguments), text = javascript)
             }
-            "fitGameScreen" -> exactGenerationOnly(arguments, result) { host.fitGameScreen() }
-            "clearCache" -> exactGenerationOnly(arguments, result) { host.clearCache() }
-            "clearSession" -> exactGenerationOnly(arguments, result) { host.clearSession() }
-            "destroy" -> {
+            else -> {
                 requireExactKeys(arguments, setOf("generationId"))
-                if (!host.destroy(generation)) stale(result)
-                else result.success(null)
+                ParsedCall(call.method, requireGeneration(arguments))
             }
         }
-    }
-
-    private fun exactGenerationOnly(
-        arguments: Map<String, Any?>,
-        result: MethodChannel.Result,
-        operation: () -> Unit,
-    ) {
-        requireExactKeys(arguments, setOf("generationId"))
-        operation()
-        result.success(null)
     }
 
     private fun requireGeneration(arguments: Map<String, Any?>): Long {
@@ -384,12 +586,8 @@ internal class NativeGameWebViewChannel(
             false
         }
 
-    private fun stale(result: MethodChannel.Result) {
-        result.error(STALE_GENERATION, "The native WebView generation is stale.", null)
-    }
-
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-        if (!destroyed) eventSink = events
+        if (!engineDestroyed) eventSink = events
     }
 
     override fun onCancel(arguments: Any?) {
@@ -397,7 +595,7 @@ internal class NativeGameWebViewChannel(
     }
 
     override fun created(generation: Long) {
-        if (destroyed || host?.currentGeneration != generation) return
+        if (engineDestroyed || activityBinding?.host?.currentGeneration != generation) return
         acceptedGeneration = generation
         emit(mapOf("type" to "created", "generationId" to generation))
     }
@@ -408,7 +606,7 @@ internal class NativeGameWebViewChannel(
 
     override fun pageFinished(generation: Long, url: String) {
         if (!acceptsEvent(generation)) return
-        safeObserverCall(lifecycleObserver::onPageFinished)
+        activityBinding?.lifecycleObserver?.let { safeObserverCall(it::onPageFinished) }
         emit(mapOf("type" to "pageFinished", "generationId" to generation, "url" to url))
     }
 
@@ -433,7 +631,7 @@ internal class NativeGameWebViewChannel(
 
     override fun renderProcessGone(generation: Long, didCrash: Boolean) {
         if (!acceptsEvent(generation)) return
-        safeObserverCall(lifecycleObserver::onRenderProcessGone)
+        activityBinding?.lifecycleObserver?.let { safeObserverCall(it::onRenderProcessGone) }
         emit(
             mapOf(
                 "type" to "renderProcessGone",
@@ -454,7 +652,7 @@ internal class NativeGameWebViewChannel(
     }
 
     private fun acceptsEvent(generation: Long): Boolean =
-        !destroyed && acceptedGeneration == generation
+        !engineDestroyed && acceptedGeneration == generation
 
     private fun emit(event: Map<String, Any?>) {
         val sink = eventSink ?: return
@@ -470,6 +668,30 @@ internal class NativeGameWebViewChannel(
             callback()
         } catch (_: Exception) {
             // Startup diagnostics must not break the primary WebView callback.
+        }
+    }
+
+    private fun safeSuccess(result: MethodChannel.Result, value: Any?) {
+        try {
+            result.success(value)
+        } catch (_: Exception) {
+            // A detached Dart caller must not stop command serialization.
+        }
+    }
+
+    private fun safeError(result: MethodChannel.Result, code: String, message: String?) {
+        try {
+            result.error(code, message, null)
+        } catch (_: Exception) {
+            // A detached Dart caller must not stop command serialization.
+        }
+    }
+
+    private fun safeNotImplemented(result: MethodChannel.Result) {
+        try {
+            result.notImplemented()
+        } catch (_: Exception) {
+            // A detached Dart caller must not break the engine handler.
         }
     }
 
@@ -504,6 +726,55 @@ internal class NativeGameWebViewChannel(
     }
 }
 
+internal class NativeGameWebViewChannelRegistry<K : Any>(
+    private val channelFactory: () -> NativeGameWebViewChannel = ::NativeGameWebViewChannel,
+) {
+    // Both sides are weak: EventSink can retain its messenger/engine through the channel value.
+    private val channels = WeakHashMap<K, WeakReference<NativeGameWebViewChannel>>()
+
+    @Synchronized
+    fun acquire(key: K, register: (NativeGameWebViewChannel) -> Unit): NativeGameWebViewChannel =
+        channels[key]?.get() ?: channelFactory().also { channel ->
+            register(channel)
+            channels[key] = WeakReference(channel)
+        }
+
+    @Synchronized
+    fun peek(key: K): NativeGameWebViewChannel? = channels[key]?.get()
+
+    @Synchronized
+    fun remove(key: K): NativeGameWebViewChannel? = channels.remove(key)?.get()
+}
+
+internal object NativeGameWebViewEngineChannels {
+    private val registry = NativeGameWebViewChannelRegistry<FlutterEngine>()
+
+    fun acquire(engine: FlutterEngine): NativeGameWebViewChannel =
+        registry.acquire(engine) { channel ->
+            MethodChannel(
+                engine.dartExecutor.binaryMessenger,
+                NativeGameWebViewChannel.METHOD_CHANNEL_NAME,
+            ).setMethodCallHandler(channel)
+            EventChannel(
+                engine.dartExecutor.binaryMessenger,
+                NativeGameWebViewChannel.EVENT_CHANNEL_NAME,
+            ).setStreamHandler(channel)
+        }
+
+    fun destroy(engine: FlutterEngine) {
+        val channel = registry.remove(engine) ?: return
+        MethodChannel(
+            engine.dartExecutor.binaryMessenger,
+            NativeGameWebViewChannel.METHOD_CHANNEL_NAME,
+        ).setMethodCallHandler(null)
+        EventChannel(
+            engine.dartExecutor.binaryMessenger,
+            NativeGameWebViewChannel.EVENT_CHANNEL_NAME,
+        ).setStreamHandler(null)
+        channel.shutdownEngine()
+    }
+}
+
 internal interface NativeWebViewSnapshotEditor {
     fun putInt(key: String, value: Int): NativeWebViewSnapshotEditor
     fun putLong(key: String, value: Long): NativeWebViewSnapshotEditor
@@ -522,6 +793,7 @@ private class AndroidNativeWebViewSnapshotPreferences(
 ) : NativeWebViewSnapshotPreferences {
     override fun readAll(): Map<String, Any?> = preferences.all
 
+    @SuppressLint("CommitPrefEdits")
     override fun edit(): NativeWebViewSnapshotEditor =
         object : NativeWebViewSnapshotEditor {
             private val editor = preferences.edit()

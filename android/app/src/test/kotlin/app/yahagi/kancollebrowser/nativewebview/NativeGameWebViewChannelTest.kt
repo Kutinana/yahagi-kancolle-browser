@@ -47,8 +47,8 @@ class NativeGameWebViewChannelTest {
         ).forEach { arguments ->
             val invalid = RecordingResult()
             channel.onMethodCall(MethodCall("create", arguments), invalid)
-            queued.removeAt(0).invoke()
             assertEquals("invalid_argument", invalid.errorCode)
+            assertTrue(queued.isEmpty())
         }
     }
 
@@ -112,7 +112,7 @@ class NativeGameWebViewChannelTest {
     }
 
     @Test
-    fun currentGenerationLayoutRejectionIsNotReportedAsStale() {
+    fun currentGenerationLayoutRejectionReturnsHostErrorRatherThanStale() {
         val host = FakeHost().apply {
             setBoundsResult = false
             setVisibleResult = false
@@ -120,7 +120,7 @@ class NativeGameWebViewChannelTest {
         val channel = activeChannel(host)
         assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
 
-        assertSuccess(
+        assertError(
             channel,
             "setBounds",
             mapOf(
@@ -133,9 +133,163 @@ class NativeGameWebViewChannelTest {
                     "devicePixelRatio" to 1.0,
                 ),
             ),
-            null,
+            "native_webview_error",
         )
-        assertSuccess(channel, "setVisible", mapOf("generationId" to 0, "visible" to true), null)
+        assertError(
+            channel,
+            "setVisible",
+            mapOf("generationId" to 0, "visible" to true),
+            "native_webview_error",
+        )
+    }
+
+    @Test
+    fun everyMethodValidatesItsCompleteSchemaBeforeCheckingGeneration() {
+        val channel = activeChannel(FakeHost())
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+        val invalidAndStale = listOf(
+            "setBounds" to mapOf("generationId" to 99, "bounds" to emptyMap<String, Any?>()),
+            "setVisible" to mapOf("generationId" to 99, "visible" to 1),
+            "loadUri" to mapOf("generationId" to 99, "uri" to "javascript:alert(1)"),
+            "showLocalHome" to mapOf("generationId" to 99, "extra" to true),
+            "reload" to mapOf("generationId" to 99, "extra" to true),
+            "canGoBack" to mapOf("generationId" to 99, "extra" to true),
+            "goBack" to mapOf("generationId" to 99, "extra" to true),
+            "runJavaScript" to mapOf("generationId" to 99, "javascript" to 1),
+            "fitGameScreen" to mapOf("generationId" to 99, "extra" to true),
+            "clearCache" to mapOf("generationId" to 99, "extra" to true),
+            "clearSession" to mapOf("generationId" to 99, "extra" to true),
+            "destroy" to mapOf("generationId" to 99, "extra" to true),
+        )
+
+        invalidAndStale.forEach { (method, arguments) ->
+            assertError(channel, method, arguments, "invalid_argument")
+        }
+    }
+
+    @Test
+    fun cachedEngineBrokerKeepsOriginalSinkForDestroyedAndExplicitRecreateAfterRebind() {
+        val registry = NativeGameWebViewChannelRegistry<Any>()
+        val engine = Any()
+        var registrations = 0
+        val channel = registry.acquire(engine) { registrations++ }
+        val events = RecordingEventSink()
+        channel.onListen(null, events)
+        lateinit var firstHost: FakeHost
+        firstHost = FakeHost { type, generation ->
+            when (type) {
+                "created" -> channel.created(generation)
+                "destroyed" -> channel.destroyed(generation)
+            }
+        }
+        val firstDispatches = mutableListOf<() -> Unit>()
+        val firstAttachment = channel.attachActivity(firstDispatches::add)
+        channel.attachHost(firstAttachment, firstHost)
+        val firstCreate = RecordingResult()
+        channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), firstCreate)
+        firstDispatches.removeAt(0).invoke()
+        assertEquals(0L, firstCreate.successValue)
+
+        channel.detachActivity(firstAttachment)
+        assertEquals(listOf("create:0", "destroy:0"), firstHost.operations)
+        assertEquals(mapOf("type" to "destroyed", "generationId" to 0L), events.values.last())
+
+        val rebound = registry.acquire(engine) { registrations++ }
+        assertTrue(channel === rebound)
+        lateinit var secondHost: FakeHost
+        secondHost = FakeHost { type, generation ->
+            when (type) {
+                "created" -> channel.created(generation)
+                "destroyed" -> channel.destroyed(generation)
+            }
+        }
+        val secondDispatches = mutableListOf<() -> Unit>()
+        val secondAttachment = rebound.attachActivity(secondDispatches::add)
+        rebound.attachHost(secondAttachment, secondHost)
+        val secondCreate = RecordingResult()
+        rebound.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), secondCreate)
+        secondDispatches.removeAt(0).invoke()
+
+        assertEquals(1, registrations)
+        assertEquals(0L, secondCreate.successValue)
+        assertEquals(
+            listOf(
+                mapOf("type" to "created", "generationId" to 0L),
+                mapOf("type" to "destroyed", "generationId" to 0L),
+                mapOf("type" to "created", "generationId" to 0L),
+            ),
+            events.values,
+        )
+    }
+
+    @Test
+    fun destroyedEngineUnregistersAndEndsStreamWhileCachedEngineRemainsRegistered() {
+        val registry = NativeGameWebViewChannelRegistry<Any>()
+        val cachedEngine = Any()
+        val destroyedEngine = Any()
+        var registrations = 0
+        val cached = registry.acquire(cachedEngine) { registrations++ }
+        val destroyed = registry.acquire(destroyedEngine) { registrations++ }
+        val sink = RecordingEventSink()
+        destroyed.onListen(null, sink)
+
+        assertTrue(registry.peek(cachedEngine) === cached)
+        val removed = registry.remove(destroyedEngine)
+        removed?.shutdownEngine()
+
+        assertNull(registry.peek(destroyedEngine))
+        assertTrue(registry.peek(cachedEngine) === cached)
+        assertEquals(2, registrations)
+        assertEquals(1, sink.endCalls)
+    }
+
+    @Test
+    fun clearSessionSerializesLaterCommandsAndIgnoresDuplicateOrDetachedCallback() {
+        val host = FakeHost().apply { autoCompleteClearSession = false }
+        val channel = activeChannel(host)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+        val clear = RecordingResult()
+        val load = RecordingResult()
+        channel.onMethodCall(MethodCall("clearSession", generation(0)), clear)
+        channel.onMethodCall(
+            MethodCall("loadUri", mapOf("generationId" to 0, "uri" to "https://example.com/game")),
+            load,
+        )
+
+        assertEquals(1, host.clearSessionCalls)
+        assertEquals(0, host.loadUriCalls)
+        assertEquals(0, clear.completionCount)
+        host.completeClearSession(null)
+        assertEquals(1, clear.completionCount)
+        assertEquals(1, host.loadUriCalls)
+        assertEquals(1, load.completionCount)
+        host.completeClearSession(IllegalStateException("duplicate"))
+        assertEquals(1, clear.completionCount)
+
+        val detachedHost = FakeHost().apply { autoCompleteClearSession = false }
+        val detachedChannel = NativeGameWebViewChannel()
+        val attachment = detachedChannel.attachActivity(dispatchToMain = { it() })
+        detachedChannel.attachHost(attachment, detachedHost)
+        assertSuccess(detachedChannel, "create", mapOf("renderer" to "webgl"), 0L)
+        val abandoned = RecordingResult()
+        detachedChannel.onMethodCall(MethodCall("clearSession", generation(0)), abandoned)
+        detachedChannel.disable()
+        detachedHost.completeClearSession(null)
+        assertEquals(0, abandoned.completionCount)
+    }
+
+    @Test
+    fun clearSessionCallbackFailureCompletesOnceWithFixedHostError() {
+        val host = FakeHost().apply { autoCompleteClearSession = false }
+        val channel = activeChannel(host)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+        val result = RecordingResult()
+
+        channel.onMethodCall(MethodCall("clearSession", generation(0)), result)
+        host.completeClearSession(IllegalStateException("cookie failure"))
+
+        assertEquals("native_webview_error", result.errorCode)
+        assertEquals(1, result.completionCount)
     }
 
     @Test
@@ -224,6 +378,19 @@ class NativeGameWebViewChannelTest {
 
         assertEquals("activity_destroyed", result.errorCode)
         assertEquals(0, host.reloadCalls)
+    }
+
+    @Test
+    fun task8DeferredHomeAndFitCommandsAreOnlyRoutedPlaceholders() {
+        val host = FakeHost()
+        val channel = activeChannel(host)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+
+        assertSuccess(channel, "showLocalHome", generation(0), null)
+        assertSuccess(channel, "fitGameScreen", generation(0), null)
+
+        assertEquals(1, host.showLocalHomeCalls)
+        assertEquals(1, host.fitGameScreenCalls)
     }
 
     @Test
@@ -428,8 +595,11 @@ class NativeGameWebViewChannelTest {
     private fun activeChannel(
         host: NativeGameWebViewHostOperations,
         dispatchToMain: ((() -> Unit) -> Unit) = { it() },
-    ) = NativeGameWebViewChannel(dispatchToMain = dispatchToMain).apply {
-        attachHost(host)
+    ): NativeGameWebViewChannel {
+        val channel = NativeGameWebViewChannel()
+        val attachment = channel.attachActivity(dispatchToMain)
+        channel.attachHost(attachment, host)
+        return channel
     }
 
     private fun generation(value: Int) = mapOf<String, Any?>("generationId" to value)
@@ -442,6 +612,7 @@ class NativeGameWebViewChannelTest {
     ) {
         val result = RecordingResult()
         channel.onMethodCall(MethodCall(method, arguments), result)
+        assertEquals(1, result.completionCount)
         assertEquals(expected, result.successValue)
         assertNull(result.errorCode)
         assertFalse(result.notImplemented)
@@ -455,6 +626,7 @@ class NativeGameWebViewChannelTest {
     ) {
         val result = RecordingResult()
         channel.onMethodCall(MethodCall(method, arguments), result)
+        assertEquals(1, result.completionCount)
         assertEquals(code, result.errorCode)
     }
 
@@ -472,22 +644,27 @@ class NativeGameWebViewChannelTest {
         var successValue: Any? = null
         var errorCode: String? = null
         var notImplemented = false
+        var completionCount = 0
 
         override fun success(result: Any?) {
+            completionCount++
             successValue = result
         }
 
         override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+            completionCount++
             this.errorCode = errorCode
         }
 
         override fun notImplemented() {
+            completionCount++
             notImplemented = true
         }
     }
 
     private class RecordingEventSink : EventChannel.EventSink {
         val values = mutableListOf<Any?>()
+        var endCalls = 0
 
         override fun success(event: Any?) {
             values += event
@@ -495,7 +672,9 @@ class NativeGameWebViewChannelTest {
 
         override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) = Unit
 
-        override fun endOfStream() = Unit
+        override fun endOfStream() {
+            endCalls++
+        }
     }
 
     private class ThrowingEventSink : EventChannel.EventSink {
@@ -515,6 +694,12 @@ class NativeGameWebViewChannelTest {
             private set
         var createCalls = 0
         var reloadCalls = 0
+        var loadUriCalls = 0
+        var showLocalHomeCalls = 0
+        var fitGameScreenCalls = 0
+        var clearSessionCalls = 0
+        var autoCompleteClearSession = true
+        private var clearSessionCallback: ((Exception?) -> Unit)? = null
         var bounds: NativeGameWebViewBounds? = null
         var setBoundsResult = true
         var setVisibleResult = true
@@ -538,9 +723,13 @@ class NativeGameWebViewChannelTest {
         override fun setVisible(generation: Long, visible: Boolean) =
             generation == currentGeneration && setVisibleResult
 
-        override fun loadUri(uri: String) = Unit
+        override fun loadUri(uri: String) {
+            loadUriCalls++
+        }
 
-        override fun showLocalHome() = Unit
+        override fun showLocalHome() {
+            showLocalHomeCalls++
+        }
 
         override fun reload() {
             reloadCalls++
@@ -552,11 +741,21 @@ class NativeGameWebViewChannelTest {
 
         override fun runJavaScript(javascript: String) = Unit
 
-        override fun fitGameScreen() = Unit
+        override fun fitGameScreen() {
+            fitGameScreenCalls++
+        }
 
         override fun clearCache() = Unit
 
-        override fun clearSession() = Unit
+        override fun clearSession(onComplete: (Exception?) -> Unit) {
+            clearSessionCalls++
+            clearSessionCallback = onComplete
+            if (autoCompleteClearSession) completeClearSession(null)
+        }
+
+        fun completeClearSession(error: Exception?) {
+            clearSessionCallback?.invoke(error)
+        }
 
         override fun destroy(generation: Long): Boolean {
             if (generation != currentGeneration) return false

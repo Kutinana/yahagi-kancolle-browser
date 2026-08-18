@@ -102,8 +102,10 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
     }
     _generationId = generationId;
     for (final notification in _pendingNotifications) {
-      if (notification.matchesGeneration(generationId)) {
-        _dispatchNotification(notification);
+      final currentGenerationId = _generationId;
+      if (currentGenerationId != null &&
+          notification.matchesGeneration(currentGenerationId)) {
+        _dispatchCurrentNotification(notification);
       }
     }
     _pendingNotifications.clear();
@@ -129,6 +131,17 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       _appendBounded(_initialNotifications, notification);
     }
     notification.dispatch(_events);
+  }
+
+  void _dispatchCurrentNotification(
+    _NativeGameWebViewNotification notification,
+  ) {
+    final event = notification.event;
+    if (event?.type == NativeGameWebViewEventType.destroyed) {
+      // Clear first so a listener can synchronously start the next generation.
+      _generationId = null;
+    }
+    _dispatchNotification(notification);
   }
 
   void _replayInitialEvents() {
@@ -296,7 +309,9 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       if (generationId == null && !_disposed) {
         _queuePending(_NativeGameWebViewNotification.data(event));
       } else if (event.generationId == generationId) {
-        _dispatchNotification(_NativeGameWebViewNotification.data(event));
+        _dispatchCurrentNotification(
+          _NativeGameWebViewNotification.data(event),
+        );
       }
     } on NativeGameWebViewSchemaException catch (error, stackTrace) {
       _onNativeError(error, stackTrace);

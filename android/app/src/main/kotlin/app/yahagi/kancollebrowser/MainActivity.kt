@@ -40,7 +40,6 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterShellArgs
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.EventChannel
 import app.yahagi.kancollebrowser.browser.WebViewProxyManager
 import app.yahagi.kancollebrowser.browser.GadgetBypassManager
 import app.yahagi.kancollebrowser.browser.GadgetBypassWebViewClient
@@ -69,6 +68,8 @@ import app.yahagi.kancollebrowser.diagnostics.DiagnosticPlatformHandler
 import app.yahagi.kancollebrowser.nativewebview.ActivityNativeGameWebViewHostOperations
 import app.yahagi.kancollebrowser.nativewebview.ActivityWebViewHost
 import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewChannel
+import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewActivityAttachment
+import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewEngineChannels
 import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewLifecycleObserver
 import app.yahagi.kancollebrowser.nativewebview.NativeWebViewActivityStartupCoordinator
 import app.yahagi.kancollebrowser.nativewebview.NativeWebViewProcessState
@@ -149,6 +150,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         const val GAME_RESOURCE_CACHE_CHANNEL = "app.yahagi.kancollebrowser/game_resource_cache"
         const val SCREENSHOT_PERMISSION_REQUEST = 2406
         const val DIAGNOSTIC_DIRECTORY_REQUEST = 2407
+        val NATIVE_WEB_VIEW_MAIN_HANDLER by lazy { Handler(Looper.getMainLooper()) }
     }
 
     private var gameCaptureBridge: GameCaptureBridge? = null
@@ -198,40 +200,40 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     private var nativeWebViewStartup: NativeWebViewActivityStartupCoordinator? = null
     private var nativeGameWebViewHost: ActivityWebViewHost? = null
     private var activityRestartRequested = false
-    private val nativeGameWebViewChannel = NativeGameWebViewChannel(
-        dispatchToMain = { operation ->
-            if (Looper.myLooper() == Looper.getMainLooper()) {
-                operation()
-            } else {
-                nativeWebViewHandler.post(operation)
-            }
-        },
-        lifecycleObserver = object : NativeGameWebViewLifecycleObserver {
-            override fun onPageFinished() {
-                nativeWebViewStartup?.onPageFinished()
-            }
+    private var nativeGameWebViewChannel: NativeGameWebViewChannel? = null
+    private var nativeGameWebViewAttachment: NativeGameWebViewActivityAttachment? = null
 
-            override fun onRenderProcessGone() {
-                nativeWebViewStartup?.onRenderProcessGone()
-            }
+    private fun attachNativeGameWebViewChannel(channel: NativeGameWebViewChannel) {
+        nativeGameWebViewAttachment = channel.attachActivity(
+            dispatchToMain = { operation ->
+                if (Looper.myLooper() == Looper.getMainLooper()) {
+                    operation()
+                } else {
+                    NATIVE_WEB_VIEW_MAIN_HANDLER.post(operation)
+                }
+            },
+            lifecycleObserver = object : NativeGameWebViewLifecycleObserver {
+                override fun onPageFinished() {
+                    nativeWebViewStartup?.onPageFinished()
+                }
 
-            override fun onCreateFailed() {
-                nativeWebViewStartup?.onCreateFailed()
-            }
-        },
-    )
+                override fun onRenderProcessGone() {
+                    nativeWebViewStartup?.onRenderProcessGone()
+                }
+
+                override fun onCreateFailed() {
+                    nativeWebViewStartup?.onCreateFailed()
+                }
+            },
+        )
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            NativeGameWebViewChannel.METHOD_CHANNEL_NAME,
-        ).setMethodCallHandler(nativeGameWebViewChannel)
-        EventChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            NativeGameWebViewChannel.EVENT_CHANNEL_NAME,
-        ).setStreamHandler(nativeGameWebViewChannel)
+        val nativeChannel = NativeGameWebViewEngineChannels.acquire(flutterEngine)
+        nativeGameWebViewChannel = nativeChannel
+        attachNativeGameWebViewChannel(nativeChannel)
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -437,8 +439,12 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     }
 
     override fun onDestroy() {
-        nativeGameWebViewChannel.disable()
-        nativeGameWebViewHost?.destroyCurrent()
+        val nativeChannel = nativeGameWebViewChannel
+        val nativeAttachment = nativeGameWebViewAttachment
+        if (nativeChannel != null && nativeAttachment != null) {
+            nativeChannel.detachActivity(nativeAttachment)
+        }
+        nativeGameWebViewAttachment = null
         nativeGameWebViewHost = null
         nativeWebViewStartup?.close()
         nativeWebViewStartup = null
@@ -480,6 +486,20 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         super.onDestroy()
     }
 
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        val nativeChannel = nativeGameWebViewChannel
+        val nativeAttachment = nativeGameWebViewAttachment
+        if (nativeChannel != null && nativeAttachment != null) {
+            nativeChannel.detachActivity(nativeAttachment)
+        }
+        nativeGameWebViewAttachment = null
+        nativeGameWebViewChannel = null
+        if (shouldDestroyEngineWithHost()) {
+            NativeGameWebViewEngineChannels.destroy(flutterEngine)
+        }
+        super.cleanUpFlutterEngine(flutterEngine)
+    }
+
     private fun enableNativeActivityWebViewIfSelected() {
         val preferences = getSharedPreferences(
             GameRenderingModeHcppPolicy.PREFERENCES_NAME,
@@ -508,9 +528,18 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             startup.onCreateFailed()
             return
         }
-        val host = ActivityWebViewHost(this, contentRoot, nativeGameWebViewChannel)
+        val nativeChannel = nativeGameWebViewChannel
+        val nativeAttachment = nativeGameWebViewAttachment
+        if (nativeChannel == null || nativeAttachment == null) {
+            startup.onCreateFailed()
+            return
+        }
+        val host = ActivityWebViewHost(this, contentRoot, nativeChannel)
         nativeGameWebViewHost = host
-        nativeGameWebViewChannel.attachHost(ActivityNativeGameWebViewHostOperations(host))
+        nativeChannel.attachHost(
+            nativeAttachment,
+            ActivityNativeGameWebViewHostOperations(host),
+        )
     }
 
     private fun scheduleNativeWebViewStartupTimeout(delayMs: Long, callback: () -> Unit) {
