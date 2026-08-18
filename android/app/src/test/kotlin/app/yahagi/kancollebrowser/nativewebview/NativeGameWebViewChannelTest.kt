@@ -3,6 +3,7 @@ package app.yahagi.kancollebrowser.nativewebview
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.lang.ref.WeakReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -373,7 +374,8 @@ class NativeGameWebViewChannelTest {
         )
 
         assertEquals(1, newDispatches.size)
-        assertEquals(0, abandonedReload.completionCount)
+        assertEquals(1, abandonedReload.completionCount)
+        assertEquals("native_webview_unavailable", abandonedReload.errorCode)
         assertEquals(0, queuedLoad.completionCount)
     }
 
@@ -456,8 +458,162 @@ class NativeGameWebViewChannelTest {
         val abandoned = RecordingResult()
         detachedChannel.onMethodCall(MethodCall("clearSession", generation(0)), abandoned)
         detachedChannel.disable()
+        assertEquals(1, abandoned.completionCount)
+        assertEquals("native_webview_unavailable", abandoned.errorCode)
         detachedHost.completeClearSession(null)
-        assertEquals(0, abandoned.completionCount)
+        assertEquals(1, abandoned.completionCount)
+    }
+
+    @Test
+    fun detachCompletesRunningAndQueuedAttachmentCallsExactlyOnce() {
+        val dispatches = mutableListOf<() -> Unit>()
+        val channel = NativeGameWebViewChannel()
+        val attachment = channel.attachActivity(dispatches::add)
+        channel.attachHost(attachment, FakeHost())
+        val create = RecordingResult()
+        channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), create)
+        dispatches.removeAt(0).invoke()
+        val reload = RecordingResult()
+        val load = RecordingResult()
+        channel.onMethodCall(MethodCall("reload", generation(0)), reload)
+        val lateReloadDispatcher = dispatches.removeAt(0)
+        channel.onMethodCall(
+            MethodCall("loadUri", mapOf("generationId" to 0, "uri" to "https://example.com/game")),
+            load,
+        )
+
+        channel.detachActivity(attachment)
+
+        assertEquals(1, reload.completionCount)
+        assertEquals("native_webview_unavailable", reload.errorCode)
+        assertEquals(1, load.completionCount)
+        assertEquals("native_webview_unavailable", load.errorCode)
+        lateReloadDispatcher.invoke()
+        assertEquals(1, reload.completionCount)
+        assertEquals(1, load.completionCount)
+    }
+
+    @Test
+    fun detachAndShutdownTerminateAsyncClearSessionWithoutDoubleCompletion() {
+        listOf(false, true).forEach { shutdown ->
+            val scheduler = FakeOperationTimeoutScheduler()
+            val host = FakeHost().apply { autoCompleteClearSession = false }
+            val channel = NativeGameWebViewChannel(scheduler)
+            val attachment = channel.attachActivity(dispatchToMain = { it() })
+            channel.attachHost(attachment, host)
+            assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+            val clear = RecordingResult()
+            val load = RecordingResult()
+            channel.onMethodCall(MethodCall("clearSession", generation(0)), clear)
+            channel.onMethodCall(
+                MethodCall("loadUri", mapOf("generationId" to 0, "uri" to "https://example.com/game")),
+                load,
+            )
+
+            if (shutdown) channel.shutdownEngine()
+            else channel.detachActivity(attachment)
+
+            assertEquals(1, clear.completionCount)
+            assertEquals("native_webview_unavailable", clear.errorCode)
+            assertEquals(1, load.completionCount)
+            assertEquals("native_webview_unavailable", load.errorCode)
+            assertTrue(scheduler.tasks.single().cancelled)
+            host.completeClearSession(null)
+            host.completeClearSession(IllegalStateException("duplicate"))
+            assertEquals(1, clear.completionCount)
+            assertEquals(1, load.completionCount)
+            assertEquals(0, host.loadUriCalls)
+        }
+    }
+
+    @Test
+    fun clearSessionWatchdogFailsAttachmentAndBlocksQueuedOrLaterCommands() {
+        val scheduler = FakeOperationTimeoutScheduler()
+        val host = FakeHost().apply { autoCompleteClearSession = false }
+        val channel = NativeGameWebViewChannel(scheduler)
+        val attachment = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(attachment, host)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+        val clear = RecordingResult()
+        val queuedLoad = RecordingResult()
+        channel.onMethodCall(MethodCall("clearSession", generation(0)), clear)
+        channel.onMethodCall(
+            MethodCall("loadUri", mapOf("generationId" to 0, "uri" to "https://example.com/queued")),
+            queuedLoad,
+        )
+
+        scheduler.fireNext()
+
+        assertEquals("native_webview_unavailable", clear.errorCode)
+        assertEquals("native_webview_unavailable", queuedLoad.errorCode)
+        assertEquals(0, host.loadUriCalls)
+        assertError(
+            channel,
+            "loadUri",
+            mapOf("generationId" to 0, "uri" to "https://example.com/later"),
+            "native_webview_unavailable",
+        )
+        host.completeClearSession(null)
+        assertEquals(1, clear.completionCount)
+        assertEquals(1, queuedLoad.completionCount)
+
+        channel.detachActivity(attachment)
+        val nextHost = FakeHost()
+        val nextAttachment = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(nextAttachment, nextHost)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+    }
+
+    @Test
+    fun rejectedClearSessionCallbackDispatchFailsAttachmentAndCancelsWatchdog() {
+        val scheduler = FakeOperationTimeoutScheduler()
+        val host = FakeHost().apply { autoCompleteClearSession = false }
+        var rejectDispatch = false
+        val channel = NativeGameWebViewChannel(scheduler)
+        val attachment = channel.attachActivity(
+            dispatchToMain = { operation ->
+                if (rejectDispatch) throw IllegalStateException("dispatcher rejected")
+                operation()
+            },
+        )
+        channel.attachHost(attachment, host)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+        val clear = RecordingResult()
+        val load = RecordingResult()
+        channel.onMethodCall(MethodCall("clearSession", generation(0)), clear)
+        channel.onMethodCall(
+            MethodCall("loadUri", mapOf("generationId" to 0, "uri" to "https://example.com/game")),
+            load,
+        )
+
+        rejectDispatch = true
+        host.completeClearSession(null)
+
+        assertEquals("native_webview_unavailable", clear.errorCode)
+        assertEquals("native_webview_unavailable", load.errorCode)
+        assertEquals(0, host.loadUriCalls)
+        assertTrue(scheduler.tasks.single().cancelled)
+        scheduler.fireNext()
+        assertEquals(1, clear.completionCount)
+        assertEquals(1, load.completionCount)
+    }
+
+    @Test
+    fun unreturnedClearSessionCallbackDoesNotRetainDetachedActivityObserver() {
+        val host = FakeHost().apply { autoCompleteClearSession = false }
+        val channel = NativeGameWebViewChannel(FakeOperationTimeoutScheduler())
+        val retained = startClearSessionAndDetachWithRetainedMarker(channel, host)
+
+        assertEventuallyCollected(retained)
+    }
+
+    @Test
+    fun unreturnedClearSessionCallbackDoesNotRetainTerminalFlutterResult() {
+        val host = FakeHost().apply { autoCompleteClearSession = false }
+        val channel = NativeGameWebViewChannel(FakeOperationTimeoutScheduler())
+        val retained = startClearSessionAndDetachWithRetainingResult(channel, host)
+
+        assertEventuallyCollected(retained)
     }
 
     @Test
@@ -623,6 +779,29 @@ class NativeGameWebViewChannelTest {
             SharedPreferencesNativeWebViewStartupStore(preferences, sameProcess).read(),
         )
         assertEquals(0, preferences.readCalls)
+        val poisonedActivity = NativeWebViewActivityStartupCoordinator(
+            guard = NativeWebViewStartupGuard(
+                SharedPreferencesNativeWebViewStartupStore(preferences, sameProcess),
+                NativeWebViewProcessSessionId("next-activity"),
+            ),
+            nowMs = { 1L },
+            scheduleTimeout = { _, _ -> },
+            cancelTimeout = {},
+            requestRestart = {},
+        )
+        val poisonedOutcome = poisonedActivity.begin("nativeActivityExperimental")
+        val poisonedChannel = NativeGameWebViewChannel()
+        val poisonedAttachment = poisonedChannel.attachActivity(dispatchToMain = { it() })
+        poisonedChannel.attachUnavailable(
+            poisonedAttachment,
+            poisonedOutcome as NativeWebViewActivityStartupOutcome.Unavailable,
+        )
+        assertError(
+            poisonedChannel,
+            "create",
+            mapOf("renderer" to "webgl"),
+            "native_webview_startup_failed",
+        )
 
         preferences.commitResult = true
         assertTrue(
@@ -716,8 +895,26 @@ class NativeGameWebViewChannelTest {
             cancelTimeout = {},
             requestRestart = {},
         )
-        assertFalse(compatibility.begin("compatibility"))
+        assertEquals(
+            NativeWebViewActivityStartupOutcome.Unavailable(
+                "native_webview_unavailable",
+                "Native Activity WebView mode is not active.",
+            ),
+            compatibility.begin("compatibility"),
+        )
         assertEquals(0, compatibilityStore.reads)
+        val compatibilityChannel = NativeGameWebViewChannel()
+        val compatibilityAttachment = compatibilityChannel.attachActivity(dispatchToMain = { it() })
+        compatibilityChannel.attachUnavailable(
+            compatibilityAttachment,
+            compatibility.begin("compatibility") as NativeWebViewActivityStartupOutcome.Unavailable,
+        )
+        assertError(
+            compatibilityChannel,
+            "create",
+            mapOf("renderer" to "webgl"),
+            "native_webview_unavailable",
+        )
 
         val fallbackStore = CountingStore(
             NativeWebViewStartupSnapshot(
@@ -740,10 +937,75 @@ class NativeGameWebViewChannelTest {
             },
         )
 
-        assertFalse(fallback.begin("nativeActivityExperimental"))
-        assertFalse(fallback.begin("nativeActivityExperimental"))
+        assertTrue(fallback.begin("nativeActivityExperimental") is NativeWebViewActivityStartupOutcome.Unavailable)
+        assertTrue(fallback.begin("nativeActivityExperimental") is NativeWebViewActivityStartupOutcome.Unavailable)
         assertEquals(1, restarts)
         assertEquals("compatibility", durableModeWhenRestarted)
+    }
+
+    @Test
+    fun startupPersistenceFailuresBecomeImmediateBrokerErrorsInsteadOfRebindWaits() {
+        listOf(
+            NativeWebViewStartupWriteResult.Failed,
+            NativeWebViewStartupWriteResult.Indeterminate,
+        ).forEach { writeResult ->
+            val store = CountingStore(
+                NativeWebViewStartupSnapshot(0, null, null, "nativeActivityExperimental"),
+                writeResult = writeResult,
+            )
+            val coordinator = NativeWebViewActivityStartupCoordinator(
+                guard = NativeWebViewStartupGuard(store, NativeWebViewProcessSessionId("process")),
+                nowMs = { 1L },
+                scheduleTimeout = { _, _ -> },
+                cancelTimeout = {},
+                requestRestart = {},
+            )
+            val outcome = coordinator.begin("nativeActivityExperimental")
+            assertEquals(
+                NativeWebViewActivityStartupOutcome.Unavailable(
+                    "native_webview_startup_failed",
+                    "Native WebView startup persistence is unavailable.",
+                ),
+                outcome,
+            )
+            val channel = NativeGameWebViewChannel()
+            val attachment = channel.attachActivity(dispatchToMain = { it() })
+
+            channel.attachUnavailable(attachment, outcome as NativeWebViewActivityStartupOutcome.Unavailable)
+
+            assertError(
+                channel,
+                "create",
+                mapOf("renderer" to "webgl"),
+                "native_webview_startup_failed",
+            )
+        }
+    }
+
+    @Test
+    fun unavailableActivityTerminatesPendingRebindAndRejectsAllLaterCalls() {
+        val channel = NativeGameWebViewChannel()
+        val pendingCreate = RecordingResult()
+        channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), pendingCreate)
+        val attachment = channel.attachActivity(dispatchToMain = { it() })
+        val outcome = NativeWebViewActivityStartupOutcome.Unavailable(
+            "native_webview_startup_failed",
+            "Host construction failed.",
+        )
+
+        channel.attachUnavailable(attachment, outcome)
+
+        assertEquals(1, pendingCreate.completionCount)
+        assertEquals("native_webview_startup_failed", pendingCreate.errorCode)
+        assertError(
+            channel,
+            "create",
+            mapOf("renderer" to "webgl"),
+            "native_webview_startup_failed",
+        )
+        assertThrows<IllegalStateException> {
+            channel.attachHost(attachment, FakeHost())
+        }
     }
 
     @Test
@@ -765,7 +1027,10 @@ class NativeGameWebViewChannelTest {
             requestRestart = {},
         )
 
-        assertTrue(coordinator.begin("nativeActivityExperimental"))
+        assertEquals(
+            NativeWebViewActivityStartupOutcome.StartHost,
+            coordinator.begin("nativeActivityExperimental"),
+        )
         assertEquals(NativeWebViewStartupGuard.STARTUP_TIMEOUT_MS, scheduledDelay)
         coordinator.onPageFinished()
         assertEquals(1, cancellations)
@@ -819,6 +1084,45 @@ class NativeGameWebViewChannelTest {
         channel.onMethodCall(MethodCall(method, arguments), result)
         assertEquals(1, result.completionCount)
         assertEquals(code, result.errorCode)
+    }
+
+    private fun startClearSessionAndDetachWithRetainedMarker(
+        channel: NativeGameWebViewChannel,
+        host: FakeHost,
+    ): WeakReference<Any> {
+        val marker = Any()
+        val attachment = channel.attachActivity(
+            dispatchToMain = { it() },
+            lifecycleObserver = RetainingLifecycleObserver(marker),
+        )
+        channel.attachHost(attachment, host)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+        channel.onMethodCall(MethodCall("clearSession", generation(0)), RecordingResult())
+        channel.detachActivity(attachment)
+        return WeakReference(marker)
+    }
+
+    private fun startClearSessionAndDetachWithRetainingResult(
+        channel: NativeGameWebViewChannel,
+        host: FakeHost,
+    ): WeakReference<Any> {
+        val marker = Any()
+        val attachment = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(attachment, host)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+        channel.onMethodCall(MethodCall("clearSession", generation(0)), RetainingResult(marker))
+        channel.detachActivity(attachment)
+        return WeakReference(marker)
+    }
+
+    private fun assertEventuallyCollected(reference: WeakReference<*>) {
+        repeat(40) {
+            if (reference.get() == null) return
+            System.gc()
+            System.runFinalization()
+            Thread.sleep(5)
+        }
+        assertNull("Detached Activity observer is still retained", reference.get())
     }
 
     private inline fun <reified T : Throwable> assertThrows(block: () -> Unit) {
@@ -891,6 +1195,47 @@ class NativeGameWebViewChannelTest {
 
         override fun onRenderProcessGone() {
             renderProcessGoneCalls++
+        }
+    }
+
+    private class RetainingLifecycleObserver(
+        @Suppress("unused") private val retained: Any,
+    ) : NativeGameWebViewLifecycleObserver
+
+    private class RetainingResult(
+        @Suppress("unused") private val retained: Any,
+    ) : MethodChannel.Result {
+        override fun success(result: Any?) = Unit
+
+        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) = Unit
+
+        override fun notImplemented() = Unit
+    }
+
+    private class FakeOperationTimeoutScheduler : NativeGameWebViewOperationTimeoutScheduler {
+        val tasks = mutableListOf<FakeScheduledOperation>()
+
+        override fun schedule(delayMs: Long, operation: () -> Unit): NativeGameWebViewScheduledOperation =
+            FakeScheduledOperation(operation).also(tasks::add)
+
+        fun fireNext() {
+            tasks.firstOrNull { !it.fired }?.fire()
+        }
+    }
+
+    private class FakeScheduledOperation(
+        private val operation: () -> Unit,
+    ) : NativeGameWebViewScheduledOperation {
+        var cancelled = false
+        var fired = false
+
+        override fun cancel() {
+            cancelled = true
+        }
+
+        fun fire() {
+            fired = true
+            if (!cancelled) operation()
         }
     }
 
@@ -1016,6 +1361,7 @@ class NativeGameWebViewChannelTest {
 
     private class CountingStore(
         var snapshot: NativeWebViewStartupSnapshot,
+        private val writeResult: NativeWebViewStartupWriteResult = NativeWebViewStartupWriteResult.Durable,
     ) : NativeWebViewStartupStore {
         var reads = 0
 
@@ -1025,8 +1371,8 @@ class NativeGameWebViewChannelTest {
         }
 
         override fun write(nextSnapshot: NativeWebViewStartupSnapshot): NativeWebViewStartupWriteResult {
-            snapshot = nextSnapshot
-            return NativeWebViewStartupWriteResult.Durable
+            if (writeResult == NativeWebViewStartupWriteResult.Durable) snapshot = nextSnapshot
+            return writeResult
         }
     }
 }

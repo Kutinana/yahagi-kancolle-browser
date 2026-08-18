@@ -2,6 +2,8 @@ package app.yahagi.kancollebrowser.nativewebview
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
+import android.os.Handler
+import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebStorage
 import io.flutter.embedding.engine.FlutterEngine
@@ -124,6 +126,38 @@ internal interface NativeGameWebViewLifecycleObserver {
 
 internal object NoOpNativeGameWebViewLifecycleObserver : NativeGameWebViewLifecycleObserver
 
+internal fun interface NativeGameWebViewScheduledOperation {
+    fun cancel()
+}
+
+internal fun interface NativeGameWebViewOperationTimeoutScheduler {
+    fun schedule(delayMs: Long, operation: () -> Unit): NativeGameWebViewScheduledOperation
+}
+
+private object NoOpNativeGameWebViewOperationTimeoutScheduler : NativeGameWebViewOperationTimeoutScheduler {
+    override fun schedule(delayMs: Long, operation: () -> Unit) =
+        NativeGameWebViewScheduledOperation { }
+}
+
+private object AndroidNativeGameWebViewOperationTimeoutScheduler : NativeGameWebViewOperationTimeoutScheduler {
+    private val handler by lazy { Handler(Looper.getMainLooper()) }
+
+    override fun schedule(delayMs: Long, operation: () -> Unit): NativeGameWebViewScheduledOperation {
+        val runnable = Runnable(operation)
+        check(handler.postDelayed(runnable, delayMs)) { "Unable to schedule the native WebView operation timeout" }
+        return NativeGameWebViewScheduledOperation { handler.removeCallbacks(runnable) }
+    }
+}
+
+internal sealed interface NativeWebViewActivityStartupOutcome {
+    data object StartHost : NativeWebViewActivityStartupOutcome
+
+    data class Unavailable(
+        val errorCode: String,
+        val message: String,
+    ) : NativeWebViewActivityStartupOutcome
+}
+
 internal class NativeWebViewActivityStartupCoordinator(
     private val guard: NativeWebViewStartupGuard,
     private val nowMs: () -> Long,
@@ -135,24 +169,44 @@ internal class NativeWebViewActivityStartupCoordinator(
     private var hasScheduledTimeout = false
     private var restartRequested = false
 
-    fun begin(storedMode: String?): Boolean {
-        if (storedMode != NATIVE_ACTIVITY_RENDERING_MODE) return false
+    fun begin(storedMode: String?): NativeWebViewActivityStartupOutcome {
+        if (storedMode != NATIVE_ACTIVITY_RENDERING_MODE) {
+            return NativeWebViewActivityStartupOutcome.Unavailable(
+                "native_webview_unavailable",
+                "Native Activity WebView mode is not active.",
+            )
+        }
         return when (val decision = guard.beginAttempt(nowMs())) {
             is NativeWebViewStartupDecision.Started -> {
                 schedule(NativeWebViewStartupGuard.STARTUP_TIMEOUT_MS)
-                true
+                NativeWebViewActivityStartupOutcome.StartHost
             }
             is NativeWebViewStartupDecision.AlreadyInProgress -> {
                 schedule(decision.remainingMs)
-                true
+                NativeWebViewActivityStartupOutcome.StartHost
             }
             NativeWebViewStartupDecision.FallbackTriggered -> {
                 requestRestartOnce()
-                false
+                fallbackUnavailable()
             }
-            else -> false
+            NativeWebViewStartupDecision.FallbackActive -> fallbackUnavailable()
+            NativeWebViewStartupDecision.PersistenceFailed,
+            NativeWebViewStartupDecision.PersistenceIndeterminate,
+            -> NativeWebViewActivityStartupOutcome.Unavailable(
+                "native_webview_startup_failed",
+                "Native WebView startup persistence is unavailable.",
+            )
+            else -> NativeWebViewActivityStartupOutcome.Unavailable(
+                "native_webview_startup_failed",
+                "Native WebView startup could not begin.",
+            )
         }
     }
+
+    private fun fallbackUnavailable() = NativeWebViewActivityStartupOutcome.Unavailable(
+        "native_webview_unavailable",
+        "Native Activity WebView fallback is active.",
+    )
 
     override fun onPageFinished() {
         cancelScheduledTimeout()
@@ -212,7 +266,10 @@ internal class NativeGameWebViewActivityAttachment internal constructor(
     internal val id: Long,
 )
 
-internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
+internal class NativeGameWebViewChannel(
+    private val operationTimeoutScheduler: NativeGameWebViewOperationTimeoutScheduler =
+        NoOpNativeGameWebViewOperationTimeoutScheduler,
+) : MethodChannel.MethodCallHandler,
     EventChannel.StreamHandler {
     private data class ActivityBinding(
         val token: NativeGameWebViewActivityAttachment,
@@ -220,6 +277,8 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         val lifecycleObserver: NativeGameWebViewLifecycleObserver,
         var host: NativeGameWebViewHostOperations? = null,
         var detaching: Boolean = false,
+        var unavailable: NativeWebViewActivityStartupOutcome.Unavailable? = null,
+        var operationWatchdog: NativeGameWebViewScheduledOperation? = null,
     )
 
     private data class ParsedCall(
@@ -234,6 +293,8 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         val parsed: ParsedCall,
         val result: MethodChannel.Result,
         var attachmentId: Long? = null,
+        val terminal: AtomicBoolean = AtomicBoolean(false),
+        val asyncCompletionClaimed: AtomicBoolean = AtomicBoolean(false),
     )
 
     private var activityBinding: ActivityBinding? = null
@@ -265,9 +326,20 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         val binding = activityBinding
         check(binding?.token === attachment) { "Native game WebView Activity is not attached" }
         check(!binding.detaching) { "Native game WebView Activity is detaching" }
+        check(binding.unavailable == null) { "Native game WebView Activity is unavailable" }
         check(binding.host == null) { "Native game WebView host is already attached" }
         binding.host = host
         dispatchNext(binding)
+    }
+
+    fun attachUnavailable(
+        attachment: NativeGameWebViewActivityAttachment,
+        unavailable: NativeWebViewActivityStartupOutcome.Unavailable,
+    ) {
+        val binding = activityBinding
+        check(binding?.token === attachment) { "Native game WebView Activity is not attached" }
+        check(!binding.detaching) { "Native game WebView Activity is detaching" }
+        markBindingUnavailable(binding, unavailable, includeRebindCalls = true)
     }
 
     fun eventSinkFor(attachment: NativeGameWebViewActivityAttachment): NativeGameWebViewEventSink {
@@ -305,9 +377,19 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
     private fun detachBinding(binding: ActivityBinding) {
         binding.detaching = true
         asyncVersion++
+        binding.operationWatchdog?.cancel()
+        binding.operationWatchdog = null
+        val abandoned = pendingCalls.filter { it.attachmentId == binding.token.id }
         pendingCalls.removeAll { it.attachmentId == binding.token.id }
         callRunning = false
         dispatchVersion++
+        abandoned.forEach { pending ->
+            completeError(
+                pending,
+                HOST_UNAVAILABLE,
+                "The native WebView Activity was detached.",
+            )
+        }
         binding.host?.currentGeneration?.let { generation ->
             try {
                 binding.host?.destroy(generation)
@@ -354,6 +436,10 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
             return
         }
         val binding = activityBinding
+        binding?.unavailable?.let { unavailable ->
+            safeError(result, unavailable.errorCode, unavailable.message)
+            return
+        }
         if (binding == null || binding.detaching || binding.host == null) {
             enqueueDuringRebind(parsed, result)
             return
@@ -364,7 +450,7 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
 
     private fun dispatchNext(binding: ActivityBinding) {
         if (callRunning || pendingCalls.isEmpty()) return
-        if (activityBinding !== binding || binding.detaching) {
+        if (activityBinding !== binding || binding.detaching || binding.unavailable != null) {
             return
         }
         callRunning = true
@@ -372,7 +458,12 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         try {
             binding.dispatchToMain {
                 if (version != dispatchVersion) return@dispatchToMain
-                if (activityBinding !== binding || binding.detaching || pendingCalls.isEmpty()) {
+                if (
+                    activityBinding !== binding ||
+                    binding.detaching ||
+                    binding.unavailable != null ||
+                    pendingCalls.isEmpty()
+                ) {
                     callRunning = false
                     return@dispatchToMain
                 }
@@ -382,12 +473,14 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
             }
         } catch (error: Exception) {
             if (version != dispatchVersion) return
-            val failed = pendingCalls.removeFirstOrNull()
-            callRunning = false
-            failed?.let {
-                safeError(it.result, HOST_ERROR, error.message ?: "Unable to dispatch native WebView operation.")
-            }
-            dispatchNext(binding)
+            markBindingUnavailable(
+                binding,
+                NativeWebViewActivityStartupOutcome.Unavailable(
+                    HOST_UNAVAILABLE,
+                    error.message ?: "Unable to dispatch native WebView operation.",
+                ),
+                includeRebindCalls = true,
+            )
         }
     }
 
@@ -412,11 +505,33 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         callRunning = false
         dispatchVersion++
         while (pendingCalls.isNotEmpty()) {
-            safeError(
-                pendingCalls.removeFirst().result,
+            completeError(
+                pendingCalls.removeFirst(),
                 HOST_UNAVAILABLE,
                 "The native WebView host is unavailable.",
             )
+        }
+    }
+
+    private fun markBindingUnavailable(
+        binding: ActivityBinding,
+        unavailable: NativeWebViewActivityStartupOutcome.Unavailable,
+        includeRebindCalls: Boolean,
+    ) {
+        if (activityBinding !== binding || binding.detaching) return
+        binding.unavailable = unavailable
+        binding.operationWatchdog?.cancel()
+        binding.operationWatchdog = null
+        asyncVersion++
+        dispatchVersion++
+        callRunning = false
+        val failed = pendingCalls.filter { pending ->
+            pending.attachmentId == binding.token.id ||
+                (includeRebindCalls && pending.attachmentId == null)
+        }
+        pendingCalls.removeAll(failed.toSet())
+        failed.forEach { pending ->
+            completeError(pending, unavailable.errorCode, unavailable.message)
         }
     }
 
@@ -517,43 +632,127 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         pending: PendingCall,
         host: NativeGameWebViewHostOperations,
     ) {
-        val callbackConsumed = AtomicBoolean(false)
         val version = ++asyncVersion
         val attachmentId = binding.token.id
-        val dispatcher = binding.dispatchToMain
+        val weakChannel = WeakReference(this)
+        val weakPending = WeakReference(pending)
         try {
+            binding.operationWatchdog = operationTimeoutScheduler.schedule(CLEAR_SESSION_TIMEOUT_MS) {
+                val activePending = weakPending.get() ?: return@schedule
+                weakChannel.get()?.onClearSessionWatchdog(version, attachmentId, activePending)
+            }
             host.clearSession { error ->
-                if (!callbackConsumed.compareAndSet(false, true)) return@clearSession
-                try {
-                    dispatcher callback@{
-                        val activeBinding = activityBinding
-                        if (
-                            version != asyncVersion ||
-                            activeBinding == null ||
-                            activeBinding.token.id != attachmentId ||
-                            activeBinding.detaching
-                        ) {
-                            return@callback
-                        }
-                        finish(activeBinding, pending) {
-                            if (error == null) safeSuccess(pending.result, null)
-                            else safeError(
-                                pending.result,
-                                HOST_ERROR,
-                                error.message ?: "Unable to clear the native WebView session.",
-                            )
-                        }
-                    }
-                } catch (_: Exception) {
-                    // Detach or dispatcher failure invalidates this Activity's pending result.
-                }
+                val activePending = weakPending.get() ?: return@clearSession
+                weakChannel.get()?.onClearSessionComplete(version, attachmentId, activePending, error)
             }
         } catch (error: Exception) {
-            if (callbackConsumed.compareAndSet(false, true)) {
+            if (pending.asyncCompletionClaimed.compareAndSet(false, true)) {
+                markBindingUnavailable(
+                    binding,
+                    NativeWebViewActivityStartupOutcome.Unavailable(
+                        HOST_UNAVAILABLE,
+                        error.message ?: "Unable to clear the native WebView session.",
+                    ),
+                    includeRebindCalls = false,
+                )
+            }
+        }
+    }
+
+    private fun onClearSessionComplete(
+        version: Long,
+        attachmentId: Long,
+        pending: PendingCall,
+        error: Exception?,
+    ) {
+        if (!pending.asyncCompletionClaimed.compareAndSet(false, true)) return
+        val binding = activityBinding ?: return
+        if (
+            version != asyncVersion ||
+            binding.token.id != attachmentId ||
+            binding.detaching ||
+            binding.unavailable != null ||
+            pending.terminal.get()
+        ) {
+            return
+        }
+        try {
+            binding.dispatchToMain callback@{
+                val activeBinding = activityBinding
+                if (
+                    version != asyncVersion ||
+                    activeBinding !== binding ||
+                    binding.detaching ||
+                    binding.unavailable != null ||
+                    pending.terminal.get()
+                ) {
+                    return@callback
+                }
                 finish(binding, pending) {
-                    safeError(pending.result, HOST_ERROR, error.message ?: "Unable to clear the native WebView session.")
+                    if (error == null) safeSuccess(pending.result, null)
+                    else safeError(
+                        pending.result,
+                        HOST_ERROR,
+                        error.message ?: "Unable to clear the native WebView session.",
+                    )
                 }
             }
+        } catch (dispatchError: Exception) {
+            markBindingUnavailable(
+                binding,
+                NativeWebViewActivityStartupOutcome.Unavailable(
+                    HOST_UNAVAILABLE,
+                    dispatchError.message ?: "Unable to dispatch the native WebView session result.",
+                ),
+                includeRebindCalls = false,
+            )
+        }
+    }
+
+    private fun onClearSessionWatchdog(
+        version: Long,
+        attachmentId: Long,
+        pending: PendingCall,
+    ) {
+        if (!pending.asyncCompletionClaimed.compareAndSet(false, true)) return
+        val binding = activityBinding ?: return
+        if (
+            version != asyncVersion ||
+            binding.token.id != attachmentId ||
+            binding.detaching ||
+            pending.terminal.get()
+        ) {
+            return
+        }
+        try {
+            binding.dispatchToMain timeout@{
+                val activeBinding = activityBinding
+                if (
+                    version != asyncVersion ||
+                    activeBinding !== binding ||
+                    binding.detaching ||
+                    pending.terminal.get()
+                ) {
+                    return@timeout
+                }
+                markBindingUnavailable(
+                    binding,
+                    NativeWebViewActivityStartupOutcome.Unavailable(
+                        HOST_UNAVAILABLE,
+                        "Native WebView session clearing timed out.",
+                    ),
+                    includeRebindCalls = false,
+                )
+            }
+        } catch (error: Exception) {
+            markBindingUnavailable(
+                binding,
+                NativeWebViewActivityStartupOutcome.Unavailable(
+                    HOST_UNAVAILABLE,
+                    error.message ?: "Unable to dispatch the native WebView session timeout.",
+                ),
+                includeRebindCalls = false,
+            )
         }
     }
 
@@ -562,10 +761,18 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
 
     private fun finish(binding: ActivityBinding, pending: PendingCall, completion: () -> Unit) {
         if (activityBinding !== binding || binding.detaching || pendingCalls.firstOrNull() !== pending) return
+        binding.operationWatchdog?.cancel()
+        binding.operationWatchdog = null
         pendingCalls.removeFirst()
         callRunning = false
-        completion()
+        if (pending.terminal.compareAndSet(false, true)) completion()
         dispatchNext(binding)
+    }
+
+    private fun completeError(pending: PendingCall, code: String, message: String) {
+        if (pending.terminal.compareAndSet(false, true)) {
+            safeError(pending.result, code, message)
+        }
     }
 
     private fun parseCall(call: MethodCall): ParsedCall {
@@ -821,6 +1028,7 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         const val HOST_UNAVAILABLE = "native_webview_unavailable"
         const val HOST_ERROR = "native_webview_error"
         const val ACTIVITY_DESTROYED = "activity_destroyed"
+        const val CLEAR_SESSION_TIMEOUT_MS = 10_000L
 
         fun invalid(message: String): Nothing = throw InvalidArgumentsException(message)
     }
@@ -847,7 +1055,9 @@ internal class NativeGameWebViewChannelRegistry<K : Any>(
 }
 
 internal object NativeGameWebViewEngineChannels {
-    private val registry = NativeGameWebViewChannelRegistry<FlutterEngine>()
+    private val registry = NativeGameWebViewChannelRegistry<FlutterEngine> {
+        NativeGameWebViewChannel(AndroidNativeGameWebViewOperationTimeoutScheduler)
+    }
 
     fun acquire(engine: FlutterEngine): NativeGameWebViewChannel =
         registry.acquire(engine) { channel ->

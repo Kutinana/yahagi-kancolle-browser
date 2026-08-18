@@ -72,6 +72,7 @@ import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewActivityAttachm
 import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewEngineChannels
 import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewLifecycleObserver
 import app.yahagi.kancollebrowser.nativewebview.NativeWebViewActivityStartupCoordinator
+import app.yahagi.kancollebrowser.nativewebview.NativeWebViewActivityStartupOutcome
 import app.yahagi.kancollebrowser.nativewebview.NativeWebViewProcessState
 import app.yahagi.kancollebrowser.nativewebview.NativeWebViewStartupGuard
 import app.yahagi.kancollebrowser.nativewebview.SharedPreferencesNativeWebViewStartupStore
@@ -209,7 +210,9 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 if (Looper.myLooper() == Looper.getMainLooper()) {
                     operation()
                 } else {
-                    NATIVE_WEB_VIEW_MAIN_HANDLER.post(operation)
+                    check(NATIVE_WEB_VIEW_MAIN_HANDLER.post(operation)) {
+                        "The native WebView main-thread dispatcher rejected an operation"
+                    }
                 }
             },
             lifecycleObserver = object : NativeGameWebViewLifecycleObserver {
@@ -521,30 +524,59 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             requestRestart = ::requestActivityRestart,
         )
         nativeWebViewStartup = startup
-        if (!startup.begin(storedMode)) return
+        val nativeChannel = nativeGameWebViewChannel ?: return
+        val nativeAttachment = nativeGameWebViewAttachment ?: return
+        when (val outcome = startup.begin(storedMode)) {
+            NativeWebViewActivityStartupOutcome.StartHost -> Unit
+            is NativeWebViewActivityStartupOutcome.Unavailable -> {
+                nativeChannel.attachUnavailable(nativeAttachment, outcome)
+                return
+            }
+        }
 
         val contentRoot = findViewById<FrameLayout>(android.R.id.content)
         if (contentRoot == null) {
             startup.onCreateFailed()
+            nativeChannel.attachUnavailable(
+                nativeAttachment,
+                nativeHostStartupFailure("The Activity content root is unavailable."),
+            )
             return
         }
-        val nativeChannel = nativeGameWebViewChannel
-        val nativeAttachment = nativeGameWebViewAttachment
-        if (nativeChannel == null || nativeAttachment == null) {
+        val host = try {
+            ActivityWebViewHost(
+                this,
+                contentRoot,
+                nativeChannel.eventSinkFor(nativeAttachment),
+            )
+        } catch (error: Exception) {
             startup.onCreateFailed()
+            nativeChannel.attachUnavailable(
+                nativeAttachment,
+                nativeHostStartupFailure(error.message ?: "Unable to construct the native WebView host."),
+            )
             return
         }
-        val host = ActivityWebViewHost(
-            this,
-            contentRoot,
-            nativeChannel.eventSinkFor(nativeAttachment),
-        )
-        nativeGameWebViewHost = host
-        nativeChannel.attachHost(
-            nativeAttachment,
-            ActivityNativeGameWebViewHostOperations(host),
-        )
+        try {
+            nativeChannel.attachHost(
+                nativeAttachment,
+                ActivityNativeGameWebViewHostOperations(host),
+            )
+            nativeGameWebViewHost = host
+        } catch (error: Exception) {
+            startup.onCreateFailed()
+            nativeChannel.attachUnavailable(
+                nativeAttachment,
+                nativeHostStartupFailure(error.message ?: "Unable to attach the native WebView host."),
+            )
+        }
     }
+
+    private fun nativeHostStartupFailure(message: String) =
+        NativeWebViewActivityStartupOutcome.Unavailable(
+            "native_webview_startup_failed",
+            message,
+        )
 
     private fun scheduleNativeWebViewStartupTimeout(delayMs: Long, callback: () -> Unit) {
         cancelNativeWebViewStartupTimeout()
