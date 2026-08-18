@@ -442,6 +442,8 @@
   "gameRenderingModeCompatibilityDesc": "Hybrid Composition + WebGL，關閉工具列模糊；效能損耗平均。",
   "gameRenderingModeCanvas": "相容模式",
   "gameRenderingModeCanvasDesc": "Hybrid Composition + Canvas，關閉工具列模糊；相容性優先，畫面效能可能降低。",
+  "gameRenderingModeNativeActivity": "原生直連（實驗）",
+  "gameRenderingModeNativeActivityDesc": "Activity 直接承載 WebView，保留目前的 Poi 版面配置；用於驗證長時間執行時的記憶體穩定性。",
   "gameRenderingModeConfirmTitle": "切換遊戲渲染模式？",
   "gameRenderingModeConfirmMessage": "切換渲染模式會自動重新啟動應用程式，遊戲頁面將重新載入。請先結束正在進行的操作。",
   "gameRenderingModeBattleWarning": "偵測到可能正在戰鬥。現在切換可能中斷目前戰鬥頁面，建議結束戰鬥後再操作。",

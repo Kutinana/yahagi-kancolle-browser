@@ -1267,6 +1267,13 @@ class AppLocalizationsZh extends AppLocalizations {
       'Hybrid Composition + Canvas，关闭工具栏模糊；兼容性优先，画面性能可能降低。';
 
   @override
+  String get gameRenderingModeNativeActivity => '原生直连（实验）';
+
+  @override
+  String get gameRenderingModeNativeActivityDesc =>
+      'Activity 直接承载 WebView，保留当前 Poi 布局；用于验证长时间运行时的内存稳定性。';
+
+  @override
   String get gameRenderingModeConfirmTitle => '切换游戏渲染模式？';
 
   @override
@@ -3000,6 +3007,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get gameRenderingModeCanvasDesc =>
       'Hybrid Composition + Canvas，關閉工具列模糊；相容性優先，畫面效能可能降低。';
+
+  @override
+  String get gameRenderingModeNativeActivity => '原生直連（實驗）';
+
+  @override
+  String get gameRenderingModeNativeActivityDesc =>
+      'Activity 直接承載 WebView，保留目前的 Poi 版面配置；用於驗證長時間執行時的記憶體穩定性。';
 
   @override
   String get gameRenderingModeConfirmTitle => '切換遊戲渲染模式？';

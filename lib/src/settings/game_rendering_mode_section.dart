@@ -52,6 +52,14 @@ class GameRenderingModeSection extends StatelessWidget {
             title: l10n.gameRenderingModeCanvas,
             subtitle: l10n.gameRenderingModeCanvasDesc,
           ),
+          const Divider(color: Color(0xff294052), height: 1),
+          _modeTile(
+            context,
+            key: const Key('rendering-mode-native-activity'),
+            mode: GameRenderingMode.nativeActivityExperimental,
+            title: l10n.gameRenderingModeNativeActivity,
+            subtitle: l10n.gameRenderingModeNativeActivityDesc,
+          ),
         ],
       ),
     );

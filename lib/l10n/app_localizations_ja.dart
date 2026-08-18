@@ -1275,6 +1275,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'Hybrid Composition + Canvas。互換性を優先するため、描画性能が低下する場合があります。';
 
   @override
+  String get gameRenderingModeNativeActivity => 'ネイティブ直結（実験）';
+
+  @override
+  String get gameRenderingModeNativeActivityDesc =>
+      'Activity が WebView を直接ホストし、現在の Poi レイアウトを維持します。長時間動作時のメモリ安定性を検証するためのモードです。';
+
+  @override
   String get gameRenderingModeConfirmTitle => 'ゲーム描画モードを切り替えますか？';
 
   @override

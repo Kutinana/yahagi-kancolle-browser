@@ -2474,6 +2474,18 @@ abstract class AppLocalizations {
   /// **'Hybrid Composition + Canvas，关闭工具栏模糊；兼容性优先，画面性能可能降低。'**
   String get gameRenderingModeCanvasDesc;
 
+  /// No description provided for @gameRenderingModeNativeActivity.
+  ///
+  /// In zh, this message translates to:
+  /// **'原生直连（实验）'**
+  String get gameRenderingModeNativeActivity;
+
+  /// No description provided for @gameRenderingModeNativeActivityDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Activity 直接承载 WebView，保留当前 Poi 布局；用于验证长时间运行时的内存稳定性。'**
+  String get gameRenderingModeNativeActivityDesc;
+
   /// No description provided for @gameRenderingModeConfirmTitle.
   ///
   /// In zh, this message translates to:

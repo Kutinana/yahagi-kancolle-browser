@@ -134,6 +134,8 @@ class DiagnosticsSection extends StatelessWidget {
         GameRenderingMode.standard => l10n.gameRenderingModeStandard,
         GameRenderingMode.compatibility => l10n.gameRenderingModeCompatibility,
         GameRenderingMode.canvasCompatibility => l10n.gameRenderingModeCanvas,
+        GameRenderingMode.nativeActivityExperimental =>
+          l10n.gameRenderingModeNativeActivity,
       };
 
   String _renderingPipelineSummary(GameRenderingMode mode) {

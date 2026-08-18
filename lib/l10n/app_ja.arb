@@ -442,6 +442,8 @@
   "gameRenderingModeCompatibilityDesc": "Hybrid Composition + WebGL。ぼかしを無効化します。性能負荷は平均的です。",
   "gameRenderingModeCanvas": "互換モード",
   "gameRenderingModeCanvasDesc": "Hybrid Composition + Canvas。互換性を優先するため、描画性能が低下する場合があります。",
+  "gameRenderingModeNativeActivity": "ネイティブ直結（実験）",
+  "gameRenderingModeNativeActivityDesc": "Activity が WebView を直接ホストし、現在の Poi レイアウトを維持します。長時間動作時のメモリ安定性を検証するためのモードです。",
   "gameRenderingModeConfirmTitle": "ゲーム描画モードを切り替えますか？",
   "gameRenderingModeConfirmMessage": "描画モードを切り替えるとアプリが自動的に再起動し、ゲームページが再読み込みされます。進行中の操作を終了してから切り替えてください。",
   "gameRenderingModeBattleWarning": "戦闘中の可能性があります。今切り替えると戦闘画面が中断されるため、戦闘終了後の変更を推奨します。",

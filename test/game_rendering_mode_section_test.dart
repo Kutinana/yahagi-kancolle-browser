@@ -31,7 +31,9 @@ void main() {
     );
   }
 
-  testWidgets('shows all three rendering modes', (tester) async {
+  testWidgets('shows all four rendering modes with native activity last', (
+    tester,
+  ) async {
     final state = await createController();
     addTearDown(state.controller.dispose);
 
@@ -43,6 +45,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('rendering-mode-canvas')), findsOneWidget);
+    expect(
+      find.byKey(const Key('rendering-mode-native-activity')),
+      findsOneWidget,
+    );
 
     final compatibilityTop = tester
         .getTopLeft(find.byKey(const Key('rendering-mode-compatibility')))
@@ -53,13 +59,18 @@ void main() {
     final canvasTop = tester
         .getTopLeft(find.byKey(const Key('rendering-mode-canvas')))
         .dy;
+    final nativeActivityTop = tester
+        .getTopLeft(find.byKey(const Key('rendering-mode-native-activity')))
+        .dy;
     expect(compatibilityTop, lessThan(standardTop));
     expect(standardTop, lessThan(canvasTop));
+    expect(canvasTop, lessThan(nativeActivityTop));
 
     for (final key in const <Key>[
       Key('rendering-mode-compatibility'),
       Key('rendering-mode-standard'),
       Key('rendering-mode-canvas'),
+      Key('rendering-mode-native-activity'),
     ]) {
       final tile = tester.widget<ListTile>(find.byKey(key));
       expect(tile.contentPadding, const EdgeInsets.only(left: 4, right: 16));
@@ -72,6 +83,7 @@ void main() {
         Key('rendering-mode-compatibility'),
         Key('rendering-mode-standard'),
         Key('rendering-mode-canvas'),
+        Key('rendering-mode-native-activity'),
       ])
         tester
             .getTopLeft(
@@ -83,12 +95,15 @@ void main() {
     ];
     expect(titleLefts[1], titleLefts[0]);
     expect(titleLefts[2], titleLefts[0]);
+    expect(titleLefts[3], titleLefts[0]);
 
     expect(find.text('标准模式（推荐）'), findsOneWidget);
     expect(find.text('高性能模式'), findsOneWidget);
     expect(find.text('兼容模式'), findsOneWidget);
+    expect(find.text('原生直连（实验）'), findsOneWidget);
     expect(find.textContaining('性能损耗平均'), findsOneWidget);
     expect(find.textContaining('性能损耗大，可能会卡顿'), findsOneWidget);
+    expect(find.textContaining('内存稳定性'), findsOneWidget);
     expect(find.textContaining('华为'), findsNothing);
     expect(find.textContaining('荣耀'), findsNothing);
   });

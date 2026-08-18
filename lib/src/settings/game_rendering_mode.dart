@@ -1,9 +1,15 @@
 enum GameRenderingMode {
   standard,
   compatibility,
-  canvasCompatibility;
+  canvasCompatibility,
+  nativeActivityExperimental;
 
-  bool get usesHybridComposition => this != standard;
+  bool get usesActivityWebView => this == nativeActivityExperimental;
+
+  bool get usesPlatformView => !usesActivityWebView;
+
+  bool get usesHybridComposition =>
+      this == compatibility || this == canvasCompatibility;
 
   bool get usesCanvasRenderer => this == canvasCompatibility;
 

@@ -13,6 +13,7 @@ class GameRenderingModeHcppPolicyTest {
     fun foldableSafeModesKeepHcppDisabledBeforeEngineStartup() {
         assertFalse(GameRenderingModeHcppPolicy.shouldEnable("compatibility"))
         assertFalse(GameRenderingModeHcppPolicy.shouldEnable("canvasCompatibility"))
+        assertFalse(GameRenderingModeHcppPolicy.shouldEnable("nativeActivityExperimental"))
         assertFalse(GameRenderingModeHcppPolicy.shouldEnable(null))
         assertFalse(GameRenderingModeHcppPolicy.shouldEnable("future-mode"))
     }

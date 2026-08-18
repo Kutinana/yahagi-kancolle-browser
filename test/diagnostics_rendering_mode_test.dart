@@ -18,7 +18,9 @@ void main() {
       _CaptureStore(),
     );
     final renderingController = await GameRenderingModeController.load(
-      MemoryGameRenderingModeStore(GameRenderingMode.canvasCompatibility),
+      MemoryGameRenderingModeStore(
+        GameRenderingMode.nativeActivityExperimental,
+      ),
     );
     addTearDown(captureModeController.dispose);
     addTearDown(renderingController.dispose);
@@ -39,8 +41,9 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('Hybrid Composition'), findsOneWidget);
-    expect(find.textContaining('Canvas'), findsOneWidget);
+    expect(find.textContaining('原生直连（实验）'), findsOneWidget);
+    expect(find.textContaining('Texture Layer'), findsOneWidget);
+    expect(find.textContaining('WebGL'), findsOneWidget);
     expect(find.textContaining('Backdrop blur: off'), findsOneWidget);
   });
 }
