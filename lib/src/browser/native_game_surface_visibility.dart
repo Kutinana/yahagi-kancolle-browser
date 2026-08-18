@@ -1,31 +1,41 @@
 import 'dart:async';
 
-/// Coordinates all conditions that determine whether the native game surface
-/// may be displayed.
+/// Serializes native visibility changes and permits explicit retries of a
+/// failed state without treating it as delivered.
 final class NativeGameSurfaceVisibility {
-  NativeGameSurfaceVisibility(this._onVisibilityChanged);
+  NativeGameSurfaceVisibility(
+    this._onVisibilityChanged, {
+    this.callbackTimeout = const Duration(seconds: 2),
+  }) : assert(!callbackTimeout.isNegative && callbackTimeout != Duration.zero);
 
   Future<void> Function(bool visible) _onVisibilityChanged;
+  final Duration callbackTimeout;
 
   bool _routeVisible = true;
   bool _appVisible = true;
   bool _slotAttached = false;
-  bool _lastSentVisible = false;
-  Future<void> _tail = Future<void>.value();
+  bool _desiredVisible = false;
+  bool _lastDeliveredVisible = false;
+  int _desiredVersion = 0;
+  int? _failedVersion;
+  _VisibilityRequest? _inFlight;
+  final List<_VisibilityRequest> _queue = <_VisibilityRequest>[];
+  final Map<int, List<Completer<void>>> _waiters =
+      <int, List<Completer<void>>>{};
 
   Future<void> setRouteVisible(bool visible) {
     _routeVisible = visible;
-    return _reportIfChanged();
+    return _requestCurrentVisibility();
   }
 
   Future<void> setAppVisible(bool visible) {
     _appVisible = visible;
-    return _reportIfChanged();
+    return _requestCurrentVisibility();
   }
 
   Future<void> setSlotAttached(bool attached) {
     _slotAttached = attached;
-    return _reportIfChanged();
+    return _requestCurrentVisibility();
   }
 
   Future<void> dispose() => setSlotAttached(false);
@@ -34,17 +44,83 @@ final class NativeGameSurfaceVisibility {
     _onVisibilityChanged = callback;
   }
 
-  Future<void> _reportIfChanged() {
+  Future<void> _requestCurrentVisibility() {
     final visible = _routeVisible && _appVisible && _slotAttached;
-    if (visible == _lastSentVisible) {
-      return _tail;
+    var enqueue = false;
+    if (visible != _desiredVisible) {
+      _desiredVisible = visible;
+      _desiredVersion++;
+      enqueue = true;
+    } else if (_failedVersion == _desiredVersion && _inFlight == null) {
+      _failedVersion = null;
+      _desiredVersion++;
+      enqueue = true;
     }
-    _lastSentVisible = visible;
-    final callback = _onVisibilityChanged;
-    final report = _tail
-        .catchError((Object _) {})
-        .then<void>((_) => callback(visible));
-    _tail = report.catchError((Object _) {});
-    return report;
+    if (!enqueue &&
+        _inFlight == null &&
+        _queue.isEmpty &&
+        _desiredVisible == _lastDeliveredVisible) {
+      return Future<void>.value();
+    }
+
+    final waiter = Completer<void>();
+    (_waiters[_desiredVersion] ??= <Completer<void>>[]).add(waiter);
+    if (enqueue) {
+      _queue.add(_VisibilityRequest(_desiredVisible, _desiredVersion));
+    }
+    _drain();
+    return waiter.future;
   }
+
+  void _drain() {
+    if (_inFlight != null || _queue.isEmpty) {
+      return;
+    }
+    final request = _queue.removeAt(0);
+    _inFlight = request;
+    unawaited(_deliver(request));
+  }
+
+  Future<void> _deliver(_VisibilityRequest request) async {
+    try {
+      await _onVisibilityChanged(request.visible).timeout(callbackTimeout);
+      _lastDeliveredVisible = request.visible;
+      _completeWaiters(request.version);
+    } catch (error, stackTrace) {
+      _failedVersion = request.version;
+      _completeWaitersWithError(request.version, error, stackTrace);
+    } finally {
+      _inFlight = null;
+    }
+    _drain();
+  }
+
+  void _completeWaiters(int version) {
+    for (final waiter
+        in _waiters.remove(version) ?? const <Completer<void>>[]) {
+      if (!waiter.isCompleted) {
+        waiter.complete();
+      }
+    }
+  }
+
+  void _completeWaitersWithError(
+    int version,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    for (final waiter
+        in _waiters.remove(version) ?? const <Completer<void>>[]) {
+      if (!waiter.isCompleted) {
+        waiter.completeError(error, stackTrace);
+      }
+    }
+  }
+}
+
+final class _VisibilityRequest {
+  const _VisibilityRequest(this.visible, this.version);
+
+  final bool visible;
+  final int version;
 }

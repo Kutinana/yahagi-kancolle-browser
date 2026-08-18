@@ -50,12 +50,20 @@ final class NativeGameSurfaceSlot extends StatefulWidget {
     required this.onBoundsChanged,
     required this.onVisibilityChanged,
     this.routeObserver,
+    this.visibilityCallbackTimeout = const Duration(seconds: 2),
+    this.boundsCallbackTimeout = const Duration(seconds: 2),
+    this.boundsRetryLimit = 3,
     super.key,
-  });
+  }) : assert(boundsRetryLimit > 0),
+       assert(visibilityCallbackTimeout != Duration.zero),
+       assert(boundsCallbackTimeout != Duration.zero);
 
   final Future<void> Function(NativeGameWebViewBounds bounds) onBoundsChanged;
   final Future<void> Function(bool visible) onVisibilityChanged;
   final RouteObserver<ModalRoute<dynamic>>? routeObserver;
+  final Duration visibilityCallbackTimeout;
+  final Duration boundsCallbackTimeout;
+  final int boundsRetryLimit;
 
   @override
   State<NativeGameSurfaceSlot> createState() => _NativeGameSurfaceSlotState();
@@ -67,15 +75,24 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   RouteObserver<ModalRoute<dynamic>>? _subscribedObserver;
   ModalRoute<dynamic>? _subscribedRoute;
   NativeGameWebViewBounds? _lastBounds;
-  NativeGameWebViewBounds? _pendingBounds;
-  int _boundsRequestId = 0;
+  NativeGameWebViewBounds? _currentBounds;
+  NativeGameWebViewBounds? _queuedBounds;
+  NativeGameWebViewBounds? _retryBounds;
+  bool _boundsDrainRunning = false;
+  bool _boundsRetryScheduled = false;
+  bool _boundsRetryExhausted = false;
+  int _boundsRetryAttempts = 0;
+  int _boundsGeneration = 0;
   bool _measureScheduled = false;
   bool _synchronizingRouteSubscription = false;
 
   @override
   void initState() {
     super.initState();
-    _visibility = NativeGameSurfaceVisibility(widget.onVisibilityChanged);
+    _visibility = NativeGameSurfaceVisibility(
+      widget.onVisibilityChanged,
+      callbackTimeout: widget.visibilityCallbackTimeout,
+    );
     WidgetsBinding.instance.addObserver(this);
     _ignoreErrors(
       _visibility.setAppVisible(
@@ -94,17 +111,21 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   @override
   void didUpdateWidget(covariant NativeGameSurfaceSlot oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.onVisibilityChanged != widget.onVisibilityChanged) {
+      _visibility.updateCallback(widget.onVisibilityChanged);
+    }
     if (oldWidget.routeObserver != widget.routeObserver) {
       _subscribeToCurrentRoute();
     }
-    if (oldWidget.onVisibilityChanged != widget.onVisibilityChanged) {
-      _visibility.updateCallback(widget.onVisibilityChanged);
+    if (_boundsRetryExhausted) {
+      _restartBoundsRetries();
     }
     _scheduleMeasurement();
   }
 
   @override
   void didChangeMetrics() {
+    _restartBoundsRetries();
     _scheduleMeasurement();
   }
 
@@ -140,8 +161,9 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
 
   @override
   void dispose() {
-    _boundsRequestId++;
-    _pendingBounds = null;
+    _boundsGeneration++;
+    _currentBounds = null;
+    _queuedBounds = null;
     WidgetsBinding.instance.removeObserver(this);
     _unsubscribeFromRoute();
     _ignoreErrors(_visibility.dispose());
@@ -199,53 +221,113 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
       devicePixelRatio: View.of(context).devicePixelRatio,
     );
     if (bounds == null) {
-      _invalidatePendingBounds();
+      _invalidateBounds();
       return;
     }
 
-    if (_sameBounds(bounds, _lastBounds)) {
-      if (_pendingBounds != null && !_sameBounds(bounds, _pendingBounds)) {
-        _boundsRequestId++;
-        _pendingBounds = null;
-      }
+    final changed = !_sameBounds(bounds, _currentBounds);
+    if (changed) {
+      _currentBounds = bounds;
+      _boundsGeneration++;
+      _restartBoundsRetries();
+    }
+    if (_sameBounds(bounds, _lastBounds) &&
+        !_boundsDrainRunning &&
+        _queuedBounds == null) {
       _ignoreErrors(_visibility.setSlotAttached(true));
       return;
     }
-    if (_sameBounds(bounds, _pendingBounds)) {
+    if (_boundsRetryExhausted && !changed) {
       return;
     }
-
-    final requestId = ++_boundsRequestId;
-    _pendingBounds = bounds;
+    _queuedBounds = bounds;
     _ignoreErrors(_visibility.setSlotAttached(false));
-    _ignoreErrors(_reportBounds(bounds, requestId));
+    _drainBounds();
   }
 
-  Future<void> _reportBounds(
-    NativeGameWebViewBounds bounds,
-    int requestId,
-  ) async {
+  void _drainBounds() {
+    if (_boundsDrainRunning) {
+      return;
+    }
+    _boundsDrainRunning = true;
+    unawaited(_runBoundsDrain());
+  }
+
+  Future<void> _runBoundsDrain() async {
     try {
-      await widget.onBoundsChanged(bounds);
-    } catch (error) {
-      debugPrint('Native game surface bounds callback failed: $error');
-      if (mounted && requestId == _boundsRequestId) {
-        _pendingBounds = null;
-        _ignoreErrors(_visibility.setSlotAttached(false));
+      while (mounted && _queuedBounds != null) {
+        final bounds = _queuedBounds!;
+        final generation = _boundsGeneration;
+        _queuedBounds = null;
+        try {
+          await widget
+              .onBoundsChanged(bounds)
+              .timeout(widget.boundsCallbackTimeout);
+        } catch (error, stackTrace) {
+          debugPrint(
+            'Native game surface bounds callback failed: $error\n$stackTrace',
+          );
+          if (!mounted ||
+              generation != _boundsGeneration ||
+              !_sameBounds(bounds, _currentBounds)) {
+            continue;
+          }
+          if (!_sameBounds(bounds, _retryBounds)) {
+            _retryBounds = bounds;
+            _boundsRetryAttempts = 0;
+          }
+          _boundsRetryAttempts++;
+          if (_boundsRetryAttempts < widget.boundsRetryLimit) {
+            _scheduleBoundsRetry();
+          } else {
+            _boundsRetryExhausted = true;
+            _ignoreErrors(_visibility.setSlotAttached(false));
+          }
+          return;
+        }
+        _lastBounds = bounds;
+        _retryBounds = null;
+        _boundsRetryAttempts = 0;
+        if (generation == _boundsGeneration &&
+            _sameBounds(bounds, _currentBounds)) {
+          _ignoreErrors(_visibility.setSlotAttached(true));
+        }
       }
-      return;
+    } finally {
+      _boundsDrainRunning = false;
+      if (mounted && _queuedBounds != null) {
+        _drainBounds();
+      }
     }
-    if (!mounted || requestId != _boundsRequestId) {
-      return;
-    }
-    _pendingBounds = null;
-    _lastBounds = bounds;
-    _ignoreErrors(_visibility.setSlotAttached(true));
   }
 
-  void _invalidatePendingBounds() {
-    _boundsRequestId++;
-    _pendingBounds = null;
+  void _scheduleBoundsRetry() {
+    if (_boundsRetryScheduled) {
+      return;
+    }
+    _boundsRetryScheduled = true;
+    WidgetsBinding.instance.scheduleFrame();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _boundsRetryScheduled = false;
+      if (!mounted || _boundsRetryExhausted || _currentBounds == null) {
+        return;
+      }
+      _queuedBounds = _currentBounds;
+      _drainBounds();
+    });
+  }
+
+  void _restartBoundsRetries() {
+    _boundsRetryExhausted = false;
+    _boundsRetryAttempts = 0;
+    _retryBounds = null;
+  }
+
+  void _invalidateBounds() {
+    _boundsGeneration++;
+    _currentBounds = null;
+    _queuedBounds = null;
+    _restartBoundsRetries();
     _ignoreErrors(_visibility.setSlotAttached(false));
   }
 
@@ -264,7 +346,7 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   void _ignoreErrors(Future<void> future) {
     unawaited(
       future.catchError((Object error, StackTrace stackTrace) {
-        debugPrint('Native game surface callback failed: $error');
+        debugPrint('Native game surface callback failed: $error\n$stackTrace');
       }),
     );
   }

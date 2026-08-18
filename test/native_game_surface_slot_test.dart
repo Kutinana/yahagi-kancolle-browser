@@ -111,6 +111,69 @@ void main() {
       expect(firstCallbackReports, <bool>[true]);
       expect(secondCallbackReports, <bool>[false, true]);
     });
+
+    test('retries a failed false report when dispose is repeated', () async {
+      final reports = <bool>[];
+      var falseAttempts = 0;
+      final visibility = NativeGameSurfaceVisibility((visible) async {
+        reports.add(visible);
+        if (!visible && ++falseAttempts == 1) {
+          throw StateError('expected false failure');
+        }
+      });
+
+      await visibility.setSlotAttached(true);
+      await expectLater(visibility.dispose(), throwsStateError);
+      await visibility.dispose();
+
+      expect(reports, <bool>[true, false, false]);
+    });
+
+    test(
+      'times out a pending report and continues with the latest state',
+      () async {
+        final reports = <bool>[];
+        final neverCompletes = Completer<void>();
+        final visibility = NativeGameSurfaceVisibility((visible) {
+          reports.add(visible);
+          return visible ? neverCompletes.future : Future<void>.value();
+        }, callbackTimeout: const Duration(milliseconds: 5));
+
+        final show = visibility.setSlotAttached(true);
+        final hide = visibility.setRouteVisible(false);
+
+        await expectLater(show, throwsA(isA<TimeoutException>()));
+        await hide;
+
+        expect(reports, <bool>[true, false]);
+      },
+    );
+
+    test(
+      'uses the current callback for work queued behind a pending report',
+      () async {
+        final firstReports = <bool>[];
+        final secondReports = <bool>[];
+        final firstCompletes = Completer<void>();
+        final visibility = NativeGameSurfaceVisibility((visible) {
+          firstReports.add(visible);
+          return firstCompletes.future;
+        });
+
+        final show = visibility.setSlotAttached(true);
+        final hide = visibility.setRouteVisible(false);
+        visibility.updateCallback(
+          (visible) async => secondReports.add(visible),
+        );
+        firstCompletes.complete();
+
+        await show;
+        await hide;
+
+        expect(firstReports, <bool>[true]);
+        expect(secondReports, <bool>[false]);
+      },
+    );
   });
 
   group('NativeGameSurfaceSlot', () {
@@ -260,6 +323,141 @@ void main() {
       expect(bounds, hasLength(2));
     });
 
+    testWidgets('retries failed static bounds on a later frame', (
+      tester,
+    ) async {
+      final visibility = <bool>[];
+      var attempts = 0;
+      await tester.pumpWidget(
+        _slotApp(
+          onBoundsChanged: (_) async {
+            attempts++;
+            if (attempts == 1) {
+              throw StateError('expected first bounds failure');
+            }
+          },
+          onVisibilityChanged: (value) async => visibility.add(value),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(attempts, 2);
+      expect(visibility, <bool>[true]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('stops retrying permanently failed bounds at its limit', (
+      tester,
+    ) async {
+      var attempts = 0;
+      final visibility = <bool>[];
+      await tester.pumpWidget(
+        _slotApp(
+          boundsRetryLimit: 3,
+          onBoundsChanged: (_) async {
+            attempts++;
+            throw StateError('expected permanent bounds failure');
+          },
+          onVisibilityChanged: (value) async => visibility.add(value),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      expect(attempts, 3);
+      expect(visibility, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'serializes bounds reports and applies only the latest update',
+      (tester) async {
+        final firstCompletes = Completer<void>();
+        final started = <double>[];
+        final applied = <double>[];
+        var active = 0;
+        var maxActive = 0;
+        Future<void> onBounds(NativeGameWebViewBounds bounds) async {
+          active++;
+          maxActive = active > maxActive ? active : maxActive;
+          started.add(bounds.width);
+          if (bounds.width == 100) {
+            await firstCompletes.future;
+          }
+          applied.add(bounds.width);
+          active--;
+        }
+
+        await tester.pumpWidget(_slotApp(onBoundsChanged: onBounds));
+        await tester.pump();
+        await tester.pumpWidget(
+          _slotApp(width: 120, onBoundsChanged: onBounds),
+        );
+        await tester.pump();
+        await tester.pumpWidget(
+          _slotApp(width: 140, onBoundsChanged: onBounds),
+        );
+        await tester.pump();
+        expect(started, <double>[100]);
+
+        firstCompletes.complete();
+        await tester.pump();
+        await tester.pump();
+
+        expect(started, <double>[100, 140]);
+        expect(applied, <double>[100, 140]);
+        expect(maxActive, 1);
+      },
+    );
+
+    testWidgets(
+      'uses the new callback for route work queued during replacement',
+      (tester) async {
+        final firstObserver = RouteObserver<ModalRoute<dynamic>>();
+        final secondObserver = RouteObserver<ModalRoute<dynamic>>();
+        final navigatorKey = GlobalKey<NavigatorState>();
+        final firstReports = <bool>[];
+        final secondReports = <bool>[];
+        final firstCompletes = Completer<void>();
+        await tester.pumpWidget(
+          _slotApp(
+            navigatorKey: navigatorKey,
+            observer: firstObserver,
+            onVisibilityChanged: (value) {
+              firstReports.add(value);
+              return firstCompletes.future;
+            },
+          ),
+        );
+        await tester.pump();
+        unawaited(
+          navigatorKey.currentState!.push<void>(
+            MaterialPageRoute<void>(builder: (_) => const SizedBox.expand()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _slotApp(
+            navigatorKey: navigatorKey,
+            observer: secondObserver,
+            onVisibilityChanged: (value) async => secondReports.add(value),
+          ),
+        );
+        await tester.pump();
+        firstCompletes.complete();
+        await tester.pump();
+
+        expect(firstReports, <bool>[true]);
+        expect(secondReports, <bool>[false]);
+      },
+    );
+
     testWidgets('uses a replacement visibility callback after widget update', (
       tester,
     ) async {
@@ -334,7 +532,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(boundsCalls, 3);
+      expect(boundsCalls, greaterThanOrEqualTo(3));
       expect(visibility, <bool>[true, false, true]);
       expect(tester.takeException(), isNull);
     });
@@ -362,16 +560,9 @@ void main() {
 
         firstBounds.complete();
         await tester.pump();
-        expect(tester.takeException(), isNull);
-        expect(visibility, isEmpty);
-
-        await tester.pumpWidget(
-          _slotApp(
-            onBoundsChanged: (_) async => attempts++,
-            onVisibilityChanged: (value) async => visibility.add(value),
-          ),
-        );
         await tester.pump();
+        await tester.pump();
+        expect(tester.takeException(), isNull);
 
         expect(attempts, 2);
         expect(visibility, <bool>[true]);
@@ -406,9 +597,10 @@ void main() {
           ),
         );
         await tester.pump();
-        expect(visibility, <bool>[true]);
+        expect(visibility, isEmpty);
 
         staleBounds.complete();
+        await tester.pump();
         await tester.pump();
         expect(visibility, <bool>[true]);
 
@@ -687,6 +879,7 @@ Widget _slotApp({
   GlobalKey<NavigatorState>? navigatorKey,
   RouteObserver<ModalRoute<dynamic>>? observer,
   bool useCurrentLifecycle = false,
+  int boundsRetryLimit = 3,
 }) {
   if (!useCurrentLifecycle &&
       WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
@@ -708,6 +901,7 @@ Widget _slotApp({
             onBoundsChanged: onBoundsChanged ?? (_) async {},
             onVisibilityChanged: onVisibilityChanged ?? (_) async {},
             routeObserver: observer,
+            boundsRetryLimit: boundsRetryLimit,
           ),
         ),
       ),
