@@ -128,6 +128,16 @@ class NativeWebViewStartupGuardTest {
     }
 
     @Test
+    fun fatalReadAndWriteFailuresAreNotSwallowed() {
+        assertFatalFailure {
+            guard(FatalStore(throwOnRead = true), "a").beginAttempt(0)
+        }
+        assertFatalFailure {
+            guard(FatalStore(throwOnRead = false), "a").beginAttempt(0)
+        }
+    }
+
+    @Test
     fun negativeFailuresAreNormalizedAndLargeCountFallsBack() {
         val negativeStore = FakeStore(snapshot = snapshot(failures = -20, attemptStartedAtMs = 0, attemptSessionId = session("a")))
         val largeStore = FakeStore(snapshot = snapshot(failures = Int.MAX_VALUE, attemptStartedAtMs = 0, attemptSessionId = session("a")))
@@ -164,6 +174,31 @@ class NativeWebViewStartupGuardTest {
             return
         }
         throw AssertionError("Expected IllegalArgumentException")
+    }
+
+    private fun assertFatalFailure(block: () -> Unit) {
+        try {
+            block()
+        } catch (error: AssertionError) {
+            assertEquals("fatal", error.message)
+            return
+        }
+        throw AssertionError("Expected fatal AssertionError")
+    }
+
+    private class FatalStore(
+        private val throwOnRead: Boolean,
+    ) : NativeWebViewStartupStore {
+        override fun read(): NativeWebViewStartupReadResult {
+            if (throwOnRead) throw AssertionError("fatal")
+            return NativeWebViewStartupReadResult.Success(
+                NativeWebViewStartupSnapshot(0, null, null, null),
+            )
+        }
+
+        override fun write(nextSnapshot: NativeWebViewStartupSnapshot): NativeWebViewStartupWriteResult {
+            throw AssertionError("fatal")
+        }
     }
 
     private class FakeStore(

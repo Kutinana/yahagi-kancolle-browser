@@ -197,7 +197,7 @@ class NativeWebViewStartupGuard(
     private fun readSnapshot(): NativeWebViewStartupSnapshot? =
         try {
             (store.read() as? NativeWebViewStartupReadResult.Success)?.snapshot
-        } catch (_: Throwable) {
+        } catch (_: Exception) {
             null
         }
 
@@ -208,7 +208,7 @@ class NativeWebViewStartupGuard(
                 NativeWebViewStartupWriteResult.Failed -> NativeWebViewStartupDecision.PersistenceFailed
                 NativeWebViewStartupWriteResult.Indeterminate -> NativeWebViewStartupDecision.PersistenceIndeterminate
             }
-        } catch (_: Throwable) {
+        } catch (_: Exception) {
             NativeWebViewStartupDecision.PersistenceIndeterminate
         }
 

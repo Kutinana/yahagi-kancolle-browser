@@ -17,6 +17,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.util.Log
@@ -26,6 +27,7 @@ import android.view.PixelCopy
 import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.webkit.WebView
+import android.widget.FrameLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -38,6 +40,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterShellArgs
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.EventChannel
 import app.yahagi.kancollebrowser.browser.WebViewProxyManager
 import app.yahagi.kancollebrowser.browser.GadgetBypassManager
 import app.yahagi.kancollebrowser.browser.GadgetBypassWebViewClient
@@ -63,6 +66,14 @@ import app.yahagi.kancollebrowser.diagnostics.DiagnosticExportDirectoryHost
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticDirectoryPickerUi
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticPickerSystemBars
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticPlatformHandler
+import app.yahagi.kancollebrowser.nativewebview.ActivityNativeGameWebViewHostOperations
+import app.yahagi.kancollebrowser.nativewebview.ActivityWebViewHost
+import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewChannel
+import app.yahagi.kancollebrowser.nativewebview.NativeGameWebViewLifecycleObserver
+import app.yahagi.kancollebrowser.nativewebview.NativeWebViewActivityStartupCoordinator
+import app.yahagi.kancollebrowser.nativewebview.NativeWebViewProcessState
+import app.yahagi.kancollebrowser.nativewebview.NativeWebViewStartupGuard
+import app.yahagi.kancollebrowser.nativewebview.SharedPreferencesNativeWebViewStartupStore
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -99,6 +110,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             }
             window.attributes = attr
         }
+        enableNativeActivityWebViewIfSelected()
     }
 
     override fun onMultiWindowModeChanged(
@@ -181,9 +193,45 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     private var fixedCanvasContentHeight: Int = 720
     private var pendingScreenshotResult: MethodChannel.Result? = null
     private var activeScreenshotResult: MethodChannel.Result? = null
+    private val nativeWebViewHandler = Handler(Looper.getMainLooper())
+    private var nativeWebViewStartupTimeout: Runnable? = null
+    private var nativeWebViewStartup: NativeWebViewActivityStartupCoordinator? = null
+    private var nativeGameWebViewHost: ActivityWebViewHost? = null
+    private var activityRestartRequested = false
+    private val nativeGameWebViewChannel = NativeGameWebViewChannel(
+        dispatchToMain = { operation ->
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                operation()
+            } else {
+                nativeWebViewHandler.post(operation)
+            }
+        },
+        lifecycleObserver = object : NativeGameWebViewLifecycleObserver {
+            override fun onPageFinished() {
+                nativeWebViewStartup?.onPageFinished()
+            }
+
+            override fun onRenderProcessGone() {
+                nativeWebViewStartup?.onRenderProcessGone()
+            }
+
+            override fun onCreateFailed() {
+                nativeWebViewStartup?.onCreateFailed()
+            }
+        },
+    )
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NativeGameWebViewChannel.METHOD_CHANNEL_NAME,
+        ).setMethodCallHandler(nativeGameWebViewChannel)
+        EventChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NativeGameWebViewChannel.EVENT_CHANNEL_NAME,
+        ).setStreamHandler(nativeGameWebViewChannel)
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -192,9 +240,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             when (call.method) {
                 "restartActivity" -> {
                     result.success(null)
-                    Handler(Looper.getMainLooper()).post {
-                        if (!isFinishing && !isDestroyed) recreate()
-                    }
+                    requestActivityRestart()
                 }
                 else -> result.notImplemented()
             }
@@ -391,6 +437,11 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     }
 
     override fun onDestroy() {
+        nativeGameWebViewChannel.disable()
+        nativeGameWebViewHost?.destroyCurrent()
+        nativeGameWebViewHost = null
+        nativeWebViewStartup?.close()
+        nativeWebViewStartup = null
         pendingGameSurfaceRecoveryActions.forEach(
             gameSurfaceRecoveryHandler::removeCallbacks,
         )
@@ -427,6 +478,59 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         )
         activeScreenshotResult = null
         super.onDestroy()
+    }
+
+    private fun enableNativeActivityWebViewIfSelected() {
+        val preferences = getSharedPreferences(
+            GameRenderingModeHcppPolicy.PREFERENCES_NAME,
+            Context.MODE_PRIVATE,
+        )
+        val storedMode = try {
+            preferences.getString(GameRenderingModeHcppPolicy.RENDERING_MODE_KEY, null)
+        } catch (_: Exception) {
+            null
+        }
+        val startup = NativeWebViewActivityStartupCoordinator(
+            guard = NativeWebViewStartupGuard(
+                SharedPreferencesNativeWebViewStartupStore(preferences),
+                NativeWebViewProcessState.sessionId,
+            ),
+            nowMs = SystemClock::elapsedRealtime,
+            scheduleTimeout = ::scheduleNativeWebViewStartupTimeout,
+            cancelTimeout = ::cancelNativeWebViewStartupTimeout,
+            requestRestart = ::requestActivityRestart,
+        )
+        nativeWebViewStartup = startup
+        if (!startup.begin(storedMode)) return
+
+        val contentRoot = findViewById<FrameLayout>(android.R.id.content)
+        if (contentRoot == null) {
+            startup.onCreateFailed()
+            return
+        }
+        val host = ActivityWebViewHost(this, contentRoot, nativeGameWebViewChannel)
+        nativeGameWebViewHost = host
+        nativeGameWebViewChannel.attachHost(ActivityNativeGameWebViewHostOperations(host))
+    }
+
+    private fun scheduleNativeWebViewStartupTimeout(delayMs: Long, callback: () -> Unit) {
+        cancelNativeWebViewStartupTimeout()
+        val timeout = Runnable(callback)
+        nativeWebViewStartupTimeout = timeout
+        nativeWebViewHandler.postDelayed(timeout, delayMs)
+    }
+
+    private fun cancelNativeWebViewStartupTimeout() {
+        nativeWebViewStartupTimeout?.let(nativeWebViewHandler::removeCallbacks)
+        nativeWebViewStartupTimeout = null
+    }
+
+    private fun requestActivityRestart() {
+        if (activityRestartRequested || isFinishing || isDestroyed) return
+        activityRestartRequested = true
+        nativeWebViewHandler.post {
+            if (!isFinishing && !isDestroyed) recreate()
+        }
     }
 
     override fun openDiagnosticExportDirectory(initialUri: Uri?) {
