@@ -130,41 +130,28 @@ void main() {
     });
 
     test(
-      'times out a pending report and continues with the latest state',
-      () async {
-        final reports = <bool>[];
-        final neverCompletes = Completer<void>();
-        final visibility = NativeGameSurfaceVisibility((visible) {
-          reports.add(visible);
-          return visible ? neverCompletes.future : Future<void>.value();
-        }, callbackTimeout: const Duration(milliseconds: 5));
-
-        final show = visibility.setSlotAttached(true);
-        final hide = visibility.setRouteVisible(false);
-
-        await expectLater(show, throwsA(isA<TimeoutException>()));
-        await hide;
-
-        expect(reports, <bool>[true, false]);
-      },
-    );
-
-    test(
       'uses the current callback for work queued behind a pending report',
       () async {
         final firstReports = <bool>[];
         final secondReports = <bool>[];
         final firstCompletes = Completer<void>();
+        var active = 0;
+        var maxActive = 0;
         final visibility = NativeGameSurfaceVisibility((visible) {
+          active++;
+          maxActive = active > maxActive ? active : maxActive;
           firstReports.add(visible);
-          return firstCompletes.future;
+          return firstCompletes.future.whenComplete(() => active--);
         });
 
         final show = visibility.setSlotAttached(true);
         final hide = visibility.setRouteVisible(false);
-        visibility.updateCallback(
-          (visible) async => secondReports.add(visible),
-        );
+        visibility.updateCallback((visible) async {
+          active++;
+          maxActive = active > maxActive ? active : maxActive;
+          secondReports.add(visible);
+          active--;
+        });
         firstCompletes.complete();
 
         await show;
@@ -172,6 +159,7 @@ void main() {
 
         expect(firstReports, <bool>[true]);
         expect(secondReports, <bool>[false]);
+        expect(maxActive, 1);
       },
     );
   });
@@ -415,6 +403,26 @@ void main() {
         expect(maxActive, 1);
       },
     );
+
+    testWidgets('resends current bounds after its callback sink is replaced', (
+      tester,
+    ) async {
+      final firstSink = <NativeGameWebViewBounds>[];
+      final secondSink = <NativeGameWebViewBounds>[];
+      await tester.pumpWidget(
+        _slotApp(onBoundsChanged: (bounds) async => firstSink.add(bounds)),
+      );
+      await tester.pump();
+      await tester.pumpWidget(
+        _slotApp(onBoundsChanged: (bounds) async => secondSink.add(bounds)),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(firstSink, hasLength(1));
+      expect(secondSink, hasLength(1));
+      expect(secondSink.single.width, 100);
+    });
 
     testWidgets(
       'uses the new callback for route work queued during replacement',
@@ -898,8 +906,8 @@ Widget _slotApp({
           width: width,
           height: height,
           child: NativeGameSurfaceSlot(
-            onBoundsChanged: onBoundsChanged ?? (_) async {},
-            onVisibilityChanged: onVisibilityChanged ?? (_) async {},
+            onBoundsChanged: onBoundsChanged ?? _ignoreBounds,
+            onVisibilityChanged: onVisibilityChanged ?? _ignoreVisibility,
             routeObserver: observer,
             boundsRetryLimit: boundsRetryLimit,
           ),
@@ -908,3 +916,7 @@ Widget _slotApp({
     ),
   );
 }
+
+Future<void> _ignoreVisibility(bool _) async {}
+
+Future<void> _ignoreBounds(NativeGameWebViewBounds _) async {}

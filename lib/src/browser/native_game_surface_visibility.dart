@@ -3,13 +3,9 @@ import 'dart:async';
 /// Serializes native visibility changes and permits explicit retries of a
 /// failed state without treating it as delivered.
 final class NativeGameSurfaceVisibility {
-  NativeGameSurfaceVisibility(
-    this._onVisibilityChanged, {
-    this.callbackTimeout = const Duration(seconds: 2),
-  }) : assert(!callbackTimeout.isNegative && callbackTimeout != Duration.zero);
+  NativeGameSurfaceVisibility(this._onVisibilityChanged);
 
   Future<void> Function(bool visible) _onVisibilityChanged;
-  final Duration callbackTimeout;
 
   bool _routeVisible = true;
   bool _appVisible = true;
@@ -83,7 +79,7 @@ final class NativeGameSurfaceVisibility {
 
   Future<void> _deliver(_VisibilityRequest request) async {
     try {
-      await _onVisibilityChanged(request.visible).timeout(callbackTimeout);
+      await _onVisibilityChanged(request.visible);
       _lastDeliveredVisible = request.visible;
       _completeWaiters(request.version);
     } catch (error, stackTrace) {
