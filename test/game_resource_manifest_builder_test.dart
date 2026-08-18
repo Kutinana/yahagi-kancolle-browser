@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_manifest_builder.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   const builder = GameResourceManifestBuilder(
     resourceOrigin: 'https://w01y.kancolle-server.com',
   );
@@ -86,5 +88,22 @@ void main() {
       isFalse,
     );
     expect(manifest.targetBytes, greaterThan(0));
+  });
+
+  test('static catalog uses the two available official font files', () async {
+    final urls = await GameResourceStaticCatalog.load();
+
+    expect(
+      urls,
+      contains('/kcs2/resources/font/A-OTF-UDShinGoPro-Regular.woff2'),
+    );
+    expect(
+      urls,
+      contains('/kcs2/resources/font/A-OTF-UDShinGoPro-Light.woff2'),
+    );
+    expect(
+      urls,
+      isNot(contains('/kcs2/resources/font/ShipNameFont.woff2')),
+    );
   });
 }

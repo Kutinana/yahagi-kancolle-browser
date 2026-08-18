@@ -35,12 +35,97 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     @Test
+    fun `completed estimated manifest converges target to actual cached bytes`() {
+        val stateFile = temporaryFolder.newFile("estimated-progress-state.json")
+        val fixture = fixture(
+            stateFile = stateFile,
+            fetcher = GameResourceFetcher { _, _, _ -> response(byteArrayOf(1)) },
+        )
+        fixture.coordinator.setManifest(
+            "light",
+            listOf(official("/kcs2/resources/a.png")),
+            115_000,
+        )
+
+        assertTrue(fixture.coordinator.startDownload())
+        awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
+
+        assertEquals(1, fixture.coordinator.status().cachedBytes)
+        assertEquals(1, fixture.coordinator.status().targetBytes)
+        fixture.coordinator.dispose()
+
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.LIGHT },
+            stateFile,
+        )
+        assertEquals(1, restored.status().targetBytes)
+        restored.dispose()
+    }
+
+    @Test
+    fun `completed exact manifest keeps its declared target after restart`() {
+        val stateFile = temporaryFolder.newFile("exact-progress-state.json")
+        val fixture = fixture(
+            stateFile = stateFile,
+            fetcher = GameResourceFetcher { _, _, _ -> response(byteArrayOf(1)) },
+        )
+        fixture.coordinator.setManifest(
+            "full",
+            listOf(official("/kcs2/resources/a.png")),
+            9,
+            expectedLengths = listOf(1),
+        )
+
+        assertTrue(fixture.coordinator.startDownload())
+        awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
+        assertEquals(9, fixture.coordinator.status().targetBytes)
+        fixture.coordinator.dispose()
+
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.FULL },
+            stateFile,
+        )
+        assertEquals(9, restored.status().targetBytes)
+        restored.dispose()
+    }
+
+    @Test
+    fun `backup manifest target wins over newer state when primary is damaged`() {
+        val stateFile = temporaryFolder.newFile("backup-target-state.json")
+        val fixture = fixture(stateFile = stateFile)
+        fixture.coordinator.setManifest(
+            "full",
+            listOf(official("/kcs2/resources/old.png")),
+            10,
+            expectedLengths = listOf(10),
+        )
+        fixture.coordinator.setManifest(
+            "full",
+            listOf(official("/kcs2/resources/new.png")),
+            20,
+            expectedLengths = listOf(20),
+        )
+        fixture.coordinator.dispose()
+        File(stateFile.parentFile, "${stateFile.name}.manifest.json").writeText("damaged")
+
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine,
+            { GameResourceCacheMode.FULL },
+            stateFile,
+        )
+        assertEquals(10, restored.status().targetBytes)
+        restored.dispose()
+    }
+
+    @Test
     fun `mode change stops exposing the previous manifest totals`() {
         val url = official("/kcs2/resources/a.png")
         val fixture = fixture(fetcher = GameResourceFetcher { _, _, _ -> response(byteArrayOf(1)) })
         fixture.engine.fetch(url)
         fixture.coordinator.setManifest("light", listOf(url), 580_000_000)
-        assertEquals(580_000_000, fixture.coordinator.status().targetBytes)
+        assertEquals(1, fixture.coordinator.status().targetBytes)
 
         assertTrue(
             fixture.coordinator.configureModeChange(

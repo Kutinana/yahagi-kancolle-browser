@@ -146,16 +146,27 @@ class GameResourceDownloadCoordinator(
                 GameResourceInspectionState.OUTDATED -> outdated++
             }
         }
+        val effectiveTargetBytes = if (
+            filteredExpectedLengths.isEmpty() &&
+            filteredUrls.isNotEmpty() &&
+            missing == 0 &&
+            damaged == 0 &&
+            outdated == 0
+        ) {
+            validLengths.values.sum()
+        } else {
+            targetBytes.coerceAtLeast(0)
+        }
         val temporary = writeManifestTemporary(
             profile,
             filteredUrls,
-            targetBytes.coerceAtLeast(0),
+            effectiveTargetBytes,
             filteredExpectedLengths,
         )
         return GameResourcePreparedManifest(
             profile = profile,
             urls = filteredUrls,
-            targetBytes = targetBytes.coerceAtLeast(0),
+            targetBytes = effectiveTargetBytes,
             expectedByteLengths = filteredExpectedLengths,
             validByteLengths = validLengths,
             missingCount = missing,
@@ -511,6 +522,17 @@ class GameResourceDownloadCoordinator(
         missingCount = inspections.values.count { it.state == GameResourceInspectionState.MISSING }
         damagedCount = inspections.values.count { it.state == GameResourceInspectionState.DAMAGED }
         outdatedCount = inspections.values.count { it.state == GameResourceInspectionState.OUTDATED }
+        if (
+            expectedByteLengths.isEmpty() &&
+            urls.isNotEmpty() &&
+            missingCount == 0 &&
+            damagedCount == 0 &&
+            outdatedCount == 0 &&
+            targetBytes != cachedBytesSnapshot &&
+            rewriteCurrentManifestTarget(cachedBytesSnapshot)
+        ) {
+            targetBytes = cachedBytesSnapshot
+        }
     }
 
     private fun cachedManifestBytes(): Long = cachedBytesSnapshot
@@ -554,6 +576,20 @@ class GameResourceDownloadCoordinator(
         }.getOrDefault(false)
     }
 
+    private fun rewriteCurrentManifestTarget(targetBytes: Long): Boolean = runCatching {
+        val temporary = writeManifestTemporary(
+            profile,
+            urls,
+            targetBytes,
+            expectedByteLengths,
+        )
+        try {
+            replaceManifestFile(temporary)
+        } finally {
+            temporary.delete()
+        }
+    }.isSuccess
+
     private fun writeManifestTemporary(
         profile: String,
         urls: List<String>,
@@ -590,6 +626,10 @@ class GameResourceDownloadCoordinator(
                 StandardCopyOption.REPLACE_EXISTING,
             )
         }
+        replaceManifestFile(temporary)
+    }
+
+    private fun replaceManifestFile(temporary: File) {
         try {
             Files.move(
                 temporary.toPath(),
