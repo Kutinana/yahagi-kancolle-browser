@@ -7,6 +7,20 @@ import org.junit.Test
 
 class NativeGameWebViewClientTest {
     @Test
+    fun reportsPageEventsForTheCurrentGeneration() {
+        val events = mutableListOf<String>()
+        val delegate = delegate(events)
+
+        delegate.pageStarted("https://example.test/start")
+        delegate.pageFinished("https://example.test/finish")
+
+        assertEquals(
+            listOf("started:https://example.test/start", "finished:https://example.test/finish"),
+            events,
+        )
+    }
+
+    @Test
     fun allowsOnlyHttpAndHttpsNavigation() {
         val events = mutableListOf<String>()
         val delegate = delegate(events)

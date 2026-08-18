@@ -9,6 +9,36 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 
+interface NativeGameWebViewCleanup {
+    fun stopLoading(webView: WebView)
+    fun loadBlank(webView: WebView)
+    fun clearHistory(webView: WebView)
+    fun removeAllViews(webView: WebView)
+    fun clearWebChromeClient(webView: WebView)
+    fun clearWebViewClient(webView: WebView)
+    fun destroy(webView: WebView)
+}
+
+internal object AndroidNativeGameWebViewCleanup : NativeGameWebViewCleanup {
+    override fun stopLoading(webView: WebView) = webView.stopLoading()
+
+    override fun loadBlank(webView: WebView) = webView.loadUrl("about:blank")
+
+    override fun clearHistory(webView: WebView) = webView.clearHistory()
+
+    override fun removeAllViews(webView: WebView) = webView.removeAllViews()
+
+    override fun clearWebChromeClient(webView: WebView) {
+        webView.webChromeClient = null
+    }
+
+    override fun clearWebViewClient(webView: WebView) {
+        webView.webViewClient = WebViewClient()
+    }
+
+    override fun destroy(webView: WebView) = webView.destroy()
+}
+
 /**
  * Owns a native game [WebView] mounted as the final child of [contentRoot].
  *
@@ -21,6 +51,7 @@ class ActivityWebViewHost(
     private val eventSink: NativeGameWebViewEventSink,
     private val webViewFactory: (Context) -> WebView = { WebView(it) },
     private val configureWebView: (WebView, WebViewClient) -> Unit = NativeGameWebViewConfigurator::configure,
+    private val webViewCleanup: NativeGameWebViewCleanup = AndroidNativeGameWebViewCleanup,
 ) {
     private val state = NativeGameWebViewHostState()
     private var overlay: FrameLayout? = null
@@ -157,17 +188,17 @@ class ActivityWebViewHost(
         hasValidBounds = false
 
         if (!rendererGone) {
-            bestEffort { activeWebView?.stopLoading() }
+            bestEffort { activeWebView?.let(webViewCleanup::stopLoading) }
             // The destroying state makes client callbacks reject this generation.
-            bestEffort { activeWebView?.loadUrl("about:blank") }
-            bestEffort { activeWebView?.clearHistory() }
-            bestEffort { activeWebView?.removeAllViews() }
+            bestEffort { activeWebView?.let(webViewCleanup::loadBlank) }
+            bestEffort { activeWebView?.let(webViewCleanup::clearHistory) }
+            bestEffort { activeWebView?.let(webViewCleanup::removeAllViews) }
         }
         bestEffort { activeOverlay?.removeView(activeWebView) }
         bestEffort { contentRoot.removeView(activeOverlay) }
-        bestEffort { activeWebView?.webChromeClient = null }
-        bestEffort { activeWebView?.webViewClient = WebViewClient() }
-        bestEffort { activeWebView?.destroy() }
+        bestEffort { activeWebView?.let(webViewCleanup::clearWebChromeClient) }
+        bestEffort { activeWebView?.let(webViewCleanup::clearWebViewClient) }
+        bestEffort { activeWebView?.let(webViewCleanup::destroy) }
 
         overlay = null
         webView = null
@@ -184,9 +215,9 @@ class ActivityWebViewHost(
         bestEffort { createdOverlay?.visibility = View.INVISIBLE }
         bestEffort { createdOverlay?.removeView(createdWebView) }
         bestEffort { contentRoot.removeView(createdOverlay) }
-        bestEffort { createdWebView?.webChromeClient = null }
-        bestEffort { createdWebView?.webViewClient = WebViewClient() }
-        bestEffort { createdWebView?.destroy() }
+        bestEffort { createdWebView?.let(webViewCleanup::clearWebChromeClient) }
+        bestEffort { createdWebView?.let(webViewCleanup::clearWebViewClient) }
+        bestEffort { createdWebView?.let(webViewCleanup::destroy) }
         overlay = null
         webView = null
         hasValidBounds = false

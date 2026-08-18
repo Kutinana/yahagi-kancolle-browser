@@ -1,8 +1,7 @@
 package app.yahagi.kancollebrowser.nativewebview
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
@@ -39,7 +38,25 @@ class ActivityWebViewHostTest {
         val flutterChild = View(context)
         root.addView(flutterChild)
         val events = mutableListOf<String>()
-        host = ActivityWebViewHost(context, root, recordingSink(events))
+        val configurationActions = mutableListOf<NativeGameWebViewConfigurationAction>()
+        var initialUserAgent = ""
+        var initialCacheMode = 0
+        var initialFileAccessFromFileUrls = false
+        var initialUniversalAccessFromFileUrls = false
+        host = ActivityWebViewHost(
+            context = context,
+            contentRoot = root,
+            eventSink = recordingSink(events),
+            configureWebView = { webView, client ->
+                initialUserAgent = webView.settings.userAgentString
+                initialCacheMode = webView.settings.cacheMode
+                initialFileAccessFromFileUrls = webView.settings.allowFileAccessFromFileURLs
+                initialUniversalAccessFromFileUrls = webView.settings.allowUniversalAccessFromFileURLs
+                NativeGameWebViewConfigurator.configure(webView, client) { action ->
+                    configurationActions += action
+                }
+            },
+        )
 
         val generation = requireNotNull(host!!.create())
         val overlay = root.getChildAt(1) as FrameLayout
@@ -55,11 +72,23 @@ class ActivityWebViewHostTest {
         assertEquals(ViewGroup.LayoutParams.MATCH_PARENT, webView.layoutParams.height)
         assertTrue(webView.settings.javaScriptEnabled)
         assertTrue(webView.settings.domStorageEnabled)
-        assertTrue(webView.settings.databaseEnabled)
         assertFalse(webView.settings.mediaPlaybackRequiresUserGesture)
-        assertEquals(Color.BLACK, (webView.background as ColorDrawable).color)
         assertEquals(View.LAYER_TYPE_HARDWARE, webView.layerType)
         assertTrue(CookieManager.getInstance().acceptCookie())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            assertTrue(CookieManager.getInstance().acceptThirdPartyCookies(webView))
+        }
+        assertEquals(initialUserAgent, webView.settings.userAgentString)
+        assertEquals(initialCacheMode, webView.settings.cacheMode)
+        assertEquals(initialFileAccessFromFileUrls, webView.settings.allowFileAccessFromFileURLs)
+        assertEquals(
+            initialUniversalAccessFromFileUrls,
+            webView.settings.allowUniversalAccessFromFileURLs,
+        )
+        assertTrue(NativeGameWebViewConfigurationAction.DATABASE_ENABLED in configurationActions)
+        assertTrue(NativeGameWebViewConfigurationAction.BACKGROUND_BLACK in configurationActions)
+        assertTrue(NativeGameWebViewConfigurationAction.WEB_VIEW_CLIENT_SET in configurationActions)
+        assertTrue(NativeGameWebViewConfigurationAction.WEB_CHROME_CLIENT_SET in configurationActions)
         assertEquals(listOf("created:$generation"), events)
     }
 
@@ -105,16 +134,53 @@ class ActivityWebViewHostTest {
     }
 
     @Test
-    fun renderGoneEntryCleansUpInvalidWebView() = onMain {
+    fun clientRenderGoneEmitsBeforeHostCleanupAndDestroyed() = onMain {
         val root = sizedRoot()
         val events = mutableListOf<String>()
-        host = ActivityWebViewHost(context, root, recordingSink(events))
+        var client: NativeGameWebViewClient? = null
+        host = ActivityWebViewHost(
+            context = context,
+            contentRoot = root,
+            eventSink = recordingSink(events),
+            configureWebView = { webView, suppliedClient ->
+                client = suppliedClient as NativeGameWebViewClient
+                NativeGameWebViewConfigurator.configure(webView, suppliedClient)
+            },
+        )
         val generation = requireNotNull(host!!.create())
 
-        assertTrue(host!!.onRenderProcessGone(generation))
+        assertTrue(client!!.onRenderProcessGone(requireNotNull(host!!.currentWebView), null))
 
         assertEquals(0, root.childCount)
+        assertEquals(
+            listOf("created:$generation", "gone:$generation:false", "destroyed:$generation"),
+            events,
+        )
+    }
+
+    @Test
+    fun destroyContinuesAfterCleanupOperationThrows() = onMain {
+        val root = sizedRoot()
+        val events = mutableListOf<String>()
+        val cleanupCalls = mutableListOf<String>()
+        host = ActivityWebViewHost(
+            context = context,
+            contentRoot = root,
+            eventSink = recordingSink(events),
+            webViewCleanup = throwingCleanup(cleanupCalls),
+        )
+        val generation = requireNotNull(host!!.create())
+
+        assertTrue(host!!.destroy(generation))
+
+        assertEquals(0, root.childCount)
+        assertNull(host!!.currentWebView)
+        assertNull(host!!.currentGeneration)
         assertEquals(listOf("created:$generation", "destroyed:$generation"), events)
+        assertEquals(
+            listOf("stop", "blank", "history", "contents", "chrome", "client", "destroy"),
+            cleanupCalls,
+        )
     }
 
     @Test
@@ -176,6 +242,43 @@ class ActivityWebViewHostTest {
         is WebView -> 1
         is ViewGroup -> (0 until view.childCount).sumOf { countWebViews(view.getChildAt(it)) }
         else -> 0
+    }
+
+    private fun throwingCleanup(calls: MutableList<String>) = object : NativeGameWebViewCleanup {
+        override fun stopLoading(webView: WebView) {
+            calls += "stop"
+            throw IllegalStateException("stop failure")
+        }
+
+        override fun loadBlank(webView: WebView) {
+            calls += "blank"
+            throw IllegalStateException("blank failure")
+        }
+
+        override fun clearHistory(webView: WebView) {
+            calls += "history"
+            webView.clearHistory()
+        }
+
+        override fun removeAllViews(webView: WebView) {
+            calls += "contents"
+            webView.removeAllViews()
+        }
+
+        override fun clearWebChromeClient(webView: WebView) {
+            calls += "chrome"
+            webView.webChromeClient = null
+        }
+
+        override fun clearWebViewClient(webView: WebView) {
+            calls += "client"
+            webView.webViewClient = android.webkit.WebViewClient()
+        }
+
+        override fun destroy(webView: WebView) {
+            calls += "destroy"
+            webView.destroy()
+        }
     }
 
     private fun recordingSink(events: MutableList<String>) = object : NativeGameWebViewEventSink {
