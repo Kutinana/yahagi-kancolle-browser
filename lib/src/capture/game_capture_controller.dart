@@ -22,6 +22,8 @@ final class GameCaptureController extends ChangeNotifier {
   Future<void>? _configurationDrain;
   int _configurationRevision = 0;
   int _processedRevision = 0;
+  int _streamEpoch = 0;
+  bool _streamHealthy = false;
   final Map<int, Completer<void>> _configurationWaiters =
       <int, Completer<void>>{};
   bool _desiredEnabled = false;
@@ -102,6 +104,8 @@ final class GameCaptureController extends ChangeNotifier {
       final script = _script;
 
       if (!identical(_port, port)) {
+        _streamEpoch += 1;
+        _streamHealthy = false;
         try {
           await _subscription?.cancel();
         } catch (error, stackTrace) {
@@ -109,16 +113,42 @@ final class GameCaptureController extends ChangeNotifier {
             'Capture subscription cancellation failed: $error\n$stackTrace',
           );
         }
-        if (!_isCurrentConfiguration(revision, port)) {
+        if (!_isCurrentRequest(revision, port)) {
           _completeConfigurationThrough(revision);
           continue;
         }
         _port = port;
-        _subscription = port?.events.listen((event) {
-          if (identical(_port, port)) _onEvent(event);
-        });
+        _subscription = null;
         _configuredEnabled = null;
         _configuredScript = null;
+        if (port != null) {
+          final streamEpoch = _streamEpoch;
+          _streamHealthy = true;
+          try {
+            _subscription = port.events.listen(
+              (event) {
+                if (_isCurrentStream(port, streamEpoch)) _onEvent(event);
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                _handleStreamTerminal(port, streamEpoch, error);
+              },
+              onDone: () {
+                _handleStreamTerminal(
+                  port,
+                  streamEpoch,
+                  StateError('capture event stream closed'),
+                );
+              },
+            );
+          } catch (error) {
+            _handleStreamTerminal(port, streamEpoch, error);
+          }
+          if (!_streamHealthy) {
+            _processedRevision = revision;
+            _completeConfigurationThrough(revision);
+            continue;
+          }
+        }
       }
 
       await _applyConfiguration(revision, port, enabled, script);
@@ -185,9 +215,33 @@ final class GameCaptureController extends ChangeNotifier {
   }
 
   bool _isCurrentConfiguration(int revision, GameCapturePort? port) {
+    return _isCurrentRequest(revision, port) &&
+        (port == null || (identical(port, _port) && _streamHealthy));
+  }
+
+  bool _isCurrentRequest(int revision, GameCapturePort? port) {
     return !_disposed &&
         revision == _configurationRevision &&
         identical(port, _desiredPort);
+  }
+
+  bool _isCurrentStream(GameCapturePort port, int epoch) {
+    return !_disposed &&
+        _streamHealthy &&
+        epoch == _streamEpoch &&
+        identical(port, _port) &&
+        identical(port, _desiredPort);
+  }
+
+  void _handleStreamTerminal(GameCapturePort port, int epoch, Object error) {
+    if (!_isCurrentStream(port, epoch)) return;
+    _streamHealthy = false;
+    _configuredEnabled = null;
+    _configuredScript = null;
+    _state = GameCaptureState.error;
+    _errorMessage = _safeError(error);
+    _completeConfigurationThrough(_configurationRevision);
+    notifyListeners();
   }
 
   void _completeConfigurationThrough(int revision) {
@@ -236,6 +290,8 @@ final class GameCaptureController extends ChangeNotifier {
     _configurationRevision += 1;
     _desiredPort = null;
     _port = null;
+    _streamEpoch += 1;
+    _streamHealthy = false;
     _configuredEnabled = null;
     for (final waiter in _configurationWaiters.values) {
       waiter.complete();

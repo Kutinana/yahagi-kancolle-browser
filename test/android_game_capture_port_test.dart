@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +13,38 @@ void main() {
 
   tearDown(() {
     messenger.setMockMethodCallHandler(channel, null);
+    MethodChannelGameCapturePort.resetArbitersForTesting();
   });
+
+  test(
+    'replacement port owns the final cross-instance configuration',
+    () async {
+      final oldConfigure = Completer<void>();
+      final enabledCalls = <bool>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'configure') {
+          final enabled =
+              (call.arguments as Map<Object?, Object?>)['enabled']! as bool;
+          enabledCalls.add(enabled);
+          if (enabledCalls.length == 1) await oldConfigure.future;
+        }
+        return null;
+      });
+      final oldPort = MethodChannelGameCapturePort(channel: channel);
+      addTearDown(oldPort.dispose);
+      final oldRequest = oldPort.configure(enabled: true, script: 'old');
+      await Future<void>.delayed(Duration.zero);
+
+      final newPort = MethodChannelGameCapturePort(channel: channel);
+      addTearDown(newPort.dispose);
+      final newRequest = newPort.configure(enabled: false, script: 'new');
+      await oldPort.configure(enabled: true, script: 'stale');
+      oldConfigure.complete();
+      await Future.wait(<Future<void>>[oldRequest, newRequest]);
+
+      expect(enabledCalls, <bool>[true, false]);
+    },
+  );
 
   test('queries support and configures the native bridge', () async {
     final calls = <MethodCall>[];

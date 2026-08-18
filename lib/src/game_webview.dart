@@ -397,6 +397,37 @@ final class GameWebViewCaptureUpdateCoordinator {
   }
 }
 
+@visibleForTesting
+final class GameWebViewStartupCoordinator {
+  Future<void>? _tail;
+  Future<void>? _navigation;
+  bool _navigationSucceeded = false;
+
+  Future<void> schedule(Future<void> Function() operation) {
+    final previous = _tail ?? Future<void>.value();
+    final scheduled = previous
+        .catchError((Object _, StackTrace _) {})
+        .then<void>((_) => operation());
+    _tail = scheduled.catchError((Object _, StackTrace _) {});
+    return scheduled;
+  }
+
+  Future<void> navigateOnce(Future<void> Function() navigate) {
+    if (_navigationSucceeded) return Future<void>.value();
+    final pending = _navigation;
+    if (pending != null) return pending;
+
+    late final Future<void> operation;
+    operation = Future<void>.sync(navigate)
+        .then<void>((_) => _navigationSucceeded = true)
+        .whenComplete(() {
+          if (identical(_navigation, operation)) _navigation = null;
+        });
+    _navigation = operation;
+    return operation;
+  }
+}
+
 final class _GameWebViewCaptureUpdate {
   const _GameWebViewCaptureUpdate({
     required this.revision,
@@ -452,6 +483,8 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   final GameNavigationPolicy _navigationPolicy = GameNavigationPolicy();
   final GameWebViewCaptureUpdateCoordinator _captureUpdates =
       GameWebViewCaptureUpdateCoordinator();
+  final GameWebViewStartupCoordinator _startupCoordinator =
+      GameWebViewStartupCoordinator();
   late CaptureMode _activeCaptureMode;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
   static const _scaleChannel = MethodChannel(
@@ -462,6 +495,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   int _startupEpoch = 0;
   int _bindingEpoch = 0;
   bool _disposed = false;
+  bool _hasReachedReady = false;
 
   GameStartupState _startupState = GameStartupState.loadingSettings;
   String _startupErrorMessage = '';
@@ -651,13 +685,33 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     _frameRateRuntimeController?.onLifecycleChanged(state);
   }
 
-  Future<void> _executeStartupSequence() async {
+  Future<void> _executeStartupSequence() {
     final startupEpoch = ++_startupEpoch;
     final orchestrator = _bindings.startupOrchestrator;
     final compatibilityReady = _compatibilityReady;
     final frameRateReady = _frameRateReady;
     final networkSettings = widget.networkSettingsController.settings;
     final browserController = widget.browserController;
+    return _startupCoordinator.schedule(
+      () => _runStartupSequence(
+        startupEpoch: startupEpoch,
+        orchestrator: orchestrator,
+        compatibilityReady: compatibilityReady,
+        frameRateReady: frameRateReady,
+        networkSettings: networkSettings,
+        browserController: browserController,
+      ),
+    );
+  }
+
+  Future<void> _runStartupSequence({
+    required int startupEpoch,
+    required GameSurfaceStartupOrchestrator orchestrator,
+    required Future<void> compatibilityReady,
+    required Future<void> frameRateReady,
+    required NetworkSettings networkSettings,
+    required GameBrowserController browserController,
+  }) async {
     try {
       if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
       setState(() => _startupState = GameStartupState.applyingNetwork);
@@ -692,9 +746,17 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         isActive: () => _isCurrentStartup(startupEpoch, orchestrator),
         navigate: () async {
           if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
-          await _webViewController.loadRequest(initialAddress);
+          await _startupCoordinator.navigateOnce(
+            () => _webViewController.loadRequest(initialAddress),
+          );
         },
       );
+      if (_isCurrentStartup(startupEpoch, orchestrator) && _hasReachedReady) {
+        await orchestrator.attachAudioPortOnce();
+        if (_isCurrentStartup(startupEpoch, orchestrator)) {
+          setState(() => _startupState = GameStartupState.ready);
+        }
+      }
     } catch (error, stackTrace) {
       debugPrint('Game WebView startup failed: $error\n$stackTrace');
       if (_isCurrentStartup(startupEpoch, orchestrator)) {
@@ -739,6 +801,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       if (!_isCurrentNavigation(navigationEpoch)) return;
 
       if (_startupState == GameStartupState.loadingGame) {
+        _hasReachedReady = true;
         setState(() => _startupState = GameStartupState.ready);
       }
       await _frameRateRuntimeController?.onPageReady(

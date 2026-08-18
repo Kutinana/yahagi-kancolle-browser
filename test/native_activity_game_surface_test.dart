@@ -231,6 +231,7 @@ void main() {
     );
     await tester.pump();
     await tester.pump();
+    fixture.toolbarController.collapse();
     fixture.port.calls.clear();
 
     fixture.port.addEvent(
@@ -287,6 +288,40 @@ void main() {
     await tester.pump();
     expect(fixture.port.calls.last, 'visible:false');
     fixture.toolbarController.collapse();
+  });
+
+  testWidgets('dispose queues hide behind an in-flight show before destroy', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    final show = Completer<void>();
+    fixture.port.visibilityCompleters.add(show);
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+    fixture.toolbarController.collapse();
+    fixture.port.calls.clear();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    expect(fixture.port.calls, isEmpty);
+
+    show.complete();
+    await tester.pump();
+    await tester.pump();
+    await _pumpUntilDestroyed(tester, fixture.port);
+    expect(
+      fixture.port.calls,
+      containsAllInOrder(<String>['visible:false', 'cancel', 'destroy']),
+    );
   });
 
   testWidgets('show failure retries, keeps an error overlay, and can recover', (
@@ -494,6 +529,7 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(nextOrchestrator.prepareCaptureCalls, 2);
+    expect(nextOrchestrator.applyNetworkCalls, 1);
     expect(
       fixture.port.calls.where((call) => call.startsWith('load:')),
       hasLength(loadCallsBeforeUpdate),
@@ -528,6 +564,35 @@ void main() {
       expect(fixture.orchestrator.disposeCalls, 1);
     },
   );
+
+  testWidgets('hot update retries a failed in-flight initial navigation', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    final oldLoad = Completer<void>();
+    fixture.port.loadCompleter = oldLoad;
+    fixture.port.loadFailure = StateError('old load failed');
+    await fixture.pump(tester);
+    await _pumpUntil(
+      tester,
+      () =>
+          fixture.port.calls.where((call) => call.startsWith('load:')).length ==
+          1,
+    );
+    final nextOrchestrator = _FakeStartupOrchestrator();
+
+    await fixture.pump(tester, startupOrchestrator: nextOrchestrator);
+    oldLoad.complete();
+    await _pumpUntil(
+      tester,
+      () =>
+          fixture.port.calls.where((call) => call.startsWith('load:')).length ==
+          2,
+    );
+
+    expect(nextOrchestrator.applyNetworkCalls, 1);
+  });
 
   testWidgets('hot update replays a pending capture revision', (tester) async {
     final captureModeController = await CaptureModeController.load(
@@ -1269,6 +1334,53 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('orchestrator cleanup does not delay native destroy', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    fixture.orchestrator.disposeCompleter = Completer<void>();
+    await fixture.pump(tester, cleanupTimeout: const Duration(seconds: 1));
+    await tester.pump();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.pump();
+
+    expect(fixture.port.calls, contains('destroy'));
+    expect(fixture.orchestrator.disposeCompleter!.isCompleted, isFalse);
+    fixture.orchestrator.disposeCompleter!.complete();
+  });
+
+  testWidgets('native dispose timeout is bounded and contains a late error', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    fixture.port.disposeCompleter = Completer<void>();
+    await fixture.pump(tester, cleanupTimeout: const Duration(milliseconds: 1));
+    await tester.pump();
+
+    final previousDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {};
+    try {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 2));
+      await tester.pump(const Duration(milliseconds: 2));
+      expect(
+        fixture.port.calls.where((call) => call == 'destroy'),
+        hasLength(1),
+      );
+      fixture.port.disposeFailure = StateError('late destroy failure');
+      fixture.port.disposeCompleter!.complete();
+      await tester.pump();
+    } finally {
+      debugPrint = previousDebugPrint;
+    }
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a cancellation error still allows native destruction', (
     tester,
   ) async {
@@ -1561,9 +1673,11 @@ final class _RecordingCapturePort implements GameCapturePort {
   _RecordingCapturePort(this.calls);
 
   final List<String> calls;
+  final StreamController<CapturedApiEvent> _events =
+      StreamController<CapturedApiEvent>.broadcast();
 
   @override
-  Stream<CapturedApiEvent> get events => const Stream<CapturedApiEvent>.empty();
+  Stream<CapturedApiEvent> get events => _events.stream;
 
   @override
   Future<bool> isSupported() async {
@@ -1578,7 +1692,7 @@ final class _RecordingCapturePort implements GameCapturePort {
   }) async => calls.add('capture.configure:$enabled');
 
   @override
-  void dispose() {}
+  void dispose() => unawaited(_events.close());
 }
 
 final class _BlockingCapturePort implements GameCapturePort {
@@ -1586,9 +1700,11 @@ final class _BlockingCapturePort implements GameCapturePort {
 
   final Completer<void> firstConfigure;
   final List<bool> enabledCalls = <bool>[];
+  final StreamController<CapturedApiEvent> _events =
+      StreamController<CapturedApiEvent>.broadcast();
 
   @override
-  Stream<CapturedApiEvent> get events => const Stream<CapturedApiEvent>.empty();
+  Stream<CapturedApiEvent> get events => _events.stream;
 
   @override
   Future<bool> isSupported() async => true;
@@ -1603,7 +1719,7 @@ final class _BlockingCapturePort implements GameCapturePort {
   }
 
   @override
-  void dispose() {}
+  void dispose() => unawaited(_events.close());
 }
 
 final class _RecordingAudioPort implements GameAudioPort {
@@ -1754,7 +1870,10 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Completer<void>? cancelCompleter;
   Object? cancelFailure;
   Object? disposeFailure;
+  Completer<void>? disposeCompleter;
   Object? reloadFailure;
+  Completer<void>? loadCompleter;
+  Object? loadFailure;
   int successfulReloadCalls = 0;
   final List<Completer<void>> visibilityCompleters = <Completer<void>>[];
   int visibilityFailuresRemaining = 0;
@@ -1800,6 +1919,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Future<void> dispose() async {
     calls.add('destroy');
     if (!destroyed.isCompleted) destroyed.complete();
+    await disposeCompleter?.future;
     if (disposeFailure case final failure?) throw failure;
   }
 
@@ -1823,7 +1943,15 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Future<void> goBack() async {}
 
   @override
-  Future<void> loadUri(Uri uri) async => calls.add('load:${uri.host}');
+  Future<void> loadUri(Uri uri) async {
+    calls.add('load:${uri.host}');
+    final blocker = loadCompleter;
+    loadCompleter = null;
+    await blocker?.future;
+    final failure = loadFailure;
+    loadFailure = null;
+    if (failure != null) throw failure;
+  }
 
   @override
   Future<void> reload() async {

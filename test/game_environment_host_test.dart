@@ -29,6 +29,58 @@ import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/safety_settings_store.dart';
 
 void main() {
+  test(
+    'GameWebView startup serializes hot updates and keeps a successful load',
+    () async {
+      final firstStage = Completer<void>();
+      final coordinator = GameWebViewStartupCoordinator();
+      final calls = <String>[];
+
+      final first = coordinator.schedule(() async {
+        calls.add('old-network');
+        await firstStage.future;
+        await coordinator.navigateOnce(() async => calls.add('old-load'));
+      });
+      final second = coordinator.schedule(() async {
+        calls.add('new-network');
+        await coordinator.navigateOnce(() async => calls.add('new-load'));
+      });
+
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, <String>['old-network']);
+      firstStage.complete();
+      await Future.wait(<Future<void>>[first, second]);
+
+      expect(calls, <String>['old-network', 'old-load', 'new-network']);
+    },
+  );
+
+  test(
+    'GameWebView startup retries navigation after an old load fails',
+    () async {
+      final firstLoad = Completer<void>();
+      final coordinator = GameWebViewStartupCoordinator();
+      var loadCalls = 0;
+
+      final first = coordinator.schedule(() async {
+        await coordinator.navigateOnce(() async {
+          loadCalls += 1;
+          await firstLoad.future;
+          throw StateError('old load failed');
+        });
+      });
+      final second = coordinator.schedule(() async {
+        await coordinator.navigateOnce(() async => loadCalls += 1);
+      });
+
+      firstLoad.complete();
+      await expectLater(first, throwsStateError);
+      await second;
+
+      expect(loadCalls, 2);
+    },
+  );
+
   test('GameWebView capture updates reload only the final revision', () async {
     final configuration = Completer<void>();
     var configureCalls = 0;

@@ -162,7 +162,9 @@ final class _NativeActivityGameSurfaceState
   int _processedVisibilityRevision = 0;
   bool _actualVisible = false;
   bool _forceVisibilityWrite = false;
-  bool _hasNavigated = false;
+  bool _navigationSucceeded = false;
+  Future<void>? _navigationFuture;
+  Future<void>? _bootstrapTail;
   bool _visibilityFatalCleanupStarted = false;
   int _processedCaptureRevision = 0;
   CaptureMode? _activeCaptureMode;
@@ -250,11 +252,7 @@ final class _NativeActivityGameSurfaceState
       final generationId = _generationId;
       if (port != null && generationId != null) {
         unawaited(
-          _restartBootstrapAfterDependencyChange(
-            port,
-            generationId,
-            _operationEpoch,
-          ),
+          _schedulePostCreateBootstrap(port, generationId, _operationEpoch),
         );
       }
     }
@@ -305,7 +303,7 @@ final class _NativeActivityGameSurfaceState
       _replayPendingEvents(port, generationId);
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
 
-      await _runPostCreateBootstrap(port, generationId, operationEpoch);
+      await _schedulePostCreateBootstrap(port, generationId, operationEpoch);
     } catch (error, stackTrace) {
       debugPrint('Native game surface startup failed: $error\n$stackTrace');
       if (_matchesAttempt(port, operationEpoch)) {
@@ -314,12 +312,34 @@ final class _NativeActivityGameSurfaceState
     }
   }
 
+  Future<void> _schedulePostCreateBootstrap(
+    NativeActivityGameWebViewPort port,
+    int generationId,
+    int operationEpoch,
+  ) {
+    final previous = _bootstrapTail ?? Future<void>.value();
+    final operation = previous
+        .catchError((Object _, StackTrace _) {})
+        .then<void>((_) {
+          if (!_matchesGeneration(port, generationId, operationEpoch)) {
+            return Future<void>.value();
+          }
+          return _runPostCreateBootstrap(port, generationId, operationEpoch);
+        });
+    _bootstrapTail = operation;
+    return operation;
+  }
+
   Future<void> _runPostCreateBootstrap(
     NativeActivityGameWebViewPort port,
     int generationId,
     int operationEpoch,
   ) async {
+    final orchestrator = _startupOrchestrator;
+    final wasReady = _startupState == GameStartupState.ready;
     try {
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
+      _setStartupState(GameStartupState.applyingNetwork);
       final bounds = _latestBounds;
       if (bounds != null) await port.setBounds(bounds);
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
@@ -329,13 +349,13 @@ final class _NativeActivityGameSurfaceState
       await WidgetsBinding.instance.endOfFrame;
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
       try {
-        await _startupOrchestrator.attachFrameRatePlatformPort();
+        await orchestrator.attachFrameRatePlatformPort();
       } catch (error, stackTrace) {
         debugPrint('Frame-rate platform port unavailable: $error\n$stackTrace');
       }
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
 
-      final result = await _startupOrchestrator.applyNetworkSettings();
+      final result = await orchestrator.applyNetworkSettings();
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
       final settings = widget.networkSettingsController?.settings;
       if (!result.success && settings?.mode != NetworkMode.system) {
@@ -352,21 +372,24 @@ final class _NativeActivityGameSurfaceState
               widget.browserController.mode != GameBrowserMode.localPrototype
           ? address
           : GameLaunchConfig.dmmGameEntry;
-      await _startupOrchestrator.runCaptureStartup(
+      await orchestrator.runCaptureStartup(
         waitForSurface: () async {
           await WidgetsBinding.instance.endOfFrame;
         },
         isActive: () => _matchesGeneration(port, generationId, operationEpoch),
         navigate: () async {
           if (_matchesGeneration(port, generationId, operationEpoch)) {
-            // Record the navigation side effect before awaiting its platform
-            // response so a dependency hot-swap cannot issue it twice.
-            _hasNavigated = true;
-            await port.loadUri(initialAddress);
+            await _navigateInitialPage(port, initialAddress);
           }
         },
       );
       if (!_matchesGeneration(port, generationId, operationEpoch)) return;
+      if (wasReady) {
+        await orchestrator.attachAudioPortOnce();
+        if (_matchesGeneration(port, generationId, operationEpoch)) {
+          _setStartupState(GameStartupState.ready);
+        }
+      }
     } catch (error, stackTrace) {
       debugPrint('Native game surface startup failed: $error\n$stackTrace');
       if (_matchesAttempt(port, operationEpoch)) {
@@ -375,37 +398,26 @@ final class _NativeActivityGameSurfaceState
     }
   }
 
-  Future<void> _restartBootstrapAfterDependencyChange(
+  Future<void> _navigateInitialPage(
     NativeActivityGameWebViewPort port,
-    int generationId,
-    int operationEpoch,
-  ) async {
-    try {
-      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
-      if (!_hasNavigated) {
-        _setStartupState(GameStartupState.applyingNetwork);
-        await _runPostCreateBootstrap(port, generationId, operationEpoch);
-        return;
-      }
-      try {
-        await _startupOrchestrator.attachFrameRatePlatformPort();
-      } catch (error, stackTrace) {
-        debugPrint('Frame-rate platform port unavailable: $error\n$stackTrace');
-      }
-      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
-      await _startupOrchestrator.prepareCapture();
-      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
-      if (_startupState == GameStartupState.ready) {
-        await _startupOrchestrator.attachAudioPortOnce();
-      }
-    } catch (error, stackTrace) {
-      debugPrint(
-        'Native game surface dependency update failed: $error\n$stackTrace',
-      );
-      if (_matchesGeneration(port, generationId, operationEpoch)) {
-        _reportPageError('游戏页面依赖更新失败：${error.runtimeType}');
-      }
-    }
+    Uri address,
+  ) {
+    if (_navigationSucceeded) return Future<void>.value();
+    final existing = _navigationFuture;
+    if (existing != null) return existing;
+    late final Future<void> operation;
+    operation = port
+        .loadUri(address)
+        .then<void>((_) {
+          _navigationSucceeded = true;
+        })
+        .whenComplete(() {
+          if (identical(_navigationFuture, operation)) {
+            _navigationFuture = null;
+          }
+        });
+    _navigationFuture = operation;
+    return operation;
   }
 
   void _replayPendingEvents(
@@ -662,8 +674,7 @@ final class _NativeActivityGameSurfaceState
     if (identical(_visibilitySyncFuture, operation)) {
       _visibilitySyncFuture = null;
     }
-    if (_active &&
-        !_visibilityFatalCleanupStarted &&
+    if (!_visibilityFatalCleanupStarted &&
         (_forceVisibilityWrite ||
             _processedVisibilityRevision < _visibilityRevision)) {
       _observeVisibilityUpdate(_requestVisibility());
@@ -923,12 +934,11 @@ final class _NativeActivityGameSurfaceState
   void dispose() {
     _active = false;
     _invalidateOperations(fatal: true);
-    _visibilityRevision += 1;
+    _desiredVisible = false;
     widget.networkSettingsController?.removeListener(_onNetworkSettingsChanged);
     widget.captureModeController?.removeListener(_onCaptureModeChanged);
     _pendingEvents.clear();
     final port = _port;
-    _port = null;
     if (port == null) {
       if (!_visibilityFatalCleanupStarted) {
         unawaited(
@@ -939,41 +949,58 @@ final class _NativeActivityGameSurfaceState
         );
       }
     } else {
-      _sendHideIntent(port);
-      try {
-        widget.browserController.detachPort(port);
-      } catch (error, stackTrace) {
-        debugPrint(
-          'Native game surface controller detach failed: '
-          '$error\n$stackTrace',
-        );
-      }
       final subscription = _eventSubscription;
       _eventSubscription = null;
-      unawaited(_disposeNativeResources(subscription, port));
+      final orchestrator = _startupOrchestrator;
+      final browserController = widget.browserController;
+      final hide = _requestVisibility(force: true);
+      unawaited(
+        _disposeAfterVisibility(
+          hide,
+          subscription,
+          port,
+          orchestrator,
+          browserController,
+        ),
+      );
     }
     super.dispose();
   }
 
-  void _sendHideIntent(NativeActivityGameWebViewPort port) {
+  Future<void> _disposeAfterVisibility(
+    Future<void> hide,
+    StreamSubscription<NativeGameWebViewEvent>? subscription,
+    NativeActivityGameWebViewPort port,
+    GameSurfaceStartupOrchestrator orchestrator,
+    GameBrowserController browserController,
+  ) async {
+    await _runBoundedCleanup(
+      () => hide,
+      'final visibility',
+      timeout: _cleanupTimeout,
+    );
+    if (_visibilityFatalCleanupStarted) return;
+    _port = null;
     try {
-      unawaited(
-        port.setVisible(false).catchError((
-          Object error,
-          StackTrace stackTrace,
-        ) {
-          debugPrint('Native game surface hide failed: $error\n$stackTrace');
-        }),
-      );
+      browserController.detachPort(port);
     } catch (error, stackTrace) {
-      debugPrint('Native game surface hide failed: $error\n$stackTrace');
+      debugPrint(
+        'Native game surface controller detach failed: '
+        '$error\n$stackTrace',
+      );
     }
+    await _disposeNativeResources(
+      subscription,
+      port,
+      orchestrator: orchestrator,
+    );
   }
 
   Future<void> _disposeNativeResources(
     StreamSubscription<NativeGameWebViewEvent>? subscription,
-    NativeActivityGameWebViewPort port,
-  ) async {
+    NativeActivityGameWebViewPort port, {
+    GameSurfaceStartupOrchestrator? orchestrator,
+  }) async {
     if (subscription != null) {
       await _runBoundedCleanup(
         subscription.cancel,
@@ -981,15 +1008,16 @@ final class _NativeActivityGameSurfaceState
         timeout: _cleanupTimeout,
       );
     }
-    await _disposeStartupOrchestrator(
-      _startupOrchestrator,
+    final startupCleanup = _disposeStartupOrchestrator(
+      orchestrator ?? _startupOrchestrator,
       timeout: _cleanupTimeout,
     );
-    try {
-      await port.dispose();
-    } catch (error, stackTrace) {
-      debugPrint('Native game surface destroy failed: $error\n$stackTrace');
-    }
+    final nativeCleanup = _runBoundedCleanup(
+      port.dispose,
+      'destroy',
+      timeout: _cleanupTimeout,
+    );
+    await Future.wait(<Future<void>>[startupCleanup, nativeCleanup]);
   }
 
   Future<void> _disposeStartupOrchestrator(

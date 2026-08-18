@@ -178,6 +178,75 @@ void main() {
         expect(controller.capturedCount, 2);
       },
     );
+
+    test(
+      'synchronous event stream listen failure completes attach safely',
+      () async {
+        final port = _FakeGameCapturePort(
+          supported: true,
+          eventsFailure: StateError('listen failed'),
+        );
+        final controller = GameCaptureController();
+        addTearDown(controller.dispose);
+
+        await controller.attach(port, enabled: true);
+
+        expect(controller.state, GameCaptureState.error);
+        expect(port.configurations, isEmpty);
+        expect(controller.errorMessage, contains('StateError'));
+      },
+    );
+
+    test('event stream errors become a terminal capture error', () async {
+      final port = _FakeGameCapturePort(supported: true);
+      final controller = GameCaptureController();
+      addTearDown(() async {
+        controller.dispose();
+        await port.close();
+      });
+      await controller.attach(port, enabled: true);
+
+      port.emitError(StateError('stream failed'));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.state, GameCaptureState.error);
+      expect(controller.errorMessage, contains('StateError'));
+    });
+
+    test('event stream terminal releases an in-flight attach waiter', () async {
+      final configureBlocker = Completer<void>();
+      final port = _FakeGameCapturePort(
+        supported: true,
+        configureBlocker: configureBlocker,
+      );
+      final controller = GameCaptureController();
+      addTearDown(() async {
+        if (!configureBlocker.isCompleted) configureBlocker.complete();
+        controller.dispose();
+        await port.close();
+      });
+      final attach = controller.attach(port, enabled: true);
+      await Future<void>.delayed(Duration.zero);
+
+      port.emitError(StateError('stream failed during configure'));
+      await attach.timeout(const Duration(milliseconds: 100));
+
+      expect(controller.state, GameCaptureState.error);
+      configureBlocker.complete();
+    });
+
+    test('event stream completion becomes a terminal capture error', () async {
+      final port = _FakeGameCapturePort(supported: true);
+      final controller = GameCaptureController();
+      addTearDown(controller.dispose);
+      await controller.attach(port, enabled: true);
+
+      await port.close();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.state, GameCaptureState.error);
+      expect(controller.errorMessage, isNotEmpty);
+    });
   });
 }
 
@@ -196,17 +265,26 @@ CapturedApiEvent _event({required int sequence, String body = '{}'}) {
 }
 
 final class _FakeGameCapturePort implements GameCapturePort {
-  _FakeGameCapturePort({required this.supported, this.configureBlocker});
+  _FakeGameCapturePort({
+    required this.supported,
+    this.configureBlocker,
+    this.eventsFailure,
+  });
 
   final bool supported;
   final Completer<void>? configureBlocker;
+  final Object? eventsFailure;
   final StreamController<CapturedApiEvent> _events =
       StreamController<CapturedApiEvent>.broadcast();
 
   final List<bool> configurations = <bool>[];
 
   @override
-  Stream<CapturedApiEvent> get events => _events.stream;
+  Stream<CapturedApiEvent> get events {
+    final failure = eventsFailure;
+    if (failure != null) throw failure;
+    return _events.stream;
+  }
 
   @override
   Future<void> configure({
@@ -226,6 +304,8 @@ final class _FakeGameCapturePort implements GameCapturePort {
   void emit(CapturedApiEvent event) {
     _events.add(event);
   }
+
+  void emitError(Object error) => _events.addError(error);
 
   Future<void> close() => _events.close();
 }
