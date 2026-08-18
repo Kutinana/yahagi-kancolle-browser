@@ -139,12 +139,12 @@ final class _NativeActivityGameSurfaceState
       <NativeGameWebViewEvent>[];
 
   int? _generationId;
-  int _terminalEpoch = 0;
+  int _operationEpoch = 0;
   int _pageEpoch = 0;
   NativeGameWebViewBounds? _latestBounds;
   bool _desiredVisible = false;
   bool _active = true;
-  bool _terminal = false;
+  bool _fatal = false;
   bool _networkRetryAvailable = false;
   Future<void>? _networkRetryFuture;
   CaptureMode? _activeCaptureMode;
@@ -188,33 +188,33 @@ final class _NativeActivityGameSurfaceState
   }
 
   Future<void> _start(NativeActivityGameWebViewPort port) async {
-    final terminalEpoch = _terminalEpoch;
+    final operationEpoch = _operationEpoch;
     _startupState = GameStartupState.applyingNetwork;
     try {
       final generationId = await port.create();
-      if (!_matchesAttempt(port, terminalEpoch)) return;
+      if (!_matchesAttempt(port, operationEpoch)) return;
       _generationId = generationId;
       widget.browserController.attachPort(port);
-      _replayPendingEvents(port, generationId, terminalEpoch);
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+      _replayPendingEvents(port, generationId);
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
 
       final bounds = _latestBounds;
       if (bounds != null) await port.setBounds(bounds);
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
       await port.setVisible(_desiredVisible && bounds != null);
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
 
       await WidgetsBinding.instance.endOfFrame;
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
       try {
         await _startupOrchestrator.attachFrameRatePlatformPort();
-      } catch (error) {
-        debugPrint('Frame-rate platform port unavailable: $error');
+      } catch (error, stackTrace) {
+        debugPrint('Frame-rate platform port unavailable: $error\n$stackTrace');
       }
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
 
       final result = await _startupOrchestrator.applyNetworkSettings();
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
       final settings = widget.networkSettingsController?.settings;
       if (!result.success && settings?.mode != NetworkMode.system) {
         _setNetworkStartupError('网络设置应用失败 [${result.code}]: ${result.message}');
@@ -234,17 +234,18 @@ final class _NativeActivityGameSurfaceState
         waitForSurface: () async {
           await WidgetsBinding.instance.endOfFrame;
         },
-        isActive: () => _matchesGeneration(port, generationId, terminalEpoch),
+        isActive: () => _matchesGeneration(port, generationId, operationEpoch),
         navigate: () async {
-          if (_matchesGeneration(port, generationId, terminalEpoch)) {
+          if (_matchesGeneration(port, generationId, operationEpoch)) {
             await port.loadUri(initialAddress);
           }
         },
       );
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
-    } catch (error) {
-      if (_matchesAttempt(port, terminalEpoch)) {
-        _setTerminalError('原生 WebView 启动失败：${error.runtimeType}');
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
+    } catch (error, stackTrace) {
+      debugPrint('Native game surface startup failed: $error\n$stackTrace');
+      if (_matchesAttempt(port, operationEpoch)) {
+        _setFatalError('原生 WebView 启动失败：${error.runtimeType}');
       }
     }
   }
@@ -252,25 +253,33 @@ final class _NativeActivityGameSurfaceState
   void _replayPendingEvents(
     NativeActivityGameWebViewPort port,
     int generationId,
-    int terminalEpoch,
   ) {
     final pending = List<NativeGameWebViewEvent>.of(_pendingEvents);
     _pendingEvents.clear();
     for (final event in pending) {
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) break;
+      if (!_active ||
+          !identical(_port, port) ||
+          _generationId != generationId) {
+        break;
+      }
+      if (_fatal && event.type != NativeGameWebViewEventType.destroyed) {
+        continue;
+      }
       _dispatchCurrentEvent(event);
     }
   }
 
   void _onEvent(NativeGameWebViewEvent event) {
-    if (!_active || _terminal) return;
+    if (!_active) return;
     final generationId = _generationId;
     if (generationId == null) {
+      if (_fatal) return;
       if (_pendingEvents.length == 64) _pendingEvents.removeAt(0);
       _pendingEvents.add(event);
       return;
     }
     if (event.generationId != generationId) return;
+    if (_fatal && event.type != NativeGameWebViewEventType.destroyed) return;
     _dispatchCurrentEvent(event);
   }
 
@@ -281,6 +290,7 @@ final class _NativeActivityGameSurfaceState
         event.generationId != generationId) {
       return;
     }
+    if (_fatal && event.type != NativeGameWebViewEventType.destroyed) return;
     switch (event.type) {
       case NativeGameWebViewEventType.created:
         return;
@@ -301,7 +311,7 @@ final class _NativeActivityGameSurfaceState
         final port = _port;
         if (port != null) {
           unawaited(
-            _finishPage(port, generationId, _terminalEpoch, _pageEpoch),
+            _finishPage(port, generationId, _operationEpoch, _pageEpoch),
           );
         }
         return;
@@ -314,14 +324,23 @@ final class _NativeActivityGameSurfaceState
         );
         return;
       case NativeGameWebViewEventType.renderProcessGone:
-        _setTerminalError('游戏渲染进程已退出。');
+        _setFatalError('游戏渲染进程已退出。');
         return;
       case NativeGameWebViewEventType.destroyed:
-        _invalidateTerminal();
+        _invalidateOperations(fatal: true);
         _generationId = null;
         final port = _port;
-        if (port != null) widget.browserController.detachPort(port);
-        _notifyTerminalError('原生 WebView 已销毁。');
+        if (port != null) {
+          try {
+            widget.browserController.detachPort(port);
+          } catch (error, stackTrace) {
+            debugPrint(
+              'Native game surface controller detach failed: '
+              '$error\n$stackTrace',
+            );
+          }
+        }
+        _notifyFatalError('原生 WebView 已销毁。');
         return;
     }
   }
@@ -329,28 +348,28 @@ final class _NativeActivityGameSurfaceState
   Future<void> _finishPage(
     NativeActivityGameWebViewPort port,
     int generationId,
-    int terminalEpoch,
+    int operationEpoch,
     int pageEpoch,
   ) async {
     await _startupOrchestrator.prepareCapture();
-    if (!_matchesPage(port, generationId, terminalEpoch, pageEpoch)) {
+    if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
       return;
     }
     await _startupOrchestrator.attachAudioPortOnce();
-    if (!_matchesPage(port, generationId, terminalEpoch, pageEpoch)) {
+    if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
       return;
     }
     _setStartupState(GameStartupState.ready);
   }
 
   void _onEventError(Object error, StackTrace stackTrace) {
-    if (!_active || _terminal) return;
+    if (!_active || _fatal) return;
     debugPrint('Native game WebView event failed: $error\n$stackTrace');
-    _setTerminalError('原生 WebView 事件通道异常。');
+    _setFatalError('原生 WebView 事件通道异常。');
   }
 
   void _reportPageError(String message) {
-    _invalidateTerminal();
+    _invalidateOperations(fatal: false);
     widget.statusController.onWebResourceError(message);
     widget.browserController.onWebResourceError(
       description: message,
@@ -364,12 +383,12 @@ final class _NativeActivityGameSurfaceState
     _setStartupState(GameStartupState.error, errorMessage: message);
   }
 
-  void _setTerminalError(String message) {
-    _invalidateTerminal();
-    _notifyTerminalError(message);
+  void _setFatalError(String message) {
+    _invalidateOperations(fatal: true);
+    _notifyFatalError(message);
   }
 
-  void _notifyTerminalError(String message) {
+  void _notifyFatalError(String message) {
     widget.statusController.onWebResourceError(message);
     widget.browserController.onWebResourceError(
       description: message,
@@ -378,9 +397,9 @@ final class _NativeActivityGameSurfaceState
     _setStartupState(GameStartupState.error, errorMessage: message);
   }
 
-  void _invalidateTerminal() {
-    _terminal = true;
-    _terminalEpoch += 1;
+  void _invalidateOperations({required bool fatal}) {
+    if (fatal) _fatal = true;
+    _operationEpoch += 1;
     _pageEpoch += 1;
     _networkRetryAvailable = false;
   }
@@ -393,57 +412,57 @@ final class _NativeActivityGameSurfaceState
     });
   }
 
-  bool _matchesAttempt(NativeActivityGameWebViewPort port, int terminalEpoch) {
+  bool _matchesAttempt(NativeActivityGameWebViewPort port, int operationEpoch) {
     return _active &&
         mounted &&
-        !_terminal &&
+        !_fatal &&
         identical(_port, port) &&
-        _terminalEpoch == terminalEpoch;
+        _operationEpoch == operationEpoch;
   }
 
   bool _matchesGeneration(
     NativeActivityGameWebViewPort port,
     int generationId,
-    int terminalEpoch,
+    int operationEpoch,
   ) {
-    return _matchesAttempt(port, terminalEpoch) &&
+    return _matchesAttempt(port, operationEpoch) &&
         _generationId == generationId;
   }
 
   bool _matchesPage(
     NativeActivityGameWebViewPort port,
     int generationId,
-    int terminalEpoch,
+    int operationEpoch,
     int pageEpoch,
   ) {
-    return _matchesGeneration(port, generationId, terminalEpoch) &&
+    return _matchesGeneration(port, generationId, operationEpoch) &&
         _pageEpoch == pageEpoch;
   }
 
   Future<void> _onBoundsChanged(NativeGameWebViewBounds bounds) async {
     _latestBounds = bounds;
     final port = _port;
-    if (!_active || port == null || _generationId == null) return;
+    if (!_active || _fatal || port == null || _generationId == null) return;
     await port.setBounds(bounds);
   }
 
   Future<void> _onVisibilityChanged(bool visible) async {
     _desiredVisible = visible;
     final port = _port;
-    if (!_active || port == null || _generationId == null) return;
+    if (!_active || _fatal || port == null || _generationId == null) return;
     await port.setVisible(visible && _latestBounds != null);
   }
 
   void _onNetworkSettingsChanged() {
     if (_active &&
-        !_terminal &&
+        !_fatal &&
         _networkRetryAvailable &&
         _startupState == GameStartupState.error &&
         _networkRetryFuture == null) {
       final port = _port;
       final generationId = _generationId;
       if (port != null && generationId != null) {
-        final operation = _restartNetwork(port, generationId, _terminalEpoch);
+        final operation = _restartNetwork(port, generationId, _operationEpoch);
         _networkRetryFuture = operation;
         unawaited(
           operation
@@ -466,21 +485,24 @@ final class _NativeActivityGameSurfaceState
   Future<void> _restartNetwork(
     NativeActivityGameWebViewPort port,
     int generationId,
-    int terminalEpoch,
+    int operationEpoch,
   ) async {
     late final GameSurfaceNetworkResult result;
     try {
       result = await _startupOrchestrator.applyNetworkSettings();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Native game surface network retry failed: $error\n$stackTrace',
+      );
       return;
     }
-    if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+    if (!_matchesGeneration(port, generationId, operationEpoch)) return;
     if (result.success) {
       _networkRetryAvailable = false;
       _setStartupState(GameStartupState.networkReady);
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
       await port.reload();
-      if (!_matchesGeneration(port, generationId, terminalEpoch)) return;
+      if (!_matchesGeneration(port, generationId, operationEpoch)) return;
     }
   }
 
@@ -495,9 +517,9 @@ final class _NativeActivityGameSurfaceState
     final generationId = _generationId;
     final port = _port;
     if (generationId == null || port == null) return;
-    final terminalEpoch = _terminalEpoch;
+    final operationEpoch = _operationEpoch;
     await _startupOrchestrator.prepareCapture();
-    if (_matchesGeneration(port, generationId, terminalEpoch)) {
+    if (_matchesGeneration(port, generationId, operationEpoch)) {
       await port.reload();
     }
   }
@@ -541,17 +563,24 @@ final class _NativeActivityGameSurfaceState
   @override
   void dispose() {
     _active = false;
-    _invalidateTerminal();
+    _invalidateOperations(fatal: true);
     widget.networkSettingsController?.removeListener(_onNetworkSettingsChanged);
     widget.captureModeController?.removeListener(_onCaptureModeChanged);
     _pendingEvents.clear();
     final port = _port;
     _port = null;
     if (port == null) {
-      _startupOrchestrator.dispose();
+      unawaited(_disposeStartupOrchestrator());
     } else {
       _sendHideIntent(port);
-      widget.browserController.detachPort(port);
+      try {
+        widget.browserController.detachPort(port);
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Native game surface controller detach failed: '
+          '$error\n$stackTrace',
+        );
+      }
       final subscription = _eventSubscription;
       _eventSubscription = null;
       unawaited(_disposeNativeResources(subscription, port));
@@ -585,11 +614,22 @@ final class _NativeActivityGameSurfaceState
         'Native game surface event cancellation failed: $error\n$stackTrace',
       );
     }
-    _startupOrchestrator.dispose();
+    await _disposeStartupOrchestrator();
     try {
       await port.dispose();
     } catch (error, stackTrace) {
       debugPrint('Native game surface destroy failed: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _disposeStartupOrchestrator() async {
+    try {
+      await _startupOrchestrator.dispose();
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Native game surface orchestrator dispose failed: '
+        '$error\n$stackTrace',
+      );
     }
   }
 }

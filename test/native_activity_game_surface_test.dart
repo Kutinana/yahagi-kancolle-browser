@@ -118,7 +118,10 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     final fixture = _SurfaceFixture();
     addTearDown(fixture.dispose);
+    fixture.orchestrator.disposeFailure = StateError('orchestrator failed');
 
+    final previousDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {};
     try {
       await fixture.pump(tester, injectPort: false);
       await tester.pump();
@@ -130,7 +133,10 @@ void main() {
         findsOneWidget,
       );
       await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
     } finally {
+      debugPrint = previousDebugPrint;
       debugDefaultTargetPlatformOverride = null;
     }
   });
@@ -176,12 +182,6 @@ void main() {
       );
 
       fixture.port.addEvent(
-        _event('navigationBlocked', generationId: 7, scheme: 'intent'),
-      );
-      await tester.pump();
-      expect(fixture.browserController.errorMessage, contains('intent'));
-
-      fixture.port.addEvent(
         _event(
           'mainFrameError',
           generationId: 7,
@@ -192,10 +192,46 @@ void main() {
       await tester.pump();
       expect(fixture.statusController.loadState, WebViewLoadState.failed);
       expect(fixture.browserController.loadState, GamePageLoadState.failed);
-      expect(fixture.browserController.errorMessage, 'network failed');
+
+      fixture.port.addEvent(
+        _event('navigationBlocked', generationId: 7, scheme: 'intent'),
+      );
+      await tester.pump();
+      expect(fixture.browserController.errorMessage, contains('intent'));
       fixture.toolbarController.collapse();
     },
   );
+
+  testWidgets('a new page can recover after a main-frame error', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+
+    fixture.port.addEvent(
+      _event(
+        'mainFrameError',
+        generationId: 7,
+        errorCode: -2,
+        description: 'network failed',
+      ),
+    );
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/new'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/new'),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(fixture.statusController.loadState, WebViewLoadState.ready);
+    expect(fixture.browserController.loadState, GamePageLoadState.ready);
+    expect(find.byKey(const Key('native-game-surface-error')), findsNothing);
+    fixture.toolbarController.collapse();
+  });
 
   testWidgets('uses the app route observer to hide and restore the surface', (
     tester,
@@ -253,10 +289,10 @@ void main() {
     },
   );
 
-  testWidgets('every terminal signal invalidates a pending startup', (
+  testWidgets('every error boundary invalidates a pending startup', (
     tester,
   ) async {
-    final terminals = <({String name, void Function(_FakeNativePort) emit})>[
+    final boundaries = <({String name, void Function(_FakeNativePort) emit})>[
       (
         name: 'main-frame error',
         emit: (port) => port.addEvent(
@@ -287,7 +323,7 @@ void main() {
     final previousDebugPrint = debugPrint;
     debugPrint = (message, {wrapWidth}) {};
     try {
-      for (final terminal in terminals) {
+      for (final boundary in boundaries) {
         final fixture = _SurfaceFixture();
         final network = Completer<GameSurfaceNetworkResult>();
         fixture.orchestrator.networkCompleter = network;
@@ -297,7 +333,7 @@ void main() {
           () => fixture.orchestrator.applyNetworkCalls == 1,
         );
 
-        terminal.emit(fixture.port);
+        boundary.emit(fixture.port);
         await tester.pump();
         network.complete(const GameSurfaceNetworkResult.success());
         await tester.pump();
@@ -306,12 +342,12 @@ void main() {
         expect(
           fixture.port.calls.where((call) => call.startsWith('load:')),
           isEmpty,
-          reason: terminal.name,
+          reason: boundary.name,
         );
         expect(
           fixture.statusController.loadState,
           WebViewLoadState.failed,
-          reason: terminal.name,
+          reason: boundary.name,
         );
         await tester.pumpWidget(const SizedBox.shrink());
         await fixture.dispose();
@@ -564,6 +600,98 @@ void main() {
       debugPrint = previousDebugPrint;
     }
     expect(fixture.port.calls, contains('destroy'));
+  });
+
+  testWidgets('cleanup isolates orchestrator and native destroy failures', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.orchestrator.disposeFailure = StateError('orchestrator failed');
+    fixture.port.disposeFailure = StateError('destroy failed');
+
+    final previousDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {};
+    try {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await _pumpUntilDestroyed(tester, fixture.port);
+      await tester.pump();
+    } finally {
+      debugPrint = previousDebugPrint;
+    }
+
+    expect(fixture.port.calls, contains('destroy'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an asynchronous orchestrator dispose failure still destroys', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.orchestrator.disposeAsyncFailure = StateError(
+      'async orchestrator failed',
+    );
+
+    final previousDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {};
+    try {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await _pumpUntilDestroyed(tester, fixture.port);
+      await tester.pump();
+    } finally {
+      debugPrint = previousDebugPrint;
+    }
+
+    expect(fixture.port.calls, contains('destroy'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('fatal render exit still accepts destroyed and detaches port', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+
+    fixture.port.addEvent(
+      _event('renderProcessGone', generationId: 7, didCrash: true),
+    );
+    fixture.port.addEvent(
+      _event(
+        'pageStarted',
+        generationId: 7,
+        url: 'https://game.example/ignored',
+      ),
+    );
+    fixture.port.addEvent(
+      _event(
+        'pageFinished',
+        generationId: 7,
+        url: 'https://game.example/ignored',
+      ),
+    );
+    fixture.port.addEvent(
+      _event('navigationBlocked', generationId: 7, scheme: 'ignored'),
+    );
+    await tester.pump();
+
+    expect(fixture.browserController.errorMessage, '游戏渲染进程已退出。');
+    expect(fixture.statusController.loadState, WebViewLoadState.failed);
+
+    fixture.port.addEvent(_event('destroyed', generationId: 7));
+    await tester.pump();
+    fixture.port.calls.clear();
+    await fixture.browserController.reload();
+
+    expect(fixture.port.calls, isNot(contains('reload')));
+    expect(fixture.browserController.errorMessage, 'WebView 尚未就绪');
+    expect(fixture.statusController.loadState, WebViewLoadState.failed);
   });
 
   testWidgets('disposing an old surface does not detach a newer port', (
@@ -883,6 +1011,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   VoidCallback? beforeCancel;
   Completer<void>? cancelCompleter;
   Object? cancelFailure;
+  Object? disposeFailure;
   bool failHide = false;
   final List<NativeGameWebViewEvent> eventsDuringCreate =
       <NativeGameWebViewEvent>[];
@@ -918,6 +1047,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Future<void> dispose() async {
     calls.add('destroy');
     if (!destroyed.isCompleted) destroyed.complete();
+    if (disposeFailure case final failure?) throw failure;
   }
 
   Future<void> close() async {
@@ -960,6 +1090,8 @@ final class _FakeStartupOrchestrator implements GameSurfaceStartupOrchestrator {
       const GameSurfaceNetworkResult.success();
   Completer<GameSurfaceNetworkResult>? networkCompleter;
   Completer<void>? prepareCaptureCompleter;
+  Object? disposeFailure;
+  Object? disposeAsyncFailure;
 
   @override
   Future<bool> attachFrameRatePlatformPort() async => true;
@@ -974,7 +1106,12 @@ final class _FakeStartupOrchestrator implements GameSurfaceStartupOrchestrator {
   }
 
   @override
-  void dispose() {}
+  FutureOr<void> dispose() {
+    if (disposeFailure case final failure?) throw failure;
+    if (disposeAsyncFailure case final failure?) {
+      return Future<void>.microtask(() => throw failure);
+    }
+  }
 
   @override
   Future<void> prepareCapture() async {
