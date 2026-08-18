@@ -164,6 +164,21 @@ void main() {
       await Future.wait(<Future<void>>[oldReload, replacementReload]);
     },
   );
+
+  test('attaching the same port keeps an in-flight reload coalesced', () async {
+    final port = FakeGameBrowserPort()..reloadCompleter = Completer<void>();
+    final controller = GameBrowserController(port: port);
+
+    final first = controller.reload();
+    await Future<void>.delayed(Duration.zero);
+    controller.attachPort(port);
+    final second = controller.reload();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(port.reloadCalls, 1);
+    port.reloadCompleter!.complete();
+    await Future.wait(<Future<void>>[first, second]);
+  });
 }
 
 final class FakeGameBrowserPort implements GameBrowserPort {

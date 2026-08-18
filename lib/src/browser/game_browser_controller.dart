@@ -48,6 +48,9 @@ final class GameBrowserController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   void attachPort(GameBrowserPort port) {
+    if (identical(_port, port)) {
+      return;
+    }
     _port = port;
     _reloadInFlight = null;
   }

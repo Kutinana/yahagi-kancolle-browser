@@ -18,10 +18,13 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
              nativeGameWebViewEventChannelName,
            ).receiveBroadcastStream();
 
+  late final StreamController<NativeGameWebViewEvent> _events =
+      StreamController<NativeGameWebViewEvent>.broadcast(
+        onListen: _replayInitialEvents,
+      );
+
   final MethodChannel _channel;
   final Stream<Object?> _eventStream;
-  final StreamController<NativeGameWebViewEvent> _events =
-      StreamController<NativeGameWebViewEvent>.broadcast();
 
   StreamSubscription<Object?>? _eventSubscription;
   Future<void>? _eventCancellation;
@@ -31,6 +34,9 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   bool _disposed = false;
   final List<NativeGameWebViewEvent> _pendingEvents =
       <NativeGameWebViewEvent>[];
+  final List<NativeGameWebViewEvent> _initialEvents =
+      <NativeGameWebViewEvent>[];
+  bool _hasInitialEventsListener = false;
 
   Stream<NativeGameWebViewEvent> get events => _events.stream;
 
@@ -64,34 +70,70 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       result = await _channel.invokeMethod<Object?>('create', <String, Object?>{
         'renderer': 'webgl',
       });
-    } catch (_) {
-      await _cancelEventSubscription();
-      rethrow;
+    } catch (error, stackTrace) {
+      await _cancelIgnoringError();
+      Error.throwWithStackTrace(error, stackTrace);
     }
     if (result is! int || result < 0) {
-      await _cancelEventSubscription();
-      throw const NativeGameWebViewSchemaException(
+      const error = NativeGameWebViewSchemaException(
         'create must return a non-negative generationId.',
       );
+      await _cancelIgnoringError();
+      throw error;
     }
+    final generationId = result;
     if (_disposed) {
+      final errors = _CleanupErrors();
       final eventCancellation = _eventCancellation;
       if (eventCancellation != null) {
-        await eventCancellation;
+        await errors.run(() => eventCancellation);
       }
-      await _channel.invokeMethod<void>('destroy', <String, Object?>{
-        'generationId': result,
-      });
+      await errors.run(() => _destroy(generationId));
+      if (errors.hasError) {
+        errors.throwFirst();
+      }
       throw StateError('Native WebView has been disposed.');
     }
-    _generationId = result;
+    _generationId = generationId;
     for (final event in _pendingEvents) {
-      if (event.generationId == result) {
-        _events.add(event);
+      if (event.generationId == generationId) {
+        _emitEvent(event);
       }
     }
     _pendingEvents.clear();
-    return result;
+    return generationId;
+  }
+
+  Future<void> _cancelIgnoringError() async {
+    try {
+      await _cancelEventSubscription();
+    } catch (_) {
+      // The create result remains the first meaningful error.
+    }
+  }
+
+  Future<void> _destroy(int generationId) {
+    return _channel.invokeMethod<void>('destroy', <String, Object?>{
+      'generationId': generationId,
+    });
+  }
+
+  void _emitEvent(NativeGameWebViewEvent event) {
+    if (!_hasInitialEventsListener) {
+      _initialEvents.add(event);
+    }
+    _events.add(event);
+  }
+
+  void _replayInitialEvents() {
+    if (_hasInitialEventsListener) {
+      return;
+    }
+    _hasInitialEventsListener = true;
+    for (final event in _initialEvents) {
+      _events.add(event);
+    }
+    _initialEvents.clear();
   }
 
   void _startEventSubscription() {
@@ -193,25 +235,38 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   }
 
   Future<void> _dispose() async {
-    await _cancelEventSubscription();
+    final errors = _CleanupErrors();
+    await errors.run(_cancelEventSubscription);
     final generationId = _generationId;
     _generationId = null;
     if (generationId != null) {
-      await _channel.invokeMethod<void>('destroy', <String, Object?>{
-        'generationId': generationId,
-      });
+      await errors.run(() => _destroy(generationId));
     } else {
       final createFuture = _createFuture;
       if (createFuture != null) {
-        try {
-          await createFuture;
-        } on StateError {
-          // A create response received after disposal destroys itself.
-        }
+        await errors.run(() async {
+          try {
+            await createFuture;
+          } on StateError {
+            // A create response received after disposal destroys itself.
+          }
+        });
       }
     }
     _pendingEvents.clear();
-    await _events.close();
+    _initialEvents.clear();
+    _closeEvents(errors);
+    if (errors.hasError) {
+      errors.throwFirst();
+    }
+  }
+
+  void _closeEvents(_CleanupErrors errors) {
+    try {
+      unawaited(_events.close());
+    } catch (error, stackTrace) {
+      errors.capture(error, stackTrace);
+    }
   }
 
   void _onNativeEvent(Object? raw) {
@@ -221,7 +276,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       if (generationId == null && !_disposed) {
         _pendingEvents.add(event);
       } else if (event.generationId == generationId) {
-        _events.add(event);
+        _emitEvent(event);
       }
     } on NativeGameWebViewSchemaException catch (error, stackTrace) {
       _events.addError(error, stackTrace);
@@ -257,5 +312,29 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
     if (_disposed) {
       throw StateError('Native WebView has been disposed.');
     }
+  }
+}
+
+final class _CleanupErrors {
+  Object? _error;
+  StackTrace? _stackTrace;
+
+  bool get hasError => _error != null;
+
+  Future<void> run(FutureOr<void> Function() action) async {
+    try {
+      await action();
+    } catch (error, stackTrace) {
+      capture(error, stackTrace);
+    }
+  }
+
+  void capture(Object error, StackTrace stackTrace) {
+    _error ??= error;
+    _stackTrace ??= stackTrace;
+  }
+
+  Never throwFirst() {
+    Error.throwWithStackTrace(_error!, _stackTrace!);
   }
 }

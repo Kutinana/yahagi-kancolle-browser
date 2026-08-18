@@ -324,4 +324,152 @@ void main() {
       ]);
     },
   );
+
+  test(
+    'closes events when an in-flight create fails during disposal',
+    () async {
+      final createResult = Completer<Object?>();
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'create') return createResult.future;
+        return null;
+      });
+      final source = StreamController<Object?>.broadcast();
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+      );
+      addTearDown(source.close);
+      final done = Completer<void>();
+      final subscription = port.events.listen(null, onDone: done.complete);
+      addTearDown(subscription.cancel);
+
+      final create = port.create();
+      final dispose = port.dispose();
+      createResult.completeError(PlatformException(code: 'create_failed'));
+
+      await expectLater(
+        create,
+        throwsA(
+          isA<PlatformException>().having(
+            (error) => error.code,
+            'code',
+            'create_failed',
+          ),
+        ),
+      );
+      await expectLater(
+        dispose,
+        throwsA(
+          isA<PlatformException>().having(
+            (error) => error.code,
+            'code',
+            'create_failed',
+          ),
+        ),
+      );
+      await done.future;
+    },
+  );
+
+  test('destroys and closes events when cancellation fails', () async {
+    final calls = <MethodCall>[];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return call.method == 'create' ? 13 : null;
+    });
+    final source = StreamController<Object?>(
+      onCancel: () =>
+          Future<void>.error(PlatformException(code: 'cancel_failed')),
+    );
+    final port = MethodChannelNativeGameWebViewPort(
+      channel: channel,
+      eventStream: source.stream,
+    );
+    final done = Completer<void>();
+    final subscription = port.events.listen(null, onDone: done.complete);
+    addTearDown(subscription.cancel);
+    await port.create();
+
+    final firstDispose = port.dispose();
+    expect(identical(firstDispose, port.dispose()), isTrue);
+    await expectLater(
+      firstDispose,
+      throwsA(
+        isA<PlatformException>().having(
+          (error) => error.code,
+          'code',
+          'cancel_failed',
+        ),
+      ),
+    );
+    expect(calls.map((call) => call.method), <String>['create', 'destroy']);
+    await done.future;
+  });
+
+  test('closes events after a native destroy failure', () async {
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'create') return 14;
+      throw PlatformException(code: 'destroy_failed');
+    });
+    final port = MethodChannelNativeGameWebViewPort(
+      channel: channel,
+      eventStream: Stream<Object?>.empty(),
+    );
+    final done = Completer<void>();
+    final subscription = port.events.listen(null, onDone: done.complete);
+    addTearDown(subscription.cancel);
+    await port.create();
+
+    await expectLater(
+      port.dispose(),
+      throwsA(
+        isA<PlatformException>().having(
+          (error) => error.code,
+          'code',
+          'destroy_failed',
+        ),
+      ),
+    );
+    await done.future;
+  });
+
+  test(
+    'replays buffered create events to the first post-create listener',
+    () async {
+      final source = StreamController<Object?>.broadcast(sync: true);
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        source
+          ..add(<String, Object?>{'type': 'created', 'generationId': 15})
+          ..add(<String, Object?>{
+            'type': 'pageStarted',
+            'generationId': 15,
+            'url': 'https://www.dmm.com/game',
+          })
+          ..add(<String, Object?>{'type': 'created', 'generationId': 14});
+        return 15;
+      });
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+      );
+      addTearDown(source.close);
+      addTearDown(port.dispose);
+
+      await port.create();
+      final first = <NativeGameWebViewEvent>[];
+      final firstSubscription = port.events.listen(first.add);
+      addTearDown(firstSubscription.cancel);
+      await Future<void>.delayed(Duration.zero);
+      final second = <NativeGameWebViewEvent>[];
+      final secondSubscription = port.events.listen(second.add);
+      addTearDown(secondSubscription.cancel);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(first.map((event) => event.type), <NativeGameWebViewEventType>[
+        NativeGameWebViewEventType.created,
+        NativeGameWebViewEventType.pageStarted,
+      ]);
+      expect(second, isEmpty);
+    },
+  );
 }
