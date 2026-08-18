@@ -7,6 +7,8 @@ import 'native_game_webview_contract.dart';
 import 'safe_page_address.dart';
 
 final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
+  static const int _maxInitialNotifications = 64;
+
   MethodChannelNativeGameWebViewPort({
     MethodChannel? channel,
     Stream<Object?>? eventStream,
@@ -32,10 +34,10 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   Future<void>? _disposeFuture;
   int? _generationId;
   bool _disposed = false;
-  final List<NativeGameWebViewEvent> _pendingEvents =
-      <NativeGameWebViewEvent>[];
-  final List<NativeGameWebViewEvent> _initialEvents =
-      <NativeGameWebViewEvent>[];
+  final List<_NativeGameWebViewNotification> _pendingNotifications =
+      <_NativeGameWebViewNotification>[];
+  final List<_NativeGameWebViewNotification> _initialNotifications =
+      <_NativeGameWebViewNotification>[];
   bool _hasInitialEventsListener = false;
 
   Stream<NativeGameWebViewEvent> get events => _events.stream;
@@ -95,12 +97,12 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       throw StateError('Native WebView has been disposed.');
     }
     _generationId = generationId;
-    for (final event in _pendingEvents) {
-      if (event.generationId == generationId) {
-        _emitEvent(event);
+    for (final notification in _pendingNotifications) {
+      if (notification.matchesGeneration(generationId)) {
+        _dispatchNotification(notification);
       }
     }
-    _pendingEvents.clear();
+    _pendingNotifications.clear();
     return generationId;
   }
 
@@ -118,11 +120,11 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
     });
   }
 
-  void _emitEvent(NativeGameWebViewEvent event) {
+  void _dispatchNotification(_NativeGameWebViewNotification notification) {
     if (!_hasInitialEventsListener) {
-      _initialEvents.add(event);
+      _appendBounded(_initialNotifications, notification);
     }
-    _events.add(event);
+    notification.dispatch(_events);
   }
 
   void _replayInitialEvents() {
@@ -130,17 +132,31 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       return;
     }
     _hasInitialEventsListener = true;
-    for (final event in _initialEvents) {
-      _events.add(event);
+    for (final notification in _initialNotifications) {
+      notification.dispatch(_events);
     }
-    _initialEvents.clear();
+    _initialNotifications.clear();
+  }
+
+  void _queuePending(_NativeGameWebViewNotification notification) {
+    _appendBounded(_pendingNotifications, notification);
+  }
+
+  void _appendBounded(
+    List<_NativeGameWebViewNotification> queue,
+    _NativeGameWebViewNotification notification,
+  ) {
+    if (queue.length == _maxInitialNotifications) {
+      queue.removeAt(0);
+    }
+    queue.add(notification);
   }
 
   void _startEventSubscription() {
     _eventSubscription ??= _eventStream.listen(
       _onNativeEvent,
       onError: (Object error, StackTrace stackTrace) {
-        _events.addError(error, stackTrace);
+        _onNativeError(error, stackTrace);
       },
     );
   }
@@ -253,8 +269,8 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
         });
       }
     }
-    _pendingEvents.clear();
-    _initialEvents.clear();
+    _pendingNotifications.clear();
+    _initialNotifications.clear();
     _closeEvents(errors);
     if (errors.hasError) {
       errors.throwFirst();
@@ -274,13 +290,28 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       final event = NativeGameWebViewEvent.decode(raw);
       final generationId = _generationId;
       if (generationId == null && !_disposed) {
-        _pendingEvents.add(event);
+        _queuePending(_NativeGameWebViewNotification.data(event));
       } else if (event.generationId == generationId) {
-        _emitEvent(event);
+        _dispatchNotification(_NativeGameWebViewNotification.data(event));
       }
     } on NativeGameWebViewSchemaException catch (error, stackTrace) {
-      _events.addError(error, stackTrace);
+      _onNativeError(error, stackTrace);
     }
+  }
+
+  void _onNativeError(Object error, StackTrace stackTrace) {
+    if (_disposed) {
+      return;
+    }
+    final notification = _NativeGameWebViewNotification.error(
+      error,
+      stackTrace,
+    );
+    if (_generationId == null) {
+      _queuePending(notification);
+      return;
+    }
+    _dispatchNotification(notification);
   }
 
   Future<void> _invoke(
@@ -336,5 +367,32 @@ final class _CleanupErrors {
 
   Never throwFirst() {
     Error.throwWithStackTrace(_error!, _stackTrace!);
+  }
+}
+
+final class _NativeGameWebViewNotification {
+  const _NativeGameWebViewNotification.data(this.event)
+    : error = null,
+      stackTrace = null;
+
+  const _NativeGameWebViewNotification.error(this.error, this.stackTrace)
+    : event = null;
+
+  final NativeGameWebViewEvent? event;
+  final Object? error;
+  final StackTrace? stackTrace;
+
+  bool matchesGeneration(int generationId) {
+    final data = event;
+    return data == null || data.generationId == generationId;
+  }
+
+  void dispatch(StreamController<NativeGameWebViewEvent> controller) {
+    final data = event;
+    if (data != null) {
+      controller.add(data);
+      return;
+    }
+    controller.addError(error!, stackTrace);
   }
 }

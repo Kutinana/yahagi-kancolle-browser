@@ -472,4 +472,71 @@ void main() {
       expect(second, isEmpty);
     },
   );
+
+  test(
+    'replays early data and errors to the first listener in source order',
+    () async {
+      final source = StreamController<Object?>.broadcast(sync: true);
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        source
+          ..add(<String, Object?>{'type': 'created', 'generationId': 16})
+          ..add(<String, Object?>{'type': 'created', 'generationId': -1})
+          ..addError(StateError('source_failed'));
+        return 16;
+      });
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+      );
+      addTearDown(source.close);
+      addTearDown(port.dispose);
+
+      await port.create();
+      final received = <Object>[];
+      final subscription = port.events.listen(
+        received.add,
+        onError: (Object error, StackTrace stackTrace) => received.add(error),
+      );
+      addTearDown(subscription.cancel);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, hasLength(3));
+      expect(received[0], isA<NativeGameWebViewEvent>());
+      expect(received[1], isA<NativeGameWebViewSchemaException>());
+      expect(received[2], isA<StateError>());
+    },
+  );
+
+  test(
+    'retains only the latest 64 notifications before the first listener',
+    () async {
+      final source = StreamController<Object?>.broadcast(sync: true);
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        for (var index = 0; index < 66; index++) {
+          source.add(<String, Object?>{
+            'type': 'pageStarted',
+            'generationId': 17,
+            'url': 'https://www.dmm.com/$index',
+          });
+        }
+        return 17;
+      });
+      final port = MethodChannelNativeGameWebViewPort(
+        channel: channel,
+        eventStream: source.stream,
+      );
+      addTearDown(source.close);
+      addTearDown(port.dispose);
+
+      await port.create();
+      final received = <NativeGameWebViewEvent>[];
+      final subscription = port.events.listen(received.add);
+      addTearDown(subscription.cancel);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(received, hasLength(64));
+      expect(received.first.url, 'https://www.dmm.com/2');
+      expect(received.last.url, 'https://www.dmm.com/65');
+    },
+  );
 }
