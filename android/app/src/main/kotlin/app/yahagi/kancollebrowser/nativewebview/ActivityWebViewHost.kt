@@ -71,20 +71,19 @@ class ActivityWebViewHost internal constructor(
     )
 
     private val state = NativeGameWebViewHostState()
-    private var overlay: FrameLayout? = null
-    private var webView: WebView? = null
+    private var ownedResources: OwnedWebViewResources? = null
     private var hasValidBounds = false
 
     internal val currentWebView: WebView?
         get() {
             requireMainThread()
-            return webView
+            return ownedResources?.takeIf { state.phase == NativeGameWebViewHostPhase.READY }?.webView
         }
 
     val currentGeneration: Long?
         get() {
             requireMainThread()
-            return state.generationId
+            return state.generationId?.takeIf { state.phase == NativeGameWebViewHostPhase.READY }
         }
 
     fun create(): Long? {
@@ -94,10 +93,9 @@ class ActivityWebViewHost internal constructor(
         }
 
         val generation = state.beginCreate()
-        var createdOverlay: FrameLayout? = null
-        var createdWebView: WebView? = null
+        var resources: OwnedWebViewResources? = null
         try {
-            createdOverlay = FrameLayout(context).apply {
+            val createdOverlay = FrameLayout(context).apply {
                 visibility = View.INVISIBLE
                 setBackgroundColor(Color.TRANSPARENT)
                 clipChildren = true
@@ -110,7 +108,16 @@ class ActivityWebViewHost internal constructor(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 ),
             )
-            createdWebView = webViewFactory(context)
+            resources = OwnedWebViewResources(generation, createdOverlay)
+            // Publish ownership before callback-capable work. CREATING rejects ordinary use.
+            ownedResources = resources
+            val createdWebView = webViewFactory(context)
+            if (!isCurrentCreate(resources)) {
+                cleanupStandaloneWebView(createdWebView)
+                rollbackCreate(resources)
+                return null
+            }
+            resources.webView = createdWebView
             val client = NativeGameWebViewClient(
                 generation = generation,
                 sink = eventSink,
@@ -119,6 +126,10 @@ class ActivityWebViewHost internal constructor(
                 onRenderProcessGone = ::onRenderProcessGone,
             )
             configureWebView(createdWebView, client)
+            if (!isCurrentCreate(resources)) {
+                rollbackCreate(resources)
+                return null
+            }
             createdOverlay.addView(
                 createdWebView,
                 FrameLayout.LayoutParams(
@@ -126,14 +137,19 @@ class ActivityWebViewHost internal constructor(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 ),
             )
-            overlay = createdOverlay
-            webView = createdWebView
+            if (!isCurrentCreate(resources)) {
+                rollbackCreate(resources)
+                return null
+            }
             hasValidBounds = false
-            check(state.markReady(generation))
+            if (!state.markReady(generation)) {
+                rollbackCreate(resources)
+                return null
+            }
             runCatching { eventSink.created(generation) }
-            return generation
+            return generation.takeIf { isCurrentReady(resources) }
         } catch (_: Throwable) {
-            rollbackCreate(generation, createdOverlay, createdWebView)
+            resources?.let(::rollbackCreate)
             return null
         }
     }
@@ -146,10 +162,10 @@ class ActivityWebViewHost internal constructor(
         val physicalBounds = bounds?.toPhysicalBounds(contentRoot.width, contentRoot.height)
         if (physicalBounds == null) {
             hasValidBounds = false
-            overlay?.visibility = View.INVISIBLE
+            ownedResources?.overlay?.visibility = View.INVISIBLE
             return false
         }
-        val activeOverlay = overlay ?: return false
+        val activeOverlay = ownedResources?.overlay ?: return false
         activeOverlay.layoutParams = FrameLayout.LayoutParams(
             physicalBounds.width,
             physicalBounds.height,
@@ -166,7 +182,7 @@ class ActivityWebViewHost internal constructor(
         if (!state.accepts(generation)) {
             return false
         }
-        val activeOverlay = overlay ?: return false
+        val activeOverlay = ownedResources?.overlay ?: return false
         if (!visible) {
             activeOverlay.visibility = View.INVISIBLE
             return true
@@ -218,15 +234,46 @@ class ActivityWebViewHost internal constructor(
         if (!state.beginDestroy(generation)) {
             return false
         }
-        overlay?.visibility = View.INVISIBLE
+        ownedResources?.overlay?.visibility = View.INVISIBLE
         hasValidBounds = false
         return true
     }
 
     private fun completeDestroy(generation: Long, rendererGone: Boolean) {
-        val activeOverlay = overlay
-        val activeWebView = webView
+        val resources = ownedResources
+        resources?.let { cleanupResources(it, rendererGone) }
+        if (ownedResources === resources) {
+            ownedResources = null
+        }
+        state.completeDestroy(generation)
+        runCatching { eventSink.destroyed(generation) }
+    }
 
+    private fun rollbackCreate(resources: OwnedWebViewResources) {
+        val canCompleteOldGeneration = state.beginDestroy(resources.generation)
+        try {
+            cleanupResources(resources, rendererGone = false)
+        } finally {
+            if (ownedResources === resources) {
+                ownedResources = null
+                hasValidBounds = false
+            }
+            if (canCompleteOldGeneration &&
+                state.generationId == resources.generation &&
+                state.phase == NativeGameWebViewHostPhase.DESTROYING
+            ) {
+                state.completeDestroy(resources.generation)
+            }
+        }
+    }
+
+    private fun cleanupResources(resources: OwnedWebViewResources, rendererGone: Boolean) {
+        if (resources.cleaned) {
+            return
+        }
+        resources.cleaned = true
+        val activeOverlay = resources.overlay
+        val activeWebView = resources.webView
         if (!rendererGone) {
             bestEffort { activeWebView?.let(webViewCleanup::stopLoading) }
             // The destroying state makes client callbacks reject this generation.
@@ -234,41 +281,37 @@ class ActivityWebViewHost internal constructor(
             bestEffort { activeWebView?.let(webViewCleanup::clearHistory) }
             bestEffort { activeWebView?.let(webViewCleanup::removeAllViews) }
         }
-        bestEffort { activeOverlay?.removeView(activeWebView) }
+        bestEffort { activeOverlay.removeView(activeWebView) }
         bestEffort { contentRoot.removeView(activeOverlay) }
         if (!rendererGone) {
             bestEffort { activeWebView?.let(webViewCleanup::clearWebChromeClient) }
             bestEffort { activeWebView?.let(webViewCleanup::clearWebViewClient) }
         }
         bestEffort { activeWebView?.let(webViewCleanup::destroy) }
-
-        overlay = null
-        webView = null
-        state.completeDestroy(generation)
-        runCatching { eventSink.destroyed(generation) }
     }
 
-    private fun rollbackCreate(
-        generation: Long,
-        createdOverlay: FrameLayout?,
-        createdWebView: WebView?,
-    ) {
-        if (state.beginDestroy(generation)) {
-            try {
-                bestEffort { createdOverlay?.visibility = View.INVISIBLE }
-                bestEffort { createdOverlay?.removeView(createdWebView) }
-                bestEffort { contentRoot.removeView(createdOverlay) }
-                bestEffort { createdWebView?.let(webViewCleanup::clearWebChromeClient) }
-                bestEffort { createdWebView?.let(webViewCleanup::clearWebViewClient) }
-                bestEffort { createdWebView?.let(webViewCleanup::destroy) }
-            } finally {
-                overlay = null
-                webView = null
-                hasValidBounds = false
-                state.completeDestroy(generation)
-            }
-        }
+    private fun isCurrentCreate(resources: OwnedWebViewResources): Boolean =
+        ownedResources === resources &&
+            state.generationId == resources.generation &&
+            state.phase == NativeGameWebViewHostPhase.CREATING
+
+    private fun isCurrentReady(resources: OwnedWebViewResources): Boolean =
+        ownedResources === resources &&
+            state.generationId == resources.generation &&
+            state.phase == NativeGameWebViewHostPhase.READY
+
+    private fun cleanupStandaloneWebView(webView: WebView) {
+        bestEffort { webViewCleanup.clearWebChromeClient(webView) }
+        bestEffort { webViewCleanup.clearWebViewClient(webView) }
+        bestEffort { webViewCleanup.destroy(webView) }
     }
+
+    private class OwnedWebViewResources(
+        val generation: Long,
+        val overlay: FrameLayout,
+        var webView: WebView? = null,
+        var cleaned: Boolean = false,
+    )
 
     private fun bestEffort(operation: () -> Unit) {
         runCatching(operation)

@@ -174,6 +174,84 @@ class ActivityWebViewHostTest {
     }
 
     @Test
+    fun configureSynchronousRendererGoneCleansUnpublishedResourcesAndAllowsAnotherCreate() = onMain {
+        val root = sizedRoot()
+        val events = mutableListOf<String>()
+        val createdViews = mutableListOf<WebView>()
+        var configureCount = 0
+        host = ActivityWebViewHost(
+            context = context,
+            contentRoot = root,
+            eventSink = recordingSink(events),
+            webViewFactory = { factoryContext -> WebView(factoryContext).also(createdViews::add) },
+            configureWebView = { webView, client ->
+                if (configureCount++ == 0) {
+                    assertTrue((client as NativeGameWebViewClient).onRenderProcessGone(webView, null))
+                } else {
+                    NativeGameWebViewConfigurator.configure(webView, client)
+                }
+            },
+        )
+
+        assertNull(host!!.create())
+        assertEquals(0, root.childCount)
+        assertNull(host!!.currentGeneration)
+        assertNull(host!!.currentWebView)
+        assertEquals(listOf("gone:0:false", "destroyed:0"), events)
+
+        val nextGeneration = requireNotNull(host!!.create())
+        assertEquals(1, root.childCount)
+        assertEquals(nextGeneration, host!!.currentGeneration)
+        assertSame(createdViews[1], host!!.currentWebView)
+        assertFalse(containsView(root, createdViews[0]))
+    }
+
+    @Test
+    fun destroyedSinkReentryCreateCannotBeOverwrittenByTheOldCreate() = onMain {
+        val root = sizedRoot()
+        val events = mutableListOf<String>()
+        val createdViews = mutableListOf<WebView>()
+        var configureCount = 0
+        var reenteredGeneration: Long? = null
+        host = ActivityWebViewHost(
+            context = context,
+            contentRoot = root,
+            eventSink = object : NativeGameWebViewEventSink by recordingSink(events) {
+                override fun destroyed(generation: Long) {
+                    events += "destroyed:$generation"
+                    if (reenteredGeneration == null) {
+                        reenteredGeneration = requireNotNull(host).create()
+                    }
+                }
+            },
+            webViewFactory = { factoryContext -> WebView(factoryContext).also(createdViews::add) },
+            configureWebView = { webView, client ->
+                if (configureCount++ == 0) {
+                    assertTrue((client as NativeGameWebViewClient).onRenderProcessGone(webView, null))
+                } else {
+                    NativeGameWebViewConfigurator.configure(webView, client)
+                }
+            },
+        )
+
+        assertNull(host!!.create())
+        val secondGeneration = requireNotNull(reenteredGeneration)
+        assertEquals(secondGeneration, host!!.currentGeneration)
+        assertSame(createdViews[1], host!!.currentWebView)
+        assertEquals(1, root.childCount)
+        assertEquals(1, countWebViews(root))
+        assertFalse(containsView(root, createdViews[0]))
+        assertEquals(1, events.count { it == "destroyed:0" })
+        assertNull(host!!.create())
+
+        assertTrue(host!!.destroy(secondGeneration))
+        val thirdGeneration = requireNotNull(host!!.create())
+        assertEquals(thirdGeneration, host!!.currentGeneration)
+        assertEquals(1, root.childCount)
+        assertEquals(1, countWebViews(root))
+    }
+
+    @Test
     fun destroyContinuesAfterCleanupOperationThrows() = onMain {
         val root = sizedRoot()
         val events = mutableListOf<String>()
@@ -268,6 +346,12 @@ class ActivityWebViewHostTest {
         is WebView -> 1
         is ViewGroup -> (0 until view.childCount).sumOf { countWebViews(view.getChildAt(it)) }
         else -> 0
+    }
+
+    private fun containsView(root: View, target: View): Boolean = when {
+        root === target -> true
+        root is ViewGroup -> (0 until root.childCount).any { containsView(root.getChildAt(it), target) }
+        else -> false
     }
 
     private fun throwingCleanup(calls: MutableList<String>) = object : NativeGameWebViewCleanup {
