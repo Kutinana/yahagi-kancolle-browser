@@ -43,6 +43,7 @@ internal class DiagnosticPlatformHandler(
     private fun deviceSnapshot(): DiagnosticDeviceSnapshot {
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val metrics = context.resources.displayMetrics
+        val previousExit = previousExitSnapshot()
         return DiagnosticDeviceSnapshot(
             manufacturer = Build.MANUFACTURER.take(128),
             model = Build.MODEL.take(128),
@@ -54,7 +55,12 @@ internal class DiagnosticPlatformHandler(
             screenHeightPx = metrics.heightPixels,
             webViewVersion = (WebViewCompat.getCurrentWebViewPackage(context)?.versionName ?: "unknown")
                 .take(64),
-            previousExitReason = previousExitReason(),
+            previousExitReason = previousExit.reason,
+            previousExitStatus = previousExit.status,
+            previousExitImportance = previousExit.importance,
+            previousExitPssKb = previousExit.pssKb,
+            previousExitRssKb = previousExit.rssKb,
+            previousExitTimestampMs = previousExit.timestampMs,
         )
     }
 
@@ -83,19 +89,41 @@ internal class DiagnosticPlatformHandler(
         )
     }
 
-    private fun previousExitReason(): String {
+    private fun previousExitSnapshot(): DiagnosticPreviousExitSnapshot {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            return "unavailable"
+            return DiagnosticPreviousExitSnapshot(
+                reason = "unavailable",
+                status = 0,
+                importance = 0,
+                pssKb = 0L,
+                rssKb = 0L,
+                timestampMs = 0L,
+            )
         }
         val activityManager =
             context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         return runCatching {
-            val reason = activityManager
+            val info = activityManager
                 .getHistoricalProcessExitReasons(context.packageName, 0, 1)
                 .firstOrNull()
-                ?.reason
-            DiagnosticPreviousExitReasonMapper.map(reason)
-        }.getOrElse { "unavailable" }
+            DiagnosticPreviousExitSnapshot(
+                reason = DiagnosticPreviousExitReasonMapper.map(info?.reason),
+                status = info?.status ?: 0,
+                importance = info?.importance ?: 0,
+                pssKb = (info?.pss ?: 0L).coerceAtLeast(0L),
+                rssKb = (info?.rss ?: 0L).coerceAtLeast(0L),
+                timestampMs = info?.timestamp ?: 0L,
+            )
+        }.getOrElse {
+            DiagnosticPreviousExitSnapshot(
+                reason = "unavailable",
+                status = 0,
+                importance = 0,
+                pssKb = 0L,
+                rssKb = 0L,
+                timestampMs = 0L,
+            )
+        }
     }
 
     private fun saveJson(path: String?, result: MethodChannel.Result) {

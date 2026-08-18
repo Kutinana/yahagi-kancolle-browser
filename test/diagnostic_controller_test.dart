@@ -155,6 +155,11 @@ final class _FakePlatform implements DiagnosticPlatformPort {
         screenHeightPx: 1080,
         webViewVersion: '139',
         previousExitReason: 'unavailable',
+        previousExitStatus: 0,
+        previousExitImportance: 0,
+        previousExitPssKb: 0,
+        previousExitRssKb: 0,
+        previousExitTimestampMs: 0,
       );
 
   @override

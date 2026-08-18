@@ -26,6 +26,11 @@ void main() {
             'screenHeightPx': 1080,
             'webViewVersion': '139.0.0',
             'previousExitReason': 'unavailable',
+            'previousExitStatus': 0,
+            'previousExitImportance': 0,
+            'previousExitPssKb': 0,
+            'previousExitRssKb': 0,
+            'previousExitTimestampMs': 0,
           },
         );
     final port = MethodChannelDiagnosticPlatformPort(channel);
@@ -51,6 +56,11 @@ void main() {
             'screenHeightPx': 1080,
             'webViewVersion': '139.0.0',
             'previousExitReason': 'unavailable',
+            'previousExitStatus': 0,
+            'previousExitImportance': 0,
+            'previousExitPssKb': 0,
+            'previousExitRssKb': 0,
+            'previousExitTimestampMs': 0,
             'androidId': 'TEST_ONLY_SECRET_DO_NOT_USE',
           },
         );

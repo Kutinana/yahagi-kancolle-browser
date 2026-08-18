@@ -18,6 +18,11 @@ class DiagnosticDeviceSnapshotTest {
             screenHeightPx = 1080,
             webViewVersion = "139",
             previousExitReason = "unavailable",
+            previousExitStatus = 0,
+            previousExitImportance = 0,
+            previousExitPssKb = 0L,
+            previousExitRssKb = 0L,
+            previousExitTimestampMs = 0L,
         ).toMap()
 
         assertEquals(
@@ -32,6 +37,11 @@ class DiagnosticDeviceSnapshotTest {
                 "screenHeightPx",
                 "webViewVersion",
                 "previousExitReason",
+                "previousExitStatus",
+                "previousExitImportance",
+                "previousExitPssKb",
+                "previousExitRssKb",
+                "previousExitTimestampMs",
             ),
             values.keys,
         )

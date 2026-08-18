@@ -21,3 +21,12 @@ internal object DiagnosticPreviousExitReasonMapper {
         }
     }
 }
+
+internal data class DiagnosticPreviousExitSnapshot(
+    val reason: String,
+    val status: Int,
+    val importance: Int,
+    val pssKb: Long,
+    val rssKb: Long,
+    val timestampMs: Long,
+)

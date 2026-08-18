@@ -11,6 +11,11 @@ internal data class DiagnosticDeviceSnapshot(
     val screenHeightPx: Int,
     val webViewVersion: String,
     val previousExitReason: String,
+    val previousExitStatus: Int,
+    val previousExitImportance: Int,
+    val previousExitPssKb: Long,
+    val previousExitRssKb: Long,
+    val previousExitTimestampMs: Long,
 ) {
     fun toMap(): Map<String, Any> = linkedMapOf(
         "manufacturer" to manufacturer,
@@ -23,5 +28,10 @@ internal data class DiagnosticDeviceSnapshot(
         "screenHeightPx" to screenHeightPx,
         "webViewVersion" to webViewVersion,
         "previousExitReason" to previousExitReason,
+        "previousExitStatus" to previousExitStatus,
+        "previousExitImportance" to previousExitImportance,
+        "previousExitPssKb" to previousExitPssKb,
+        "previousExitRssKb" to previousExitRssKb,
+        "previousExitTimestampMs" to previousExitTimestampMs,
     )
 }

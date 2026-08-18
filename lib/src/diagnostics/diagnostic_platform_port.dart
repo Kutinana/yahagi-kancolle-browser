@@ -16,6 +16,11 @@ final class DiagnosticDeviceSnapshot {
     required this.screenHeightPx,
     required this.webViewVersion,
     required this.previousExitReason,
+    required this.previousExitStatus,
+    required this.previousExitImportance,
+    required this.previousExitPssKb,
+    required this.previousExitRssKb,
+    required this.previousExitTimestampMs,
   });
 
   final String manufacturer;
@@ -28,6 +33,11 @@ final class DiagnosticDeviceSnapshot {
   final int screenHeightPx;
   final String webViewVersion;
   final String previousExitReason;
+  final int previousExitStatus;
+  final int previousExitImportance;
+  final int previousExitPssKb;
+  final int previousExitRssKb;
+  final int previousExitTimestampMs;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'manufacturer': manufacturer,
@@ -40,6 +50,11 @@ final class DiagnosticDeviceSnapshot {
     'screenHeightPx': screenHeightPx,
     'webViewVersion': webViewVersion,
     'previousExitReason': previousExitReason,
+    'previousExitStatus': previousExitStatus,
+    'previousExitImportance': previousExitImportance,
+    'previousExitPssKb': previousExitPssKb,
+    'previousExitRssKb': previousExitRssKb,
+    'previousExitTimestampMs': previousExitTimestampMs,
   };
 }
 
@@ -94,6 +109,11 @@ final class MethodChannelDiagnosticPlatformPort
     'screenHeightPx',
     'webViewVersion',
     'previousExitReason',
+    'previousExitStatus',
+    'previousExitImportance',
+    'previousExitPssKb',
+    'previousExitRssKb',
+    'previousExitTimestampMs',
   };
   static const Set<String> _runtimeKeys = <String>{
     'pssKb',
@@ -120,6 +140,11 @@ final class MethodChannelDiagnosticPlatformPort
       screenHeightPx: _int(map, 'screenHeightPx'),
       webViewVersion: _string(map, 'webViewVersion'),
       previousExitReason: _string(map, 'previousExitReason'),
+      previousExitStatus: _int(map, 'previousExitStatus'),
+      previousExitImportance: _int(map, 'previousExitImportance'),
+      previousExitPssKb: _int(map, 'previousExitPssKb'),
+      previousExitRssKb: _int(map, 'previousExitRssKb'),
+      previousExitTimestampMs: _int(map, 'previousExitTimestampMs'),
     );
   }
 
