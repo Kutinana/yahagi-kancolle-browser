@@ -27,6 +27,68 @@ import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/safety_settings_store.dart';
 
 void main() {
+  test('GameWebView hot-update bindings migrate identities safely', () async {
+    final oldBrowser = GameBrowserController();
+    final nextBrowser = GameBrowserController();
+    final oldNetwork = _HotNetworkController();
+    final nextNetwork = _HotNetworkController();
+    final oldCapture = await CaptureModeController.load(
+      const _MemoryCaptureModeStore(),
+    );
+    final nextCapture = await CaptureModeController.load(
+      const _MemoryCaptureModeStore(),
+    );
+    final port = _HotBrowserPort();
+    final newerPort = _HotBrowserPort();
+    final oldOrchestrator = _HotStartupOrchestrator();
+    final nextOrchestrator = _HotStartupOrchestrator();
+    var networkChanges = 0;
+    var captureChanges = 0;
+    final bindings = GameWebViewBindingCoordinator(
+      browserController: oldBrowser,
+      browserPort: port,
+      networkSettingsController: oldNetwork,
+      captureModeController: oldCapture,
+      startupOrchestrator: oldOrchestrator,
+      onNetworkSettingsChanged: () => networkChanges += 1,
+      onCaptureModeChanged: () => captureChanges += 1,
+    );
+
+    bindings.update(
+      browserController: nextBrowser,
+      networkSettingsController: nextNetwork,
+      captureModeController: nextCapture,
+      startupOrchestrator: nextOrchestrator,
+    );
+    oldNetwork.emitChange();
+    await oldCapture.setMode(CaptureMode.browserOnly);
+    expect(networkChanges, 0);
+    expect(captureChanges, 0);
+    nextNetwork.emitChange();
+    await nextCapture.setMode(CaptureMode.browserOnly);
+    expect(networkChanges, 1);
+    expect(captureChanges, 1);
+    expect(oldOrchestrator.disposeCalls, 1);
+    expect(identical(bindings.startupOrchestrator, nextOrchestrator), isTrue);
+
+    await nextBrowser.reload();
+    expect(port.reloadCalls, 1);
+    await oldBrowser.reload();
+    expect(port.reloadCalls, 1);
+
+    nextBrowser.attachPort(newerPort);
+    await bindings.dispose();
+    await nextBrowser.reload();
+    expect(newerPort.reloadCalls, 1);
+
+    oldBrowser.dispose();
+    nextBrowser.dispose();
+    oldNetwork.dispose();
+    nextNetwork.dispose();
+    oldCapture.dispose();
+    nextCapture.dispose();
+  });
+
   testWidgets('selects the native surface only for the activity mode', (
     tester,
   ) async {
@@ -250,6 +312,70 @@ void main() {
     final result = await controller.changeMode(GameRenderingMode.standard);
     expect(result.status, GameRenderingModeChangeStatus.unavailable);
   });
+}
+
+final class _HotNetworkController extends NetworkSettingsController {
+  _HotNetworkController() : super(store: _MemoryNetworkStore());
+
+  void emitChange() => notifyListeners();
+}
+
+final class _HotBrowserPort implements GameBrowserPort {
+  int reloadCalls = 0;
+
+  @override
+  Future<void> reload() async => reloadCalls += 1;
+
+  @override
+  Future<bool> canGoBack() async => false;
+
+  @override
+  Future<void> clearCache() async {}
+
+  @override
+  Future<void> clearSession() async {}
+
+  @override
+  Future<void> fitGameScreen() async {}
+
+  @override
+  Future<void> goBack() async {}
+
+  @override
+  Future<void> loadUri(Uri uri) async {}
+
+  @override
+  Future<void> runJavaScript(String javascript) async {}
+
+  @override
+  Future<void> showLocalHome() async {}
+}
+
+final class _HotStartupOrchestrator implements GameSurfaceStartupOrchestrator {
+  int disposeCalls = 0;
+
+  @override
+  Future<void> attachAudioPortOnce() async {}
+
+  @override
+  Future<bool> attachFrameRatePlatformPort() async => false;
+
+  @override
+  Future<GameSurfaceNetworkResult> applyNetworkSettings() async =>
+      const GameSurfaceNetworkResult.success();
+
+  @override
+  void dispose() => disposeCalls += 1;
+
+  @override
+  Future<void> prepareCapture() async {}
+
+  @override
+  Future<void> runCaptureStartup({
+    required Future<void> Function() waitForSurface,
+    required bool Function() isActive,
+    required Future<void> Function() navigate,
+  }) async {}
 }
 
 final class _NoopDamageAlertPort implements BattleDamageAlertPort {

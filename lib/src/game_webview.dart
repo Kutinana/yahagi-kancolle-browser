@@ -108,6 +108,9 @@ final class DefaultGameSurfaceStartupOrchestrator
   bool _capturePortAttached = false;
   bool _audioPortAttached = false;
   bool _disposed = false;
+  int _captureRevision = 0;
+  Future<void>? _captureInFlight;
+  Future<void>? _audioAttachInFlight;
 
   @override
   Future<GameSurfaceNetworkResult> applyNetworkSettings() async {
@@ -140,27 +143,58 @@ final class DefaultGameSurfaceStartupOrchestrator
   }
 
   @override
-  Future<void> prepareCapture() async {
-    if (!_capturePortAttached) {
-      _capturePortAttached = true;
-      await gameCaptureController.attach(
-        _gameCapturePort,
-        enabled: captureModeController.mode.installsGameBridge,
-        script: nativeGameCaptureScript,
-      );
-      return;
+  Future<void> prepareCapture() {
+    _captureRevision += 1;
+    final inFlight = _captureInFlight;
+    if (inFlight != null) return inFlight;
+    final operation = _drainCaptureChanges();
+    _captureInFlight = operation;
+    return operation.whenComplete(() {
+      if (identical(_captureInFlight, operation)) _captureInFlight = null;
+    });
+  }
+
+  Future<void> _drainCaptureChanges() async {
+    while (!_disposed) {
+      final revision = _captureRevision;
+      final enabled = captureModeController.mode.installsGameBridge;
+      if (!_capturePortAttached) {
+        await gameCaptureController.attach(
+          _gameCapturePort,
+          enabled: enabled,
+          script: nativeGameCaptureScript,
+        );
+        if (_disposed) return;
+        _capturePortAttached = true;
+      } else {
+        await gameCaptureController.configure(
+          enabled: enabled,
+          script: nativeGameCaptureScript,
+        );
+      }
+      if (revision == _captureRevision) return;
     }
-    await gameCaptureController.configure(
-      enabled: captureModeController.mode.installsGameBridge,
-      script: nativeGameCaptureScript,
-    );
   }
 
   @override
-  Future<void> attachAudioPortOnce() async {
-    if (_audioPortAttached) return;
-    _audioPortAttached = true;
+  Future<void> attachAudioPortOnce() {
+    if (_audioPortAttached) return Future<void>.value();
+    final inFlight = _audioAttachInFlight;
+    if (inFlight != null) return inFlight;
+    final operation = _attachAudioPort();
+    _audioAttachInFlight = operation;
+    return operation.whenComplete(() {
+      if (identical(_audioAttachInFlight, operation)) {
+        _audioAttachInFlight = null;
+      }
+    });
+  }
+
+  Future<void> _attachAudioPort() async {
     await audioController.attachPort(_audioPortFactory());
+    if (_disposed) return;
+    _audioPortAttached =
+        audioController.availability == GameAudioAvailability.available;
   }
 
   @override
@@ -176,6 +210,103 @@ final class DefaultGameSurfaceStartupOrchestrator
     if (_disposed) return;
     _disposed = true;
     _gameCapturePort.dispose();
+  }
+}
+
+@visibleForTesting
+final class GameWebViewBindingCoordinator {
+  GameWebViewBindingCoordinator({
+    required GameBrowserController browserController,
+    required GameBrowserPort browserPort,
+    required NetworkSettingsController networkSettingsController,
+    required CaptureModeController captureModeController,
+    required GameSurfaceStartupOrchestrator startupOrchestrator,
+    required VoidCallback onNetworkSettingsChanged,
+    required VoidCallback onCaptureModeChanged,
+  }) : this._internal(
+         browserController: browserController,
+         browserPort: browserPort,
+         networkSettingsController: networkSettingsController,
+         captureModeController: captureModeController,
+         startupOrchestrator: startupOrchestrator,
+         onNetworkSettingsChanged: onNetworkSettingsChanged,
+         onCaptureModeChanged: onCaptureModeChanged,
+       );
+
+  GameWebViewBindingCoordinator._internal({
+    required this._browserController,
+    required this.browserPort,
+    required this._networkSettingsController,
+    required this._captureModeController,
+    required this._startupOrchestrator,
+    required this.onNetworkSettingsChanged,
+    required this.onCaptureModeChanged,
+  }) {
+    _browserController.attachPort(browserPort);
+    _networkSettingsController.addListener(onNetworkSettingsChanged);
+    _captureModeController.addListener(onCaptureModeChanged);
+  }
+
+  final GameBrowserPort browserPort;
+  final VoidCallback onNetworkSettingsChanged;
+  final VoidCallback onCaptureModeChanged;
+  GameBrowserController _browserController;
+  NetworkSettingsController _networkSettingsController;
+  CaptureModeController _captureModeController;
+  GameSurfaceStartupOrchestrator _startupOrchestrator;
+  bool _disposed = false;
+
+  GameSurfaceStartupOrchestrator get startupOrchestrator =>
+      _startupOrchestrator;
+
+  void update({
+    required GameBrowserController browserController,
+    required NetworkSettingsController networkSettingsController,
+    required CaptureModeController captureModeController,
+    required GameSurfaceStartupOrchestrator startupOrchestrator,
+  }) {
+    if (_disposed) return;
+    if (!identical(_browserController, browserController)) {
+      _browserController.detachPort(browserPort);
+      _browserController = browserController;
+      _browserController.attachPort(browserPort);
+    }
+    if (!identical(_networkSettingsController, networkSettingsController)) {
+      _networkSettingsController.removeListener(onNetworkSettingsChanged);
+      _networkSettingsController = networkSettingsController;
+      _networkSettingsController.addListener(onNetworkSettingsChanged);
+    }
+    if (!identical(_captureModeController, captureModeController)) {
+      _captureModeController.removeListener(onCaptureModeChanged);
+      _captureModeController = captureModeController;
+      _captureModeController.addListener(onCaptureModeChanged);
+    }
+    if (!identical(_startupOrchestrator, startupOrchestrator)) {
+      final previous = _startupOrchestrator;
+      _startupOrchestrator = startupOrchestrator;
+      unawaited(_disposeGuarded(previous));
+    }
+  }
+
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    _browserController.detachPort(browserPort);
+    _networkSettingsController.removeListener(onNetworkSettingsChanged);
+    _captureModeController.removeListener(onCaptureModeChanged);
+    await _disposeGuarded(_startupOrchestrator);
+  }
+
+  Future<void> _disposeGuarded(
+    GameSurfaceStartupOrchestrator orchestrator,
+  ) async {
+    try {
+      await orchestrator.dispose();
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Game WebView orchestrator dispose failed: $error\n$stackTrace',
+      );
+    }
   }
 }
 
@@ -211,9 +342,10 @@ class GameWebView extends StatefulWidget {
 
 class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   late final WebViewController _webViewController;
-  late final Future<void> _compatibilityReady;
-  late final Future<void> _frameRateReady;
-  late final GameSurfaceStartupOrchestrator _startupOrchestrator;
+  late Future<void> _compatibilityReady;
+  late Future<void> _frameRateReady;
+  late final WebViewGameBrowserPort _browserPort;
+  late final GameWebViewBindingCoordinator _bindings;
   final GameNavigationPolicy _navigationPolicy = GameNavigationPolicy();
   late CaptureMode _activeCaptureMode;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
@@ -222,43 +354,60 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   );
 
   int _navigationEpoch = 0;
+  int _startupEpoch = 0;
+  int _bindingEpoch = 0;
+  bool _disposed = false;
 
   GameStartupState _startupState = GameStartupState.loadingSettings;
   String _startupErrorMessage = '';
 
   void _onNetworkSettingsChanged() {
-    if (!mounted) return;
+    if (!mounted || _disposed) return;
     if (_startupState == GameStartupState.error) {
-      _executeStartupSequence();
+      unawaited(_executeStartupSequence());
     }
+  }
+
+  void _handleCaptureModeChanged() {
+    unawaited(_onCaptureModeChanged());
+  }
+
+  GameSurfaceStartupOrchestrator _createStartupOrchestrator(
+    GameWebView config,
+  ) {
+    return DefaultGameSurfaceStartupOrchestrator(
+      networkSettingsController: config.networkSettingsController,
+      captureModeController: config.captureModeController,
+      audioController: config.audioController,
+      gameCaptureController: config.gameCaptureController,
+      frameRateSettingsController: config.frameRateSettingsController,
+    );
   }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    widget.networkSettingsController.addListener(_onNetworkSettingsChanged);
     _activeCaptureMode = widget.captureModeController.mode;
-    _startupOrchestrator = DefaultGameSurfaceStartupOrchestrator(
-      networkSettingsController: widget.networkSettingsController,
-      captureModeController: widget.captureModeController,
-      audioController: widget.audioController,
-      gameCaptureController: widget.gameCaptureController,
-      frameRateSettingsController: widget.frameRateSettingsController,
-    );
-    widget.captureModeController.addListener(_onCaptureModeChanged);
     _webViewController = WebViewController();
     _compatibilityReady = _configureCompatibility();
-    _frameRateReady = _configureFrameRate();
-    widget.browserController.attachPort(
-      WebViewGameBrowserPort(
-        _webViewController,
-        _prototypePage,
-        compatibilityReady: _compatibilityReady,
-        prepareForRealNavigation: _prepareCapture,
-        synchronizeGamePresentation: _synchronizeGamePresentation,
-      ),
+    _browserPort = WebViewGameBrowserPort(
+      _webViewController,
+      _prototypePage,
+      compatibilityReady: _compatibilityReady,
+      prepareForRealNavigation: _prepareCapture,
+      synchronizeGamePresentation: _synchronizeGamePresentation,
     );
+    _bindings = GameWebViewBindingCoordinator(
+      browserController: widget.browserController,
+      browserPort: _browserPort,
+      networkSettingsController: widget.networkSettingsController,
+      captureModeController: widget.captureModeController,
+      startupOrchestrator: _createStartupOrchestrator(widget),
+      onNetworkSettingsChanged: _onNetworkSettingsChanged,
+      onCaptureModeChanged: _handleCaptureModeChanged,
+    );
+    _frameRateReady = _configureFrameRate();
 
     _webViewController
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -300,26 +449,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
             }
           },
           onPageFinished: (url) async {
-            final navigationEpoch = _navigationEpoch;
-            widget.controller.onPageFinished(url);
-            widget.browserController.onPageFinished(url);
-
-            await _synchronizeGamePresentation();
-            if (!_isCurrentNavigation(navigationEpoch)) return;
-            await _prepareCapture();
-            if (!_isCurrentNavigation(navigationEpoch)) return;
-            await _attachAudioPortOnce();
-            if (!_isCurrentNavigation(navigationEpoch)) return;
-
-            if (_startupState == GameStartupState.loadingGame) {
-              setState(() => _startupState = GameStartupState.ready);
-            }
-            await _frameRateRuntimeController?.onPageReady(
-              samplingEnabled:
-                  widget.browserController.mode !=
-                      GameBrowserMode.localPrototype &&
-                  isGameFrameRateSamplingPage(url),
-            );
+            await _finishPage(url);
           },
           onWebResourceError: (error) {
             final isForMainFrame = error.isForMainFrame ?? true;
@@ -343,7 +473,72 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         ),
       );
 
-    _executeStartupSequence();
+    unawaited(_executeStartupSequence());
+  }
+
+  @override
+  void didUpdateWidget(covariant GameWebView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_disposed) return;
+
+    final startupDependenciesChanged =
+        !identical(
+          oldWidget.networkSettingsController,
+          widget.networkSettingsController,
+        ) ||
+        !identical(
+          oldWidget.captureModeController,
+          widget.captureModeController,
+        ) ||
+        !identical(oldWidget.audioController, widget.audioController) ||
+        !identical(
+          oldWidget.gameCaptureController,
+          widget.gameCaptureController,
+        ) ||
+        !identical(
+          oldWidget.frameRateSettingsController,
+          widget.frameRateSettingsController,
+        );
+    final startupContextChanged =
+        startupDependenciesChanged ||
+        !identical(oldWidget.browserController, widget.browserController);
+    if (startupContextChanged) {
+      _startupEpoch += 1;
+      _navigationEpoch += 1;
+    }
+    if (startupDependenciesChanged) {
+      _bindingEpoch += 1;
+    }
+    if (!identical(
+      oldWidget.captureModeController,
+      widget.captureModeController,
+    )) {
+      _activeCaptureMode = widget.captureModeController.mode;
+    }
+
+    _bindings.update(
+      browserController: widget.browserController,
+      networkSettingsController: widget.networkSettingsController,
+      captureModeController: widget.captureModeController,
+      startupOrchestrator: startupDependenciesChanged
+          ? _createStartupOrchestrator(widget)
+          : _bindings.startupOrchestrator,
+    );
+
+    if (!identical(
+      oldWidget.frameRateSettingsController,
+      widget.frameRateSettingsController,
+    )) {
+      _frameRateRuntimeController?.dispose();
+      _frameRateRuntimeController = null;
+      _frameRateReady = _configureFrameRate();
+    }
+    if (oldWidget.renderingMode != widget.renderingMode) {
+      _compatibilityReady = _configureCompatibility();
+    }
+    if (startupContextChanged) {
+      unawaited(_executeStartupSequence());
+    }
   }
 
   @override
@@ -352,52 +547,106 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   }
 
   Future<void> _executeStartupSequence() async {
-    setState(() => _startupState = GameStartupState.applyingNetwork);
+    final startupEpoch = ++_startupEpoch;
+    final orchestrator = _bindings.startupOrchestrator;
+    final compatibilityReady = _compatibilityReady;
+    final frameRateReady = _frameRateReady;
+    final networkSettings = widget.networkSettingsController.settings;
+    final browserController = widget.browserController;
+    try {
+      if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
+      setState(() => _startupState = GameStartupState.applyingNetwork);
 
-    // Ensure compatibility is done
-    await _compatibilityReady;
-    await _frameRateReady;
+      await compatibilityReady;
+      if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
+      await frameRateReady;
+      if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
 
-    // Apply network settings
-    final netSettings = widget.networkSettingsController.settings;
-    final result = await _startupOrchestrator.applyNetworkSettings();
+      final result = await orchestrator.applyNetworkSettings();
+      if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
 
-    if (!mounted) return;
+      if (!result.success && networkSettings.mode != NetworkMode.system) {
+        _reportRecoverableError('网络设置应用失败 [${result.code}]: ${result.message}');
+        return;
+      }
 
-    if (!result.success && netSettings.mode != NetworkMode.system) {
-      setState(() {
-        _startupState = GameStartupState.error;
-        _startupErrorMessage = '网络设置应用失败 [${result.code}]: ${result.message}';
-      });
-      return;
+      setState(() => _startupState = GameStartupState.networkReady);
+
+      final address = Uri.tryParse(browserController.displayAddress);
+      final initialAddress =
+          address != null &&
+              SafePageAddress.canNavigate(address) &&
+              browserController.mode != GameBrowserMode.localPrototype
+          ? address
+          : GameLaunchConfig.dmmGameEntry;
+
+      await orchestrator.runCaptureStartup(
+        waitForSurface: () async {
+          await WidgetsBinding.instance.endOfFrame;
+        },
+        isActive: () => _isCurrentStartup(startupEpoch, orchestrator),
+        navigate: () async {
+          if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
+          await _webViewController.loadRequest(initialAddress);
+        },
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Game WebView startup failed: $error\n$stackTrace');
+      if (_isCurrentStartup(startupEpoch, orchestrator)) {
+        _reportRecoverableError('游戏页面启动失败：$error');
+      }
     }
+  }
 
-    setState(() => _startupState = GameStartupState.networkReady);
+  bool _isCurrentStartup(
+    int epoch,
+    GameSurfaceStartupOrchestrator orchestrator,
+  ) {
+    return mounted &&
+        !_disposed &&
+        epoch == _startupEpoch &&
+        identical(orchestrator, _bindings.startupOrchestrator);
+  }
 
-    // Initial Load Request
-    final displayAddress = widget.browserController.displayAddress;
-    final address = Uri.tryParse(displayAddress);
-    final initialAddress =
-        address != null &&
-            SafePageAddress.canNavigate(address) &&
-            widget.browserController.mode != GameBrowserMode.localPrototype
-        ? address
-        : GameLaunchConfig.dmmGameEntry;
-
-    await _startupOrchestrator.runCaptureStartup(
-      waitForSurface: () async {
-        await WidgetsBinding.instance.endOfFrame;
-      },
-      isActive: () => mounted,
-      navigate: () async {
-        if (!mounted) return;
-        await _webViewController.loadRequest(initialAddress);
-      },
-    );
+  void _reportRecoverableError(String message) {
+    if (!mounted || _disposed) return;
+    setState(() {
+      _startupState = GameStartupState.error;
+      _startupErrorMessage = message;
+    });
   }
 
   Future<void> _attachAudioPortOnce() async {
-    await _startupOrchestrator.attachAudioPortOnce();
+    await _bindings.startupOrchestrator.attachAudioPortOnce();
+  }
+
+  Future<void> _finishPage(String url) async {
+    final navigationEpoch = _navigationEpoch;
+    try {
+      widget.controller.onPageFinished(url);
+      widget.browserController.onPageFinished(url);
+
+      await _synchronizeGamePresentation();
+      if (!_isCurrentNavigation(navigationEpoch)) return;
+      await _prepareCapture();
+      if (!_isCurrentNavigation(navigationEpoch)) return;
+      await _attachAudioPortOnce();
+      if (!_isCurrentNavigation(navigationEpoch)) return;
+
+      if (_startupState == GameStartupState.loadingGame) {
+        setState(() => _startupState = GameStartupState.ready);
+      }
+      await _frameRateRuntimeController?.onPageReady(
+        samplingEnabled:
+            widget.browserController.mode != GameBrowserMode.localPrototype &&
+            isGameFrameRateSamplingPage(url),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Game WebView page finish failed: $error\n$stackTrace');
+      if (_isCurrentNavigation(navigationEpoch)) {
+        _reportRecoverableError('游戏页面准备失败：$error');
+      }
+    }
   }
 
   Future<void> _synchronizeGamePresentation() async {
@@ -448,12 +697,22 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       return;
     }
     _activeCaptureMode = nextMode;
-    await _prepareCapture();
-    await _webViewController.reload();
+    final bindingEpoch = _bindingEpoch;
+    final orchestrator = _bindings.startupOrchestrator;
+    try {
+      await orchestrator.prepareCapture();
+      if (!_isCurrentBinding(bindingEpoch, orchestrator)) return;
+      await _webViewController.reload();
+    } catch (error, stackTrace) {
+      debugPrint('Game WebView capture update failed: $error\n$stackTrace');
+      if (_isCurrentBinding(bindingEpoch, orchestrator)) {
+        _reportRecoverableError('抓包模式更新失败：$error');
+      }
+    }
   }
 
   Future<void> _prepareCapture() async {
-    await _startupOrchestrator.prepareCapture();
+    await _bindings.startupOrchestrator.prepareCapture();
   }
 
   Future<void> _configureCompatibility() async {
@@ -487,12 +746,13 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   Future<void> _configureFrameRate() async {
     final controller = widget.frameRateSettingsController;
     if (controller == null) return;
+    final bindingEpoch = _bindingEpoch;
+    final orchestrator = _bindings.startupOrchestrator;
     await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
+    if (!_isCurrentBinding(bindingEpoch, orchestrator)) return;
     try {
-      final supported = await _startupOrchestrator
-          .attachFrameRatePlatformPort();
-      if (!mounted) return;
+      final supported = await orchestrator.attachFrameRatePlatformPort();
+      if (!_isCurrentBinding(bindingEpoch, orchestrator)) return;
       if (!supported) return;
       final runtimeController = GameFrameRateRuntimeController(
         settings: controller,
@@ -503,9 +763,19 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       if (lifecycleState != null) {
         runtimeController.onLifecycleChanged(lifecycleState);
       }
-    } catch (error) {
-      debugPrint('Frame-rate runtime unavailable: $error');
+    } catch (error, stackTrace) {
+      debugPrint('Frame-rate runtime unavailable: $error\n$stackTrace');
     }
+  }
+
+  bool _isCurrentBinding(
+    int epoch,
+    GameSurfaceStartupOrchestrator orchestrator,
+  ) {
+    return mounted &&
+        !_disposed &&
+        epoch == _bindingEpoch &&
+        identical(orchestrator, _bindings.startupOrchestrator);
   }
 
   NavigationDecision _onNavigationRequest(NavigationRequest request) {
@@ -573,11 +843,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              widget.networkSettingsController
-                  .applySettings(NetworkMode.system, '', 8099)
-                  .then((_) {
-                    _executeStartupSequence();
-                  });
+              unawaited(_retryWithSystemNetwork());
             },
             icon: const Icon(Icons.public),
             label: Text(
@@ -607,6 +873,23 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _retryWithSystemNetwork() async {
+    try {
+      await widget.networkSettingsController.applySettings(
+        NetworkMode.system,
+        '',
+        8099,
+      );
+      if (!mounted || _disposed) return;
+      await _executeStartupSequence();
+    } catch (error, stackTrace) {
+      debugPrint('Game WebView network retry failed: $error\n$stackTrace');
+      if (mounted && !_disposed) {
+        _reportRecoverableError('网络重试失败：$error');
+      }
+    }
+  }
+
   String _getStartupStatusText() {
     switch (_startupState) {
       case GameStartupState.loadingSettings:
@@ -624,16 +907,26 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _disposed = true;
+    _startupEpoch += 1;
+    _bindingEpoch += 1;
+    _navigationEpoch += 1;
     WidgetsBinding.instance.removeObserver(this);
     _frameRateRuntimeController?.dispose();
-    widget.captureModeController.removeListener(_onCaptureModeChanged);
-    widget.networkSettingsController.removeListener(_onNetworkSettingsChanged);
-    _webViewController.setJavaScriptMode(JavaScriptMode.disabled);
-    _webViewController.loadHtmlString(
-      '<!DOCTYPE html><html><body></body></html>',
-    );
-    _startupOrchestrator.dispose();
+    unawaited(_bindings.dispose());
+    unawaited(_disableWebView());
     super.dispose();
+  }
+
+  Future<void> _disableWebView() async {
+    try {
+      await _webViewController.setJavaScriptMode(JavaScriptMode.disabled);
+      await _webViewController.loadHtmlString(
+        '<!DOCTYPE html><html><body></body></html>',
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Game WebView shutdown failed: $error\n$stackTrace');
+    }
   }
 }
 

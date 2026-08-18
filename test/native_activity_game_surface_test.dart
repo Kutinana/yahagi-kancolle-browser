@@ -84,6 +84,64 @@ void main() {
     },
   );
 
+  test(
+    'default orchestrator shares audio attach and retries unavailable ports',
+    () async {
+      final calls = <String>[];
+      final support = Completer<bool>();
+      var audioPortNumber = 0;
+      final fixture = await _DefaultOrchestratorFixture.create(
+        calls,
+        audioPortFactory: () {
+          audioPortNumber += 1;
+          if (audioPortNumber == 1) return _BlockingAudioPort(support.future);
+          return _RecordingAudioPort(calls);
+        },
+      );
+      addTearDown(fixture.dispose);
+
+      final first = fixture.orchestrator.attachAudioPortOnce();
+      var secondCompleted = false;
+      final second = fixture.orchestrator.attachAudioPortOnce().whenComplete(
+        () => secondCompleted = true,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(secondCompleted, isFalse);
+
+      support.complete(false);
+      await Future.wait(<Future<void>>[first, second]);
+      await fixture.orchestrator.attachAudioPortOnce();
+      expect(audioPortNumber, 2);
+    },
+  );
+
+  test(
+    'default orchestrator serializes capture changes with latest mode last',
+    () async {
+      final calls = <String>[];
+      final firstConfigure = Completer<void>();
+      final capturePort = _BlockingCapturePort(firstConfigure);
+      final fixture = await _DefaultOrchestratorFixture.create(
+        calls,
+        capturePortFactory: () => capturePort,
+      );
+      addTearDown(fixture.dispose);
+
+      final first = fixture.orchestrator.prepareCapture();
+      await Future<void>.delayed(Duration.zero);
+      await fixture.captureModeController.setMode(CaptureMode.browserOnly);
+      final second = fixture.orchestrator.prepareCapture();
+      await fixture.captureModeController.setMode(CaptureMode.game);
+      final third = fixture.orchestrator.prepareCapture();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(capturePort.enabledCalls, <bool>[true]);
+      firstConfigure.complete();
+      await Future.wait(<Future<void>>[first, second, third]);
+      expect(capturePort.enabledCalls.last, isTrue);
+    },
+  );
+
   testWidgets(
     'subscribes before create and builds a slot without any platform view',
     (tester) async {
@@ -112,6 +170,151 @@ void main() {
     },
   );
 
+  testWidgets('native visibility follows readiness instead of slot desire', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+
+    expect(fixture.port.calls, contains('visible:false'));
+    expect(fixture.port.calls, isNot(contains('visible:true')));
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(
+      fixture.port.calls.lastWhere((call) => call.startsWith('visible:')),
+      'visible:true',
+    );
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/next'),
+    );
+    await tester.pump();
+    expect(
+      fixture.port.calls.lastWhere((call) => call.startsWith('visible:')),
+      'visible:false',
+    );
+    fixture.toolbarController.collapse();
+
+    fixture.port.addEvent(
+      _event(
+        'mainFrameError',
+        generationId: 7,
+        errorCode: -2,
+        description: 'failed',
+      ),
+    );
+    await tester.pump();
+    expect(
+      fixture.port.calls.lastWhere((call) => call.startsWith('visible:')),
+      'visible:false',
+    );
+  });
+
+  testWidgets('route desire stays authoritative when a page becomes ready', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.navigatorKey.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => const SizedBox()),
+    );
+    await tester.pump();
+    await tester.pump();
+    fixture.port.calls.clear();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(fixture.port.calls, isNot(contains('visible:true')));
+
+    fixture.navigatorKey.currentState!.pop();
+    await tester.pump();
+    await tester.pump();
+    expect(fixture.port.calls, contains('visible:true'));
+    fixture.toolbarController.collapse();
+  });
+
+  testWidgets('visibility writes are serialized and latest desire wins', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    final show = Completer<void>();
+    fixture.port.visibilityCompleters.add(show);
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(
+      fixture.port.calls.lastWhere((call) => call.startsWith('visible:')),
+      'visible:true',
+    );
+
+    fixture.navigatorKey.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => const SizedBox()),
+    );
+    await tester.pump();
+    expect(
+      fixture.port.calls.where((call) => call == 'visible:false'),
+      hasLength(1),
+    );
+
+    show.complete();
+    await tester.pump();
+    await tester.pump();
+    expect(fixture.port.calls.last, 'visible:false');
+    fixture.toolbarController.collapse();
+  });
+
+  testWidgets('an unexpected event-stream close fails and hides the surface', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+    fixture.port.calls.clear();
+
+    await fixture.port.close();
+    await tester.pump();
+
+    expect(fixture.statusController.loadState, WebViewLoadState.failed);
+    expect(fixture.port.calls, contains('visible:false'));
+    expect(tester.takeException(), isNull);
+    fixture.toolbarController.collapse();
+  });
+
   testWidgets('does not touch the Android channel without an injected port', (
     tester,
   ) async {
@@ -139,6 +342,76 @@ void main() {
       debugPrint = previousDebugPrint;
       debugDefaultTargetPlatformOverride = null;
     }
+  });
+
+  test('rejects incomplete default-orchestrator dependencies at runtime', () {
+    expect(
+      () => NativeActivityGameSurface(
+        statusController: PrototypeStatusController(),
+        browserController: GameBrowserController(),
+        toolbarController: GameToolbarController(),
+        routeObserver: RouteObserver<ModalRoute<dynamic>>(),
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  testWidgets('hot update migrates the attached browser controller', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    final nextBrowserController = GameBrowserController();
+    addTearDown(nextBrowserController.dispose);
+
+    await fixture.pump(tester, browserController: nextBrowserController);
+    fixture.port.calls.clear();
+    await nextBrowserController.reload();
+    expect(fixture.port.calls, contains('reload'));
+
+    fixture.port.calls.clear();
+    await fixture.browserController.reload();
+    expect(fixture.port.calls, isNot(contains('reload')));
+    expect(fixture.browserController.errorMessage, 'WebView 尚未就绪');
+  });
+
+  testWidgets('hot update replaces the orchestrator and invalidates old work', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await _pumpUntil(
+      tester,
+      () => fixture.port.calls.any((call) => call.startsWith('load:')),
+    );
+    final oldFinish = Completer<void>();
+    fixture.orchestrator.prepareCaptureCompleter = oldFinish;
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/old'),
+    );
+    await tester.pump();
+    final nextOrchestrator = _FakeStartupOrchestrator();
+
+    await fixture.pump(tester, startupOrchestrator: nextOrchestrator);
+    oldFinish.complete();
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(fixture.orchestrator.disposeCalls, 1);
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/new'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/new'),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(nextOrchestrator.prepareCaptureCalls, 1);
+    expect(fixture.statusController.loadState, WebViewLoadState.ready);
+    fixture.toolbarController.collapse();
   });
 
   testWidgets(
@@ -317,6 +590,14 @@ void main() {
     addTearDown(fixture.dispose);
     await fixture.pump(tester);
     await tester.pump();
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
     fixture.port.calls.clear();
 
     unawaited(
@@ -337,6 +618,7 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(fixture.port.calls, contains('visible:true'));
+    fixture.toolbarController.collapse();
   });
 
   testWidgets(
@@ -528,6 +810,134 @@ void main() {
     expect(fixture.orchestrator.applyNetworkCalls, 2);
   });
 
+  testWidgets('a failed retry reload remains retryable until one success', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    fixture.networkSettingsController.settingsValue = const NetworkSettings(
+      mode: NetworkMode.httpProxy,
+      host: '127.0.0.1',
+      port: 8080,
+    );
+    fixture.orchestrator.networkResult = const GameSurfaceNetworkResult(
+      success: false,
+      code: 'failed',
+      message: 'failed',
+    );
+    await fixture.pump(tester);
+    await _pumpUntil(
+      tester,
+      () => find
+          .byKey(const Key('native-game-surface-error'))
+          .evaluate()
+          .isNotEmpty,
+    );
+    fixture.orchestrator.networkResult =
+        const GameSurfaceNetworkResult.success();
+    fixture.port.reloadFailure = StateError('reload failed');
+
+    final previousDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {};
+    try {
+      fixture.networkSettingsController.emitChange();
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.byKey(const Key('native-game-surface-error')),
+        findsOneWidget,
+      );
+      expect(fixture.orchestrator.applyNetworkCalls, 2);
+
+      fixture.port.reloadFailure = null;
+      fixture.networkSettingsController.emitChange();
+      await tester.pump();
+      await tester.pump();
+    } finally {
+      debugPrint = previousDebugPrint;
+    }
+
+    expect(fixture.orchestrator.applyNetworkCalls, 3);
+    expect(fixture.port.successfulReloadCalls, 1);
+  });
+
+  for (final failureStage in <String>['capture', 'audio']) {
+    testWidgets('$failureStage finish failure is contained and hides', (
+      tester,
+    ) async {
+      final fixture = _SurfaceFixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester);
+      await _pumpUntil(
+        tester,
+        () => fixture.port.calls.any((call) => call.startsWith('load:')),
+      );
+      if (failureStage == 'capture') {
+        fixture.orchestrator.prepareCaptureFailure = StateError(
+          'capture failed',
+        );
+      } else {
+        fixture.orchestrator.attachAudioFailure = StateError('audio failed');
+      }
+
+      final previousDebugPrint = debugPrint;
+      debugPrint = (message, {wrapWidth}) {};
+      try {
+        fixture.port.addEvent(
+          _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+        );
+        fixture.port.addEvent(
+          _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+        );
+        await tester.pump();
+        await tester.pump();
+      } finally {
+        debugPrint = previousDebugPrint;
+      }
+
+      expect(fixture.statusController.loadState, WebViewLoadState.failed);
+      expect(
+        find.byKey(const Key('native-game-surface-error')),
+        findsOneWidget,
+      );
+      expect(
+        fixture.port.calls.lastWhere((call) => call.startsWith('visible:')),
+        'visible:false',
+      );
+      expect(tester.takeException(), isNull);
+      fixture.toolbarController.collapse();
+    });
+  }
+
+  testWidgets('rapid capture changes reload only the final mode', (
+    tester,
+  ) async {
+    final captureModeController = await CaptureModeController.load(
+      const _GameCaptureModeStore(),
+    );
+    addTearDown(captureModeController.dispose);
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester, captureModeController: captureModeController);
+    await _pumpUntil(
+      tester,
+      () => fixture.port.calls.any((call) => call.startsWith('load:')),
+    );
+    fixture.port.calls.clear();
+    final capture = Completer<void>();
+    fixture.orchestrator.prepareCaptureCompleter = capture;
+
+    await captureModeController.setMode(CaptureMode.browserOnly);
+    await tester.pump();
+    await captureModeController.setMode(CaptureMode.game);
+    await tester.pump();
+    capture.complete();
+    await tester.pump();
+    await tester.pump();
+
+    expect(fixture.port.calls.where((call) => call == 'reload'), hasLength(1));
+  });
+
   for (final terminalType in <String>['renderProcessGone', 'destroyed']) {
     testWidgets(
       '$terminalType prevents a pending network retry from reloading',
@@ -652,6 +1062,63 @@ void main() {
       fixture.port.calls.indexOf('destroy'),
       greaterThan(fixture.port.calls.indexOf('cancel')),
     );
+  });
+
+  testWidgets('cancel timeout still destroys and contains a late error', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    fixture.port.cancelCompleter = Completer<void>();
+    await fixture.pump(tester, cleanupTimeout: const Duration(milliseconds: 1));
+    await tester.pump();
+
+    final previousDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {};
+    try {
+      await tester.pumpWidget(const SizedBox.shrink());
+      for (var pumpCount = 0; pumpCount < 4; pumpCount++) {
+        await tester.pump(const Duration(milliseconds: 2));
+      }
+      await _pumpUntilDestroyed(tester, fixture.port);
+      fixture.port.cancelFailure = StateError('late cancel failure');
+      fixture.port.cancelCompleter!.complete();
+      await tester.pump();
+    } finally {
+      debugPrint = previousDebugPrint;
+    }
+
+    expect(fixture.port.calls, contains('destroy'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('orchestrator timeout still destroys and contains a late error', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    fixture.orchestrator.disposeCompleter = Completer<void>();
+    await fixture.pump(tester, cleanupTimeout: const Duration(milliseconds: 1));
+    await tester.pump();
+
+    final previousDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {};
+    try {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 2));
+      await tester.pump(const Duration(milliseconds: 2));
+      await _pumpUntilDestroyed(tester, fixture.port);
+      fixture.orchestrator.disposeAsyncFailure = StateError(
+        'late orchestrator failure',
+      );
+      fixture.orchestrator.disposeCompleter!.complete();
+      await tester.pump();
+    } finally {
+      debugPrint = previousDebugPrint;
+    }
+
+    expect(fixture.port.calls, contains('destroy'));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a cancellation error still allows native destruction', (
@@ -871,7 +1338,11 @@ final class _DefaultOrchestratorFixture {
   final GameFrameRateSettingsController frameRateController;
   final GameCaptureController captureController;
 
-  static Future<_DefaultOrchestratorFixture> create(List<String> calls) async {
+  static Future<_DefaultOrchestratorFixture> create(
+    List<String> calls, {
+    GameCapturePort Function()? capturePortFactory,
+    GameAudioPort Function()? audioPortFactory,
+  }) async {
     final networkController = _RecordingNetworkController(calls);
     final captureModeController = await CaptureModeController.load(
       const _GameCaptureModeStore(),
@@ -889,8 +1360,9 @@ final class _DefaultOrchestratorFixture {
       audioController: audioController,
       gameCaptureController: captureController,
       frameRateSettingsController: frameRateController,
-      capturePortFactory: () => _RecordingCapturePort(calls),
-      audioPortFactory: () => _RecordingAudioPort(calls),
+      capturePortFactory:
+          capturePortFactory ?? () => _RecordingCapturePort(calls),
+      audioPortFactory: audioPortFactory ?? () => _RecordingAudioPort(calls),
       frameRatePortFactory: () => _RecordingFrameRatePort(calls),
     );
     return _DefaultOrchestratorFixture._(
@@ -961,6 +1433,31 @@ final class _RecordingCapturePort implements GameCapturePort {
   void dispose() {}
 }
 
+final class _BlockingCapturePort implements GameCapturePort {
+  _BlockingCapturePort(this.firstConfigure);
+
+  final Completer<void> firstConfigure;
+  final List<bool> enabledCalls = <bool>[];
+
+  @override
+  Stream<CapturedApiEvent> get events => const Stream<CapturedApiEvent>.empty();
+
+  @override
+  Future<bool> isSupported() async => true;
+
+  @override
+  Future<void> configure({
+    required bool enabled,
+    required String script,
+  }) async {
+    enabledCalls.add(enabled);
+    if (enabledCalls.length == 1) await firstConfigure.future;
+  }
+
+  @override
+  void dispose() {}
+}
+
 final class _RecordingAudioPort implements GameAudioPort {
   _RecordingAudioPort(this.calls);
 
@@ -974,6 +1471,18 @@ final class _RecordingAudioPort implements GameAudioPort {
 
   @override
   Future<void> setMuted(bool muted) async => calls.add('audio.muted:$muted');
+}
+
+final class _BlockingAudioPort implements GameAudioPort {
+  _BlockingAudioPort(this.supported);
+
+  final Future<bool> supported;
+
+  @override
+  Future<bool> isSupported() => supported;
+
+  @override
+  Future<void> setMuted(bool muted) async {}
 }
 
 final class _RecordingFrameRatePort implements GameFrameRatePort {
@@ -1034,7 +1543,14 @@ final class _SurfaceFixture {
   final observer = RouteObserver<ModalRoute<dynamic>>();
   final navigatorKey = GlobalKey<NavigatorState>();
 
-  Future<void> pump(WidgetTester tester, {bool injectPort = true}) {
+  Future<void> pump(
+    WidgetTester tester, {
+    bool injectPort = true,
+    Duration? cleanupTimeout,
+    CaptureModeController? captureModeController,
+    GameBrowserController? browserController,
+    GameSurfaceStartupOrchestrator? startupOrchestrator,
+  }) {
     if (tester.binding.lifecycleState != AppLifecycleState.resumed) {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     }
@@ -1047,12 +1563,14 @@ final class _SurfaceFixture {
           height: 480,
           child: NativeActivityGameSurface(
             statusController: statusController,
-            browserController: browserController,
+            browserController: browserController ?? this.browserController,
             toolbarController: toolbarController,
             routeObserver: observer,
             networkSettingsController: networkSettingsController,
+            captureModeController: captureModeController,
             portFactory: injectPort ? () => port : null,
-            startupOrchestrator: orchestrator,
+            startupOrchestrator: startupOrchestrator ?? orchestrator,
+            cleanupTimeout: cleanupTimeout,
           ),
         ),
       ),
@@ -1064,7 +1582,6 @@ final class _SurfaceFixture {
     browserController.dispose();
     toolbarController.dispose();
     networkSettingsController.dispose();
-    await port.close();
   }
 }
 
@@ -1089,6 +1606,9 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Completer<void>? cancelCompleter;
   Object? cancelFailure;
   Object? disposeFailure;
+  Object? reloadFailure;
+  int successfulReloadCalls = 0;
+  final List<Completer<void>> visibilityCompleters = <Completer<void>>[];
   bool failHide = false;
   final List<NativeGameWebViewEvent> eventsDuringCreate =
       <NativeGameWebViewEvent>[];
@@ -1117,6 +1637,9 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   @override
   Future<void> setVisible(bool visible) async {
     calls.add('visible:$visible');
+    if (visibilityCompleters.isNotEmpty) {
+      await visibilityCompleters.removeAt(0).future;
+    }
     if (!visible && failHide) throw StateError('hide failed');
   }
 
@@ -1150,7 +1673,11 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Future<void> loadUri(Uri uri) async => calls.add('load:${uri.host}');
 
   @override
-  Future<void> reload() async => calls.add('reload');
+  Future<void> reload() async {
+    calls.add('reload');
+    if (reloadFailure case final failure?) throw failure;
+    successfulReloadCalls += 1;
+  }
 
   @override
   Future<void> runJavaScript(String javascript) async {}
@@ -1167,14 +1694,21 @@ final class _FakeStartupOrchestrator implements GameSurfaceStartupOrchestrator {
       const GameSurfaceNetworkResult.success();
   Completer<GameSurfaceNetworkResult>? networkCompleter;
   Completer<void>? prepareCaptureCompleter;
+  Completer<void>? disposeCompleter;
   Object? disposeFailure;
   Object? disposeAsyncFailure;
+  Object? prepareCaptureFailure;
+  Object? attachAudioFailure;
+  int disposeCalls = 0;
 
   @override
   Future<bool> attachFrameRatePlatformPort() async => true;
 
   @override
-  Future<void> attachAudioPortOnce() async => attachAudioCalls += 1;
+  Future<void> attachAudioPortOnce() async {
+    attachAudioCalls += 1;
+    if (attachAudioFailure case final failure?) throw failure;
+  }
 
   @override
   Future<GameSurfaceNetworkResult> applyNetworkSettings() async {
@@ -1184,7 +1718,13 @@ final class _FakeStartupOrchestrator implements GameSurfaceStartupOrchestrator {
 
   @override
   FutureOr<void> dispose() {
+    disposeCalls += 1;
     if (disposeFailure case final failure?) throw failure;
+    if (disposeCompleter case final completer?) {
+      return completer.future.then((_) {
+        if (disposeAsyncFailure case final failure?) throw failure;
+      });
+    }
     if (disposeAsyncFailure case final failure?) {
       return Future<void>.microtask(() => throw failure);
     }
@@ -1194,6 +1734,7 @@ final class _FakeStartupOrchestrator implements GameSurfaceStartupOrchestrator {
   Future<void> prepareCapture() async {
     prepareCaptureCalls += 1;
     await prepareCaptureCompleter?.future;
+    if (prepareCaptureFailure case final failure?) throw failure;
   }
 
   @override
