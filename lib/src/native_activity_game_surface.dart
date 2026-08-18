@@ -145,6 +145,7 @@ final class _NativeActivityGameSurfaceState
   bool _desiredVisible = false;
   bool _active = true;
   bool _fatal = false;
+  bool _awaitingNewPageStart = false;
   bool _networkRetryAvailable = false;
   Future<void>? _networkRetryFuture;
   CaptureMode? _activeCaptureMode;
@@ -295,6 +296,7 @@ final class _NativeActivityGameSurfaceState
       case NativeGameWebViewEventType.created:
         return;
       case NativeGameWebViewEventType.pageStarted:
+        _awaitingNewPageStart = false;
         _pageEpoch += 1;
         final url = event.url!;
         widget.statusController.onPageStarted(url);
@@ -305,6 +307,7 @@ final class _NativeActivityGameSurfaceState
         }
         return;
       case NativeGameWebViewEventType.pageFinished:
+        if (_awaitingNewPageStart) return;
         final url = event.url!;
         widget.statusController.onPageFinished(url);
         widget.browserController.onPageFinished(url);
@@ -370,6 +373,7 @@ final class _NativeActivityGameSurfaceState
 
   void _reportPageError(String message) {
     _invalidateOperations(fatal: false);
+    _awaitingNewPageStart = true;
     widget.statusController.onWebResourceError(message);
     widget.browserController.onWebResourceError(
       description: message,
@@ -398,7 +402,10 @@ final class _NativeActivityGameSurfaceState
   }
 
   void _invalidateOperations({required bool fatal}) {
-    if (fatal) _fatal = true;
+    if (fatal) {
+      _fatal = true;
+      _awaitingNewPageStart = false;
+    }
     _operationEpoch += 1;
     _pageEpoch += 1;
     _networkRetryAvailable = false;

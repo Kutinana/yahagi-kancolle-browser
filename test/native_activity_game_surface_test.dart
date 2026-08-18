@@ -198,6 +198,78 @@ void main() {
       );
       await tester.pump();
       expect(fixture.browserController.errorMessage, contains('intent'));
+
+      final finishCalls = fixture.orchestrator.prepareCaptureCalls;
+      fixture.port.addEvent(
+        _event(
+          'pageFinished',
+          generationId: 7,
+          url: 'https://game.example/late',
+        ),
+      );
+      await tester.pump();
+      expect(fixture.statusController.loadState, WebViewLoadState.failed);
+      expect(fixture.browserController.loadState, GamePageLoadState.failed);
+      expect(fixture.browserController.errorMessage, contains('intent'));
+      expect(fixture.orchestrator.prepareCaptureCalls, finishCalls);
+      fixture.toolbarController.collapse();
+    },
+  );
+
+  testWidgets(
+    'consecutive errors ignore stale-generation and late page finishes',
+    (tester) async {
+      final fixture = _SurfaceFixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester);
+      await tester.pump();
+      final finishCalls = fixture.orchestrator.prepareCaptureCalls;
+      final address = fixture.browserController.displayAddress;
+
+      fixture.port.addEvent(
+        _event(
+          'mainFrameError',
+          generationId: 7,
+          errorCode: -2,
+          description: 'first failure',
+        ),
+      );
+      fixture.port.addEvent(
+        _event(
+          'mainFrameError',
+          generationId: 7,
+          errorCode: -3,
+          description: 'second failure',
+        ),
+      );
+      fixture.port.addEvent(
+        _event(
+          'pageStarted',
+          generationId: 6,
+          url: 'https://stale.example/start',
+        ),
+      );
+      fixture.port.addEvent(
+        _event(
+          'pageFinished',
+          generationId: 6,
+          url: 'https://stale.example/finish',
+        ),
+      );
+      fixture.port.addEvent(
+        _event(
+          'pageFinished',
+          generationId: 7,
+          url: 'https://game.example/late',
+        ),
+      );
+      await tester.pump();
+
+      expect(fixture.statusController.loadState, WebViewLoadState.failed);
+      expect(fixture.browserController.loadState, GamePageLoadState.failed);
+      expect(fixture.browserController.errorMessage, 'second failure');
+      expect(fixture.browserController.displayAddress, address);
+      expect(fixture.orchestrator.prepareCaptureCalls, finishCalls);
       fixture.toolbarController.collapse();
     },
   );
@@ -221,6 +293,11 @@ void main() {
     fixture.port.addEvent(
       _event('pageStarted', generationId: 7, url: 'https://game.example/new'),
     );
+    await tester.pump();
+
+    expect(fixture.statusController.loadState, WebViewLoadState.loading);
+    expect(fixture.browserController.loadState, GamePageLoadState.loading);
+
     fixture.port.addEvent(
       _event('pageFinished', generationId: 7, url: 'https://game.example/new'),
     );
