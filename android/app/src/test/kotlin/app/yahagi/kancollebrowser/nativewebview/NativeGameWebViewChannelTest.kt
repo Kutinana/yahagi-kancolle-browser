@@ -168,22 +168,24 @@ class NativeGameWebViewChannelTest {
     }
 
     @Test
-    fun cachedEngineBrokerKeepsOriginalSinkForDestroyedAndExplicitRecreateAfterRebind() {
+    fun cachedEngineDestroyedListenerCanImmediatelyQueueCreateUntilNewHostAttaches() {
         val registry = NativeGameWebViewChannelRegistry<Any>()
         val engine = Any()
         var registrations = 0
         val channel = registry.acquire(engine) { registrations++ }
-        val events = RecordingEventSink()
-        channel.onListen(null, events)
-        lateinit var firstHost: FakeHost
-        firstHost = FakeHost { type, generation ->
-            when (type) {
-                "created" -> channel.created(generation)
-                "destroyed" -> channel.destroyed(generation)
+        val pendingCreate = RecordingResult()
+        val events = RecordingEventSink { event ->
+            if ((event as? Map<*, *>)?.get("type") == "destroyed") {
+                channel.onMethodCall(
+                    MethodCall("create", mapOf("renderer" to "webgl")),
+                    pendingCreate,
+                )
             }
         }
+        channel.onListen(null, events)
         val firstDispatches = mutableListOf<() -> Unit>()
         val firstAttachment = channel.attachActivity(firstDispatches::add)
+        val firstHost = FakeHost(event = hostEvents(channel.eventSinkFor(firstAttachment)))
         channel.attachHost(firstAttachment, firstHost)
         val firstCreate = RecordingResult()
         channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), firstCreate)
@@ -193,25 +195,19 @@ class NativeGameWebViewChannelTest {
         channel.detachActivity(firstAttachment)
         assertEquals(listOf("create:0", "destroy:0"), firstHost.operations)
         assertEquals(mapOf("type" to "destroyed", "generationId" to 0L), events.values.last())
+        assertEquals(0, pendingCreate.completionCount)
 
         val rebound = registry.acquire(engine) { registrations++ }
         assertTrue(channel === rebound)
-        lateinit var secondHost: FakeHost
-        secondHost = FakeHost { type, generation ->
-            when (type) {
-                "created" -> channel.created(generation)
-                "destroyed" -> channel.destroyed(generation)
-            }
-        }
         val secondDispatches = mutableListOf<() -> Unit>()
         val secondAttachment = rebound.attachActivity(secondDispatches::add)
+        val secondHost = FakeHost(event = hostEvents(rebound.eventSinkFor(secondAttachment)))
         rebound.attachHost(secondAttachment, secondHost)
-        val secondCreate = RecordingResult()
-        rebound.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), secondCreate)
+        assertEquals(0, pendingCreate.completionCount)
         secondDispatches.removeAt(0).invoke()
 
         assertEquals(1, registrations)
-        assertEquals(0L, secondCreate.successValue)
+        assertEquals(0L, pendingCreate.successValue)
         assertEquals(
             listOf(
                 mapOf("type" to "created", "generationId" to 0L),
@@ -220,6 +216,192 @@ class NativeGameWebViewChannelTest {
             ),
             events.values,
         )
+    }
+
+    @Test
+    fun rebindQueueKeepsCommandsBehindItsSinglePendingCreate() {
+        val channel = NativeGameWebViewChannel()
+        val firstAttachment = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(firstAttachment, FakeHost())
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+        channel.detachActivity(firstAttachment)
+        val pendingCreate = RecordingResult()
+        val pendingLoad = RecordingResult()
+
+        channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), pendingCreate)
+        channel.onMethodCall(
+            MethodCall("loadUri", mapOf("generationId" to 0, "uri" to "https://example.com/game")),
+            pendingLoad,
+        )
+
+        assertEquals(0, pendingCreate.completionCount)
+        assertEquals(0, pendingLoad.completionCount)
+        val dispatches = mutableListOf<() -> Unit>()
+        val secondHost = FakeHost()
+        val secondAttachment = channel.attachActivity(dispatches::add)
+        channel.attachHost(secondAttachment, secondHost)
+        assertEquals(1, dispatches.size)
+        dispatches.removeAt(0).invoke()
+        assertEquals(1, pendingCreate.completionCount)
+        assertEquals(0, pendingLoad.completionCount)
+        assertEquals(0, secondHost.loadUriCalls)
+        dispatches.removeAt(0).invoke()
+
+        assertEquals(1, pendingLoad.completionCount)
+        assertEquals(1, secondHost.loadUriCalls)
+    }
+
+    @Test
+    fun rebindWindowRejectsASecondCreateWithoutReplacingThePendingCreate() {
+        val channel = NativeGameWebViewChannel()
+        val attachment = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(attachment, FakeHost())
+        channel.detachActivity(attachment)
+        val first = RecordingResult()
+        val second = RecordingResult()
+
+        channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), first)
+        channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), second)
+
+        assertEquals(0, first.completionCount)
+        assertEquals("native_webview_unavailable", second.errorCode)
+        val rebound = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(rebound, FakeHost())
+        assertEquals(0L, first.successValue)
+    }
+
+    @Test
+    fun engineShutdownCompletesAQueuedRebindCreateWithUnavailable() {
+        val channel = NativeGameWebViewChannel()
+        val attachment = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(attachment, FakeHost())
+        channel.detachActivity(attachment)
+        val pending = RecordingResult()
+        channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), pending)
+        assertEquals(0, pending.completionCount)
+
+        channel.shutdownEngine()
+
+        assertEquals(1, pending.completionCount)
+        assertEquals("native_webview_unavailable", pending.errorCode)
+    }
+
+    @Test
+    fun oldAttachmentLateEventsCannotTouchANewHostThatReusesItsGeneration() {
+        val channel = NativeGameWebViewChannel()
+        val events = RecordingEventSink()
+        channel.onListen(null, events)
+        val firstAttachment = channel.attachActivity(dispatchToMain = { it() })
+        val firstSink = channel.eventSinkFor(firstAttachment)
+        val firstHost = FakeHost(event = hostEvents(firstSink))
+        channel.attachHost(firstAttachment, firstHost)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+
+        channel.detachActivity(firstAttachment)
+        val observer = RecordingLifecycleObserver()
+        val secondAttachment = channel.attachActivity(
+            dispatchToMain = { it() },
+            lifecycleObserver = observer,
+        )
+        val secondSink = channel.eventSinkFor(secondAttachment)
+        val secondHost = FakeHost(event = hostEvents(secondSink))
+        channel.attachHost(secondAttachment, secondHost)
+        assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
+
+        firstSink.created(0)
+        firstSink.pageStarted(0, "https://old.example/start")
+        firstSink.pageFinished(0, "https://old.example/finish")
+        firstSink.mainFrameError(0, -2, "old error")
+        firstSink.navigationBlocked(0, "intent")
+        firstSink.renderProcessGone(0, true)
+        firstSink.destroyed(0)
+        secondSink.pageFinished(0, "https://new.example/finish")
+
+        assertSuccess(channel, "reload", generation(0), null)
+        assertEquals(1, secondHost.reloadCalls)
+        assertEquals(1, observer.pageFinishedCalls)
+        assertEquals(0, observer.renderProcessGoneCalls)
+        assertEquals(
+            listOf(
+                mapOf("type" to "created", "generationId" to 0L),
+                mapOf("type" to "destroyed", "generationId" to 0L),
+                mapOf("type" to "created", "generationId" to 0L),
+                mapOf(
+                    "type" to "pageFinished",
+                    "generationId" to 0L,
+                    "url" to "https://new.example/finish",
+                ),
+            ),
+            events.values,
+        )
+    }
+
+    @Test
+    fun staleOldDispatcherCannotUnlockOrDuplicateTheNewAttachmentQueue() {
+        val channel = NativeGameWebViewChannel()
+        val oldDispatches = mutableListOf<() -> Unit>()
+        val oldAttachment = channel.attachActivity(oldDispatches::add)
+        val oldHost = FakeHost(event = hostEvents(channel.eventSinkFor(oldAttachment)))
+        channel.attachHost(oldAttachment, oldHost)
+        val events = RecordingEventSink { event ->
+            if ((event as? Map<*, *>)?.get("type") == "destroyed") {
+                channel.onMethodCall(
+                    MethodCall("create", mapOf("renderer" to "webgl")),
+                    RecordingResult(),
+                )
+            }
+        }
+        channel.onListen(null, events)
+        val initialCreate = RecordingResult()
+        channel.onMethodCall(MethodCall("create", mapOf("renderer" to "webgl")), initialCreate)
+        oldDispatches.removeAt(0).invoke()
+        val abandonedReload = RecordingResult()
+        channel.onMethodCall(MethodCall("reload", generation(0)), abandonedReload)
+        val staleDispatcher = oldDispatches.removeAt(0)
+
+        channel.detachActivity(oldAttachment)
+        val newDispatches = mutableListOf<() -> Unit>()
+        val newAttachment = channel.attachActivity(newDispatches::add)
+        channel.attachHost(newAttachment, FakeHost())
+        assertEquals(1, newDispatches.size)
+
+        staleDispatcher.invoke()
+        val queuedLoad = RecordingResult()
+        channel.onMethodCall(
+            MethodCall("loadUri", mapOf("generationId" to 0, "uri" to "https://example.com/game")),
+            queuedLoad,
+        )
+
+        assertEquals(1, newDispatches.size)
+        assertEquals(0, abandonedReload.completionCount)
+        assertEquals(0, queuedLoad.completionCount)
+    }
+
+    @Test
+    fun pendingCreateSurvivesAnAttachmentThatDetachesBeforeItsDispatchRuns() {
+        val channel = NativeGameWebViewChannel()
+        val firstAttachment = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(firstAttachment, FakeHost())
+        channel.detachActivity(firstAttachment)
+        val pendingCreate = RecordingResult()
+        channel.onMethodCall(
+            MethodCall("create", mapOf("renderer" to "webgl")),
+            pendingCreate,
+        )
+        val abandonedDispatches = mutableListOf<() -> Unit>()
+        val abandonedAttachment = channel.attachActivity(abandonedDispatches::add)
+        channel.attachHost(abandonedAttachment, FakeHost())
+        assertEquals(1, abandonedDispatches.size)
+
+        channel.detachActivity(abandonedAttachment)
+        assertEquals(0, pendingCreate.completionCount)
+        val finalAttachment = channel.attachActivity(dispatchToMain = { it() })
+        channel.attachHost(finalAttachment, FakeHost())
+
+        assertEquals(1, pendingCreate.completionCount)
+        assertEquals(0L, pendingCreate.successValue)
+        abandonedDispatches.single().invoke()
+        assertEquals(1, pendingCreate.completionCount)
     }
 
     @Test
@@ -303,14 +485,10 @@ class NativeGameWebViewChannelTest {
 
     @Test
     fun repeatedCreateDeterministicallyDestroysOldGenerationBeforeCreatingNewOne() {
-        lateinit var channel: NativeGameWebViewChannel
-        val host = FakeHost { type, generation ->
-            when (type) {
-                "created" -> channel.created(generation)
-                "destroyed" -> channel.destroyed(generation)
-            }
-        }
-        channel = activeChannel(host)
+        val channel = NativeGameWebViewChannel()
+        val attachment = channel.attachActivity(dispatchToMain = { it() })
+        val host = FakeHost(event = hostEvents(channel.eventSinkFor(attachment)))
+        channel.attachHost(attachment, host)
         val events = RecordingEventSink()
         channel.onListen(null, events)
 
@@ -330,20 +508,23 @@ class NativeGameWebViewChannelTest {
 
     @Test
     fun eventsUseExactMapsAndLateOrCancelledEventsAreSilent() {
+        val channel = NativeGameWebViewChannel()
+        val attachment = channel.attachActivity(dispatchToMain = { it() })
+        val sink = channel.eventSinkFor(attachment)
         val host = FakeHost()
-        val channel = activeChannel(host)
+        channel.attachHost(attachment, host)
         val events = RecordingEventSink()
         channel.onListen(null, events)
         assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
 
-        channel.created(0)
-        channel.pageStarted(0, "https://example.com/start")
-        channel.pageFinished(0, "https://example.com/finish")
-        channel.mainFrameError(0, -2, "network")
-        channel.navigationBlocked(0, "intent")
-        channel.renderProcessGone(0, true)
-        channel.destroyed(0)
-        channel.pageFinished(0, "https://example.com/late")
+        sink.created(0)
+        sink.pageStarted(0, "https://example.com/start")
+        sink.pageFinished(0, "https://example.com/finish")
+        sink.mainFrameError(0, -2, "network")
+        sink.navigationBlocked(0, "intent")
+        sink.renderProcessGone(0, true)
+        sink.destroyed(0)
+        sink.pageFinished(0, "https://example.com/late")
 
         assertEquals(
             listOf(
@@ -359,20 +540,23 @@ class NativeGameWebViewChannelTest {
         )
 
         channel.onCancel(null)
-        channel.created(1)
+        sink.created(1)
         assertEquals(7, events.values.size)
     }
 
     @Test
     fun eventSinkFailuresAreIsolatedAndDisableMakesMethodsAndEventsSilent() {
+        val channel = NativeGameWebViewChannel()
+        val attachment = channel.attachActivity(dispatchToMain = { it() })
+        val sink = channel.eventSinkFor(attachment)
         val host = FakeHost()
-        val channel = activeChannel(host)
+        channel.attachHost(attachment, host)
         channel.onListen(null, ThrowingEventSink())
         assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
 
-        channel.created(0)
+        sink.created(0)
         channel.disable()
-        channel.destroyed(0)
+        sink.destroyed(0)
         val result = RecordingResult()
         channel.onMethodCall(MethodCall("reload", generation(0)), result)
 
@@ -604,6 +788,13 @@ class NativeGameWebViewChannelTest {
 
     private fun generation(value: Int) = mapOf<String, Any?>("generationId" to value)
 
+    private fun hostEvents(sink: NativeGameWebViewEventSink): (String, Long) -> Unit = { type, generation ->
+        when (type) {
+            "created" -> sink.created(generation)
+            "destroyed" -> sink.destroyed(generation)
+        }
+    }
+
     private fun assertSuccess(
         channel: NativeGameWebViewChannel,
         method: String,
@@ -662,12 +853,15 @@ class NativeGameWebViewChannelTest {
         }
     }
 
-    private class RecordingEventSink : EventChannel.EventSink {
+    private class RecordingEventSink(
+        private val onSuccess: (Any?) -> Unit = {},
+    ) : EventChannel.EventSink {
         val values = mutableListOf<Any?>()
         var endCalls = 0
 
         override fun success(event: Any?) {
             values += event
+            onSuccess(event)
         }
 
         override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) = Unit
@@ -685,6 +879,19 @@ class NativeGameWebViewChannelTest {
         override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) = Unit
 
         override fun endOfStream() = Unit
+    }
+
+    private class RecordingLifecycleObserver : NativeGameWebViewLifecycleObserver {
+        var pageFinishedCalls = 0
+        var renderProcessGoneCalls = 0
+
+        override fun onPageFinished() {
+            pageFinishedCalls++
+        }
+
+        override fun onRenderProcessGone() {
+            renderProcessGoneCalls++
+        }
     }
 
     private class FakeHost(

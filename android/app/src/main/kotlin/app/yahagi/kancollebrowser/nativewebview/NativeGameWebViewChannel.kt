@@ -213,8 +213,7 @@ internal class NativeGameWebViewActivityAttachment internal constructor(
 )
 
 internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
-    EventChannel.StreamHandler,
-    NativeGameWebViewEventSink {
+    EventChannel.StreamHandler {
     private data class ActivityBinding(
         val token: NativeGameWebViewActivityAttachment,
         val dispatchToMain: ((() -> Unit) -> Unit),
@@ -234,12 +233,14 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
     private data class PendingCall(
         val parsed: ParsedCall,
         val result: MethodChannel.Result,
+        var attachmentId: Long? = null,
     )
 
     private var activityBinding: ActivityBinding? = null
     private var nextAttachmentId = 0L
     private val pendingCalls = ArrayDeque<PendingCall>()
     private var callRunning = false
+    private var dispatchVersion = 0L
     private var asyncVersion = 0L
     private var eventSink: EventChannel.EventSink? = null
     private var acceptedGeneration: Long? = null
@@ -266,6 +267,33 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         check(!binding.detaching) { "Native game WebView Activity is detaching" }
         check(binding.host == null) { "Native game WebView host is already attached" }
         binding.host = host
+        dispatchNext(binding)
+    }
+
+    fun eventSinkFor(attachment: NativeGameWebViewActivityAttachment): NativeGameWebViewEventSink {
+        val binding = activityBinding
+        check(binding?.token === attachment) { "Native game WebView Activity is not attached" }
+        val attachmentId = attachment.id
+        return object : NativeGameWebViewEventSink {
+            override fun created(generation: Long) = handleCreated(attachmentId, generation)
+
+            override fun pageStarted(generation: Long, url: String) =
+                handlePageStarted(attachmentId, generation, url)
+
+            override fun pageFinished(generation: Long, url: String) =
+                handlePageFinished(attachmentId, generation, url)
+
+            override fun mainFrameError(generation: Long, errorCode: Int, description: String) =
+                handleMainFrameError(attachmentId, generation, errorCode, description)
+
+            override fun navigationBlocked(generation: Long, scheme: String) =
+                handleNavigationBlocked(attachmentId, generation, scheme)
+
+            override fun renderProcessGone(generation: Long, didCrash: Boolean) =
+                handleRenderProcessGone(attachmentId, generation, didCrash)
+
+            override fun destroyed(generation: Long) = handleDestroyed(attachmentId, generation)
+        }
     }
 
     fun detachActivity(attachment: NativeGameWebViewActivityAttachment) {
@@ -277,8 +305,9 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
     private fun detachBinding(binding: ActivityBinding) {
         binding.detaching = true
         asyncVersion++
-        pendingCalls.clear()
+        pendingCalls.removeAll { it.attachmentId == binding.token.id }
         callRunning = false
+        dispatchVersion++
         binding.host?.currentGeneration?.let { generation ->
             try {
                 binding.host?.destroy(generation)
@@ -296,6 +325,7 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         activityBinding?.let(::detachBinding)
         engineDestroyed = true
         acceptedGeneration = null
+        failPendingRebindCalls()
         val sink = eventSink
         eventSink = null
         try {
@@ -325,35 +355,68 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         }
         val binding = activityBinding
         if (binding == null || binding.detaching || binding.host == null) {
-            safeError(result, HOST_UNAVAILABLE, "The native WebView host is unavailable.")
+            enqueueDuringRebind(parsed, result)
             return
         }
-        pendingCalls.addLast(PendingCall(parsed, result))
+        pendingCalls.addLast(PendingCall(parsed, result, binding.token.id))
         dispatchNext(binding)
     }
 
     private fun dispatchNext(binding: ActivityBinding) {
         if (callRunning || pendingCalls.isEmpty()) return
         if (activityBinding !== binding || binding.detaching) {
-            pendingCalls.clear()
             return
         }
         callRunning = true
+        val version = ++dispatchVersion
         try {
             binding.dispatchToMain {
+                if (version != dispatchVersion) return@dispatchToMain
                 if (activityBinding !== binding || binding.detaching || pendingCalls.isEmpty()) {
                     callRunning = false
                     return@dispatchToMain
                 }
-                executeOnMain(binding, pendingCalls.first())
+                val pending = pendingCalls.first()
+                pending.attachmentId = binding.token.id
+                executeOnMain(binding, pending)
             }
         } catch (error: Exception) {
+            if (version != dispatchVersion) return
             val failed = pendingCalls.removeFirstOrNull()
             callRunning = false
             failed?.let {
                 safeError(it.result, HOST_ERROR, error.message ?: "Unable to dispatch native WebView operation.")
             }
             dispatchNext(binding)
+        }
+    }
+
+    private fun enqueueDuringRebind(parsed: ParsedCall, result: MethodChannel.Result) {
+        val hasPendingCreate = pendingCalls.any { it.parsed.method == "create" }
+        if (parsed.method == "create") {
+            if (hasPendingCreate) {
+                safeError(result, HOST_UNAVAILABLE, "A native WebView create is already pending rebind.")
+            } else {
+                pendingCalls.addLast(PendingCall(parsed, result))
+            }
+            return
+        }
+        if (hasPendingCreate) {
+            pendingCalls.addLast(PendingCall(parsed, result))
+        } else {
+            safeError(result, HOST_UNAVAILABLE, "The native WebView host is unavailable.")
+        }
+    }
+
+    private fun failPendingRebindCalls() {
+        callRunning = false
+        dispatchVersion++
+        while (pendingCalls.isNotEmpty()) {
+            safeError(
+                pendingCalls.removeFirst().result,
+                HOST_UNAVAILABLE,
+                "The native WebView host is unavailable.",
+            )
         }
     }
 
@@ -377,6 +440,9 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
                     error("Unable to create the native WebView")
                 }
                 acceptedGeneration = generation
+                pendingCalls.drop(1).forEach { queued ->
+                    if (queued.attachmentId == null) queued.attachmentId = binding.token.id
+                }
                 finish(binding, pending) { safeSuccess(pending.result, generation) }
                 return
             }
@@ -594,24 +660,35 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         eventSink = null
     }
 
-    override fun created(generation: Long) {
-        if (engineDestroyed || activityBinding?.host?.currentGeneration != generation) return
+    private fun handleCreated(attachmentId: Long, generation: Long) {
+        val binding = bindingForEvent(attachmentId) ?: return
+        if (binding.host?.currentGeneration != generation) return
         acceptedGeneration = generation
         emit(mapOf("type" to "created", "generationId" to generation))
     }
 
-    override fun pageStarted(generation: Long, url: String) {
-        emitForGeneration(generation, mapOf("type" to "pageStarted", "generationId" to generation, "url" to url))
+    private fun handlePageStarted(attachmentId: Long, generation: Long, url: String) {
+        emitForGeneration(
+            attachmentId,
+            generation,
+            mapOf("type" to "pageStarted", "generationId" to generation, "url" to url),
+        )
     }
 
-    override fun pageFinished(generation: Long, url: String) {
-        if (!acceptsEvent(generation)) return
-        activityBinding?.lifecycleObserver?.let { safeObserverCall(it::onPageFinished) }
+    private fun handlePageFinished(attachmentId: Long, generation: Long, url: String) {
+        val binding = bindingForAcceptedEvent(attachmentId, generation) ?: return
+        safeObserverCall(binding.lifecycleObserver::onPageFinished)
         emit(mapOf("type" to "pageFinished", "generationId" to generation, "url" to url))
     }
 
-    override fun mainFrameError(generation: Long, errorCode: Int, description: String) {
+    private fun handleMainFrameError(
+        attachmentId: Long,
+        generation: Long,
+        errorCode: Int,
+        description: String,
+    ) {
         emitForGeneration(
+            attachmentId,
             generation,
             mapOf(
                 "type" to "mainFrameError",
@@ -622,16 +699,17 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         )
     }
 
-    override fun navigationBlocked(generation: Long, scheme: String) {
+    private fun handleNavigationBlocked(attachmentId: Long, generation: Long, scheme: String) {
         emitForGeneration(
+            attachmentId,
             generation,
             mapOf("type" to "navigationBlocked", "generationId" to generation, "scheme" to scheme),
         )
     }
 
-    override fun renderProcessGone(generation: Long, didCrash: Boolean) {
-        if (!acceptsEvent(generation)) return
-        activityBinding?.lifecycleObserver?.let { safeObserverCall(it::onRenderProcessGone) }
+    private fun handleRenderProcessGone(attachmentId: Long, generation: Long, didCrash: Boolean) {
+        val binding = bindingForAcceptedEvent(attachmentId, generation) ?: return
+        safeObserverCall(binding.lifecycleObserver::onRenderProcessGone)
         emit(
             mapOf(
                 "type" to "renderProcessGone",
@@ -641,18 +719,40 @@ internal class NativeGameWebViewChannel : MethodChannel.MethodCallHandler,
         )
     }
 
-    override fun destroyed(generation: Long) {
-        if (!acceptsEvent(generation)) return
+    private fun handleDestroyed(attachmentId: Long, generation: Long) {
+        val binding = bindingForAcceptedEvent(
+            attachmentId,
+            generation,
+            allowDetaching = true,
+        ) ?: return
         emit(mapOf("type" to "destroyed", "generationId" to generation))
-        if (acceptedGeneration == generation) acceptedGeneration = null
+        if (activityBinding === binding && acceptedGeneration == generation) {
+            acceptedGeneration = null
+        }
     }
 
-    private fun emitForGeneration(generation: Long, event: Map<String, Any?>) {
-        if (acceptsEvent(generation)) emit(event)
+    private fun emitForGeneration(attachmentId: Long, generation: Long, event: Map<String, Any?>) {
+        if (bindingForAcceptedEvent(attachmentId, generation) != null) emit(event)
     }
 
-    private fun acceptsEvent(generation: Long): Boolean =
-        !engineDestroyed && acceptedGeneration == generation
+    private fun bindingForAcceptedEvent(
+        attachmentId: Long,
+        generation: Long,
+        allowDetaching: Boolean = false,
+    ): ActivityBinding? =
+        bindingForEvent(attachmentId, allowDetaching)
+            ?.takeIf { acceptedGeneration == generation }
+
+    private fun bindingForEvent(
+        attachmentId: Long,
+        allowDetaching: Boolean = false,
+    ): ActivityBinding? {
+        if (engineDestroyed) return null
+        val binding = activityBinding ?: return null
+        if (binding.token.id != attachmentId) return null
+        if (binding.detaching && !allowDetaching) return null
+        return binding
+    }
 
     private fun emit(event: Map<String, Any?>) {
         val sink = eventSink ?: return

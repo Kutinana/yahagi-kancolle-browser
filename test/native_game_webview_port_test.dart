@@ -187,10 +187,14 @@ void main() {
     'forwards current destroyed and clears generation before listeners recreate',
     () async {
       final calls = <MethodCall>[];
-      var generationId = 40;
+      final platformRecreate = Completer<int>();
+      var createCalls = 0;
       messenger.setMockMethodCallHandler(channel, (call) async {
         calls.add(call);
-        if (call.method == 'create') return generationId++;
+        if (call.method == 'create') {
+          createCalls++;
+          return createCalls == 1 ? 40 : platformRecreate.future;
+        }
         return null;
       });
       final source = StreamController<Object?>.broadcast(sync: true);
@@ -216,7 +220,10 @@ void main() {
       addTearDown(subscription.cancel);
 
       source.add(<String, Object?>{'type': 'destroyed', 'generationId': 40});
+      await Future<void>.delayed(Duration.zero);
 
+      expect(recreated.isCompleted, isFalse);
+      platformRecreate.complete(41);
       expect(await recreated.future, 41);
       expect(received.map((event) => event.type), <NativeGameWebViewEventType>[
         NativeGameWebViewEventType.destroyed,

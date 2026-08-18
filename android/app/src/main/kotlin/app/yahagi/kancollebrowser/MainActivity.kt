@@ -534,7 +534,11 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             startup.onCreateFailed()
             return
         }
-        val host = ActivityWebViewHost(this, contentRoot, nativeChannel)
+        val host = ActivityWebViewHost(
+            this,
+            contentRoot,
+            nativeChannel.eventSinkFor(nativeAttachment),
+        )
         nativeGameWebViewHost = host
         nativeChannel.attachHost(
             nativeAttachment,
