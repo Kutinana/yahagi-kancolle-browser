@@ -12,6 +12,7 @@ import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart
 import 'package:yahagi_kancolle_browser/src/browser/game_application_restart_port.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_environment_host.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_toolbar_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/network_proxy_channel.dart';
 import 'package:yahagi_kancolle_browser/src/capture/battle_result_warning_overlay.dart';
 import 'package:yahagi_kancolle_browser/src/capture/capture_mode.dart';
 import 'package:yahagi_kancolle_browser/src/capture/capture_mode_controller.dart';
@@ -29,6 +30,67 @@ import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/safety_settings_store.dart';
 
 void main() {
+  test(
+    'network owner timeout lets replacement win and late work replays it',
+    () async {
+      final arbiter = SharedGameNetworkSettingsArbiter.instance;
+      arbiter.resetForTesting();
+      final oldOwner = arbiter.claimOwner();
+      final blocker = Completer<void>();
+      final calls = <String>[];
+      final old = arbiter.run(
+        oldOwner,
+        const Duration(milliseconds: 1),
+        () async {
+          calls.add('old-start');
+          await blocker.future;
+          calls.add('old-complete');
+          return const ProxyResult(
+            success: true,
+            code: 'old',
+            message: '',
+            elapsedMs: 0,
+          );
+        },
+      );
+      await Future<void>.delayed(Duration.zero);
+      final newOwner = arbiter.claimOwner();
+      ProxyResult applyNew() {
+        calls.add('new');
+        return const ProxyResult(
+          success: true,
+          code: 'new',
+          message: '',
+          elapsedMs: 0,
+        );
+      }
+
+      final current = arbiter.run(
+        newOwner,
+        const Duration(milliseconds: 20),
+        () async => applyNew(),
+      );
+
+      await expectLater(old, throwsA(isA<TimeoutException>()));
+      await current;
+      blocker.complete();
+      for (var index = 0; index < 5 && calls.length < 4; index++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(calls, <String>['old-start', 'new', 'old-complete', 'new']);
+      await expectLater(
+        arbiter.run(
+          oldOwner,
+          const Duration(milliseconds: 1),
+          () async => applyNew(),
+        ),
+        throwsStateError,
+      );
+      arbiter.release(newOwner);
+      expect(arbiter.activeOwnerCountForTesting, 0);
+    },
+  );
+
   test(
     'GameWebView startup serializes hot updates and keeps a successful load',
     () async {
@@ -88,7 +150,9 @@ void main() {
     final never = Completer<void>();
     var newRuns = 0;
 
-    final old = coordinator.schedule(() => never.future);
+    final old = coordinator.schedule(
+      () => coordinator.waitForStage(never.future),
+    );
     final current = coordinator.schedule(() async => newRuns += 1);
 
     await expectLater(old, throwsA(isA<TimeoutException>()));
@@ -96,22 +160,69 @@ void main() {
     expect(newRuns, 1);
   });
 
-  test('GameWebView navigation timeout remains retryable', () async {
-    final coordinator = GameWebViewStartupCoordinator(
-      stageTimeout: const Duration(milliseconds: 1),
-    );
-    final never = Completer<void>();
-    var calls = 0;
+  test(
+    'GameWebView navigation timeout keeps the issued command single',
+    () async {
+      final coordinator = GameWebViewStartupCoordinator(
+        stageTimeout: const Duration(milliseconds: 1),
+      );
+      final never = Completer<void>();
+      var calls = 0;
 
+      await expectLater(
+        coordinator.navigateOnce(() {
+          calls += 1;
+          return never.future;
+        }),
+        throwsA(isA<TimeoutException>()),
+      );
+      await coordinator.navigateOnce(() async => calls += 1);
+      coordinator.acknowledgeNavigation();
+      await coordinator.navigateOnce(() async => calls += 1);
+      expect(calls, 1);
+    },
+  );
+
+  test('GameWebView explicit navigation failure allows a retry', () async {
+    final coordinator = GameWebViewStartupCoordinator();
+    var calls = 0;
     await expectLater(
-      coordinator.navigateOnce(() {
+      coordinator.navigateOnce(() async {
         calls += 1;
-        return never.future;
+        throw StateError('load failed');
       }),
-      throwsA(isA<TimeoutException>()),
+      throwsStateError,
     );
     await coordinator.navigateOnce(() async => calls += 1);
     expect(calls, 2);
+  });
+
+  test(
+    'GameWebView page ack ignores a late navigation response error',
+    () async {
+      final coordinator = GameWebViewStartupCoordinator();
+      final response = Completer<void>();
+      final navigation = coordinator.navigateOnce(() async {
+        await response.future;
+        throw StateError('late response error');
+      });
+
+      coordinator.acknowledgeNavigation();
+      response.complete();
+      await navigation;
+      await coordinator.navigateOnce(() async => fail('must not resend'));
+    },
+  );
+
+  test('GameWebView startup timeout validates and supports hot updates', () {
+    expect(
+      () => GameWebViewStartupCoordinator(stageTimeout: Duration.zero),
+      throwsArgumentError,
+    );
+    final coordinator = GameWebViewStartupCoordinator();
+    coordinator.updateTimeout(const Duration(milliseconds: 2));
+    expect(coordinator.stageTimeout, const Duration(milliseconds: 2));
+    expect(() => coordinator.updateTimeout(Duration.zero), throwsArgumentError);
   });
 
   test('GameWebView page-ready fact wins over bootstrap fallback state', () {

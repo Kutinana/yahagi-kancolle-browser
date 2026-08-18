@@ -95,7 +95,13 @@ void main() {
         final newAttach = controller.attach(newPort, enabled: false);
         blocked.complete();
         await Future.wait(<Future<void>>[oldAttach, newAttach]);
-
+        for (
+          var index = 0;
+          index < 5 && newPort.configurations.isEmpty;
+          index++
+        ) {
+          await Future<void>.delayed(Duration.zero);
+        }
         expect(oldPort.configurations, <bool>[true]);
         expect(newPort.configurations, <bool>[false]);
         expect(controller.state, GameCaptureState.disabled);
@@ -127,6 +133,43 @@ void main() {
       expect(newPort.configurations, <bool>[false]);
       expect(controller.state, GameCaptureState.disabled);
     });
+
+    test(
+      'late old side effect replays the final new-port configuration',
+      () async {
+        final blocked = Completer<void>();
+        final oldPort = _FakeGameCapturePort(
+          supported: true,
+          configureBlocker: blocked,
+          recordConfigureOnCompletion: true,
+        );
+        final newPort = _FakeGameCapturePort(supported: true);
+        final controller = GameCaptureController();
+        addTearDown(() async {
+          if (!blocked.isCompleted) blocked.complete();
+          controller.dispose();
+          await oldPort.close();
+          await newPort.close();
+        });
+
+        final oldAttach = controller.attach(oldPort, enabled: true);
+        await Future<void>.delayed(Duration.zero);
+        await controller.attach(newPort, enabled: false);
+        blocked.complete();
+        await oldAttach;
+        for (
+          var index = 0;
+          index < 5 && newPort.configurations.length < 2;
+          index++
+        ) {
+          await Future<void>.delayed(Duration.zero);
+        }
+
+        expect(oldPort.configurations, <bool>[true]);
+        expect(newPort.configurations, <bool>[false, false]);
+        expect(controller.state, GameCaptureState.disabled);
+      },
+    );
 
     test(
       'a current never-ending configure times out without hanging',
@@ -172,7 +215,7 @@ void main() {
         blocked.complete();
         await Future.wait(<Future<void>>[attach, disable]);
 
-        expect(port.configurations, <bool>[true, false]);
+        expect(port.configurations, <bool>[true, false, false]);
         expect(controller.state, GameCaptureState.disabled);
       },
     );
@@ -319,15 +362,18 @@ final class _FakeGameCapturePort implements GameCapturePort {
     required this.supported,
     this.configureBlocker,
     this.eventsFailure,
+    this.recordConfigureOnCompletion = false,
   });
 
   final bool supported;
   final Completer<void>? configureBlocker;
   final Object? eventsFailure;
+  final bool recordConfigureOnCompletion;
   final StreamController<CapturedApiEvent> _events =
       StreamController<CapturedApiEvent>.broadcast();
 
   final List<bool> configurations = <bool>[];
+  int configureCalls = 0;
 
   @override
   Stream<CapturedApiEvent> get events {
@@ -341,8 +387,10 @@ final class _FakeGameCapturePort implements GameCapturePort {
     required bool enabled,
     required String script,
   }) async {
-    configurations.add(enabled);
-    if (configurations.length == 1) await configureBlocker?.future;
+    configureCalls += 1;
+    if (!recordConfigureOnCompletion) configurations.add(enabled);
+    if (configureCalls == 1) await configureBlocker?.future;
+    if (recordConfigureOnCompletion) configurations.add(enabled);
   }
 
   @override

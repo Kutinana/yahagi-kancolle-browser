@@ -162,7 +162,8 @@ final class _NativeActivityGameSurfaceState
   int _processedVisibilityRevision = 0;
   bool _actualVisible = false;
   bool _forceVisibilityWrite = false;
-  bool _navigationSucceeded = false;
+  bool _navigationIssued = false;
+  bool _navigationAcknowledged = false;
   bool _pageReady = false;
   Future<void>? _navigationFuture;
   Future<void>? _bootstrapTail;
@@ -253,7 +254,16 @@ final class _NativeActivityGameSurfaceState
       final generationId = _generationId;
       if (port != null && generationId != null) {
         unawaited(
-          _schedulePostCreateBootstrap(port, generationId, _operationEpoch),
+          _schedulePostCreateBootstrap(
+            port,
+            generationId,
+            _operationEpoch,
+          ).catchError((Object error, StackTrace stackTrace) {
+            debugPrint(
+              'Native game surface bootstrap scheduling failed: '
+              '$error\n$stackTrace',
+            );
+          }),
         );
       }
     }
@@ -411,15 +421,27 @@ final class _NativeActivityGameSurfaceState
     NativeActivityGameWebViewPort port,
     Uri address,
   ) {
-    if (_navigationSucceeded) return Future<void>.value();
+    if (_navigationAcknowledged || _navigationIssued) {
+      return _navigationFuture ?? Future<void>.value();
+    }
     final existing = _navigationFuture;
     if (existing != null) return existing;
+    _navigationIssued = true;
+    var responseTimedOut = false;
     late final Future<void> operation;
     operation = port
         .loadUri(address)
-        .timeout(_cleanupTimeout)
-        .then<void>((_) {
-          _navigationSucceeded = true;
+        .timeout(
+          _cleanupTimeout,
+          onTimeout: () {
+            responseTimedOut = true;
+            throw TimeoutException('Initial navigation response timed out');
+          },
+        )
+        .catchError((Object error, StackTrace stackTrace) {
+          if (_navigationAcknowledged) return;
+          if (!responseTimedOut) _navigationIssued = false;
+          Error.throwWithStackTrace(error, stackTrace);
         })
         .whenComplete(() {
           if (identical(_navigationFuture, operation)) {
@@ -475,6 +497,8 @@ final class _NativeActivityGameSurfaceState
       case NativeGameWebViewEventType.created:
         return;
       case NativeGameWebViewEventType.pageStarted:
+        _navigationIssued = true;
+        _navigationAcknowledged = true;
         _pageReady = false;
         _awaitingNewPageStart = false;
         _pageEpoch += 1;

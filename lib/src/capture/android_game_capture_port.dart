@@ -24,7 +24,7 @@ final class MethodChannelGameCapturePort implements GameCapturePort {
     this.configurationTimeout = const Duration(seconds: 10),
   }) : _configurationArbiter = _configurationArbiters.putIfAbsent(
          channel.name,
-         _CaptureConfigurationArbiter.new,
+         () => _CaptureConfigurationArbiter(channel.name),
        ) {
     _configurationArbiter.claim(_handlerOwner);
     _handlerOwners[channel.name] = _handlerOwner;
@@ -43,6 +43,17 @@ final class MethodChannelGameCapturePort implements GameCapturePort {
 
   @visibleForTesting
   static int get arbiterCountForTesting => _configurationArbiters.length;
+
+  static void _replayCurrentAfterLateCompletion(
+    String channelName,
+    _CaptureConfigurationArbiter source,
+    _CaptureConfigurationCommand command,
+  ) {
+    final current = _configurationArbiters[channelName];
+    if (current == null) return;
+    if (identical(current, source) && current._isCurrent(command)) return;
+    current._replayCurrent();
+  }
 
   final MethodChannel channel;
   final Duration configurationTimeout;
@@ -127,6 +138,9 @@ final class MethodChannelGameCapturePort implements GameCapturePort {
 }
 
 final class _CaptureConfigurationArbiter {
+  _CaptureConfigurationArbiter(this.channelName);
+
+  final String channelName;
   Object? _activeOwner;
   Future<void> _tail = Future<void>.value();
   int _pending = 0;
@@ -167,10 +181,22 @@ final class _CaptureConfigurationArbiter {
       unawaited(
         raw.then<void>(
           (_) {
-            if (timedOut) _replayAfterLateCompletion(command);
+            if (timedOut) {
+              MethodChannelGameCapturePort._replayCurrentAfterLateCompletion(
+                channelName,
+                this,
+                command,
+              );
+            }
           },
           onError: (Object _, StackTrace _) {
-            if (timedOut) _replayAfterLateCompletion(command);
+            if (timedOut) {
+              MethodChannelGameCapturePort._replayCurrentAfterLateCompletion(
+                channelName,
+                this,
+                command,
+              );
+            }
           },
         ),
       );
@@ -208,11 +234,9 @@ final class _CaptureConfigurationArbiter {
         _revision == command.revision;
   }
 
-  void _replayAfterLateCompletion(_CaptureConfigurationCommand stale) {
+  void _replayCurrent() {
     final current = _desired;
-    if (current == null || identical(current, stale) || !_isCurrent(current)) {
-      return;
-    }
+    if (current == null || !_isCurrent(current)) return;
     _desired = _CaptureConfigurationCommand(
       owner: current.owner,
       revision: ++_revision,

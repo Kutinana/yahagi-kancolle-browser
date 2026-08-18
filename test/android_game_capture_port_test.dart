@@ -100,7 +100,10 @@ void main() {
       configurationTimeout: const Duration(milliseconds: 1),
     );
     final oldRequest = oldPort.configure(enabled: true, script: 'old');
-    await Future<void>.delayed(Duration.zero);
+    await expectLater(oldRequest, throwsA(isA<TimeoutException>()));
+    oldPort.dispose();
+    expect(MethodChannelGameCapturePort.arbiterCountForTesting, 0);
+
     final newPort = MethodChannelGameCapturePort(
       channel: channel,
       configurationTimeout: const Duration(milliseconds: 20),
@@ -108,14 +111,13 @@ void main() {
     await newPort.configure(enabled: false, script: 'new');
 
     blocker.complete();
-    await oldRequest;
     for (var index = 0; index < 5 && enabledCalls.length < 3; index++) {
       await Future<void>.delayed(Duration.zero);
     }
     expect(enabledCalls, <bool>[true, false, false]);
 
-    oldPort.dispose();
     newPort.dispose();
+    expect(MethodChannelGameCapturePort.arbiterCountForTesting, 0);
   });
 
   test('queries support and configures the native bridge', () async {

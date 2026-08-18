@@ -641,7 +641,7 @@ void main() {
     expect(nextOrchestrator.applyNetworkCalls, 1);
   });
 
-  testWidgets('hot update retries after an old load stage times out', (
+  testWidgets('hot update does not resend an issued load after timeout', (
     tester,
   ) async {
     final fixture = _SurfaceFixture();
@@ -663,8 +663,17 @@ void main() {
 
     expect(
       fixture.port.calls.where((call) => call.startsWith('load:')),
-      hasLength(2),
+      hasLength(1),
     );
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    expect(
+      fixture.port.calls.where((call) => call.startsWith('load:')),
+      hasLength(1),
+    );
+    fixture.toolbarController.collapse();
   });
 
   testWidgets('hot update retries a failed in-flight initial navigation', (
@@ -694,6 +703,37 @@ void main() {
     );
 
     expect(nextOrchestrator.applyNetworkCalls, 1);
+  });
+
+  testWidgets('pageStarted ack ignores a late load response error', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    final response = Completer<void>();
+    fixture.port.loadCompleter = response;
+    fixture.port.loadFailure = StateError('late response error');
+    await fixture.pump(tester);
+    await _pumpUntil(
+      tester,
+      () => fixture.port.calls.any((call) => call.startsWith('load:')),
+    );
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    response.complete();
+    await tester.pump();
+    await tester.pump();
+    final nextOrchestrator = _FakeStartupOrchestrator();
+    await fixture.pump(tester, startupOrchestrator: nextOrchestrator);
+    await tester.pump();
+
+    expect(
+      fixture.port.calls.where((call) => call.startsWith('load:')),
+      hasLength(1),
+    );
+    fixture.toolbarController.collapse();
   });
 
   testWidgets('hot update replays a pending capture revision', (tester) async {

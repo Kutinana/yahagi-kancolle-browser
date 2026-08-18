@@ -186,6 +186,9 @@ final class GameCaptureController extends ChangeNotifier {
           final result = await _waitForPortOperation(
             port.configure(enabled: false, script: ''),
             invalidator,
+            revision,
+            port,
+            replayLate: true,
           );
           if (!result.completed) return;
           if (result.error case final error?) throw error;
@@ -207,6 +210,9 @@ final class GameCaptureController extends ChangeNotifier {
       final support = await _waitForPortOperation(
         port.isSupported(),
         invalidator,
+        revision,
+        port,
+        replayLate: false,
       );
       if (!support.completed) return;
       if (support.error case final error?) throw error;
@@ -221,6 +227,9 @@ final class GameCaptureController extends ChangeNotifier {
         final result = await _waitForPortOperation(
           port.configure(enabled: true, script: script),
           invalidator,
+          revision,
+          port,
+          replayLate: true,
         );
         if (!result.completed) return;
         if (result.error case final error?) throw error;
@@ -242,7 +251,28 @@ final class GameCaptureController extends ChangeNotifier {
   Future<_PortOperationResult<T>> _waitForPortOperation<T>(
     Future<T> operation,
     Completer<void> invalidator,
-  ) {
+    int revision,
+    GameCapturePort port, {
+    required bool replayLate,
+  }) {
+    if (replayLate) {
+      final weakController = WeakReference<GameCaptureController>(this);
+      unawaited(
+        operation.then<void>(
+          (_) => _replayLatestAfterLatePortCompletion(
+            weakController,
+            revision,
+            port,
+          ),
+          onError: (Object _, StackTrace _) =>
+              _replayLatestAfterLatePortCompletion(
+                weakController,
+                revision,
+                port,
+              ),
+        ),
+      );
+    }
     return Future.any(<Future<_PortOperationResult<T>>>[
       operation
           .timeout(operationTimeout)
@@ -255,6 +285,22 @@ final class GameCaptureController extends ChangeNotifier {
         (_) => _PortOperationResult<T>.interrupted(),
       ),
     ]);
+  }
+
+  static void _replayLatestAfterLatePortCompletion(
+    WeakReference<GameCaptureController> weakController,
+    int revision,
+    GameCapturePort port,
+  ) {
+    final controller = weakController.target;
+    if (controller == null || controller._disposed) return;
+    if (revision == controller._configurationRevision &&
+        identical(port, controller._desiredPort)) {
+      return;
+    }
+    controller._configuredEnabled = null;
+    controller._configuredScript = null;
+    unawaited(controller._enqueueConfiguration());
   }
 
   bool _isCurrentConfiguration(int revision, GameCapturePort? port) {

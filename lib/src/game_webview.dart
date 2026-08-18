@@ -20,6 +20,7 @@ import 'browser/game_webview_compatibility.dart';
 import 'browser/safe_page_address.dart';
 import 'browser/game_launch_config.dart';
 import 'browser/game_navigation_policy.dart';
+import 'browser/network_proxy_channel.dart';
 import 'capture/capture_mode.dart';
 import 'capture/capture_mode_controller.dart';
 import 'capture/android_game_capture_port.dart';
@@ -79,6 +80,148 @@ abstract interface class GameSurfaceStartupOrchestrator {
   FutureOr<void> dispose();
 }
 
+@visibleForTesting
+final class SharedGameNetworkSettingsArbiter {
+  SharedGameNetworkSettingsArbiter._();
+
+  static final SharedGameNetworkSettingsArbiter instance =
+      SharedGameNetworkSettingsArbiter._();
+  final _SharedNetworkConfigurationArbiter _delegate =
+      _SharedNetworkConfigurationArbiter();
+
+  Object claimOwner() {
+    final owner = Object();
+    _delegate.claim(owner);
+    return owner;
+  }
+
+  Future<ProxyResult> run(
+    Object owner,
+    Duration timeout,
+    Future<ProxyResult> Function() operation,
+  ) => _delegate.run(owner, timeout, operation);
+
+  void release(Object owner) => _delegate.release(owner);
+
+  int get activeOwnerCountForTesting => _delegate.hasOwner ? 1 : 0;
+
+  void resetForTesting() => _delegate.reset();
+}
+
+final class _SharedNetworkConfigurationArbiter {
+  Object? _owner;
+  int _revision = 0;
+  _NetworkConfigurationCommand? _desired;
+  Future<void> _tail = Future<void>.value();
+
+  bool get hasOwner => _owner != null;
+
+  void claim(Object owner) {
+    _owner = owner;
+    _revision += 1;
+    _desired = null;
+  }
+
+  Future<ProxyResult> run(
+    Object owner,
+    Duration timeout,
+    Future<ProxyResult> Function() operation,
+  ) {
+    if (!identical(owner, _owner)) {
+      return Future<ProxyResult>.error(StateError('stale network owner'));
+    }
+    final command = _NetworkConfigurationCommand(
+      owner: owner,
+      revision: ++_revision,
+      timeout: timeout,
+      operation: operation,
+    );
+    _desired = command;
+    final result = Completer<ProxyResult>();
+    final scheduled = _tail.then<void>((_) async {
+      if (!_isCurrent(command)) {
+        result.completeError(StateError('stale network command'));
+        return;
+      }
+      var timedOut = false;
+      final raw = Future<ProxyResult>.sync(command.operation);
+      unawaited(
+        raw.then<void>(
+          (_) {
+            if (timedOut) _replayIfStale(command);
+          },
+          onError: (Object _, StackTrace _) {
+            if (timedOut) _replayIfStale(command);
+          },
+        ),
+      );
+      try {
+        final value = await raw.timeout(
+          timeout,
+          onTimeout: () {
+            timedOut = true;
+            throw TimeoutException('Network configuration timed out', timeout);
+          },
+        );
+        if (!result.isCompleted) result.complete(value);
+      } catch (error, stackTrace) {
+        if (!result.isCompleted) result.completeError(error, stackTrace);
+      }
+    });
+    _tail = scheduled.catchError((Object _, StackTrace _) {});
+    return result.future;
+  }
+
+  bool _isCurrent(_NetworkConfigurationCommand command) {
+    return identical(_owner, command.owner) &&
+        identical(_desired, command) &&
+        _revision == command.revision;
+  }
+
+  void _replayIfStale(_NetworkConfigurationCommand command) {
+    if (_isCurrent(command)) return;
+    final current = _desired;
+    if (current == null || !_isCurrent(current)) return;
+    unawaited(
+      run(current.owner, current.timeout, current.operation).catchError(
+        (Object _, StackTrace _) => const ProxyResult(
+          success: false,
+          code: 'late_replay_failed',
+          message: '',
+          elapsedMs: 0,
+        ),
+      ),
+    );
+  }
+
+  void release(Object owner) {
+    if (!identical(_owner, owner)) return;
+    _owner = null;
+    _desired = null;
+    _revision += 1;
+  }
+
+  void reset() {
+    _owner = null;
+    _desired = null;
+    _revision += 1;
+  }
+}
+
+final class _NetworkConfigurationCommand {
+  const _NetworkConfigurationCommand({
+    required this.owner,
+    required this.revision,
+    required this.timeout,
+    required this.operation,
+  });
+
+  final Object owner;
+  final int revision;
+  final Duration timeout;
+  final Future<ProxyResult> Function() operation;
+}
+
 final class DefaultGameSurfaceStartupOrchestrator
     implements GameSurfaceStartupOrchestrator {
   DefaultGameSurfaceStartupOrchestrator({
@@ -90,11 +233,21 @@ final class DefaultGameSurfaceStartupOrchestrator
     GameCapturePort Function()? capturePortFactory,
     GameAudioPort Function()? audioPortFactory,
     GameFrameRatePort Function()? frameRatePortFactory,
+    this.networkTimeout = const Duration(seconds: 10),
   }) : _gameCapturePort =
            (capturePortFactory ?? createPlatformGameCapturePort)(),
        _audioPortFactory = audioPortFactory ?? MethodChannelGameAudioPort.new,
        _frameRatePortFactory =
-           frameRatePortFactory ?? createPlatformGameFrameRatePort;
+           frameRatePortFactory ?? createPlatformGameFrameRatePort {
+    if (networkTimeout <= Duration.zero) {
+      throw ArgumentError.value(
+        networkTimeout,
+        'networkTimeout',
+        'must be positive',
+      );
+    }
+    _networkOwner = _networkArbiter.claimOwner();
+  }
 
   final NetworkSettingsController networkSettingsController;
   final CaptureModeController captureModeController;
@@ -104,6 +257,10 @@ final class DefaultGameSurfaceStartupOrchestrator
   final GameCapturePort _gameCapturePort;
   final GameAudioPort Function() _audioPortFactory;
   final GameFrameRatePort Function() _frameRatePortFactory;
+  final Duration networkTimeout;
+  late final Object _networkOwner;
+  final SharedGameNetworkSettingsArbiter _networkArbiter =
+      SharedGameNetworkSettingsArbiter.instance;
 
   bool _capturePortAttached = false;
   bool _audioPortAttached = false;
@@ -115,10 +272,14 @@ final class DefaultGameSurfaceStartupOrchestrator
   @override
   Future<GameSurfaceNetworkResult> applyNetworkSettings() async {
     final settings = networkSettingsController.settings;
-    final result = await networkSettingsController.applySettings(
-      settings.mode,
-      NetworkSettingsValidator.formatProxyHost(settings.host),
-      settings.port,
+    final result = await _networkArbiter.run(
+      _networkOwner,
+      networkTimeout,
+      () => networkSettingsController.applySettings(
+        settings.mode,
+        NetworkSettingsValidator.formatProxyHost(settings.host),
+        settings.port,
+      ),
     );
     return GameSurfaceNetworkResult(
       success: result.success,
@@ -209,6 +370,7 @@ final class DefaultGameSurfaceStartupOrchestrator
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _networkArbiter.release(_networkOwner);
     _gameCapturePort.dispose();
   }
 }
@@ -400,37 +562,69 @@ final class GameWebViewCaptureUpdateCoordinator {
 @visibleForTesting
 final class GameWebViewStartupCoordinator {
   GameWebViewStartupCoordinator({
-    this.stageTimeout = const Duration(seconds: 10),
-  });
+    Duration stageTimeout = const Duration(seconds: 10),
+  }) : _stageTimeout = _validateTimeout(stageTimeout);
 
-  final Duration stageTimeout;
+  Duration _stageTimeout;
+  Duration get stageTimeout => _stageTimeout;
   Future<void>? _tail;
   Future<void>? _navigation;
-  bool _navigationSucceeded = false;
+  bool _navigationIssued = false;
+  bool _navigationAcknowledged = false;
+
+  static Duration _validateTimeout(Duration timeout) {
+    if (timeout <= Duration.zero) {
+      throw ArgumentError.value(timeout, 'stageTimeout', 'must be positive');
+    }
+    return timeout;
+  }
+
+  void updateTimeout(Duration timeout) {
+    _stageTimeout = _validateTimeout(timeout);
+  }
 
   Future<void> schedule(Future<void> Function() operation) {
     final previous = _tail ?? Future<void>.value();
     final scheduled = previous
         .catchError((Object _, StackTrace _) {})
-        .then<void>((_) => Future<void>.sync(operation).timeout(stageTimeout));
+        .then<void>((_) => operation());
     _tail = scheduled.catchError((Object _, StackTrace _) {});
     return scheduled;
   }
 
   Future<void> navigateOnce(Future<void> Function() navigate) {
-    if (_navigationSucceeded) return Future<void>.value();
+    if (_navigationAcknowledged || _navigationIssued) {
+      return _navigation ?? Future<void>.value();
+    }
     final pending = _navigation;
     if (pending != null) return pending;
 
+    _navigationIssued = true;
+    var responseTimedOut = false;
     late final Future<void> operation;
     operation = Future<void>.sync(navigate)
-        .timeout(stageTimeout)
-        .then<void>((_) => _navigationSucceeded = true)
+        .timeout(
+          stageTimeout,
+          onTimeout: () {
+            responseTimedOut = true;
+            throw TimeoutException('Initial navigation response timed out');
+          },
+        )
+        .catchError((Object error, StackTrace stackTrace) {
+          if (_navigationAcknowledged) return;
+          if (!responseTimedOut) _navigationIssued = false;
+          Error.throwWithStackTrace(error, stackTrace);
+        })
         .whenComplete(() {
           if (identical(_navigation, operation)) _navigation = null;
         });
     _navigation = operation;
     return operation;
+  }
+
+  void acknowledgeNavigation() {
+    _navigationIssued = true;
+    _navigationAcknowledged = true;
   }
 
   Future<T> waitForStage<T>(Future<T> operation) {
@@ -529,7 +723,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   void _onNetworkSettingsChanged() {
     if (!mounted || _disposed) return;
     if (_startupState == GameStartupState.error) {
-      unawaited(_executeStartupSequence());
+      _scheduleStartupSequence();
     }
   }
 
@@ -601,6 +795,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         NavigationDelegate(
           onNavigationRequest: _onNavigationRequest,
           onPageStarted: (url) {
+            _startupCoordinator.acknowledgeNavigation();
             _pageReadiness.pageStarted();
             _navigationPolicy.onPageStarted(Uri.tryParse(url));
             _navigationEpoch += 1;
@@ -643,13 +838,18 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         ),
       );
 
-    unawaited(_executeStartupSequence());
+    _scheduleStartupSequence();
   }
 
   @override
   void didUpdateWidget(covariant GameWebView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_disposed) return;
+    if (oldWidget.startupTimeout != widget.startupTimeout) {
+      _startupCoordinator.updateTimeout(
+        widget.startupTimeout ?? const Duration(seconds: 10),
+      );
+    }
 
     final startupDependenciesChanged =
         !identical(
@@ -707,8 +907,16 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       _compatibilityReady = _configureCompatibility();
     }
     if (startupContextChanged) {
-      unawaited(_executeStartupSequence());
+      _scheduleStartupSequence();
     }
+  }
+
+  void _scheduleStartupSequence() {
+    unawaited(
+      _executeStartupSequence().catchError((Object error, StackTrace stack) {
+        debugPrint('Game WebView startup scheduling failed: $error\n$stack');
+      }),
+    );
   }
 
   @override
