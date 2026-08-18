@@ -1,15 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:yahagi_kancolle_browser/main.dart';
+import 'package:yahagi_kancolle_browser/src/audio/game_audio_controller.dart';
+import 'package:yahagi_kancolle_browser/src/audio/game_audio_store.dart';
+import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
+import 'package:yahagi_kancolle_browser/src/battle/battle_damage_alert.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_application_restart_port.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_environment_host.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_toolbar_controller.dart';
+import 'package:yahagi_kancolle_browser/src/capture/battle_result_warning_overlay.dart';
+import 'package:yahagi_kancolle_browser/src/capture/capture_mode.dart';
+import 'package:yahagi_kancolle_browser/src/capture/capture_mode_controller.dart';
+import 'package:yahagi_kancolle_browser/src/capture/capture_mode_store.dart';
+import 'package:yahagi_kancolle_browser/src/capture/game_capture_controller.dart';
+import 'package:yahagi_kancolle_browser/src/game_webview.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
+import 'package:yahagi_kancolle_browser/src/native_activity_game_surface.dart';
+import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/safety_settings_store.dart';
 
 void main() {
   testWidgets('selects the native surface only for the activity mode', (
     tester,
   ) async {
+    final gameCaptureController = GameCaptureController();
+    final battleController = BattleController(gameState: () => GameState.empty);
+    final safetySettingsController = await SafetySettingsController.load(
+      MemorySafetySettingsStore(),
+    );
+    addTearDown(gameCaptureController.dispose);
+    addTearDown(battleController.dispose);
+    addTearDown(safetySettingsController.dispose);
+
     for (final mode in GameRenderingMode.values) {
       await tester.pumpWidget(
         MaterialApp(
@@ -24,19 +53,104 @@ void main() {
               key: const Key('flutter-webview'),
               child: Text('webview-${renderingMode.storageName}'),
             ),
-            withBattleWarning: (child) => _BattleWarningProbe(child: child),
+            withBattleWarning: (child) => BattleResultWarningOverlay(
+              gameCaptureController: gameCaptureController,
+              battleController: battleController,
+              safetySettingsController: safetySettingsController,
+              damageAlertPort: const _NoopDamageAlertPort(),
+              child: child,
+            ),
           ),
         ),
       );
 
-      expect(find.byType(_BattleWarningProbe), findsOneWidget);
+      expect(find.byType(BattleResultWarningOverlay), findsOneWidget);
       if (mode == GameRenderingMode.nativeActivityExperimental) {
         expect(find.byKey(const Key('native-surface')), findsOneWidget);
         expect(find.byKey(const Key('flutter-webview')), findsNothing);
+        expect(find.byType(WebViewWidget), findsNothing);
+        expect(find.byType(PlatformViewLink), findsNothing);
+        expect(find.byType(AndroidView), findsNothing);
+        expect(find.byType(UiKitView), findsNothing);
       } else {
         expect(find.byKey(const Key('native-surface')), findsNothing);
         expect(find.byKey(const Key('flutter-webview')), findsOneWidget);
       }
+    }
+  });
+
+  test('wraps the actual surface type for every rendering mode', () async {
+    final networkController = NetworkSettingsController(
+      store: _MemoryNetworkStore(),
+    );
+    final safetyController = await SafetySettingsController.load(
+      MemorySafetySettingsStore(),
+    );
+    final captureModeController = await CaptureModeController.load(
+      const _MemoryCaptureModeStore(),
+    );
+    final audioController = await GameAudioController.load(
+      const _MemoryAudioStore(),
+    );
+    final statusController = PrototypeStatusController();
+    final browserController = GameBrowserController();
+    final toolbarController = GameToolbarController()..collapse();
+    final gameCaptureController = GameCaptureController();
+    final battleController = BattleController(gameState: () => GameState.empty);
+    addTearDown(networkController.dispose);
+    addTearDown(safetyController.dispose);
+    addTearDown(captureModeController.dispose);
+    addTearDown(audioController.dispose);
+    addTearDown(statusController.dispose);
+    addTearDown(browserController.dispose);
+    addTearDown(toolbarController.dispose);
+    addTearDown(gameCaptureController.dispose);
+    addTearDown(battleController.dispose);
+
+    for (final mode in GameRenderingMode.values) {
+      final selected = buildGameSurfaceForRenderingMode(
+        mode: mode,
+        key: ValueKey<String>(mode.storageName),
+        buildNativeActivityGameSurface: (key) => NativeActivityGameSurface(
+          key: key,
+          statusController: statusController,
+          browserController: browserController,
+          toolbarController: toolbarController,
+          routeObserver: RouteObserver<ModalRoute<dynamic>>(),
+          networkSettingsController: networkController,
+          captureModeController: captureModeController,
+          audioController: audioController,
+          gameCaptureController: gameCaptureController,
+        ),
+        buildGameWebView: (key, renderingMode) => GameWebView(
+          key: key,
+          networkSettingsController: networkController,
+          safetySettingsController: safetyController,
+          controller: statusController,
+          browserController: browserController,
+          captureModeController: captureModeController,
+          audioController: audioController,
+          toolbarController: toolbarController,
+          gameCaptureController: gameCaptureController,
+          renderingMode: renderingMode,
+        ),
+        withBattleWarning: (child) => BattleResultWarningOverlay(
+          gameCaptureController: gameCaptureController,
+          battleController: battleController,
+          safetySettingsController: safetyController,
+          damageAlertPort: const _NoopDamageAlertPort(),
+          child: child,
+        ),
+      );
+
+      expect(selected, isA<BattleResultWarningOverlay>());
+      final child = (selected as BattleResultWarningOverlay).child;
+      expect(
+        child,
+        mode == GameRenderingMode.nativeActivityExperimental
+            ? isA<NativeActivityGameSurface>()
+            : isA<GameWebView>(),
+      );
     }
   });
 
@@ -138,13 +252,45 @@ void main() {
   });
 }
 
-final class _BattleWarningProbe extends StatelessWidget {
-  const _BattleWarningProbe({required this.child});
-
-  final Widget child;
+final class _NoopDamageAlertPort implements BattleDamageAlertPort {
+  const _NoopDamageAlertPort();
 
   @override
-  Widget build(BuildContext context) => child;
+  Future<void> alert(BattleDamageAlertSeverity severity) async {}
+}
+
+final class _MemoryNetworkStore implements NetworkSettingsStore {
+  @override
+  Future<NetworkSettings> loadSettings() async => const NetworkSettings();
+
+  @override
+  Future<void> saveSettings(NetworkSettings settings) async {}
+}
+
+final class _MemoryCaptureModeStore implements CaptureModeStore {
+  const _MemoryCaptureModeStore();
+
+  @override
+  Future<CaptureMode?> read() async => CaptureMode.game;
+
+  @override
+  Future<void> write(CaptureMode mode) async {}
+}
+
+final class _MemoryAudioStore implements GameAudioStore {
+  const _MemoryAudioStore();
+
+  @override
+  Future<bool?> readMuted() async => false;
+
+  @override
+  Future<void> writeMuted(bool muted) async {}
+
+  @override
+  Future<bool?> readBackgroundPlaybackEnabled() async => false;
+
+  @override
+  Future<void> writeBackgroundPlaybackEnabled(bool enabled) async {}
 }
 
 final class _RecordingApplicationRestartPort
