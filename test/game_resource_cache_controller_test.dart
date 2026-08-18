@@ -9,7 +9,7 @@ void main() {
   test('formats completeness as one capacity line', () {
     expect(
       formatCacheCompleteness(6840000000, 8120000000),
-      '6.84 GB / 8.12 GB（84.2%）',
+      '6.84 GB（84.2%）',
     );
   });
 
@@ -22,7 +22,7 @@ void main() {
       );
       await controller.initialize();
 
-      expect(controller.completenessLine, '0.00 GB / --（--）');
+      expect(controller.completenessLine, '0.00 GB（--）');
       controller.dispose();
     },
   );
@@ -75,7 +75,7 @@ void main() {
       await controller.initialize();
 
       expect(controller.status.state, GameResourceCacheState.downloading);
-      expect(controller.completenessLine, '6.84 GB / 8.12 GB（84.2%）');
+      expect(controller.completenessLine, '6.84 GB（84.2%）');
       controller.dispose();
     },
   );
