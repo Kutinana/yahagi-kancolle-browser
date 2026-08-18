@@ -71,6 +71,46 @@ void main() {
     expect(encoded, isNot(contains('"previousExitReason"')));
   });
 
+  test('fixed error can carry a sanitized runtime context', () {
+    final event = DiagnosticEvent.fixedError(
+      occurredAt: DateTime.utc(2026, 8, 19),
+      component: DiagnosticComponent.webView,
+      errorType: 'PlatformException',
+      code: DiagnosticErrorCode.platformUnavailable,
+      renderingMode: 'nativeActivityExperimental',
+      webViewHost: DiagnosticWebViewHost.activityDirect,
+      renderer: DiagnosticGameRenderer.webgl,
+      generationId: 17,
+      lifecycle: DiagnosticLifecycleState.resumed,
+      pssKb: 900000,
+      graphicsKb: 210000,
+      privateOtherKb: 70000,
+      systemAvailableKb: 1200000,
+      lowMemory: false,
+    );
+
+    final encoded = jsonEncode(event.toJson());
+    expect(encoded, contains('nativeActivityExperimental'));
+    expect(encoded, contains('activityDirect'));
+    expect(encoded, contains('"generationId":17'));
+    expect(encoded, contains('"graphicsKb":210000'));
+    expect(encoded, isNot(contains('api_token')));
+  });
+
+  test('startup snapshot records only the previous exit classification', () {
+    final event = DiagnosticEvent.startupSnapshot(
+      occurredAt: DateTime.utc(2026, 8, 19),
+      uptimeMs: 0,
+      previousExitReason: 'lowMemory',
+    );
+
+    final encoded = jsonEncode(event.toJson());
+    expect(encoded, contains('startupSnapshot'));
+    expect(encoded, contains('lowMemory'));
+    expect(encoded, isNot(contains('cookie')));
+    expect(encoded, isNot(contains('account')));
+  });
+
   test('event fields are immutable', () {
     final event = DiagnosticEvent.lifecycle(
       occurredAt: DateTime.utc(2026, 8, 13),

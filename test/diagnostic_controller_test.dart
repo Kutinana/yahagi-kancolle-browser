@@ -50,6 +50,51 @@ void main() {
     expect((await storage.inspect()).totalBytes, 0);
   });
 
+  test(
+    'startup records the previous exit reason without delaying start',
+    () async {
+      final root = Directory.systemTemp.createTempSync(
+        'diagnostic-controller-',
+      );
+      addTearDown(() => root.deleteSync(recursive: true));
+      final storage = DiagnosticStorage(
+        directory: Directory('${root.path}/log'),
+      );
+      final recorder = DiagnosticRecorder(sink: storage, enabled: false);
+      final platform = _FakePlatform();
+      final controller = DiagnosticController(
+        settings: MemoryDiagnosticSettingsStore(true),
+        storage: storage,
+        recorder: recorder,
+        exporter: DiagnosticExportService(
+          storage: storage,
+          exportDirectory: Directory('${root.path}/export'),
+          platform: platform,
+          appVersion: 'test',
+        ),
+        platform: platform,
+        manageGlobalErrors: false,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      await Future<void>.delayed(Duration.zero);
+      await recorder.flush();
+
+      final records = await storage.readRecords().toList();
+      expect(
+        records.any(
+          (record) =>
+              record['type'] == 'startupSnapshot' &&
+              (record['fields']
+                      as Map<Object?, Object?>)['previousExitReason'] ==
+                  'unavailable',
+        ),
+        isTrue,
+      );
+    },
+  );
+
   test('save and share flush records and always reset busy state', () async {
     final root = Directory.systemTemp.createTempSync('diagnostic-controller-');
     addTearDown(() => root.deleteSync(recursive: true));

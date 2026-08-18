@@ -308,34 +308,44 @@ Future<void> main() async {
   }
 
   var diagnosticNativeWebViewGeneration = -1;
+  DiagnosticWebViewHost diagnosticWebViewHost() {
+    final mode = gameRenderingModeController.mode;
+    if (!mode.usesActivityWebView) {
+      return DiagnosticWebViewHost.flutterPlatformView;
+    }
+    return diagnosticNativeWebViewGeneration >= 0
+        ? DiagnosticWebViewHost.activityDirect
+        : DiagnosticWebViewHost.absent;
+  }
+
+  DiagnosticGameRenderer diagnosticRenderer() {
+    final mode = gameRenderingModeController.mode;
+    return mode.usesCanvasRenderer
+        ? DiagnosticGameRenderer.canvas
+        : DiagnosticGameRenderer.webgl;
+  }
+
+  int diagnosticGeneration() => diagnosticNativeWebViewGeneration < 0
+      ? 0
+      : diagnosticNativeWebViewGeneration;
   final diagnosticPerformanceMonitor = DiagnosticPerformanceMonitor(
     recorder: diagnosticRecorder,
     platform: diagnosticPlatform,
     pendingApiEvents: () => gameApiEventPipeline.pendingEventCount,
     databaseBytes: LogbookDatabase.instance.diagnosticFileSizeBytes,
-    webViewHost: () {
-      final mode = gameRenderingModeController.mode;
-      if (!mode.usesActivityWebView) {
-        return DiagnosticWebViewHost.flutterPlatformView;
-      }
-      return diagnosticNativeWebViewGeneration >= 0
-          ? DiagnosticWebViewHost.activityDirect
-          : DiagnosticWebViewHost.absent;
-    },
-    renderer: () {
-      final mode = gameRenderingModeController.mode;
-      return mode.usesCanvasRenderer
-          ? DiagnosticGameRenderer.canvas
-          : DiagnosticGameRenderer.webgl;
-    },
-    generationId: () => diagnosticNativeWebViewGeneration < 0
-        ? 0
-        : diagnosticNativeWebViewGeneration,
+    webViewHost: diagnosticWebViewHost,
+    renderer: diagnosticRenderer,
+    generationId: diagnosticGeneration,
   );
   final diagnosticController = DiagnosticController(
     settings: SharedPreferencesDiagnosticSettingsStore(),
     storage: diagnosticStorage,
     recorder: diagnosticRecorder,
+    platform: diagnosticPlatform,
+    webViewHost: diagnosticWebViewHost,
+    renderer: diagnosticRenderer,
+    generationId: diagnosticGeneration,
+    renderingModeName: () => gameRenderingModeController.mode.storageName,
     exporter: DiagnosticExportService(
       storage: diagnosticStorage,
       exportDirectory: Directory(

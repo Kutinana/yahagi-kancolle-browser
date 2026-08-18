@@ -84,6 +84,16 @@ final class DiagnosticEvent {
     required String errorType,
     required DiagnosticErrorCode code,
     StackTrace? stack,
+    String? renderingMode,
+    DiagnosticWebViewHost? webViewHost,
+    DiagnosticGameRenderer? renderer,
+    int? generationId,
+    DiagnosticLifecycleState? lifecycle,
+    int? pssKb,
+    int? graphicsKb,
+    int? privateOtherKb,
+    int? systemAvailableKb,
+    bool? lowMemory,
   }) => DiagnosticEvent._(
     occurredAt: occurredAt.toUtc(),
     type: 'fixedError',
@@ -92,6 +102,29 @@ final class DiagnosticEvent {
       'errorType': errorType,
       'code': code.name,
       'stack': _policy.safeStack(stack),
+      'renderingMode': ?renderingMode,
+      'webViewHost': ?webViewHost?.name,
+      'renderer': ?renderer?.name,
+      'generationId': ?generationId,
+      'lifecycle': ?lifecycle?.name,
+      'pssKb': ?pssKb,
+      'graphicsKb': ?graphicsKb,
+      'privateOtherKb': ?privateOtherKb,
+      'systemAvailableKb': ?systemAvailableKb,
+      'lowMemory': ?lowMemory,
+    },
+  );
+
+  factory DiagnosticEvent.startupSnapshot({
+    required DateTime occurredAt,
+    required int uptimeMs,
+    required String previousExitReason,
+  }) => DiagnosticEvent._(
+    occurredAt: occurredAt.toUtc(),
+    type: 'startupSnapshot',
+    fields: <String, Object?>{
+      'uptimeMs': uptimeMs,
+      'previousExitReason': previousExitReason,
     },
   );
 

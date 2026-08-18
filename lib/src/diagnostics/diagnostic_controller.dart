@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import 'diagnostic_event.dart';
 import 'diagnostic_export_service.dart';
 import 'diagnostic_performance_monitor.dart';
+import 'diagnostic_platform_port.dart';
 import 'diagnostic_recorder.dart';
 import 'diagnostic_settings_store.dart';
 import 'diagnostic_storage.dart';
@@ -16,16 +18,30 @@ final class DiagnosticController extends ChangeNotifier {
     required this.recorder,
     required this.exporter,
     this.performanceMonitor,
+    this.platform,
+    this.webViewHost,
+    this.renderer,
+    this.generationId,
+    this.renderingModeName,
     this.onAttachObservers,
     this.onDetachObservers,
     this.manageGlobalErrors = true,
-  });
+    this.errorRuntimeSampleInterval = const Duration(seconds: 30),
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   final DiagnosticSettingsStore settings;
   final DiagnosticStorage storage;
   final DiagnosticRecorder recorder;
   final DiagnosticExportService exporter;
   final DiagnosticPerformanceMonitor? performanceMonitor;
+  final DiagnosticPlatformPort? platform;
+  final DiagnosticWebViewHost Function()? webViewHost;
+  final DiagnosticGameRenderer Function()? renderer;
+  final int Function()? generationId;
+  final String Function()? renderingModeName;
+  final Duration errorRuntimeSampleInterval;
+  final DateTime Function() _now;
   final VoidCallback? onAttachObservers;
   final VoidCallback? onDetachObservers;
   final bool manageGlobalErrors;
@@ -37,6 +53,7 @@ final class DiagnosticController extends ChangeNotifier {
   FlutterExceptionHandler? _previousFlutterHandler;
   bool Function(Object, StackTrace)? _previousPlatformHandler;
   bool _errorsAttached = false;
+  DateTime? _lastErrorRuntimeSampleAt;
 
   bool get enabled => _enabled;
   bool get exporting => _exporting;
@@ -50,11 +67,12 @@ final class DiagnosticController extends ChangeNotifier {
       _attach();
       recorder.record(
         DiagnosticEvent.lifecycle(
-          occurredAt: DateTime.now(),
+          occurredAt: _now(),
           state: DiagnosticLifecycleState.started,
           uptimeMs: 0,
         ),
       );
+      unawaited(_recordStartupSnapshot());
     }
     await refreshStorageState();
     notifyListeners();
@@ -151,15 +169,78 @@ final class DiagnosticController extends ChangeNotifier {
     DiagnosticComponent component,
   ) {
     if (!_enabled) return;
+    unawaited(_recordErrorAsync(error, stack, component));
+  }
+
+  Future<void> _recordErrorAsync(
+    Object error,
+    StackTrace? stack,
+    DiagnosticComponent component,
+  ) async {
+    if (!_enabled) return;
+    final now = _now();
+    DiagnosticRuntimeSnapshot? runtime;
+    final platform = this.platform;
+    final shouldSample =
+        platform != null &&
+        (_lastErrorRuntimeSampleAt == null ||
+            now.difference(_lastErrorRuntimeSampleAt!) >=
+                errorRuntimeSampleInterval);
+    if (shouldSample) {
+      try {
+        runtime = await platform.runtimeSnapshot();
+        _lastErrorRuntimeSampleAt = now;
+      } catch (_) {
+        // Error diagnostics must never recurse or block the app.
+      }
+    }
+    if (!_enabled) return;
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    final lifecycle = switch (lifecycleState) {
+      AppLifecycleState.resumed => DiagnosticLifecycleState.resumed,
+      AppLifecycleState.inactive ||
+      AppLifecycleState.hidden ||
+      AppLifecycleState.paused => DiagnosticLifecycleState.paused,
+      AppLifecycleState.detached => DiagnosticLifecycleState.stopped,
+      null => null,
+    };
     recorder.record(
       DiagnosticEvent.fixedError(
-        occurredAt: DateTime.now(),
+        occurredAt: now,
         component: component,
         errorType: error.runtimeType.toString(),
         code: DiagnosticErrorCode.operationFailed,
         stack: stack,
+        renderingMode: renderingModeName?.call(),
+        webViewHost: webViewHost?.call(),
+        renderer: renderer?.call(),
+        generationId: generationId?.call(),
+        lifecycle: lifecycle,
+        pssKb: runtime?.pssKb,
+        graphicsKb: runtime?.graphicsKb,
+        privateOtherKb: runtime?.privateOtherKb,
+        systemAvailableKb: runtime?.systemAvailableKb,
+        lowMemory: runtime?.lowMemory,
       ),
     );
+  }
+
+  Future<void> _recordStartupSnapshot() async {
+    final platform = this.platform;
+    if (platform == null || !_enabled) return;
+    try {
+      final device = await platform.deviceSnapshot();
+      if (!_enabled) return;
+      recorder.record(
+        DiagnosticEvent.startupSnapshot(
+          occurredAt: _now(),
+          uptimeMs: 0,
+          previousExitReason: device.previousExitReason,
+        ),
+      );
+    } catch (_) {
+      // A missing platform snapshot must never fail startup.
+    }
   }
 
   void _detachErrorHandlers() {
