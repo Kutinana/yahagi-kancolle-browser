@@ -9,6 +9,7 @@ final class NativeGameSurfaceVisibility {
 
   bool _routeVisible = true;
   bool _appVisible = true;
+  bool _workspaceVisible = true;
   bool _slotAttached = false;
   bool _desiredVisible = false;
   bool _lastDeliveredVisible = false;
@@ -29,6 +30,11 @@ final class NativeGameSurfaceVisibility {
     return _requestCurrentVisibility();
   }
 
+  Future<void> setWorkspaceVisible(bool visible) {
+    _workspaceVisible = visible;
+    return _requestCurrentVisibility();
+  }
+
   Future<void> setSlotAttached(bool attached) {
     _slotAttached = attached;
     return _requestCurrentVisibility();
@@ -41,7 +47,8 @@ final class NativeGameSurfaceVisibility {
   }
 
   Future<void> _requestCurrentVisibility() {
-    final visible = _routeVisible && _appVisible && _slotAttached;
+    final visible =
+        _routeVisible && _appVisible && _workspaceVisible && _slotAttached;
     var enqueue = false;
     if (visible != _desiredVisible) {
       _desiredVisible = visible;

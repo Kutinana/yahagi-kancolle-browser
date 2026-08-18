@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_workspace_visibility.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_surface_slot.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_surface_visibility.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_contract.dart';
@@ -637,6 +638,31 @@ void main() {
       },
     );
 
+    testWidgets('hides when the game workspace becomes inactive', (
+      tester,
+    ) async {
+      final visibility = <bool>[];
+      Future<void> onVisibility(bool value) async => visibility.add(value);
+
+      await tester.pumpWidget(
+        _slotApp(onVisibilityChanged: onVisibility, workspaceActive: true),
+      );
+      await tester.pump();
+      expect(visibility, <bool>[true]);
+
+      await tester.pumpWidget(
+        _slotApp(onVisibilityChanged: onVisibility, workspaceActive: false),
+      );
+      await tester.pump();
+      expect(visibility, <bool>[true, false]);
+
+      await tester.pumpWidget(
+        _slotApp(onVisibilityChanged: onVisibility, workspaceActive: true),
+      );
+      await tester.pump();
+      expect(visibility, <bool>[true, false, true]);
+    });
+
     test(
       'measurement helper rejects unattached non-box and non-finite values',
       () {
@@ -895,6 +921,7 @@ Widget _slotApp({
   bool useCurrentLifecycle = false,
   int boundsRetryLimit = 3,
   Object? boundsSinkIdentity,
+  bool workspaceActive = true,
 }) {
   if (!useCurrentLifecycle &&
       WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
@@ -912,13 +939,16 @@ Widget _slotApp({
         child: SizedBox(
           width: width,
           height: height,
-          child: NativeGameSurfaceSlot(
-            onBoundsChanged: onBoundsChanged ?? _ignoreBounds,
-            onVisibilityChanged: onVisibilityChanged ?? _ignoreVisibility,
-            routeObserver: observer,
-            boundsRetryLimit: boundsRetryLimit,
-            boundsSinkIdentity:
-                boundsSinkIdentity ?? _defaultBoundsSinkIdentity,
+          child: GameWorkspaceActive(
+            active: workspaceActive,
+            child: NativeGameSurfaceSlot(
+              onBoundsChanged: onBoundsChanged ?? _ignoreBounds,
+              onVisibilityChanged: onVisibilityChanged ?? _ignoreVisibility,
+              routeObserver: observer,
+              boundsRetryLimit: boundsRetryLimit,
+              boundsSinkIdentity:
+                  boundsSinkIdentity ?? _defaultBoundsSinkIdentity,
+            ),
           ),
         ),
       ),

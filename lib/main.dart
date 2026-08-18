@@ -29,6 +29,7 @@ import 'src/browser/game_toolbar_controller.dart';
 import 'src/browser/game_toolbar_display_controller.dart';
 import 'src/browser/game_screenshot_controller.dart';
 import 'src/browser/game_surface_boundary.dart';
+import 'src/browser/game_workspace_visibility.dart';
 import 'src/browser/game_environment_host.dart';
 import 'src/browser/game_application_restart_port.dart';
 import 'src/browser/game_resource_cache_controller.dart';
@@ -949,10 +950,12 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        TickerMode(
-                          enabled: _workspaceIndex == 0,
-                          child: Offstage(
-                            offstage: _workspaceIndex != 0,
+                        GameWorkspaceActive(
+                          active: _workspaceIndex == 0,
+                          child: TickerMode(
+                            enabled: _workspaceIndex == 0,
+                            child: Offstage(
+                              offstage: _workspaceIndex != 0,
                             child: LayoutBuilder(
                               key: const Key('game-workspace'),
                               builder: (context, constraints) {
@@ -1211,6 +1214,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                 );
                               },
                             ),
+                          ),
                           ),
                         ),
                         if (_workspaceIndex == 1)

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'game_workspace_visibility.dart';
 import 'native_game_surface_visibility.dart';
 import 'native_game_webview_contract.dart';
 
@@ -82,6 +83,7 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   bool _resendCurrentBoundsToNewSink = false;
   bool _measureScheduled = false;
   bool _synchronizingRouteSubscription = false;
+  bool? _workspaceActive;
 
   Object get _effectiveBoundsSinkIdentity =>
       widget.boundsSinkIdentity ?? widget.onBoundsChanged;
@@ -102,6 +104,11 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final workspaceActive = GameWorkspaceActive.of(context);
+    if (workspaceActive != _workspaceActive) {
+      _workspaceActive = workspaceActive;
+      _ignoreErrors(_visibility.setWorkspaceVisible(workspaceActive));
+    }
     _subscribeToCurrentRoute();
   }
 
