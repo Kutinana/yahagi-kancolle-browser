@@ -81,6 +81,57 @@ void main() {
     },
   );
 
+  test('GameWebView startup timeout lets hot-update work proceed', () async {
+    final coordinator = GameWebViewStartupCoordinator(
+      stageTimeout: const Duration(milliseconds: 1),
+    );
+    final never = Completer<void>();
+    var newRuns = 0;
+
+    final old = coordinator.schedule(() => never.future);
+    final current = coordinator.schedule(() async => newRuns += 1);
+
+    await expectLater(old, throwsA(isA<TimeoutException>()));
+    await current;
+    expect(newRuns, 1);
+  });
+
+  test('GameWebView navigation timeout remains retryable', () async {
+    final coordinator = GameWebViewStartupCoordinator(
+      stageTimeout: const Duration(milliseconds: 1),
+    );
+    final never = Completer<void>();
+    var calls = 0;
+
+    await expectLater(
+      coordinator.navigateOnce(() {
+        calls += 1;
+        return never.future;
+      }),
+      throwsA(isA<TimeoutException>()),
+    );
+    await coordinator.navigateOnce(() async => calls += 1);
+    expect(calls, 2);
+  });
+
+  test('GameWebView page-ready fact wins over bootstrap fallback state', () {
+    final readiness = GameWebViewPageReadiness();
+    readiness.pageStarted();
+    expect(readiness.isReady, isFalse);
+
+    readiness.pageFinished();
+    expect(
+      readiness.stateAfterBootstrap(GameStartupState.networkReady),
+      GameStartupState.ready,
+    );
+
+    readiness.pageStarted();
+    expect(
+      readiness.stateAfterBootstrap(GameStartupState.networkReady),
+      GameStartupState.networkReady,
+    );
+  });
+
   test('GameWebView capture updates reload only the final revision', () async {
     final configuration = Completer<void>();
     var configureCalls = 0;

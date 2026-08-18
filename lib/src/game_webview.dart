@@ -399,6 +399,11 @@ final class GameWebViewCaptureUpdateCoordinator {
 
 @visibleForTesting
 final class GameWebViewStartupCoordinator {
+  GameWebViewStartupCoordinator({
+    this.stageTimeout = const Duration(seconds: 10),
+  });
+
+  final Duration stageTimeout;
   Future<void>? _tail;
   Future<void>? _navigation;
   bool _navigationSucceeded = false;
@@ -407,7 +412,7 @@ final class GameWebViewStartupCoordinator {
     final previous = _tail ?? Future<void>.value();
     final scheduled = previous
         .catchError((Object _, StackTrace _) {})
-        .then<void>((_) => operation());
+        .then<void>((_) => Future<void>.sync(operation).timeout(stageTimeout));
     _tail = scheduled.catchError((Object _, StackTrace _) {});
     return scheduled;
   }
@@ -419,12 +424,32 @@ final class GameWebViewStartupCoordinator {
 
     late final Future<void> operation;
     operation = Future<void>.sync(navigate)
+        .timeout(stageTimeout)
         .then<void>((_) => _navigationSucceeded = true)
         .whenComplete(() {
           if (identical(_navigation, operation)) _navigation = null;
         });
     _navigation = operation;
     return operation;
+  }
+
+  Future<T> waitForStage<T>(Future<T> operation) {
+    return operation.timeout(stageTimeout);
+  }
+}
+
+@visibleForTesting
+final class GameWebViewPageReadiness {
+  bool _ready = false;
+
+  bool get isReady => _ready;
+
+  void pageStarted() => _ready = false;
+
+  void pageFinished() => _ready = true;
+
+  GameStartupState stateAfterBootstrap(GameStartupState fallback) {
+    return _ready ? GameStartupState.ready : fallback;
   }
 }
 
@@ -457,6 +482,7 @@ class GameWebView extends StatefulWidget {
     required this.gameCaptureController,
     this.frameRateSettingsController,
     this.renderingMode = GameRenderingMode.compatibility,
+    this.startupTimeout,
   });
 
   final NetworkSettingsController networkSettingsController;
@@ -469,6 +495,7 @@ class GameWebView extends StatefulWidget {
   final GameCaptureController gameCaptureController;
   final GameFrameRateSettingsController? frameRateSettingsController;
   final GameRenderingMode renderingMode;
+  final Duration? startupTimeout;
 
   @override
   State<GameWebView> createState() => _GameWebViewState();
@@ -483,8 +510,8 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   final GameNavigationPolicy _navigationPolicy = GameNavigationPolicy();
   final GameWebViewCaptureUpdateCoordinator _captureUpdates =
       GameWebViewCaptureUpdateCoordinator();
-  final GameWebViewStartupCoordinator _startupCoordinator =
-      GameWebViewStartupCoordinator();
+  late final GameWebViewStartupCoordinator _startupCoordinator;
+  final GameWebViewPageReadiness _pageReadiness = GameWebViewPageReadiness();
   late CaptureMode _activeCaptureMode;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
   static const _scaleChannel = MethodChannel(
@@ -495,7 +522,6 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   int _startupEpoch = 0;
   int _bindingEpoch = 0;
   bool _disposed = false;
-  bool _hasReachedReady = false;
 
   GameStartupState _startupState = GameStartupState.loadingSettings;
   String _startupErrorMessage = '';
@@ -526,6 +552,9 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _startupCoordinator = GameWebViewStartupCoordinator(
+      stageTimeout: widget.startupTimeout ?? const Duration(seconds: 10),
+    );
     WidgetsBinding.instance.addObserver(this);
     _activeCaptureMode = widget.captureModeController.mode;
     _webViewController = WebViewController();
@@ -572,6 +601,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         NavigationDelegate(
           onNavigationRequest: _onNavigationRequest,
           onPageStarted: (url) {
+            _pageReadiness.pageStarted();
             _navigationPolicy.onPageStarted(Uri.tryParse(url));
             _navigationEpoch += 1;
             _releaseFixedCanvas().catchError((Object _) {});
@@ -593,6 +623,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
           onWebResourceError: (error) {
             final isForMainFrame = error.isForMainFrame ?? true;
             if (isForMainFrame) {
+              _pageReadiness.pageStarted();
               widget.controller.onWebResourceError(error.description);
               // Check if it's an SSL error (usually -11 on Android, but flutter maps to description)
               if (error.description.toLowerCase().contains('ssl') ||
@@ -716,12 +747,14 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
       setState(() => _startupState = GameStartupState.applyingNetwork);
 
-      await compatibilityReady;
+      await _startupCoordinator.waitForStage(compatibilityReady);
       if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
-      await frameRateReady;
+      await _startupCoordinator.waitForStage(frameRateReady);
       if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
 
-      final result = await orchestrator.applyNetworkSettings();
+      final result = await _startupCoordinator.waitForStage(
+        orchestrator.applyNetworkSettings(),
+      );
       if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
 
       if (!result.success && networkSettings.mode != NetworkMode.system) {
@@ -739,20 +772,25 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
           ? address
           : GameLaunchConfig.dmmGameEntry;
 
-      await orchestrator.runCaptureStartup(
-        waitForSurface: () async {
-          await WidgetsBinding.instance.endOfFrame;
-        },
-        isActive: () => _isCurrentStartup(startupEpoch, orchestrator),
-        navigate: () async {
-          if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
-          await _startupCoordinator.navigateOnce(
-            () => _webViewController.loadRequest(initialAddress),
-          );
-        },
+      await _startupCoordinator.waitForStage(
+        orchestrator.runCaptureStartup(
+          waitForSurface: () async {
+            await WidgetsBinding.instance.endOfFrame;
+          },
+          isActive: () => _isCurrentStartup(startupEpoch, orchestrator),
+          navigate: () async {
+            if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
+            await _startupCoordinator.navigateOnce(
+              () => _webViewController.loadRequest(initialAddress),
+            );
+          },
+        ),
       );
-      if (_isCurrentStartup(startupEpoch, orchestrator) && _hasReachedReady) {
-        await orchestrator.attachAudioPortOnce();
+      if (_isCurrentStartup(startupEpoch, orchestrator) &&
+          _pageReadiness.isReady) {
+        await _startupCoordinator.waitForStage(
+          orchestrator.attachAudioPortOnce(),
+        );
         if (_isCurrentStartup(startupEpoch, orchestrator)) {
           setState(() => _startupState = GameStartupState.ready);
         }
@@ -793,22 +831,25 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       widget.controller.onPageFinished(url);
       widget.browserController.onPageFinished(url);
 
-      await _synchronizeGamePresentation();
+      await _startupCoordinator.waitForStage(_synchronizeGamePresentation());
       if (!_isCurrentNavigation(navigationEpoch)) return;
-      await _prepareCapture();
+      await _startupCoordinator.waitForStage(_prepareCapture());
       if (!_isCurrentNavigation(navigationEpoch)) return;
-      await _attachAudioPortOnce();
+      await _startupCoordinator.waitForStage(_attachAudioPortOnce());
       if (!_isCurrentNavigation(navigationEpoch)) return;
 
+      _pageReadiness.pageFinished();
       if (_startupState == GameStartupState.loadingGame) {
-        _hasReachedReady = true;
         setState(() => _startupState = GameStartupState.ready);
       }
-      await _frameRateRuntimeController?.onPageReady(
+      final frameReady = _frameRateRuntimeController?.onPageReady(
         samplingEnabled:
             widget.browserController.mode != GameBrowserMode.localPrototype &&
             isGameFrameRateSamplingPage(url),
       );
+      if (frameReady != null) {
+        await _startupCoordinator.waitForStage(frameReady);
+      }
     } catch (error, stackTrace) {
       debugPrint('Game WebView page finish failed: $error\n$stackTrace');
       if (_isCurrentNavigation(navigationEpoch)) {
@@ -819,8 +860,9 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
 
   Future<void> _synchronizeGamePresentation() async {
     final navigationEpoch = _navigationEpoch;
-    final gameSurfaceResult = await _webViewController
-        .runJavaScriptReturningResult(gamePageAlignmentScript);
+    final gameSurfaceResult = await _startupCoordinator.waitForStage(
+      _webViewController.runJavaScriptReturningResult(gamePageAlignmentScript),
+    );
     if (!_isCurrentNavigation(navigationEpoch)) return;
     await _applyGamePresentation(
       isGameSurfaceDetectionResult(gameSurfaceResult),
@@ -835,25 +877,33 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     if (!_isCurrentNavigation(navigationEpoch)) return;
     if (_webViewController.platform is AndroidWebViewController) {
       if (hasGameSurface) {
-        await _scaleChannel.invokeMethod<void>(
-          'bindFixedCanvas',
-          <String, Object>{'contentWidth': 1200, 'contentHeight': 720},
+        await _startupCoordinator.waitForStage(
+          _scaleChannel.invokeMethod<void>('bindFixedCanvas', <String, Object>{
+            'contentWidth': 1200,
+            'contentHeight': 720,
+          }),
         );
       } else {
-        await _scaleChannel.invokeMethod<void>('releaseFixedCanvas');
+        await _startupCoordinator.waitForStage(
+          _scaleChannel.invokeMethod<void>('releaseFixedCanvas'),
+        );
       }
       if (!_isCurrentNavigation(navigationEpoch)) return;
     }
     if (hasGameSurface) {
-      await _webViewController.runJavaScript('''
-        if (window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();
-      ''');
+      await _startupCoordinator.waitForStage(
+        _webViewController.runJavaScript('''
+          if (window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();
+        '''),
+      );
     }
   }
 
   Future<void> _releaseFixedCanvas() async {
     if (_webViewController.platform is AndroidWebViewController) {
-      await _scaleChannel.invokeMethod<void>('releaseFixedCanvas');
+      await _startupCoordinator.waitForStage(
+        _scaleChannel.invokeMethod<void>('releaseFixedCanvas'),
+      );
     }
   }
 
@@ -1046,10 +1096,12 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
 
   Future<void> _retryWithSystemNetwork() async {
     try {
-      await widget.networkSettingsController.applySettings(
-        NetworkMode.system,
-        '',
-        8099,
+      await _startupCoordinator.waitForStage(
+        widget.networkSettingsController.applySettings(
+          NetworkMode.system,
+          '',
+          8099,
+        ),
       );
       if (!mounted || _disposed) return;
       await _executeStartupSequence();
@@ -1086,19 +1138,29 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _frameRateRuntimeController?.dispose();
     unawaited(_bindings.dispose());
-    unawaited(_disableWebView());
+    unawaited(
+      _disableWebViewController(
+        _webViewController,
+        _startupCoordinator.stageTimeout,
+      ),
+    );
     super.dispose();
   }
+}
 
-  Future<void> _disableWebView() async {
-    try {
-      await _webViewController.setJavaScriptMode(JavaScriptMode.disabled);
-      await _webViewController.loadHtmlString(
-        '<!DOCTYPE html><html><body></body></html>',
-      );
-    } catch (error, stackTrace) {
-      debugPrint('Game WebView shutdown failed: $error\n$stackTrace');
-    }
+Future<void> _disableWebViewController(
+  WebViewController controller,
+  Duration timeout,
+) async {
+  try {
+    await controller
+        .setJavaScriptMode(JavaScriptMode.disabled)
+        .timeout(timeout);
+    await controller
+        .loadHtmlString('<!DOCTYPE html><html><body></body></html>')
+        .timeout(timeout);
+  } catch (error, stackTrace) {
+    debugPrint('Game WebView shutdown failed: $error\n$stackTrace');
   }
 }
 

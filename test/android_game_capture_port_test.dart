@@ -46,6 +46,78 @@ void main() {
     },
   );
 
+  test(
+    'old never-ending owner times out so replacement can configure',
+    () async {
+      final blocker = Completer<void>();
+      final enabledCalls = <bool>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'configure') {
+          final enabled =
+              (call.arguments as Map<Object?, Object?>)['enabled']! as bool;
+          enabledCalls.add(enabled);
+          if (enabledCalls.length == 1) await blocker.future;
+        }
+        return null;
+      });
+      final oldPort = MethodChannelGameCapturePort(
+        channel: channel,
+        configurationTimeout: const Duration(milliseconds: 1),
+      );
+      final oldRequest = oldPort.configure(enabled: true, script: 'old');
+      await Future<void>.delayed(Duration.zero);
+      final newPort = MethodChannelGameCapturePort(
+        channel: channel,
+        configurationTimeout: const Duration(milliseconds: 1),
+      );
+
+      await newPort.configure(enabled: false, script: 'new');
+      await oldRequest;
+      expect(enabledCalls, <bool>[true, false]);
+
+      oldPort.dispose();
+      newPort.dispose();
+      blocker.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(MethodChannelGameCapturePort.arbiterCountForTesting, 0);
+    },
+  );
+
+  test('late old completion replays the current owner configuration', () async {
+    final blocker = Completer<void>();
+    final enabledCalls = <bool>[];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'configure') {
+        final enabled =
+            (call.arguments as Map<Object?, Object?>)['enabled']! as bool;
+        enabledCalls.add(enabled);
+        if (enabledCalls.length == 1) await blocker.future;
+      }
+      return null;
+    });
+    final oldPort = MethodChannelGameCapturePort(
+      channel: channel,
+      configurationTimeout: const Duration(milliseconds: 1),
+    );
+    final oldRequest = oldPort.configure(enabled: true, script: 'old');
+    await Future<void>.delayed(Duration.zero);
+    final newPort = MethodChannelGameCapturePort(
+      channel: channel,
+      configurationTimeout: const Duration(milliseconds: 20),
+    );
+    await newPort.configure(enabled: false, script: 'new');
+
+    blocker.complete();
+    await oldRequest;
+    for (var index = 0; index < 5 && enabledCalls.length < 3; index++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(enabledCalls, <bool>[true, false, false]);
+
+    oldPort.dispose();
+    newPort.dispose();
+  });
+
   test('queries support and configures the native bridge', () async {
     final calls = <MethodCall>[];
     messenger.setMockMethodCallHandler(channel, (call) async {

@@ -102,6 +102,56 @@ void main() {
       },
     );
 
+    test('new port proceeds while an old configure never completes', () async {
+      final blocked = Completer<void>();
+      final oldPort = _FakeGameCapturePort(
+        supported: true,
+        configureBlocker: blocked,
+      );
+      final newPort = _FakeGameCapturePort(supported: true);
+      final controller = GameCaptureController();
+      addTearDown(() async {
+        if (!blocked.isCompleted) blocked.complete();
+        controller.dispose();
+        await oldPort.close();
+        await newPort.close();
+      });
+
+      final oldAttach = controller.attach(oldPort, enabled: true);
+      await Future<void>.delayed(Duration.zero);
+      await controller
+          .attach(newPort, enabled: false)
+          .timeout(const Duration(milliseconds: 100));
+      await oldAttach;
+
+      expect(newPort.configurations, <bool>[false]);
+      expect(controller.state, GameCaptureState.disabled);
+    });
+
+    test(
+      'a current never-ending configure times out without hanging',
+      () async {
+        final blocked = Completer<void>();
+        final port = _FakeGameCapturePort(
+          supported: true,
+          configureBlocker: blocked,
+        );
+        final controller = GameCaptureController(
+          operationTimeout: const Duration(milliseconds: 1),
+        );
+        addTearDown(() async {
+          blocked.complete();
+          controller.dispose();
+          await port.close();
+        });
+
+        await controller.attach(port, enabled: true);
+
+        expect(controller.state, GameCaptureState.error);
+        expect(controller.errorMessage, contains('TimeoutException'));
+      },
+    );
+
     test(
       'rapid same-port changes replay the latest mode after a late call',
       () async {

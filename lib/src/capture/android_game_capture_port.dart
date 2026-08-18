@@ -19,11 +19,13 @@ GameCapturePort createPlatformGameCapturePort() {
 }
 
 final class MethodChannelGameCapturePort implements GameCapturePort {
-  MethodChannelGameCapturePort({this.channel = _defaultGameCaptureChannel})
-    : _configurationArbiter = _configurationArbiters.putIfAbsent(
-        channel.name,
-        _CaptureConfigurationArbiter.new,
-      ) {
+  MethodChannelGameCapturePort({
+    this.channel = _defaultGameCaptureChannel,
+    this.configurationTimeout = const Duration(seconds: 10),
+  }) : _configurationArbiter = _configurationArbiters.putIfAbsent(
+         channel.name,
+         _CaptureConfigurationArbiter.new,
+       ) {
     _configurationArbiter.claim(_handlerOwner);
     _handlerOwners[channel.name] = _handlerOwner;
     channel.setMethodCallHandler(_onMethodCall);
@@ -39,7 +41,11 @@ final class MethodChannelGameCapturePort implements GameCapturePort {
     _handlerOwners.clear();
   }
 
+  @visibleForTesting
+  static int get arbiterCountForTesting => _configurationArbiters.length;
+
   final MethodChannel channel;
+  final Duration configurationTimeout;
   final Object _handlerOwner = Object();
   final _CaptureConfigurationArbiter _configurationArbiter;
   final StreamController<CapturedApiEvent> _events =
@@ -63,7 +69,7 @@ final class MethodChannelGameCapturePort implements GameCapturePort {
   @override
   Future<void> configure({required bool enabled, required String script}) {
     if (_disposed) return Future<void>.value();
-    return _configurationArbiter.run(_handlerOwner, () {
+    return _configurationArbiter.run(_handlerOwner, configurationTimeout, () {
       return GameCaptureStartupSequence.configureWithRetry(
         configure: () async {
           try {
@@ -124,22 +130,65 @@ final class _CaptureConfigurationArbiter {
   Object? _activeOwner;
   Future<void> _tail = Future<void>.value();
   int _pending = 0;
+  int _revision = 0;
+  _CaptureConfigurationCommand? _desired;
   void Function()? _onIdle;
 
   void claim(Object owner) {
     _activeOwner = owner;
+    _revision += 1;
+    _desired = null;
     _onIdle = null;
   }
 
-  Future<void> run(Object owner, Future<void> Function() operation) {
+  Future<void> run(
+    Object owner,
+    Duration timeout,
+    Future<void> Function() operation,
+  ) {
     if (!identical(_activeOwner, owner)) return Future<void>.value();
+    final revision = ++_revision;
+    final command = _CaptureConfigurationCommand(
+      owner: owner,
+      revision: revision,
+      timeout: timeout,
+      operation: operation,
+    );
+    _desired = command;
+    return _enqueue(command);
+  }
+
+  Future<void> _enqueue(_CaptureConfigurationCommand command) {
     _pending += 1;
     final scheduled = _tail.then<void>((_) async {
-      if (!identical(_activeOwner, owner)) return;
+      if (!_isCurrent(command)) return;
+      var timedOut = false;
+      final raw = Future<void>.sync(command.operation);
+      unawaited(
+        raw.then<void>(
+          (_) {
+            if (timedOut) _replayAfterLateCompletion(command);
+          },
+          onError: (Object _, StackTrace _) {
+            if (timedOut) _replayAfterLateCompletion(command);
+          },
+        ),
+      );
       try {
-        await operation();
+        await raw.timeout(
+          command.timeout,
+          onTimeout: () {
+            timedOut = true;
+            throw TimeoutException(
+              'Capture configuration timed out',
+              command.timeout,
+            );
+          },
+        );
+      } on TimeoutException {
+        if (_isCurrent(command)) rethrow;
       } catch (_) {
-        if (identical(_activeOwner, owner)) rethrow;
+        if (_isCurrent(command)) rethrow;
       }
     });
     _tail = scheduled.catchError((Object _, StackTrace _) {}).whenComplete(() {
@@ -153,15 +202,51 @@ final class _CaptureConfigurationArbiter {
     return scheduled;
   }
 
+  bool _isCurrent(_CaptureConfigurationCommand command) {
+    return identical(_activeOwner, command.owner) &&
+        identical(_desired, command) &&
+        _revision == command.revision;
+  }
+
+  void _replayAfterLateCompletion(_CaptureConfigurationCommand stale) {
+    final current = _desired;
+    if (current == null || identical(current, stale) || !_isCurrent(current)) {
+      return;
+    }
+    _desired = _CaptureConfigurationCommand(
+      owner: current.owner,
+      revision: ++_revision,
+      timeout: current.timeout,
+      operation: current.operation,
+    );
+    unawaited(_enqueue(_desired!).catchError((Object _, StackTrace _) {}));
+  }
+
   void release(Object owner, {required void Function() onIdle}) {
     if (!identical(_activeOwner, owner)) return;
     _activeOwner = null;
+    _desired = null;
+    _revision += 1;
     if (_pending == 0) {
       onIdle();
     } else {
       _onIdle = onIdle;
     }
   }
+}
+
+final class _CaptureConfigurationCommand {
+  const _CaptureConfigurationCommand({
+    required this.owner,
+    required this.revision,
+    required this.timeout,
+    required this.operation,
+  });
+
+  final Object owner;
+  final int revision;
+  final Duration timeout;
+  final Future<void> Function() operation;
 }
 
 final class UnsupportedGameCapturePort implements GameCapturePort {

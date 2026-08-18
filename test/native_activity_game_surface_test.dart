@@ -324,6 +324,36 @@ void main() {
     );
   });
 
+  testWidgets('a never-ending show times out so terminal hide can destroy', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester, cleanupTimeout: const Duration(milliseconds: 1));
+    await tester.pump();
+    fixture.port.visibilityCompleters.add(Completer<void>());
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    fixture.toolbarController.collapse();
+    fixture.port.calls.clear();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    for (var index = 0; index < 6; index++) {
+      await tester.pump(const Duration(milliseconds: 2));
+    }
+    await _pumpUntilDestroyed(tester, fixture.port);
+
+    expect(
+      fixture.port.calls,
+      containsAllInOrder(<String>['visible:false', 'cancel', 'destroy']),
+    );
+  });
+
   testWidgets('show failure retries, keeps an error overlay, and can recover', (
     tester,
   ) async {
@@ -564,6 +594,78 @@ void main() {
       expect(fixture.orchestrator.disposeCalls, 1);
     },
   );
+
+  testWidgets('page finished during bootstrap remains ready after network', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    final network = Completer<GameSurfaceNetworkResult>();
+    fixture.orchestrator.networkCompleter = network;
+    await fixture.pump(tester);
+    await tester.pump();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+    network.complete(const GameSurfaceNetworkResult.success());
+    for (var index = 0; index < 4; index++) {
+      await tester.pump();
+    }
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    fixture.toolbarController.collapse();
+  });
+
+  testWidgets('hot update proceeds after an old network stage times out', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    fixture.orchestrator.networkCompleter =
+        Completer<GameSurfaceNetworkResult>();
+    await fixture.pump(tester, cleanupTimeout: const Duration(milliseconds: 1));
+    await _pumpUntil(tester, () => fixture.orchestrator.applyNetworkCalls == 1);
+    final nextOrchestrator = _FakeStartupOrchestrator();
+
+    await fixture.pump(tester, startupOrchestrator: nextOrchestrator);
+    for (var index = 0; index < 4; index++) {
+      await tester.pump(const Duration(milliseconds: 2));
+    }
+
+    expect(nextOrchestrator.applyNetworkCalls, 1);
+  });
+
+  testWidgets('hot update retries after an old load stage times out', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    fixture.port.loadCompleter = Completer<void>();
+    await fixture.pump(tester, cleanupTimeout: const Duration(milliseconds: 1));
+    await _pumpUntil(
+      tester,
+      () =>
+          fixture.port.calls.where((call) => call.startsWith('load:')).length ==
+          1,
+    );
+    final nextOrchestrator = _FakeStartupOrchestrator();
+
+    await fixture.pump(tester, startupOrchestrator: nextOrchestrator);
+    for (var index = 0; index < 4; index++) {
+      await tester.pump(const Duration(milliseconds: 2));
+    }
+
+    expect(
+      fixture.port.calls.where((call) => call.startsWith('load:')),
+      hasLength(2),
+    );
+  });
 
   testWidgets('hot update retries a failed in-flight initial navigation', (
     tester,

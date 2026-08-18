@@ -10,16 +10,19 @@ final class GameCaptureController extends ChangeNotifier {
   GameCaptureController({
     this.maxResponseBytes = 8 * 1024 * 1024,
     this.onAcceptedEvent,
+    this.operationTimeout = const Duration(seconds: 10),
   }) : assert(maxResponseBytes > 0);
 
   final int maxResponseBytes;
   final ValueChanged<CapturedApiEvent>? onAcceptedEvent;
+  final Duration operationTimeout;
   final ValueNotifier<int> _eventActivity = ValueNotifier<int>(0);
 
   GameCapturePort? _port;
   GameCapturePort? _desiredPort;
   StreamSubscription<CapturedApiEvent>? _subscription;
   Future<void>? _configurationDrain;
+  Completer<void> _configurationInvalidator = Completer<void>();
   int _configurationRevision = 0;
   int _processedRevision = 0;
   int _streamEpoch = 0;
@@ -73,6 +76,10 @@ final class GameCaptureController extends ChangeNotifier {
 
   Future<void> _enqueueConfiguration() {
     if (_disposed) return Future<void>.value();
+    if (!_configurationInvalidator.isCompleted) {
+      _configurationInvalidator.complete();
+    }
+    _configurationInvalidator = Completer<void>();
     final revision = ++_configurationRevision;
     final waiter = Completer<void>();
     _configurationWaiters[revision] = waiter;
@@ -102,6 +109,7 @@ final class GameCaptureController extends ChangeNotifier {
       final port = _desiredPort;
       final enabled = _desiredEnabled;
       final script = _script;
+      final invalidator = _configurationInvalidator;
 
       if (!identical(_port, port)) {
         _streamEpoch += 1;
@@ -151,7 +159,7 @@ final class GameCaptureController extends ChangeNotifier {
         }
       }
 
-      await _applyConfiguration(revision, port, enabled, script);
+      await _applyConfiguration(revision, port, enabled, script, invalidator);
       _processedRevision = revision;
       _completeConfigurationThrough(revision);
     }
@@ -162,6 +170,7 @@ final class GameCaptureController extends ChangeNotifier {
     GameCapturePort? port,
     bool enabled,
     String script,
+    Completer<void> invalidator,
   ) async {
     if (port == null) {
       if (enabled && _isCurrentConfiguration(revision, port)) {
@@ -174,7 +183,12 @@ final class GameCaptureController extends ChangeNotifier {
     try {
       if (!enabled) {
         if (_configuredEnabled != false) {
-          await port.configure(enabled: false, script: '');
+          final result = await _waitForPortOperation(
+            port.configure(enabled: false, script: ''),
+            invalidator,
+          );
+          if (!result.completed) return;
+          if (result.error case final error?) throw error;
         }
         if (!_isCurrentConfiguration(revision, port)) return;
         _configuredEnabled = false;
@@ -190,7 +204,13 @@ final class GameCaptureController extends ChangeNotifier {
         _errorMessage = null;
         notifyListeners();
       }
-      if (!await port.isSupported()) {
+      final support = await _waitForPortOperation(
+        port.isSupported(),
+        invalidator,
+      );
+      if (!support.completed) return;
+      if (support.error case final error?) throw error;
+      if (support.value != true) {
         if (!_isCurrentConfiguration(revision, port)) return;
         _state = GameCaptureState.unsupported;
         notifyListeners();
@@ -198,7 +218,12 @@ final class GameCaptureController extends ChangeNotifier {
       }
       if (!_isCurrentConfiguration(revision, port)) return;
       if (_configuredEnabled != true || _configuredScript != script) {
-        await port.configure(enabled: true, script: script);
+        final result = await _waitForPortOperation(
+          port.configure(enabled: true, script: script),
+          invalidator,
+        );
+        if (!result.completed) return;
+        if (result.error case final error?) throw error;
       }
       if (!_isCurrentConfiguration(revision, port)) return;
       _configuredEnabled = true;
@@ -212,6 +237,24 @@ final class GameCaptureController extends ChangeNotifier {
       _errorMessage = _safeError(error);
     }
     notifyListeners();
+  }
+
+  Future<_PortOperationResult<T>> _waitForPortOperation<T>(
+    Future<T> operation,
+    Completer<void> invalidator,
+  ) {
+    return Future.any(<Future<_PortOperationResult<T>>>[
+      operation
+          .timeout(operationTimeout)
+          .then<_PortOperationResult<T>>(
+            (value) => _PortOperationResult<T>.success(value),
+            onError: (Object error, StackTrace stackTrace) =>
+                _PortOperationResult<T>.failure(error),
+          ),
+      invalidator.future.then<_PortOperationResult<T>>(
+        (_) => _PortOperationResult<T>.interrupted(),
+      ),
+    ]);
   }
 
   bool _isCurrentConfiguration(int revision, GameCapturePort? port) {
@@ -240,6 +283,9 @@ final class GameCaptureController extends ChangeNotifier {
     _configuredScript = null;
     _state = GameCaptureState.error;
     _errorMessage = _safeError(error);
+    if (!_configurationInvalidator.isCompleted) {
+      _configurationInvalidator.complete();
+    }
     _completeConfigurationThrough(_configurationRevision);
     notifyListeners();
   }
@@ -288,6 +334,9 @@ final class GameCaptureController extends ChangeNotifier {
     if (_disposed) return;
     _disposed = true;
     _configurationRevision += 1;
+    if (!_configurationInvalidator.isCompleted) {
+      _configurationInvalidator.complete();
+    }
     _desiredPort = null;
     _port = null;
     _streamEpoch += 1;
@@ -304,4 +353,23 @@ final class GameCaptureController extends ChangeNotifier {
     _eventActivity.dispose();
     super.dispose();
   }
+}
+
+final class _PortOperationResult<T> {
+  const _PortOperationResult._({
+    required this.completed,
+    this.value,
+    this.error,
+  });
+
+  factory _PortOperationResult.success(T value) =>
+      _PortOperationResult<T>._(completed: true, value: value);
+  factory _PortOperationResult.failure(Object error) =>
+      _PortOperationResult<T>._(completed: true, error: error);
+  factory _PortOperationResult.interrupted() =>
+      _PortOperationResult<T>._(completed: false);
+
+  final bool completed;
+  final T? value;
+  final Object? error;
 }
