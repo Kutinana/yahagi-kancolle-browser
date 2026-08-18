@@ -119,6 +119,10 @@ void main() {
       expect(created.type, NativeGameWebViewEventType.created);
       expect(started.type, NativeGameWebViewEventType.pageStarted);
       expect(started.url, 'https://www.dmm.com/game');
+      expect(
+        started.navigationUri,
+        Uri.parse('https://www.dmm.com/game?token=secret#fragment'),
+      );
       expect(finished.type, NativeGameWebViewEventType.pageFinished);
       expect(error.errorCode, -2);
       expect(error.description, 'network error');

@@ -31,6 +31,8 @@ final class GameCaptureController extends ChangeNotifier {
       <int, Completer<void>>{};
   bool _desiredEnabled = false;
   bool _disposed = false;
+  bool _repairPending = false;
+  bool _repairInFlight = false;
 
   GameCaptureState _state = GameCaptureState.disabled;
   bool? _configuredEnabled;
@@ -96,7 +98,8 @@ final class GameCaptureController extends ChangeNotifier {
         if (identical(_configurationDrain, operation)) {
           _configurationDrain = null;
         }
-        if (!_disposed && _processedRevision < _configurationRevision) {
+        if (!_disposed &&
+            (_processedRevision < _configurationRevision || _repairPending)) {
           _ensureConfigurationDrain();
         }
       }),
@@ -104,12 +107,17 @@ final class GameCaptureController extends ChangeNotifier {
   }
 
   Future<void> _drainConfigurations() async {
-    while (!_disposed && _processedRevision < _configurationRevision) {
+    while (!_disposed &&
+        (_processedRevision < _configurationRevision || _repairPending)) {
       final revision = _configurationRevision;
       final port = _desiredPort;
       final enabled = _desiredEnabled;
       final script = _script;
       final invalidator = _configurationInvalidator;
+      final isRepair = _repairPending;
+      if (isRepair) {
+        _repairPending = false;
+      }
 
       if (!identical(_port, port)) {
         _streamEpoch += 1;
@@ -159,7 +167,9 @@ final class GameCaptureController extends ChangeNotifier {
         }
       }
 
+      if (isRepair) _repairInFlight = true;
       await _applyConfiguration(revision, port, enabled, script, invalidator);
+      if (isRepair) _repairInFlight = false;
       _processedRevision = revision;
       _completeConfigurationThrough(revision);
     }
@@ -186,9 +196,12 @@ final class GameCaptureController extends ChangeNotifier {
           final result = await _waitForPortOperation(
             port.configure(enabled: false, script: ''),
             invalidator,
-            revision,
-            port,
-            replayLate: true,
+            lateRepairCommand: _CaptureConfigurationCommand(
+              revision: revision,
+              port: port,
+              enabled: false,
+              script: '',
+            ),
           );
           if (!result.completed) return;
           if (result.error case final error?) throw error;
@@ -210,9 +223,6 @@ final class GameCaptureController extends ChangeNotifier {
       final support = await _waitForPortOperation(
         port.isSupported(),
         invalidator,
-        revision,
-        port,
-        replayLate: false,
       );
       if (!support.completed) return;
       if (support.error case final error?) throw error;
@@ -227,9 +237,12 @@ final class GameCaptureController extends ChangeNotifier {
         final result = await _waitForPortOperation(
           port.configure(enabled: true, script: script),
           invalidator,
-          revision,
-          port,
-          replayLate: true,
+          lateRepairCommand: _CaptureConfigurationCommand(
+            revision: revision,
+            port: port,
+            enabled: true,
+            script: script,
+          ),
         );
         if (!result.completed) return;
         if (result.error case final error?) throw error;
@@ -250,26 +263,16 @@ final class GameCaptureController extends ChangeNotifier {
 
   Future<_PortOperationResult<T>> _waitForPortOperation<T>(
     Future<T> operation,
-    Completer<void> invalidator,
-    int revision,
-    GameCapturePort port, {
-    required bool replayLate,
+    Completer<void> invalidator, {
+    _CaptureConfigurationCommand? lateRepairCommand,
   }) {
-    if (replayLate) {
+    if (lateRepairCommand != null) {
       final weakController = WeakReference<GameCaptureController>(this);
       unawaited(
         operation.then<void>(
-          (_) => _replayLatestAfterLatePortCompletion(
-            weakController,
-            revision,
-            port,
-          ),
+          (_) => _handleLatePortCompletion(weakController, lateRepairCommand),
           onError: (Object _, StackTrace _) =>
-              _replayLatestAfterLatePortCompletion(
-                weakController,
-                revision,
-                port,
-              ),
+              _handleLatePortCompletion(weakController, lateRepairCommand),
         ),
       );
     }
@@ -287,20 +290,24 @@ final class GameCaptureController extends ChangeNotifier {
     ]);
   }
 
-  static void _replayLatestAfterLatePortCompletion(
+  static void _handleLatePortCompletion(
     WeakReference<GameCaptureController> weakController,
-    int revision,
-    GameCapturePort port,
+    _CaptureConfigurationCommand command,
   ) {
     final controller = weakController.target;
     if (controller == null || controller._disposed) return;
-    if (revision == controller._configurationRevision &&
-        identical(port, controller._desiredPort)) {
+    if (command.revision > controller._configurationRevision) return;
+    final desiredScript = controller._desiredEnabled ? controller._script : '';
+    if (identical(command.port, controller._desiredPort) &&
+        command.enabled == controller._desiredEnabled &&
+        command.script == desiredScript) {
       return;
     }
     controller._configuredEnabled = null;
     controller._configuredScript = null;
-    unawaited(controller._enqueueConfiguration());
+    if (controller._repairPending || controller._repairInFlight) return;
+    controller._repairPending = true;
+    controller._ensureConfigurationDrain();
   }
 
   bool _isCurrentConfiguration(int revision, GameCapturePort? port) {
@@ -384,6 +391,7 @@ final class GameCaptureController extends ChangeNotifier {
       _configurationInvalidator.complete();
     }
     _desiredPort = null;
+    _repairPending = false;
     _port = null;
     _streamEpoch += 1;
     _streamHealthy = false;
@@ -418,4 +426,18 @@ final class _PortOperationResult<T> {
   final bool completed;
   final T? value;
   final Object? error;
+}
+
+final class _CaptureConfigurationCommand {
+  const _CaptureConfigurationCommand({
+    required this.revision,
+    required this.port,
+    required this.enabled,
+    required this.script,
+  });
+
+  final int revision;
+  final GameCapturePort port;
+  final bool enabled;
+  final String script;
 }

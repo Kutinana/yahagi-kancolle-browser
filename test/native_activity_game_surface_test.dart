@@ -9,6 +9,7 @@ import 'package:yahagi_kancolle_browser/src/audio/game_audio_port.dart';
 import 'package:yahagi_kancolle_browser/src/audio/game_audio_store.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_launch_config.dart';
 import 'package:yahagi_kancolle_browser/src/browser/network_proxy_channel.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_surface_slot.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_contract.dart';
@@ -694,6 +695,9 @@ void main() {
     final nextOrchestrator = _FakeStartupOrchestrator();
 
     await fixture.pump(tester, startupOrchestrator: nextOrchestrator);
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://wrong.example/'),
+    );
     oldLoad.complete();
     await _pumpUntil(
       tester,
@@ -703,6 +707,7 @@ void main() {
     );
 
     expect(nextOrchestrator.applyNetworkCalls, 1);
+    fixture.toolbarController.collapse();
   });
 
   testWidgets('pageStarted ack ignores a late load response error', (
@@ -720,7 +725,13 @@ void main() {
     );
 
     fixture.port.addEvent(
-      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+      _event(
+        'pageStarted',
+        generationId: 7,
+        url: GameLaunchConfig.dmmGameEntry
+            .replace(port: 443, fragment: 'ignored')
+            .toString(),
+      ),
     );
     response.complete();
     await tester.pump();
@@ -733,6 +744,45 @@ void main() {
       fixture.port.calls.where((call) => call.startsWith('load:')),
       hasLength(1),
     );
+    expect(
+      fixture.browserController.loadState,
+      isNot(GamePageLoadState.failed),
+    );
+    fixture.toolbarController.collapse();
+  });
+
+  testWidgets('pageStarted before load issue cannot acknowledge navigation', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    fixture.port.eventsDuringCreate.add(
+      _event(
+        'pageStarted',
+        generationId: 7,
+        url: GameLaunchConfig.dmmGameEntry.toString(),
+      ),
+    );
+    final firstLoad = Completer<void>();
+    fixture.port.loadCompleter = firstLoad;
+    fixture.port.loadFailure = StateError('initial load failed');
+    await fixture.pump(tester);
+    await _pumpUntil(
+      tester,
+      () =>
+          fixture.port.calls.where((call) => call.startsWith('load:')).length ==
+          1,
+    );
+
+    await fixture.pump(tester, startupOrchestrator: _FakeStartupOrchestrator());
+    firstLoad.complete();
+    await _pumpUntil(
+      tester,
+      () =>
+          fixture.port.calls.where((call) => call.startsWith('load:')).length ==
+          2,
+    );
+
     fixture.toolbarController.collapse();
   });
 

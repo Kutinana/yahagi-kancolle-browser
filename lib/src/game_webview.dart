@@ -571,6 +571,7 @@ final class GameWebViewStartupCoordinator {
   Future<void>? _navigation;
   bool _navigationIssued = false;
   bool _navigationAcknowledged = false;
+  Uri? _navigationTarget;
 
   static Duration _validateTimeout(Duration timeout) {
     if (timeout <= Duration.zero) {
@@ -592,7 +593,7 @@ final class GameWebViewStartupCoordinator {
     return scheduled;
   }
 
-  Future<void> navigateOnce(Future<void> Function() navigate) {
+  Future<void> navigateOnce(Uri target, Future<void> Function() navigate) {
     if (_navigationAcknowledged || _navigationIssued) {
       return _navigation ?? Future<void>.value();
     }
@@ -600,6 +601,7 @@ final class GameWebViewStartupCoordinator {
     if (pending != null) return pending;
 
     _navigationIssued = true;
+    _navigationTarget = canonicalNavigationTarget(target);
     var responseTimedOut = false;
     late final Future<void> operation;
     operation = Future<void>.sync(navigate)
@@ -612,7 +614,10 @@ final class GameWebViewStartupCoordinator {
         )
         .catchError((Object error, StackTrace stackTrace) {
           if (_navigationAcknowledged) return;
-          if (!responseTimedOut) _navigationIssued = false;
+          if (!responseTimedOut) {
+            _navigationIssued = false;
+            _navigationTarget = null;
+          }
           Error.throwWithStackTrace(error, stackTrace);
         })
         .whenComplete(() {
@@ -622,14 +627,34 @@ final class GameWebViewStartupCoordinator {
     return operation;
   }
 
-  void acknowledgeNavigation() {
-    _navigationIssued = true;
+  bool acknowledgeNavigation(Uri? startedUri) {
+    if (!_navigationIssued || startedUri == null) return false;
+    if (canonicalNavigationTarget(startedUri) != _navigationTarget) {
+      return false;
+    }
     _navigationAcknowledged = true;
+    return true;
   }
 
   Future<T> waitForStage<T>(Future<T> operation) {
     return operation.timeout(stageTimeout);
   }
+}
+
+Uri canonicalNavigationTarget(Uri uri) {
+  final scheme = uri.scheme.toLowerCase();
+  final host = uri.host.toLowerCase();
+  final isDefaultPort =
+      (scheme == 'https' && uri.port == 443) ||
+      (scheme == 'http' && uri.port == 80);
+  return Uri(
+    scheme: scheme,
+    userInfo: uri.userInfo,
+    host: host,
+    port: uri.hasPort && !isDefaultPort ? uri.port : null,
+    path: uri.path.isEmpty ? '/' : uri.path,
+    query: uri.hasQuery ? uri.query : null,
+  );
 }
 
 @visibleForTesting
@@ -795,7 +820,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         NavigationDelegate(
           onNavigationRequest: _onNavigationRequest,
           onPageStarted: (url) {
-            _startupCoordinator.acknowledgeNavigation();
+            _startupCoordinator.acknowledgeNavigation(Uri.tryParse(url));
             _pageReadiness.pageStarted();
             _navigationPolicy.onPageStarted(Uri.tryParse(url));
             _navigationEpoch += 1;
@@ -989,6 +1014,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
           navigate: () async {
             if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
             await _startupCoordinator.navigateOnce(
+              initialAddress,
               () => _webViewController.loadRequest(initialAddress),
             );
           },

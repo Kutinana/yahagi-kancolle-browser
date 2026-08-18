@@ -172,6 +172,52 @@ void main() {
     );
 
     test(
+      'multiple stale completions coalesce into one latest repair',
+      () async {
+        final firstBlocker = Completer<void>();
+        final secondBlocker = Completer<void>();
+        final oldPort = _FakeGameCapturePort(
+          supported: true,
+          configureBlockers: <Completer<void>>[firstBlocker, secondBlocker],
+          recordConfigureOnCompletion: true,
+        );
+        final newPort = _FakeGameCapturePort(supported: true);
+        final controller = GameCaptureController();
+        addTearDown(() async {
+          if (!firstBlocker.isCompleted) firstBlocker.complete();
+          if (!secondBlocker.isCompleted) secondBlocker.complete();
+          controller.dispose();
+          await oldPort.close();
+          await newPort.close();
+        });
+
+        final first = controller.attach(oldPort, enabled: true, script: 'old');
+        await Future<void>.delayed(Duration.zero);
+        final second = controller.configure(enabled: false);
+        await Future<void>.delayed(Duration.zero);
+        final latest = controller.attach(newPort, enabled: false);
+        await latest;
+
+        firstBlocker.complete();
+        secondBlocker.complete();
+        await Future.wait(<Future<void>>[first, second]);
+        for (
+          var index = 0;
+          index < 10 && newPort.configurations.length < 2;
+          index++
+        ) {
+          await Future<void>.delayed(Duration.zero);
+        }
+
+        expect(oldPort.configurations, <bool>[true, false]);
+        expect(newPort.configurations, <bool>[false, false]);
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        expect(newPort.configurations, hasLength(2));
+        expect(controller.state, GameCaptureState.disabled);
+      },
+    );
+
+    test(
       'a current never-ending configure times out without hanging',
       () async {
         final blocked = Completer<void>();
@@ -215,7 +261,7 @@ void main() {
         blocked.complete();
         await Future.wait(<Future<void>>[attach, disable]);
 
-        expect(port.configurations, <bool>[true, false, false]);
+        expect(port.configurations, <bool>[true, false]);
         expect(controller.state, GameCaptureState.disabled);
       },
     );
@@ -361,12 +407,14 @@ final class _FakeGameCapturePort implements GameCapturePort {
   _FakeGameCapturePort({
     required this.supported,
     this.configureBlocker,
+    this.configureBlockers = const <Completer<void>>[],
     this.eventsFailure,
     this.recordConfigureOnCompletion = false,
   });
 
   final bool supported;
   final Completer<void>? configureBlocker;
+  final List<Completer<void>> configureBlockers;
   final Object? eventsFailure;
   final bool recordConfigureOnCompletion;
   final StreamController<CapturedApiEvent> _events =
@@ -389,7 +437,11 @@ final class _FakeGameCapturePort implements GameCapturePort {
   }) async {
     configureCalls += 1;
     if (!recordConfigureOnCompletion) configurations.add(enabled);
-    if (configureCalls == 1) await configureBlocker?.future;
+    if (configureCalls <= configureBlockers.length) {
+      await configureBlockers[configureCalls - 1].future;
+    } else if (configureCalls == 1) {
+      await configureBlocker?.future;
+    }
     if (recordConfigureOnCompletion) configurations.add(enabled);
   }
 

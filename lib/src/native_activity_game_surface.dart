@@ -164,6 +164,7 @@ final class _NativeActivityGameSurfaceState
   bool _forceVisibilityWrite = false;
   bool _navigationIssued = false;
   bool _navigationAcknowledged = false;
+  Uri? _navigationTarget;
   bool _pageReady = false;
   Future<void>? _navigationFuture;
   Future<void>? _bootstrapTail;
@@ -427,6 +428,7 @@ final class _NativeActivityGameSurfaceState
     final existing = _navigationFuture;
     if (existing != null) return existing;
     _navigationIssued = true;
+    _navigationTarget = canonicalNavigationTarget(address);
     var responseTimedOut = false;
     late final Future<void> operation;
     operation = port
@@ -440,7 +442,10 @@ final class _NativeActivityGameSurfaceState
         )
         .catchError((Object error, StackTrace stackTrace) {
           if (_navigationAcknowledged) return;
-          if (!responseTimedOut) _navigationIssued = false;
+          if (!responseTimedOut) {
+            _navigationIssued = false;
+            _navigationTarget = null;
+          }
           Error.throwWithStackTrace(error, stackTrace);
         })
         .whenComplete(() {
@@ -497,8 +502,12 @@ final class _NativeActivityGameSurfaceState
       case NativeGameWebViewEventType.created:
         return;
       case NativeGameWebViewEventType.pageStarted:
-        _navigationIssued = true;
-        _navigationAcknowledged = true;
+        final startedUri = event.navigationUri;
+        if (_navigationIssued &&
+            startedUri != null &&
+            canonicalNavigationTarget(startedUri) == _navigationTarget) {
+          _navigationAcknowledged = true;
+        }
         _pageReady = false;
         _awaitingNewPageStart = false;
         _pageEpoch += 1;

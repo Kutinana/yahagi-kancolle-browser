@@ -74,6 +74,7 @@ final class NativeGameWebViewEvent {
     required this.type,
     required this.generationId,
     this.url,
+    this.navigationUri,
     this.errorCode,
     this.description,
     this.scheme,
@@ -83,6 +84,7 @@ final class NativeGameWebViewEvent {
   final NativeGameWebViewEventType type;
   final int generationId;
   final String? url;
+  final Uri? navigationUri;
   final int? errorCode;
   final String? description;
   final String? scheme;
@@ -130,6 +132,7 @@ final class NativeGameWebViewEvent {
           type: type,
           generationId: generationId,
           url: SafePageAddress.fromRaw(rawUrl).displayText,
+          navigationUri: uri,
         );
       case NativeGameWebViewEventType.mainFrameError:
         return NativeGameWebViewEvent._(

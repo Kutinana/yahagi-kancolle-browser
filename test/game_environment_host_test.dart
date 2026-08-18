@@ -101,11 +101,17 @@ void main() {
       final first = coordinator.schedule(() async {
         calls.add('old-network');
         await firstStage.future;
-        await coordinator.navigateOnce(() async => calls.add('old-load'));
+        await coordinator.navigateOnce(
+          Uri.parse('https://game.example/'),
+          () async => calls.add('old-load'),
+        );
       });
       final second = coordinator.schedule(() async {
         calls.add('new-network');
-        await coordinator.navigateOnce(() async => calls.add('new-load'));
+        await coordinator.navigateOnce(
+          Uri.parse('https://game.example/'),
+          () async => calls.add('new-load'),
+        );
       });
 
       await Future<void>.delayed(Duration.zero);
@@ -125,14 +131,20 @@ void main() {
       var loadCalls = 0;
 
       final first = coordinator.schedule(() async {
-        await coordinator.navigateOnce(() async {
-          loadCalls += 1;
-          await firstLoad.future;
-          throw StateError('old load failed');
-        });
+        await coordinator.navigateOnce(
+          Uri.parse('https://game.example/'),
+          () async {
+            loadCalls += 1;
+            await firstLoad.future;
+            throw StateError('old load failed');
+          },
+        );
       });
       final second = coordinator.schedule(() async {
-        await coordinator.navigateOnce(() async => loadCalls += 1);
+        await coordinator.navigateOnce(
+          Uri.parse('https://game.example/'),
+          () async => loadCalls += 1,
+        );
       });
 
       firstLoad.complete();
@@ -170,15 +182,21 @@ void main() {
       var calls = 0;
 
       await expectLater(
-        coordinator.navigateOnce(() {
+        coordinator.navigateOnce(Uri.parse('https://game.example/'), () {
           calls += 1;
           return never.future;
         }),
         throwsA(isA<TimeoutException>()),
       );
-      await coordinator.navigateOnce(() async => calls += 1);
-      coordinator.acknowledgeNavigation();
-      await coordinator.navigateOnce(() async => calls += 1);
+      await coordinator.navigateOnce(
+        Uri.parse('https://game.example/'),
+        () async => calls += 1,
+      );
+      coordinator.acknowledgeNavigation(Uri.parse('https://game.example/'));
+      await coordinator.navigateOnce(
+        Uri.parse('https://game.example/'),
+        () async => calls += 1,
+      );
       expect(calls, 1);
     },
   );
@@ -186,31 +204,82 @@ void main() {
   test('GameWebView explicit navigation failure allows a retry', () async {
     final coordinator = GameWebViewStartupCoordinator();
     var calls = 0;
+    expect(
+      coordinator.acknowledgeNavigation(Uri.parse('about:blank')),
+      isFalse,
+    );
     await expectLater(
-      coordinator.navigateOnce(() async {
+      coordinator.navigateOnce(Uri.parse('https://game.example/'), () async {
         calls += 1;
+        expect(
+          coordinator.acknowledgeNavigation(
+            Uri.parse('https://other.example/'),
+          ),
+          isFalse,
+        );
         throw StateError('load failed');
       }),
       throwsStateError,
     );
-    await coordinator.navigateOnce(() async => calls += 1);
+    await coordinator.navigateOnce(
+      Uri.parse('https://game.example/'),
+      () async => calls += 1,
+    );
     expect(calls, 2);
   });
+
+  test(
+    'navigation acknowledgement canonicalizes only the issued target',
+    () async {
+      final coordinator = GameWebViewStartupCoordinator();
+      final response = Completer<void>();
+
+      final navigation = coordinator.navigateOnce(
+        Uri.parse('https://game.example/'),
+        () => response.future,
+      );
+
+      expect(
+        coordinator.acknowledgeNavigation(Uri.parse('about:blank')),
+        isFalse,
+      );
+      expect(
+        coordinator.acknowledgeNavigation(
+          Uri.parse('HTTPS://GAME.EXAMPLE:443/#ignored'),
+        ),
+        isTrue,
+      );
+      response.complete();
+      await navigation;
+      expect(
+        canonicalNavigationTarget(
+          Uri.parse('HTTPS://GAME.EXAMPLE:443#fragment'),
+        ),
+        canonicalNavigationTarget(Uri.parse('https://game.example/')),
+      );
+    },
+  );
 
   test(
     'GameWebView page ack ignores a late navigation response error',
     () async {
       final coordinator = GameWebViewStartupCoordinator();
       final response = Completer<void>();
-      final navigation = coordinator.navigateOnce(() async {
-        await response.future;
-        throw StateError('late response error');
-      });
+      final navigation = coordinator.navigateOnce(
+        Uri.parse('https://game.example/'),
+        () async {
+          await response.future;
+          throw StateError('late response error');
+        },
+      );
 
-      coordinator.acknowledgeNavigation();
+      coordinator.acknowledgeNavigation(Uri.parse('https://game.example/'));
       response.complete();
       await navigation;
-      await coordinator.navigateOnce(() async => fail('must not resend'));
+      await coordinator.navigateOnce(
+        Uri.parse('https://game.example/'),
+        () async => fail('must not resend'),
+      );
     },
   );
 
