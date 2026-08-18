@@ -33,7 +33,7 @@ class NativeGameWebViewClientTest {
         assertTrue(delegate.shouldOverrideUrlLoading("not a uri"))
 
         assertEquals(
-            listOf("blocked:intent", "blocked:javascript", "blocked:", "blocked:"),
+            listOf("blocked:intent", "blocked:javascript", "blocked:invalid", "blocked:invalid"),
             events,
         )
     }
@@ -46,6 +46,17 @@ class NativeGameWebViewClientTest {
         delegate.shouldOverrideUrlLoading("CuStOmSchemeWhichIsFarLongerThanThirtyTwoCharacters:value")
 
         assertEquals("blocked:customschemewhichisfarlongerthan", events.single())
+    }
+
+    @Test
+    fun blocksSubframeCustomSchemesWithoutReportingNavigation() {
+        val events = mutableListOf<String>()
+        val delegate = delegate(events)
+
+        assertTrue(delegate.shouldOverrideUrlLoading("intent:#Intent;end", isMainFrame = false))
+        assertFalse(delegate.shouldOverrideUrlLoading("https://example.test", isMainFrame = false))
+
+        assertTrue(events.isEmpty())
     }
 
     @Test
@@ -68,6 +79,7 @@ class NativeGameWebViewClientTest {
             generation = 7,
             sink = recordingSink(events),
             acceptsGeneration = { false },
+            prepareRenderProcessGone = { true },
             onRenderProcessGone = {},
         )
 
@@ -97,6 +109,7 @@ class NativeGameWebViewClientTest {
                 override fun destroyed(generation: Long) = Unit
             },
             acceptsGeneration = { true },
+            prepareRenderProcessGone = { true },
             onRenderProcessGone = {
                 events += "cleanup"
                 throw IllegalStateException("cleanup failure")
@@ -108,10 +121,32 @@ class NativeGameWebViewClientTest {
         assertEquals(listOf("event", "cleanup"), events)
     }
 
+    @Test
+    fun renderGonePreparesTheHostBeforeNotifyingTheSink() {
+        val events = mutableListOf<String>()
+        var active = true
+        val delegate = NativeGameWebViewClientDelegate(
+            generation = 3,
+            sink = recordingSink(events),
+            acceptsGeneration = { active },
+            prepareRenderProcessGone = {
+                events += "prepared"
+                active = false
+                true
+            },
+            onRenderProcessGone = { events += "cleanup" },
+        )
+
+        assertTrue(delegate.renderProcessGone(didCrash = true))
+
+        assertEquals(listOf("prepared", "gone:true", "cleanup"), events)
+    }
+
     private fun delegate(events: MutableList<String>) = NativeGameWebViewClientDelegate(
         generation = 2,
         sink = recordingSink(events),
         acceptsGeneration = { true },
+        prepareRenderProcessGone = { true },
         onRenderProcessGone = {},
     )
 

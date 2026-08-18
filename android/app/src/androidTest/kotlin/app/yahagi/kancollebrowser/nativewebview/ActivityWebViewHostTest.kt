@@ -134,18 +134,31 @@ class ActivityWebViewHostTest {
     }
 
     @Test
-    fun clientRenderGoneEmitsBeforeHostCleanupAndDestroyed() = onMain {
+    fun clientRenderGoneInvalidatesBeforeSinkReentryAndUsesOnlyRendererSafeCleanup() = onMain {
         val root = sizedRoot()
         val events = mutableListOf<String>()
+        val cleanupCalls = mutableListOf<String>()
+        val timeline = mutableListOf<String>()
         var client: NativeGameWebViewClient? = null
         host = ActivityWebViewHost(
             context = context,
             contentRoot = root,
-            eventSink = recordingSink(events),
+            eventSink = object : NativeGameWebViewEventSink by recordingSink(events) {
+                override fun renderProcessGone(generation: Long, didCrash: Boolean) {
+                    events += "gone:$generation:$didCrash"
+                    timeline += "gone"
+                    assertFalse(requireNotNull(host).destroy(generation))
+                }
+                override fun destroyed(generation: Long) {
+                    events += "destroyed:$generation"
+                    timeline += "destroyed"
+                }
+            },
             configureWebView = { webView, suppliedClient ->
                 client = suppliedClient as NativeGameWebViewClient
                 NativeGameWebViewConfigurator.configure(webView, suppliedClient)
             },
+            webViewCleanup = recordingCleanup(cleanupCalls, timeline),
         )
         val generation = requireNotNull(host!!.create())
 
@@ -156,6 +169,8 @@ class ActivityWebViewHostTest {
             listOf("created:$generation", "gone:$generation:false", "destroyed:$generation"),
             events,
         )
+        assertEquals(listOf("destroy"), cleanupCalls)
+        assertEquals(listOf("gone", "destroy", "destroyed"), timeline)
     }
 
     @Test
@@ -203,17 +218,28 @@ class ActivityWebViewHostTest {
     @Test
     fun rollsBackConfigurationFailureWithoutLeakingTheWebView() = onMain {
         val root = sizedRoot()
+        val events = mutableListOf<String>()
+        val cleanupCalls = mutableListOf<String>()
+        var client: NativeGameWebViewClient? = null
         val failing = ActivityWebViewHost(
             context = context,
             contentRoot = root,
-            eventSink = recordingSink(mutableListOf()),
-            configureWebView = { _, _ -> throw IllegalStateException("configuration failure") },
+            eventSink = recordingSink(events),
+            configureWebView = { webView, suppliedClient ->
+                client = suppliedClient as NativeGameWebViewClient
+                NativeGameWebViewConfigurator.configure(webView, suppliedClient)
+                throw IllegalStateException("configuration failure")
+            },
+            webViewCleanup = rollbackCleanup(cleanupCalls),
         )
 
         assertNull(failing.create())
         assertEquals(0, root.childCount)
         assertNull(failing.currentWebView)
         assertNull(failing.currentGeneration)
+        client!!.onPageStarted(null, "https://example.test/old", null)
+        assertTrue(events.isEmpty())
+        assertEquals(listOf("chrome", "client", "destroy"), cleanupCalls)
     }
 
     @Test
@@ -279,6 +305,36 @@ class ActivityWebViewHostTest {
             calls += "destroy"
             webView.destroy()
         }
+    }
+
+    private fun recordingCleanup(
+        calls: MutableList<String>,
+        timeline: MutableList<String>? = null,
+    ) = object : NativeGameWebViewCleanup {
+        override fun stopLoading(webView: WebView) { calls += "stop" }
+        override fun loadBlank(webView: WebView) { calls += "blank" }
+        override fun clearHistory(webView: WebView) { calls += "history" }
+        override fun removeAllViews(webView: WebView) { calls += "contents" }
+        override fun clearWebChromeClient(webView: WebView) { calls += "chrome" }
+        override fun clearWebViewClient(webView: WebView) { calls += "client" }
+        override fun destroy(webView: WebView) {
+            calls += "destroy"
+            timeline?.add("destroy")
+            webView.destroy()
+        }
+    }
+
+    private fun rollbackCleanup(calls: MutableList<String>) = object : NativeGameWebViewCleanup {
+        override fun stopLoading(webView: WebView) = Unit
+        override fun loadBlank(webView: WebView) = Unit
+        override fun clearHistory(webView: WebView) = Unit
+        override fun removeAllViews(webView: WebView) = Unit
+        override fun clearWebChromeClient(webView: WebView) { calls += "chrome" }
+        override fun clearWebViewClient(webView: WebView) {
+            calls += "client"
+            throw IllegalStateException("client cleanup failure")
+        }
+        override fun destroy(webView: WebView) { calls += "destroy"; webView.destroy() }
     }
 
     private fun recordingSink(events: MutableList<String>) = object : NativeGameWebViewEventSink {

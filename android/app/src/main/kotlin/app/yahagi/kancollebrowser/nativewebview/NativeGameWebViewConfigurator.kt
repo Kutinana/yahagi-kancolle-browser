@@ -23,7 +23,7 @@ internal enum class NativeGameWebViewConfigurationAction {
 }
 
 /** Applies the deliberately narrow configuration used by the native game WebView. */
-object NativeGameWebViewConfigurator {
+internal object NativeGameWebViewConfigurator {
     fun configure(webView: WebView, client: WebViewClient) = configure(webView, client) {}
 
     @SuppressLint("ObsoleteSdkInt", "SetJavaScriptEnabled")

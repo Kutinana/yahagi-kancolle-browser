@@ -75,7 +75,7 @@ class ActivityWebViewHost internal constructor(
     private var webView: WebView? = null
     private var hasValidBounds = false
 
-    val currentWebView: WebView?
+    internal val currentWebView: WebView?
         get() {
             requireMainThread()
             return webView
@@ -115,6 +115,7 @@ class ActivityWebViewHost internal constructor(
                 generation = generation,
                 sink = eventSink,
                 acceptsGeneration = { state.accepts(generation) },
+                prepareRenderProcessGone = ::prepareRenderProcessGone,
                 onRenderProcessGone = ::onRenderProcessGone,
             )
             configureWebView(createdWebView, client)
@@ -189,20 +190,42 @@ class ActivityWebViewHost internal constructor(
         return state.generationId?.let { destroyInternal(it, rendererGone = false) } ?: false
     }
 
-    /** Called by [NativeGameWebViewClient] after it reports a renderer loss. */
-    fun onRenderProcessGone(generation: Long): Boolean {
+    /** Completes a renderer-loss transaction after its event has been delivered. */
+    internal fun onRenderProcessGone(generation: Long): Boolean {
         requireMainThread()
-        return destroyInternal(generation, rendererGone = true)
+        if (state.generationId != generation || state.phase != NativeGameWebViewHostPhase.DESTROYING) {
+            return false
+        }
+        completeDestroy(generation, rendererGone = true)
+        return true
+    }
+
+    /** Starts renderer-loss teardown before the client synchronously reports it to the sink. */
+    private fun prepareRenderProcessGone(generation: Long): Boolean {
+        requireMainThread()
+        return beginDestroy(generation)
     }
 
     private fun destroyInternal(generation: Long, rendererGone: Boolean): Boolean {
+        if (!beginDestroy(generation)) {
+            return false
+        }
+        completeDestroy(generation, rendererGone)
+        return true
+    }
+
+    private fun beginDestroy(generation: Long): Boolean {
         if (!state.beginDestroy(generation)) {
             return false
         }
+        overlay?.visibility = View.INVISIBLE
+        hasValidBounds = false
+        return true
+    }
+
+    private fun completeDestroy(generation: Long, rendererGone: Boolean) {
         val activeOverlay = overlay
         val activeWebView = webView
-        activeOverlay?.visibility = View.INVISIBLE
-        hasValidBounds = false
 
         if (!rendererGone) {
             bestEffort { activeWebView?.let(webViewCleanup::stopLoading) }
@@ -213,15 +236,16 @@ class ActivityWebViewHost internal constructor(
         }
         bestEffort { activeOverlay?.removeView(activeWebView) }
         bestEffort { contentRoot.removeView(activeOverlay) }
-        bestEffort { activeWebView?.let(webViewCleanup::clearWebChromeClient) }
-        bestEffort { activeWebView?.let(webViewCleanup::clearWebViewClient) }
+        if (!rendererGone) {
+            bestEffort { activeWebView?.let(webViewCleanup::clearWebChromeClient) }
+            bestEffort { activeWebView?.let(webViewCleanup::clearWebViewClient) }
+        }
         bestEffort { activeWebView?.let(webViewCleanup::destroy) }
 
         overlay = null
         webView = null
         state.completeDestroy(generation)
         runCatching { eventSink.destroyed(generation) }
-        return true
     }
 
     private fun rollbackCreate(
@@ -229,17 +253,20 @@ class ActivityWebViewHost internal constructor(
         createdOverlay: FrameLayout?,
         createdWebView: WebView?,
     ) {
-        bestEffort { createdOverlay?.visibility = View.INVISIBLE }
-        bestEffort { createdOverlay?.removeView(createdWebView) }
-        bestEffort { contentRoot.removeView(createdOverlay) }
-        bestEffort { createdWebView?.let(webViewCleanup::clearWebChromeClient) }
-        bestEffort { createdWebView?.let(webViewCleanup::clearWebViewClient) }
-        bestEffort { createdWebView?.let(webViewCleanup::destroy) }
-        overlay = null
-        webView = null
-        hasValidBounds = false
         if (state.beginDestroy(generation)) {
-            state.completeDestroy(generation)
+            try {
+                bestEffort { createdOverlay?.visibility = View.INVISIBLE }
+                bestEffort { createdOverlay?.removeView(createdWebView) }
+                bestEffort { contentRoot.removeView(createdOverlay) }
+                bestEffort { createdWebView?.let(webViewCleanup::clearWebChromeClient) }
+                bestEffort { createdWebView?.let(webViewCleanup::clearWebViewClient) }
+                bestEffort { createdWebView?.let(webViewCleanup::destroy) }
+            } finally {
+                overlay = null
+                webView = null
+                hasValidBounds = false
+                state.completeDestroy(generation)
+            }
         }
     }
 

@@ -20,10 +20,11 @@ interface NativeGameWebViewEventSink {
 }
 
 /** Android-free policy and event mapper used by [NativeGameWebViewClient]. */
-class NativeGameWebViewClientDelegate(
+internal class NativeGameWebViewClientDelegate(
     private val generation: Long,
     private val sink: NativeGameWebViewEventSink,
     private val acceptsGeneration: () -> Boolean,
+    private val prepareRenderProcessGone: () -> Boolean,
     private val onRenderProcessGone: () -> Unit,
 ) {
     fun pageStarted(url: String) = emit { it.pageStarted(generation, url) }
@@ -36,7 +37,7 @@ class NativeGameWebViewClientDelegate(
         }
     }
 
-    fun shouldOverrideUrlLoading(url: String?): Boolean {
+    fun shouldOverrideUrlLoading(url: String?, isMainFrame: Boolean = true): Boolean {
         if (!acceptsGeneration()) {
             return true
         }
@@ -44,15 +45,21 @@ class NativeGameWebViewClientDelegate(
         if (scheme == "http" || scheme == "https") {
             return false
         }
-        runCatching { sink.navigationBlocked(generation, scheme) }
+        if (isMainFrame) {
+            runCatching { sink.navigationBlocked(generation, scheme) }
+        }
         return true
     }
 
     fun renderProcessGone(didCrash: Boolean): Boolean {
-        if (acceptsGeneration()) {
-            runCatching { sink.renderProcessGone(generation, didCrash) }
-            runCatching(onRenderProcessGone)
+        if (!acceptsGeneration()) {
+            return true
         }
+        if (!runCatching(prepareRenderProcessGone).getOrDefault(false)) {
+            return true
+        }
+        runCatching { sink.renderProcessGone(generation, didCrash) }
+        runCatching(onRenderProcessGone)
         return true
     }
 
@@ -63,7 +70,7 @@ class NativeGameWebViewClientDelegate(
     }
 
     private fun normalizedScheme(url: String?): String {
-        val match = SCHEME_PATTERN.find(url.orEmpty()) ?: return ""
+        val match = SCHEME_PATTERN.find(url.orEmpty()) ?: return INVALID_SCHEME
         return match.groupValues[1].lowercase(Locale.ROOT).take(MAX_SCHEME_LENGTH)
     }
 
@@ -73,19 +80,22 @@ class NativeGameWebViewClientDelegate(
         val SCHEME_PATTERN = Regex("^([A-Za-z][A-Za-z0-9+.-]*):")
         const val MAX_SCHEME_LENGTH = 32
         const val MAX_DESCRIPTION_LENGTH = 256
+        const val INVALID_SCHEME = "invalid"
     }
 }
 
-class NativeGameWebViewClient(
+internal class NativeGameWebViewClient(
     generation: Long,
     sink: NativeGameWebViewEventSink,
     acceptsGeneration: () -> Boolean,
+    prepareRenderProcessGone: (Long) -> Boolean,
     onRenderProcessGone: (Long) -> Unit,
 ) : WebViewClient() {
     private val delegate = NativeGameWebViewClientDelegate(
         generation = generation,
         sink = sink,
         acceptsGeneration = acceptsGeneration,
+        prepareRenderProcessGone = { prepareRenderProcessGone(generation) },
         onRenderProcessGone = { onRenderProcessGone(generation) },
     )
 
@@ -119,7 +129,10 @@ class NativeGameWebViewClient(
         delegate.shouldOverrideUrlLoading(url)
 
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean =
-        delegate.shouldOverrideUrlLoading(request?.url?.toString())
+        delegate.shouldOverrideUrlLoading(
+            url = request?.url?.toString(),
+            isMainFrame = request?.isForMainFrame == true,
+        )
 
     override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean =
         delegate.renderProcessGone(
