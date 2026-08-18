@@ -37,7 +37,7 @@ final class GameResourceCacheController extends ChangeNotifier {
   bool get busy => _busy;
   String get completenessLine => _status.targetBytes > 0
       ? formatCacheCompleteness(_status.cachedBytes, _status.targetBytes)
-      : '${(_status.cachedBytes / 1000000000).toStringAsFixed(2)} GB（--）';
+      : '0.00 GB（--）';
 
   Future<void> initialize() async {
     _mode = await _store.load();

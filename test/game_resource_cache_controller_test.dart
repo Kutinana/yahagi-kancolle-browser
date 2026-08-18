@@ -16,9 +16,24 @@ void main() {
   test(
     'does not show the cache capacity as an unknown manifest size',
     () async {
+      final port = FakePort()
+        ..nextStatus = const GameResourceCacheStatus(
+          mode: GameResourceCacheMode.light,
+          state: GameResourceCacheState.idle,
+          cachedBytes: 1250000000,
+          maxBytes: 10000000000,
+          targetBytes: 0,
+          downloadedBytes: 0,
+          bytesPerSecond: 0,
+          remainingSeconds: null,
+          missingCount: 0,
+          damagedCount: 0,
+          fileCount: 0,
+          capacityBlocked: false,
+        );
       final controller = GameResourceCacheController(
         store: MemoryStore(),
-        port: FakePort(),
+        port: port,
       );
       await controller.initialize();
 
