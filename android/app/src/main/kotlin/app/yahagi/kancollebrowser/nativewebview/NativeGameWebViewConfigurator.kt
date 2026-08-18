@@ -14,6 +14,7 @@ internal enum class NativeGameWebViewConfigurationAction {
     DOM_STORAGE_ENABLED,
     DATABASE_ENABLED,
     MEDIA_PLAYBACK_WITHOUT_GESTURE,
+    USER_AGENT_SET,
     BACKGROUND_BLACK,
     HARDWARE_LAYER,
     ACCEPT_COOKIE,
@@ -42,6 +43,8 @@ internal object NativeGameWebViewConfigurator {
             onApplied(NativeGameWebViewConfigurationAction.DATABASE_ENABLED)
             mediaPlaybackRequiresUserGesture = false
             onApplied(NativeGameWebViewConfigurationAction.MEDIA_PLAYBACK_WITHOUT_GESTURE)
+            userAgentString = NativeGameWebViewUserAgent.toDesktop(userAgentString)
+            onApplied(NativeGameWebViewConfigurationAction.USER_AGENT_SET)
         }
         webView.setBackgroundColor(Color.BLACK)
         onApplied(NativeGameWebViewConfigurationAction.BACKGROUND_BLACK)
@@ -60,5 +63,19 @@ internal object NativeGameWebViewConfigurator {
         onApplied(NativeGameWebViewConfigurationAction.WEB_VIEW_CLIENT_SET)
         webView.webChromeClient = WebChromeClient()
         onApplied(NativeGameWebViewConfigurationAction.WEB_CHROME_CLIENT_SET)
+    }
+}
+
+internal object NativeGameWebViewUserAgent {
+    private val chromePattern = Regex("\\bChrome/[0-9.]+")
+    private val appleWebKitPattern = Regex("\\bAppleWebKit/[0-9.]+")
+    private val safariPattern = Regex("\\bSafari/[0-9.]+")
+
+    fun toDesktop(current: String): String {
+        val chrome = chromePattern.find(current)?.value ?: return current
+        val appleWebKit = appleWebKitPattern.find(current)?.value ?: return current
+        val safari = safariPattern.find(current)?.value ?: return current
+        return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+            "$appleWebKit (KHTML, like Gecko) $chrome $safari"
     }
 }

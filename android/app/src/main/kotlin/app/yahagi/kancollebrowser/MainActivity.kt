@@ -216,6 +216,12 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 }
             },
             lifecycleObserver = object : NativeGameWebViewLifecycleObserver {
+                override fun onCreated() {
+                    // The native host is now discoverable under decorView. Reapply
+                    // the existing request client stack to this single WebView.
+                    ensureGadgetBypassWrap()
+                }
+
                 override fun onPageFinished() {
                     nativeWebViewStartup?.onPageFinished()
                 }

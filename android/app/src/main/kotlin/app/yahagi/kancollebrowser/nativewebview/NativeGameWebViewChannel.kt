@@ -23,12 +23,12 @@ internal interface NativeGameWebViewHostOperations {
     fun setBounds(generation: Long, bounds: NativeGameWebViewBounds): Boolean
     fun setVisible(generation: Long, visible: Boolean): Boolean
     fun loadUri(uri: String)
-    fun showLocalHome()
+    fun showLocalHome(html: String)
     fun reload()
     fun canGoBack(): Boolean
     fun goBack()
     fun runJavaScript(javascript: String)
-    fun fitGameScreen()
+    fun fitGameScreen(javascript: String)
     fun clearCache()
     fun clearSession(onComplete: (Exception?) -> Unit)
     fun destroy(generation: Long): Boolean
@@ -52,11 +52,10 @@ internal class ActivityNativeGameWebViewHostOperations(
         requireWebView().loadUrl(uri)
     }
 
-    override fun showLocalHome() {
-        // Task 8 replaces this placeholder with the complete offline home document.
+    override fun showLocalHome(html: String) {
         requireWebView().loadDataWithBaseURL(
             LOCAL_HOME_BASE_URL,
-            LOCAL_HOME_HTML,
+            html,
             "text/html",
             "UTF-8",
             null,
@@ -77,12 +76,8 @@ internal class ActivityNativeGameWebViewHostOperations(
         requireWebView().evaluateJavascript(javascript, null)
     }
 
-    override fun fitGameScreen() {
-        // Task 8 installs the complete fitting script; this only invokes its future hook.
-        requireWebView().evaluateJavascript(
-            "window.__yahagiMobileSyncPresentation?.();",
-            null,
-        )
+    override fun fitGameScreen(javascript: String) {
+        requireWebView().evaluateJavascript(javascript, null)
     }
 
     override fun clearCache() {
@@ -114,11 +109,11 @@ internal class ActivityNativeGameWebViewHostOperations(
 
     private companion object {
         const val LOCAL_HOME_BASE_URL = "https://localhost/"
-        const val LOCAL_HOME_HTML = "<html><body style=\"background:#000\"></body></html>"
     }
 }
 
 internal interface NativeGameWebViewLifecycleObserver {
+    fun onCreated() = Unit
     fun onPageFinished() = Unit
     fun onRenderProcessGone() = Unit
     fun onCreateFailed() = Unit
@@ -588,7 +583,7 @@ internal class NativeGameWebViewChannel(
                     finishSuccess(binding, pending)
                 }
                 "showLocalHome" -> {
-                    host.showLocalHome()
+                    host.showLocalHome(checkNotNull(parsed.text))
                     finishSuccess(binding, pending)
                 }
                 "reload" -> {
@@ -607,7 +602,7 @@ internal class NativeGameWebViewChannel(
                     finishSuccess(binding, pending)
                 }
                 "fitGameScreen" -> {
-                    host.fitGameScreen()
+                    host.fitGameScreen(checkNotNull(parsed.text))
                     finishSuccess(binding, pending)
                 }
                 "clearCache" -> {
@@ -798,9 +793,21 @@ internal class NativeGameWebViewChannel(
                 if (!isSafeWebUri(uri)) invalid("uri must be an absolute HTTP(S) URI")
                 ParsedCall(call.method, requireGeneration(arguments), text = uri)
             }
+            "showLocalHome" -> {
+                requireExactKeys(arguments, setOf("generationId", "html"))
+                val html = arguments["html"] as? String ?: invalid("html must be a string")
+                if (html.length > MAX_LOCAL_HOME_LENGTH) invalid("html is too large")
+                ParsedCall(call.method, requireGeneration(arguments), text = html)
+            }
             "runJavaScript" -> {
                 requireExactKeys(arguments, setOf("generationId", "javascript"))
                 val javascript = arguments["javascript"] as? String ?: invalid("javascript must be a string")
+                ParsedCall(call.method, requireGeneration(arguments), text = javascript)
+            }
+            "fitGameScreen" -> {
+                requireExactKeys(arguments, setOf("generationId", "javascript"))
+                val javascript = arguments["javascript"] as? String ?: invalid("javascript must be a string")
+                if (javascript.length > MAX_FIT_SCRIPT_LENGTH) invalid("javascript is too large")
                 ParsedCall(call.method, requireGeneration(arguments), text = javascript)
             }
             else -> {
@@ -871,6 +878,7 @@ internal class NativeGameWebViewChannel(
         val binding = bindingForEvent(attachmentId) ?: return
         if (binding.host?.currentGeneration != generation) return
         acceptedGeneration = generation
+        runCatching { binding.lifecycleObserver.onCreated() }
         emit(mapOf("type" to "created", "generationId" to generation))
     }
 
@@ -1029,6 +1037,8 @@ internal class NativeGameWebViewChannel(
         const val HOST_ERROR = "native_webview_error"
         const val ACTIVITY_DESTROYED = "activity_destroyed"
         const val CLEAR_SESSION_TIMEOUT_MS = 10_000L
+        const val MAX_LOCAL_HOME_LENGTH = 64 * 1024
+        const val MAX_FIT_SCRIPT_LENGTH = 64 * 1024
 
         fun invalid(message: String): Nothing = throw InvalidArgumentsException(message)
     }

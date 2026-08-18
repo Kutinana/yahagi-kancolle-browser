@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import 'game_browser_controller.dart';
+import 'game_local_home.dart';
+import 'game_page_alignment_script.dart';
 import 'native_game_webview_contract.dart';
 import 'safe_page_address.dart';
 
@@ -232,7 +234,8 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   }
 
   @override
-  Future<void> showLocalHome() => _invoke('showLocalHome');
+  Future<void> showLocalHome() =>
+      _invoke('showLocalHome', <String, Object?>{'html': gameLocalHomeHtml});
 
   @override
   Future<void> reload() => _invoke('reload');
@@ -259,7 +262,9 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   }
 
   @override
-  Future<void> fitGameScreen() => _invoke('fitGameScreen');
+  Future<void> fitGameScreen() => _invoke('fitGameScreen', <String, Object?>{
+    'javascript': gamePageAlignmentScript,
+  });
 
   @override
   Future<void> clearCache() => _invoke('clearCache');

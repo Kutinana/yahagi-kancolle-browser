@@ -78,7 +78,10 @@ class ActivityWebViewHostTest {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             assertTrue(CookieManager.getInstance().acceptThirdPartyCookies(webView))
         }
-        assertEquals(initialUserAgent, webView.settings.userAgentString)
+        assertEquals(
+            NativeGameWebViewUserAgent.toDesktop(initialUserAgent),
+            webView.settings.userAgentString,
+        )
         assertEquals(initialCacheMode, webView.settings.cacheMode)
         assertEquals(initialFileAccessFromFileUrls, webView.settings.allowFileAccessFromFileURLs)
         assertEquals(
@@ -87,6 +90,7 @@ class ActivityWebViewHostTest {
         )
         assertTrue(NativeGameWebViewConfigurationAction.DATABASE_ENABLED in configurationActions)
         assertTrue(NativeGameWebViewConfigurationAction.BACKGROUND_BLACK in configurationActions)
+        assertTrue(NativeGameWebViewConfigurationAction.USER_AGENT_SET in configurationActions)
         assertTrue(NativeGameWebViewConfigurationAction.WEB_VIEW_CLIENT_SET in configurationActions)
         assertTrue(NativeGameWebViewConfigurationAction.WEB_CHROME_CLIENT_SET in configurationActions)
         assertEquals(listOf("created:$generation"), events)

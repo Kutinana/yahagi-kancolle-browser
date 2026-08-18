@@ -220,6 +220,31 @@ void main() {
     );
   });
 
+  testWidgets('page completion fits the native page before becoming ready', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.calls.clear();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(fixture.port.calls, contains('fit'));
+    expect(fixture.orchestrator.prepareCaptureCalls, greaterThan(0));
+    expect(fixture.orchestrator.attachAudioCalls, greaterThan(0));
+    expect(find.byKey(const Key('native-game-surface-error')), findsNothing);
+    fixture.toolbarController.collapse();
+  });
+
   testWidgets('route desire stays authoritative when a page becomes ready', (
     tester,
   ) async {
@@ -2129,7 +2154,9 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Future<void> clearSession() async {}
 
   @override
-  Future<void> fitGameScreen() async {}
+  Future<void> fitGameScreen() async {
+    calls.add('fit');
+  }
 
   @override
   Future<void> goBack() async {}

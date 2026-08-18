@@ -570,6 +570,10 @@ final class _NativeActivityGameSurfaceState
     int pageEpoch,
   ) async {
     try {
+      await port.fitGameScreen().timeout(_cleanupTimeout);
+      if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
+        return;
+      }
       await _startupOrchestrator.prepareCapture().timeout(_cleanupTimeout);
       if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
         return;

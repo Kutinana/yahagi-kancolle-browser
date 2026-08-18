@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_local_home.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_page_alignment_script.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_contract.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_port.dart';
 
@@ -99,12 +101,19 @@ void main() {
         'generationId': 7,
         'uri': 'https://www.dmm.com/game',
       });
-      expect(calls[4].arguments, <String, Object?>{'generationId': 7});
+      expect(calls[4].arguments, <String, Object?>{
+        'generationId': 7,
+        'html': gameLocalHomeHtml,
+      });
       expect(calls[8].arguments, <String, Object?>{
         'generationId': 7,
         'javascript': 'window.test()',
       });
-      for (final index in <int>[4, 5, 6, 7, 9, 10, 11]) {
+      expect(calls[9].arguments, <String, Object?>{
+        'generationId': 7,
+        'javascript': gamePageAlignmentScript,
+      });
+      for (final index in <int>[5, 6, 7, 10, 11]) {
         expect(calls[index].arguments, <String, Object?>{'generationId': 7});
       }
     },

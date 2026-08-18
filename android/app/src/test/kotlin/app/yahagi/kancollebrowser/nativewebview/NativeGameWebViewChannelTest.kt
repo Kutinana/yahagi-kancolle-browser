@@ -77,12 +77,24 @@ class NativeGameWebViewChannelTest {
         assertEquals(NativeGameWebViewBounds(-1.5, 2.0, 1200.0, 720.0, 2.5), host.bounds)
         assertSuccess(channel, "setVisible", mapOf("generationId" to 0, "visible" to true), null)
         assertSuccess(channel, "loadUri", mapOf("generationId" to 0, "uri" to "https://example.com/game"), null)
-        assertSuccess(channel, "showLocalHome", generation(0), null)
+        assertSuccess(
+            channel,
+            "showLocalHome",
+            mapOf("generationId" to 0, "html" to "<html>native home</html>"),
+            null,
+        )
         assertSuccess(channel, "reload", generation(0), null)
         assertSuccess(channel, "canGoBack", generation(0), true)
         assertSuccess(channel, "goBack", generation(0), null)
         assertSuccess(channel, "runJavaScript", mapOf("generationId" to 0, "javascript" to "1 + 1"), null)
-        assertSuccess(channel, "fitGameScreen", generation(0), null)
+        assertSuccess(
+            channel,
+            "fitGameScreen",
+            mapOf("generationId" to 0, "javascript" to "window.fit()"),
+            null,
+        )
+        assertEquals("<html>native home</html>", host.localHomeHtml)
+        assertEquals("window.fit()", host.fitJavascript)
         assertSuccess(channel, "clearCache", generation(0), null)
         assertSuccess(channel, "clearSession", generation(0), null)
 
@@ -152,12 +164,12 @@ class NativeGameWebViewChannelTest {
             "setBounds" to mapOf("generationId" to 99, "bounds" to emptyMap<String, Any?>()),
             "setVisible" to mapOf("generationId" to 99, "visible" to 1),
             "loadUri" to mapOf("generationId" to 99, "uri" to "javascript:alert(1)"),
-            "showLocalHome" to mapOf("generationId" to 99, "extra" to true),
+            "showLocalHome" to mapOf("generationId" to 99, "html" to 1),
             "reload" to mapOf("generationId" to 99, "extra" to true),
             "canGoBack" to mapOf("generationId" to 99, "extra" to true),
             "goBack" to mapOf("generationId" to 99, "extra" to true),
             "runJavaScript" to mapOf("generationId" to 99, "javascript" to 1),
-            "fitGameScreen" to mapOf("generationId" to 99, "extra" to true),
+            "fitGameScreen" to mapOf("generationId" to 99, "javascript" to 1),
             "clearCache" to mapOf("generationId" to 99, "extra" to true),
             "clearSession" to mapOf("generationId" to 99, "extra" to true),
             "destroy" to mapOf("generationId" to 99, "extra" to true),
@@ -320,6 +332,7 @@ class NativeGameWebViewChannelTest {
 
         assertSuccess(channel, "reload", generation(0), null)
         assertEquals(1, secondHost.reloadCalls)
+        assertEquals(1, observer.createdCalls)
         assertEquals(1, observer.pageFinishedCalls)
         assertEquals(0, observer.renderProcessGoneCalls)
         assertEquals(
@@ -721,16 +734,28 @@ class NativeGameWebViewChannelTest {
     }
 
     @Test
-    fun task8DeferredHomeAndFitCommandsAreOnlyRoutedPlaceholders() {
+    fun homeAndFitCommandsRouteTheirSharedDartPayloads() {
         val host = FakeHost()
         val channel = activeChannel(host)
         assertSuccess(channel, "create", mapOf("renderer" to "webgl"), 0L)
 
-        assertSuccess(channel, "showLocalHome", generation(0), null)
-        assertSuccess(channel, "fitGameScreen", generation(0), null)
+        assertSuccess(
+            channel,
+            "showLocalHome",
+            mapOf("generationId" to 0, "html" to "<html>home</html>"),
+            null,
+        )
+        assertSuccess(
+            channel,
+            "fitGameScreen",
+            mapOf("generationId" to 0, "javascript" to "window.fit()"),
+            null,
+        )
 
         assertEquals(1, host.showLocalHomeCalls)
         assertEquals(1, host.fitGameScreenCalls)
+        assertEquals("<html>home</html>", host.localHomeHtml)
+        assertEquals("window.fit()", host.fitJavascript)
     }
 
     @Test
@@ -1186,8 +1211,13 @@ class NativeGameWebViewChannelTest {
     }
 
     private class RecordingLifecycleObserver : NativeGameWebViewLifecycleObserver {
+        var createdCalls = 0
         var pageFinishedCalls = 0
         var renderProcessGoneCalls = 0
+
+        override fun onCreated() {
+            createdCalls++
+        }
 
         override fun onPageFinished() {
             pageFinishedCalls++
@@ -1249,6 +1279,8 @@ class NativeGameWebViewChannelTest {
         var loadUriCalls = 0
         var showLocalHomeCalls = 0
         var fitGameScreenCalls = 0
+        var localHomeHtml: String? = null
+        var fitJavascript: String? = null
         var clearSessionCalls = 0
         var autoCompleteClearSession = true
         private var clearSessionCallback: ((Exception?) -> Unit)? = null
@@ -1279,8 +1311,9 @@ class NativeGameWebViewChannelTest {
             loadUriCalls++
         }
 
-        override fun showLocalHome() {
+        override fun showLocalHome(html: String) {
             showLocalHomeCalls++
+            localHomeHtml = html
         }
 
         override fun reload() {
@@ -1293,8 +1326,9 @@ class NativeGameWebViewChannelTest {
 
         override fun runJavaScript(javascript: String) = Unit
 
-        override fun fitGameScreen() {
+        override fun fitGameScreen(javascript: String) {
             fitGameScreenCalls++
+            fitJavascript = javascript
         }
 
         override fun clearCache() = Unit
