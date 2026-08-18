@@ -71,8 +71,11 @@ Set<String> _reviewedEntries(String path) => File(path)
     .readAsLinesSync()
     .map((line) => line.trim())
     .where((line) => line.isNotEmpty && !line.startsWith('#'))
-    .map((line) => jsonDecode(line) as String)
+    .map((line) => _normalizeNewlines(jsonDecode(line) as String))
     .toSet();
+
+String _normalizeNewlines(String value) =>
+    value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
 void main() {
   test('UI source has no unreviewed hardcoded Han string literals', () {
@@ -94,8 +97,9 @@ void main() {
     for (final file in files) {
       final path = file.path.replaceAll('\\', '/');
       for (final literal in _dartStringLiterals(file.readAsStringSync())) {
-        if (!_hanCharacter.hasMatch(literal.value)) continue;
-        final entry = '$path|${literal.value}';
+        final normalized = _normalizeNewlines(literal.value);
+        if (!_hanCharacter.hasMatch(normalized)) continue;
+        final entry = '$path|$normalized';
         if (reviewedEntries.contains(entry)) {
           usedReviewedEntries.add(entry);
           continue;
