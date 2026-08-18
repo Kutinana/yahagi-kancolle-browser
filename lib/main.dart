@@ -59,6 +59,7 @@ import 'src/fleet/construction_summary_card.dart';
 import 'src/fleet/pre_sortie_check_summary.dart';
 
 import 'src/game_webview.dart';
+import 'src/native_activity_game_surface.dart';
 import 'src/game_state/game_state_controller.dart';
 import 'src/game_state/game_api_event_pipeline.dart';
 import 'src/game_state/game_state_store.dart';
@@ -374,6 +375,22 @@ Future<void> main() async {
   });
 }
 
+final RouteObserver<ModalRoute<dynamic>> yahagiGameRouteObserver =
+    RouteObserver<ModalRoute<dynamic>>();
+
+Widget buildGameSurfaceForRenderingMode({
+  required GameRenderingMode mode,
+  required Key key,
+  required Widget Function(Key key) buildNativeActivityGameSurface,
+  required Widget Function(Key key, GameRenderingMode mode) buildGameWebView,
+  required Widget Function(Widget child) withBattleWarning,
+}) {
+  if (mode.usesActivityWebView) {
+    return withBattleWarning(buildNativeActivityGameSurface(key));
+  }
+  return withBattleWarning(buildGameWebView(key, mode));
+}
+
 class YahagiApp extends StatelessWidget {
   const YahagiApp({
     super.key,
@@ -407,6 +424,7 @@ class YahagiApp extends StatelessWidget {
     this.gameScreenshotController,
     this.showDeveloperDiagnostics = false,
     this.diagnosticController,
+    this.gameRouteObserver,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -439,6 +457,7 @@ class YahagiApp extends StatelessWidget {
   final GameScreenshotController? gameScreenshotController;
   final bool showDeveloperDiagnostics;
   final DiagnosticController? diagnosticController;
+  final RouteObserver<ModalRoute<dynamic>>? gameRouteObserver;
 
   @override
   Widget build(BuildContext context) {
@@ -452,6 +471,7 @@ class YahagiApp extends StatelessWidget {
         ?gameRenderingModeController,
       ]),
       builder: (context, _) {
+        final routeObserver = gameRouteObserver ?? yahagiGameRouteObserver;
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'ヤハギ',
@@ -470,6 +490,7 @@ class YahagiApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
+          navigatorObservers: <NavigatorObserver>[routeObserver],
           theme: ThemeData(
             brightness: Brightness.dark,
             fontFamily: layoutSettingsController.fontFamily,
@@ -540,18 +561,42 @@ class YahagiApp extends StatelessWidget {
     }
     final renderingController = gameRenderingModeController;
     if (renderingController == null) {
-      return withBattleWarning(
-        _buildGameWebView(const GlobalObjectKey('yahagi_game_webview')),
+      return buildGameSurfaceForRenderingMode(
+        mode: GameRenderingMode.compatibility,
+        key: const GlobalObjectKey('yahagi_game_webview'),
+        buildNativeActivityGameSurface: _buildNativeActivityGameSurface,
+        buildGameWebView: (key, mode) =>
+            _buildGameWebView(key, renderingMode: mode),
+        withBattleWarning: withBattleWarning,
       );
     }
     return GameEnvironmentHost(
       controller: renderingController,
       beforeRestart: _waitForCaptureQueues,
       applicationRestartPort: const MethodChannelGameApplicationRestartPort(),
-      gameBuilder: (context, mode, key) =>
-          withBattleWarning(_buildGameWebView(key, renderingMode: mode)),
+      gameBuilder: (context, mode, key) => buildGameSurfaceForRenderingMode(
+        mode: mode,
+        key: key,
+        buildNativeActivityGameSurface: _buildNativeActivityGameSurface,
+        buildGameWebView: (key, mode) =>
+            _buildGameWebView(key, renderingMode: mode),
+        withBattleWarning: withBattleWarning,
+      ),
     );
   }
+
+  Widget _buildNativeActivityGameSurface(Key key) => NativeActivityGameSurface(
+    key: key,
+    statusController: controller,
+    browserController: browserController,
+    toolbarController: toolbarController,
+    routeObserver: gameRouteObserver ?? yahagiGameRouteObserver,
+    networkSettingsController: networkSettingsController,
+    captureModeController: captureModeController,
+    audioController: audioController,
+    gameCaptureController: gameCaptureController,
+    frameRateSettingsController: gameFrameRateSettingsController,
+  );
 
   Widget _buildGameWebView(Key key, {GameRenderingMode? renderingMode}) =>
       GameWebView(

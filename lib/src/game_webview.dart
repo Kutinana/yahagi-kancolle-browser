@@ -42,6 +42,141 @@ enum GameStartupState {
   error,
 }
 
+final class GameSurfaceNetworkResult {
+  const GameSurfaceNetworkResult({
+    required this.success,
+    required this.code,
+    required this.message,
+  });
+
+  const GameSurfaceNetworkResult.success()
+    : success = true,
+      code = 'ok',
+      message = '';
+
+  final bool success;
+  final String code;
+  final String message;
+}
+
+abstract interface class GameSurfaceStartupOrchestrator {
+  Future<GameSurfaceNetworkResult> applyNetworkSettings();
+
+  Future<void> runCaptureStartup({
+    required Future<void> Function() waitForSurface,
+    required bool Function() isActive,
+    required Future<void> Function() navigate,
+  });
+
+  Future<void> prepareCapture();
+
+  Future<void> attachAudioPortOnce();
+
+  Future<bool> attachFrameRatePlatformPort();
+
+  void dispose();
+}
+
+final class DefaultGameSurfaceStartupOrchestrator
+    implements GameSurfaceStartupOrchestrator {
+  DefaultGameSurfaceStartupOrchestrator({
+    required this.networkSettingsController,
+    required this.captureModeController,
+    required this.audioController,
+    required this.gameCaptureController,
+    required this.frameRateSettingsController,
+    GameCapturePort Function()? capturePortFactory,
+    GameAudioPort Function()? audioPortFactory,
+    GameFrameRatePort Function()? frameRatePortFactory,
+  }) : _gameCapturePort =
+           (capturePortFactory ?? createPlatformGameCapturePort)(),
+       _audioPortFactory = audioPortFactory ?? MethodChannelGameAudioPort.new,
+       _frameRatePortFactory =
+           frameRatePortFactory ?? createPlatformGameFrameRatePort;
+
+  final NetworkSettingsController networkSettingsController;
+  final CaptureModeController captureModeController;
+  final GameAudioController audioController;
+  final GameCaptureController gameCaptureController;
+  final GameFrameRateSettingsController? frameRateSettingsController;
+  final GameCapturePort _gameCapturePort;
+  final GameAudioPort Function() _audioPortFactory;
+  final GameFrameRatePort Function() _frameRatePortFactory;
+
+  bool _capturePortAttached = false;
+  bool _audioPortAttached = false;
+  bool _disposed = false;
+
+  @override
+  Future<GameSurfaceNetworkResult> applyNetworkSettings() async {
+    final settings = networkSettingsController.settings;
+    final result = await networkSettingsController.applySettings(
+      settings.mode,
+      NetworkSettingsValidator.formatProxyHost(settings.host),
+      settings.port,
+    );
+    return GameSurfaceNetworkResult(
+      success: result.success,
+      code: result.code,
+      message: result.message,
+    );
+  }
+
+  @override
+  Future<void> runCaptureStartup({
+    required Future<void> Function() waitForSurface,
+    required bool Function() isActive,
+    required Future<void> Function() navigate,
+  }) {
+    return GameCaptureStartupSequence.run(
+      waitForPlatformView: waitForSurface,
+      configureCapture: () async {
+        if (isActive()) await prepareCapture();
+      },
+      navigate: navigate,
+    );
+  }
+
+  @override
+  Future<void> prepareCapture() async {
+    if (!_capturePortAttached) {
+      _capturePortAttached = true;
+      await gameCaptureController.attach(
+        _gameCapturePort,
+        enabled: captureModeController.mode.installsGameBridge,
+        script: nativeGameCaptureScript,
+      );
+      return;
+    }
+    await gameCaptureController.configure(
+      enabled: captureModeController.mode.installsGameBridge,
+      script: nativeGameCaptureScript,
+    );
+  }
+
+  @override
+  Future<void> attachAudioPortOnce() async {
+    if (_audioPortAttached) return;
+    _audioPortAttached = true;
+    await audioController.attachPort(_audioPortFactory());
+  }
+
+  @override
+  Future<bool> attachFrameRatePlatformPort() async {
+    final controller = frameRateSettingsController;
+    if (controller == null) return false;
+    await controller.attachPort(_frameRatePortFactory());
+    return controller.supported == true;
+  }
+
+  @override
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _gameCapturePort.dispose();
+  }
+}
+
 class GameWebView extends StatefulWidget {
   const GameWebView({
     super.key,
@@ -76,7 +211,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   late final WebViewController _webViewController;
   late final Future<void> _compatibilityReady;
   late final Future<void> _frameRateReady;
-  late final GameCapturePort _gameCapturePort;
+  late final GameSurfaceStartupOrchestrator _startupOrchestrator;
   final GameNavigationPolicy _navigationPolicy = GameNavigationPolicy();
   late CaptureMode _activeCaptureMode;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
@@ -84,8 +219,6 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     'app.webview/fixed_canvas_scaling',
   );
 
-  bool _audioPortAttached = false;
-  bool _capturePortAttached = false;
   int _navigationEpoch = 0;
 
   GameStartupState _startupState = GameStartupState.loadingSettings;
@@ -104,7 +237,13 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     widget.networkSettingsController.addListener(_onNetworkSettingsChanged);
     _activeCaptureMode = widget.captureModeController.mode;
-    _gameCapturePort = createPlatformGameCapturePort();
+    _startupOrchestrator = DefaultGameSurfaceStartupOrchestrator(
+      networkSettingsController: widget.networkSettingsController,
+      captureModeController: widget.captureModeController,
+      audioController: widget.audioController,
+      gameCaptureController: widget.gameCaptureController,
+      frameRateSettingsController: widget.frameRateSettingsController,
+    );
     widget.captureModeController.addListener(_onCaptureModeChanged);
     _webViewController = WebViewController();
     _compatibilityReady = _configureCompatibility();
@@ -219,14 +358,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
 
     // Apply network settings
     final netSettings = widget.networkSettingsController.settings;
-    final formattedHost = NetworkSettingsValidator.formatProxyHost(
-      netSettings.host,
-    );
-    final result = await widget.networkSettingsController.applySettings(
-      netSettings.mode,
-      formattedHost,
-      netSettings.port,
-    );
+    final result = await _startupOrchestrator.applyNetworkSettings();
 
     if (!mounted) return;
 
@@ -250,14 +382,11 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         ? address
         : GameLaunchConfig.dmmGameEntry;
 
-    await GameCaptureStartupSequence.run(
-      waitForPlatformView: () async {
+    await _startupOrchestrator.runCaptureStartup(
+      waitForSurface: () async {
         await WidgetsBinding.instance.endOfFrame;
       },
-      configureCapture: () async {
-        if (!mounted) return;
-        await _prepareCapture();
-      },
+      isActive: () => mounted,
       navigate: () async {
         if (!mounted) return;
         await _webViewController.loadRequest(initialAddress);
@@ -266,11 +395,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   }
 
   Future<void> _attachAudioPortOnce() async {
-    if (_audioPortAttached) {
-      return;
-    }
-    _audioPortAttached = true;
-    await widget.audioController.attachPort(MethodChannelGameAudioPort());
+    await _startupOrchestrator.attachAudioPortOnce();
   }
 
   Future<void> _synchronizeGamePresentation() async {
@@ -326,19 +451,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   }
 
   Future<void> _prepareCapture() async {
-    if (!_capturePortAttached) {
-      _capturePortAttached = true;
-      await widget.gameCaptureController.attach(
-        _gameCapturePort,
-        enabled: widget.captureModeController.mode.installsGameBridge,
-        script: nativeGameCaptureScript,
-      );
-      return;
-    }
-    await widget.gameCaptureController.configure(
-      enabled: widget.captureModeController.mode.installsGameBridge,
-      script: nativeGameCaptureScript,
-    );
+    await _startupOrchestrator.prepareCapture();
   }
 
   Future<void> _configureCompatibility() async {
@@ -375,9 +488,10 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
     try {
-      await controller.attachPort(createPlatformGameFrameRatePort());
+      final supported = await _startupOrchestrator
+          .attachFrameRatePlatformPort();
       if (!mounted) return;
-      if (controller.supported != true) return;
+      if (!supported) return;
       final runtimeController = GameFrameRateRuntimeController(
         settings: controller,
         port: createGameFrameRateRuntimePort(_webViewController),
@@ -516,7 +630,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     _webViewController.loadHtmlString(
       '<!DOCTYPE html><html><body></body></html>',
     );
-    _gameCapturePort.dispose();
+    _startupOrchestrator.dispose();
     super.dispose();
   }
 }
