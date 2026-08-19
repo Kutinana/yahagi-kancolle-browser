@@ -112,6 +112,8 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
                         state: state,
                         anchorageRepairStartedAt:
                             widget.controller.anchorageRepairStartedAt,
+                        nosakiSparkleStartedAt:
+                            widget.controller.nosakiSparkleStartedAt,
                         now: now,
                         selectedFleetId: _selectedFleetId,
                         damagePulseMode: widget.damagePulseMode,
@@ -243,6 +245,7 @@ class _FleetView extends StatefulWidget {
   const _FleetView({
     required this.state,
     required this.anchorageRepairStartedAt,
+    this.nosakiSparkleStartedAt,
     required this.now,
     required this.selectedFleetId,
     required this.damagePulseMode,
@@ -252,6 +255,7 @@ class _FleetView extends StatefulWidget {
 
   final GameState state;
   final DateTime? anchorageRepairStartedAt;
+  final DateTime? nosakiSparkleStartedAt;
   final DateTime now;
   final int selectedFleetId;
   final DamagePulseMode damagePulseMode;
@@ -329,6 +333,7 @@ class _FleetViewState extends State<_FleetView> {
         state: state,
         shipId: ship.id,
         anchorageRepairStartedAt: widget.anchorageRepairStartedAt,
+        nosakiSparkleStartedAt: widget.nosakiSparkleStartedAt,
         now: widget.now,
       );
       if (status != null) repairStatuses[ship.id] = status;
@@ -622,20 +627,36 @@ class _FleetRosterShipCapsule extends StatelessWidget {
                     key: Key('fleet-roster-portrait-${ship.id}'),
                     borderRadius: BorderRadius.circular(10),
                     child: LayoutBuilder(
-                      builder: (context, constraints) => ShipPortrait(
-                        ship: state.masterForShip(ship),
-                        serverOrigin: state.serverOrigin,
-                        width: constraints.maxWidth,
-                        height: constraints.maxHeight,
-                      ),
+                      builder: (context, constraints) {
+                        final portrait = ShipPortrait(
+                          ship: state.masterForShip(ship),
+                          serverOrigin: state.serverOrigin,
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
+                        );
+                        if (repairStatus != ShipRepairStatus.retreat) {
+                          return portrait;
+                        }
+                        return ColorFiltered(
+                          colorFilter: const ColorFilter.matrix(<double>[
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0,      0,      0,      1, 0,
+                          ]),
+                          child: portrait,
+                        );
+                      },
                     ),
                   ),
                 ),
                 ShipHpFrame(
                   key: Key('fleet-hp-outer-frame-${ship.id}'),
                   shipId: ship.id,
-                  ratio: hpRatio,
-                  color: shipHpBarColor(hpRatio, isZeroHp: ship.currentHp <= 0),
+                  ratio: repairStatus == ShipRepairStatus.retreat ? 0.0 : hpRatio,
+                  color: repairStatus == ShipRepairStatus.retreat
+                      ? yahagiStatusZeroHp
+                      : shipHpBarColor(hpRatio, isZeroHp: ship.currentHp <= 0),
                   mode: damagePulseMode,
                 ),
                 ShipMoraleMark(
@@ -678,6 +699,7 @@ class _FleetFocusPanel extends StatelessWidget {
     final master = state.masterForShip(ship);
     final type = state.typeForShip(ship);
     final equipment = state.equipmentForShip(ship);
+    final isRetreat = state.combatState.escapedShipIds.contains(ship.id);
     final hpRatio = _ShipRow._ratio(ship.currentHp, ship.maxHp);
     final fuelRatio = _ShipRow._ratio(ship.currentFuel, master?.maxFuel ?? 0);
     final ammoRatio = _ShipRow._ratio(ship.currentAmmo, master?.maxAmmo ?? 0);
@@ -734,12 +756,32 @@ class _FleetFocusPanel extends StatelessWidget {
                                           ),
                                           width: portraitWidth,
                                           height: portraitHeight,
-                                          child: ShipPortrait(
-                                            ship: master,
-                                            serverOrigin: state.serverOrigin,
-                                            width: portraitWidth,
-                                            height: portraitHeight,
-                                          ),
+                                          child: isRetreat
+                                              ? ColorFiltered(
+                                                  colorFilter:
+                                                      const ColorFilter.matrix(
+                                                    <double>[
+                                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                                      0,      0,      0,      1, 0,
+                                                    ],
+                                                  ),
+                                                  child: ShipPortrait(
+                                                    ship: master,
+                                                    serverOrigin:
+                                                        state.serverOrigin,
+                                                    width: portraitWidth,
+                                                    height: portraitHeight,
+                                                  ),
+                                                )
+                                              : ShipPortrait(
+                                                  ship: master,
+                                                  serverOrigin:
+                                                      state.serverOrigin,
+                                                  width: portraitWidth,
+                                                  height: portraitHeight,
+                                                ),
                                         ),
                                         SizedBox(width: sectionGap),
                                         Expanded(

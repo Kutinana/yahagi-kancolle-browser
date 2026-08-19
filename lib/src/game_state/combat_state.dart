@@ -8,6 +8,8 @@ class CombatState {
     this.airSuperiority,
     this.dropShipMasterId,
     this.isActive = false,
+    this.escapedShipIds = const <int>{},
+    this.pendingEscapeShipIds = const <int>[],
   });
 
   final int sortieFleetId;
@@ -18,6 +20,8 @@ class CombatState {
   final String? airSuperiority;
   final int? dropShipMasterId;
   final bool isActive;
+  final Set<int> escapedShipIds;
+  final List<int> pendingEscapeShipIds;
 
   static const CombatState empty = CombatState();
 
@@ -30,6 +34,8 @@ class CombatState {
     String? airSuperiority,
     int? dropShipMasterId,
     bool? isActive,
+    Set<int>? escapedShipIds,
+    List<int>? pendingEscapeShipIds,
   }) {
     return CombatState(
       sortieFleetId: sortieFleetId ?? this.sortieFleetId,
@@ -40,6 +46,8 @@ class CombatState {
       airSuperiority: airSuperiority ?? this.airSuperiority,
       dropShipMasterId: dropShipMasterId ?? this.dropShipMasterId,
       isActive: isActive ?? this.isActive,
+      escapedShipIds: escapedShipIds ?? this.escapedShipIds,
+      pendingEscapeShipIds: pendingEscapeShipIds ?? this.pendingEscapeShipIds,
     );
   }
 
@@ -51,6 +59,8 @@ class CombatState {
       mapInfo: mapInfo,
       currentNode: nextNode,
       isActive: true,
+      escapedShipIds: escapedShipIds,
+      pendingEscapeShipIds: const <int>[],
       // Clear previous battle data
       enemyFleetName: null,
       airSuperiority: null,

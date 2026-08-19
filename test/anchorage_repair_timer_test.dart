@@ -135,9 +135,10 @@ void main() {
       expect(tracker.startedAt, startedAt);
     });
 
-    test('formation changes in another fleet do not reset the timer', () {
+    test('formation changes in another fleet reset the shared global timer', () {
       final tracker = AnchorageRepairTimerTracker();
       final startedAt = DateTime.utc(2026, 8, 6, 10);
+      final changedAt = startedAt.add(const Duration(minutes: 7));
       final base = buildAnchorageTestState(facilities: 3);
       final state = base.copyWith(
         fleets: <Fleet>[
@@ -159,8 +160,41 @@ void main() {
         nextState: state,
         event: _event(
           '/kcsapi/api_req_hensei/change',
-          startedAt.add(const Duration(minutes: 7)),
-          requestParams: const <String, Object?>{'api_id': '2'},
+          changedAt,
+          requestParams: const <String, Object?>{
+            'api_id': '2',
+            'api_ship_idx': '0',
+            'api_ship_id': '501',
+          },
+        ),
+      );
+
+      expect(tracker.startedAt, changedAt);
+    });
+
+    test('fleet batch unequip (随伴舰一括解除) does not reset the timer', () {
+      final tracker = AnchorageRepairTimerTracker();
+      final startedAt = DateTime.utc(2026, 8, 6, 10);
+      tracker.observe(
+        previousState: buildAnchorageTestState(
+          facilities: 3,
+          flagshipMasterId: 501,
+        ),
+        nextState: buildAnchorageTestState(facilities: 3),
+        event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
+      );
+
+      tracker.observe(
+        previousState: buildAnchorageTestState(facilities: 3),
+        nextState: buildAnchorageTestState(facilities: 3),
+        event: _event(
+          '/kcsapi/api_req_hensei/change',
+          startedAt.add(const Duration(minutes: 8)),
+          requestParams: const <String, Object?>{
+            'api_id': '1',
+            'api_ship_idx': '-1',
+            'api_ship_id': '-2',
+          },
         ),
       );
 

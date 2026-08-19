@@ -251,6 +251,49 @@ void main() {
     expect(rows.single['map_name'], '南沙諸島沖/オルモック沖/サンベルナルジノ海峡沖');
     expect(rows.single['node_label'], 'Y');
   });
+
+  test('practice battle records store standardized values', () async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(practice: true),
+          friendMain: [
+            BattleShipSnapshot(
+              masterId: 1,
+              name: '矢矧改二乙',
+              side: BattleSide.friend,
+              fleetRole: BattleFleetRole.main,
+              position: 0,
+              initialHp: 54,
+              maxHp: 54,
+              currentHp: 54,
+            ),
+          ],
+          enemyFleetName: '演习对手舰队',
+          rank: BattleRank.s,
+          mvpPositions: [0],
+        ),
+        completedAt: DateTime(2026, 8, 19, 22, 30),
+      ),
+    );
+
+    final rows = await database.getBattleRecords();
+    expect(rows.single['map_area'], 0);
+    expect(rows.single['map_no'], 0);
+    expect(rows.single['map_name'], '演习');
+    expect(rows.single['node'], 0);
+    expect(rows.single['node_label'], '-');
+    expect(rows.single['node_type'], '普通战斗');
+    expect(rows.single['enemy_fleet_name'], '-');
+    expect(rows.single['flagship_name'], '矢矧改二乙');
+    expect(rows.single['escort_flagship_name'], '-');
+    expect(rows.single['mvp_name'], '矢矧改二乙');
+    expect(rows.single['escort_mvp_name'], '-');
+    expect(rows.single['rank'], 's');
+  });
 }
 
 GameState _resourceState(int fuel) => GameState(

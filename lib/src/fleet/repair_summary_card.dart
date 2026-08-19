@@ -7,6 +7,7 @@ import '../performance/second_tick_scope.dart';
 import 'anchorage_repair_calculator.dart';
 import 'anchorage_repair_view.dart';
 import 'dashboard_card.dart';
+import 'nosaki_sparkle_calculator.dart';
 import 'operation_progress.dart';
 import 'ship_portrait.dart';
 
@@ -66,11 +67,14 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
             mode: _mode,
             dockLabel: strings.repairDockMode,
             anchorageLabel: strings.anchorageRepairMode,
+            nosakiLabel: '野埼',
             onChanged: (mode) => setState(() => _mode = mode),
           ),
-          child: _mode == RepairCenterMode.dock
-              ? _buildDockGrid(state, strings)
-              : _buildAnchorageSummary(state, strings),
+          child: switch (_mode) {
+            RepairCenterMode.dock => _buildDockGrid(state, strings),
+            RepairCenterMode.anchorage => _buildAnchorageSummary(state, strings),
+            RepairCenterMode.nosaki => _buildNosakiSummary(state, strings),
+          },
         );
       },
     );
@@ -287,6 +291,134 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
     );
   }
 
+  Widget _buildNosakiSummary(GameState state, AppLocalizations strings) {
+    final visibleFleets = state.fleets.take(4).toList(growable: false);
+    final selectedFleet = visibleFleets
+        .where((fleet) => fleet.id == _selectedFleetId)
+        .firstOrNull;
+    final effectiveFleet = selectedFleet ?? visibleFleets.firstOrNull;
+    final fleetId = effectiveFleet?.id ?? _selectedFleetId ?? 1;
+    final startedAt = widget.controller.nosakiSparkleStartedAt;
+    final elapsed = startedAt == null || _now.isBefore(startedAt)
+        ? Duration.zero
+        : _now.difference(startedAt);
+    final projection = NosakiSparkleCalculator.project(
+      state: state,
+      fleetId: fleetId,
+      elapsed: elapsed,
+    );
+
+    return Column(
+      children: [
+        _AnchorageFleetSelector(
+          fleets: visibleFleets,
+          selectedFleetId: fleetId,
+          onSelected: (id) => setState(() => _selectedFleetId = id),
+        ),
+        const SizedBox(height: 8),
+        for (var row = 0; row < 3; row++) ...[
+          Row(
+            children: [
+              _buildNosakiSlot(row * 2, fleetId, state, projection, strings),
+              const SizedBox(width: 8),
+              _buildNosakiSlot(
+                row * 2 + 1,
+                fleetId,
+                state,
+                projection,
+                strings,
+              ),
+            ],
+          ),
+          if (row < 2) const SizedBox(height: 8),
+        ],
+        const SizedBox(height: 2),
+      ],
+    );
+  }
+
+  Widget _buildNosakiSlot(
+    int position,
+    int fleetId,
+    GameState state,
+    NosakiSparkleProjection projection,
+    AppLocalizations strings,
+  ) {
+    final row = projection.rows
+        .where((candidate) => candidate.position == position)
+        .firstOrNull;
+    if (row == null) {
+      return _RepairCapsule(
+        key: Key('repair-summary-nosaki-slot-$position'),
+        contentKey: const Key('repair-summary-nosaki-slot'),
+        state: state,
+        name: strings.idle,
+        disabled: false,
+        detail: Text(
+          strings.inactive,
+          style: const TextStyle(fontSize: 11, color: Color(0xff8197a5)),
+        ),
+        onTap: () => widget.onOpenRepair(
+          RepairDestination(mode: RepairCenterMode.nosaki, fleetId: fleetId),
+        ),
+      );
+    }
+
+    final visual = _nosakiVisual(row.status, row.currentCond);
+    return _RepairCapsule(
+      key: Key('repair-summary-nosaki-slot-$position'),
+      contentKey: const Key('repair-summary-nosaki-slot'),
+      state: state,
+      master: row.master,
+      name: row.master?.name ?? '未知',
+      disabled: false,
+      fitFullName: true,
+      dotColor: visual.color,
+      detail: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          visual.label,
+          maxLines: 1,
+          style: _repairSummaryTimeStyle.copyWith(color: visual.color),
+        ),
+      ),
+      onTap: () => widget.onOpenRepair(
+        RepairDestination(mode: RepairCenterMode.nosaki, fleetId: fleetId),
+      ),
+    );
+  }
+
+  ({String label, Color color}) _nosakiVisual(
+    NosakiSparkleShipStatus status,
+    int condition,
+  ) => switch (status) {
+    NosakiSparkleShipStatus.sparkling => (
+      label: '刷闪中 (★$condition)',
+      color: const Color(0xffefbd58),
+    ),
+    NosakiSparkleShipStatus.completed => (
+      label: '已刷闪 (★$condition)',
+      color: const Color(0xff65d493),
+    ),
+    NosakiSparkleShipStatus.nosakiSelf => (
+      label: '给粮舰 (★$condition)',
+      color: const Color(0xff65d493),
+    ),
+    NosakiSparkleShipStatus.docked => (
+      label: '入渠中',
+      color: const Color(0xff65b3e6),
+    ),
+    NosakiSparkleShipStatus.unable => (
+      label: '需Cond≥49',
+      color: const Color(0xffef6f6c),
+    ),
+    NosakiSparkleShipStatus.unready => (
+      label: '未就绪',
+      color: const Color(0xffef6f6c),
+    ),
+  };
+
   ({String label, Color color}) _anchorageVisual(
     AnchorageRepairShipStatus status,
     AppLocalizations strings,
@@ -323,12 +455,14 @@ class _RepairSummaryModeSelector extends StatelessWidget {
     required this.mode,
     required this.dockLabel,
     required this.anchorageLabel,
+    required this.nosakiLabel,
     required this.onChanged,
   });
 
   final RepairCenterMode mode;
   final String dockLabel;
   final String anchorageLabel;
+  final String nosakiLabel;
   final ValueChanged<RepairCenterMode> onChanged;
 
   @override
@@ -356,6 +490,12 @@ class _RepairSummaryModeSelector extends StatelessWidget {
             label: anchorageLabel,
             selected: mode == RepairCenterMode.anchorage,
             onTap: () => onChanged(RepairCenterMode.anchorage),
+          ),
+          _ModeButton(
+            key: const Key('repair-summary-mode-nosaki'),
+            label: nosakiLabel,
+            selected: mode == RepairCenterMode.nosaki,
+            onTap: () => onChanged(RepairCenterMode.nosaki),
           ),
         ],
       ),

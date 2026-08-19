@@ -49,6 +49,7 @@ final class BattleController extends ChangeNotifier
   static const Set<String> _mapPaths = GameCapturePathCatalog.battleMap;
   static const Set<String> _battlePaths = GameCapturePathCatalog.battlePhases;
   static const Set<String> _resultPaths = GameCapturePathCatalog.battleResults;
+  static const Set<String> _retreatPaths = GameCapturePathCatalog.battleRetreat;
 
   final GameState Function() gameState;
   void Function(Map<int, int> hpByShipId, DateTime capturedAt)?
@@ -222,6 +223,10 @@ final class BattleController extends ChangeNotifier
         );
       }
       _applyResult(map, event);
+      return;
+    }
+    if (_retreatPaths.contains(event.path)) {
+      _applyRetreat();
     }
   }
 
@@ -229,12 +234,16 @@ final class BattleController extends ChangeNotifier
     Map<String, Object?> data,
     CapturedApiEvent event,
   ) {
+    final state = gameState();
     final mapAreaId = _positive(data['api_maparea_id'], _context.mapAreaId);
     final mapInfoNo = _positive(data['api_mapinfo_no'], _context.mapInfoNo);
     final node = _positive(data['api_no'], _context.node);
+    final sortieFleetId = state.combatState.sortieFleetId;
     final deckId = _positive(
       event.requestParams['api_deck_id'],
-      _context.deckId,
+      _context.deckId > 0
+          ? _context.deckId
+          : (sortieFleetId > 0 ? sortieFleetId : 1),
     );
     return BattleContext(
       mapAreaId: mapAreaId,
@@ -242,7 +251,7 @@ final class BattleController extends ChangeNotifier
       node: node,
       bossNode: _positive(data['api_bosscell_no'], _context.bossNode),
       deckId: deckId,
-      combinedFleetType: _combinedFleetTypeForDeck(gameState(), deckId),
+      combinedFleetType: _combinedFleetTypeForDeck(state, deckId),
       eventId: _int(data['api_event_id']),
       eventKind: _int(data['api_event_kind']),
       nodeDisplayLabel: nodeLabelResolver.resolve(
@@ -369,11 +378,19 @@ final class BattleController extends ChangeNotifier
     final combinedFleetType = practice
         ? CombinedFleetType.none
         : _combinedFleetTypeForDeck(state, deckId);
-    _context = _context.copyWith(
-      deckId: deckId,
-      practice: practice,
-      combinedFleetType: combinedFleetType,
-    );
+    if (practice) {
+      _context = BattleContext(
+        deckId: deckId,
+        practice: true,
+        combinedFleetType: CombinedFleetType.none,
+      );
+    } else {
+      _context = _context.copyWith(
+        deckId: deckId,
+        practice: false,
+        combinedFleetType: combinedFleetType,
+      );
+    }
 
     final previous = _current;
     final previousBattle = previous?.displayStage == BattleDisplayStage.battle
@@ -427,12 +444,20 @@ final class BattleController extends ChangeNotifier
     );
     _predictionEngine = appendResult.engine;
     final parsed = appendResult.prediction;
+    final parsedFriendMain = _mergeEscapedFlags(
+      parsed.friendMain,
+      friendMain,
+    );
+    final parsedFriendEscort = _mergeEscapedFlags(
+      parsed.friendEscort,
+      friendEscort,
+    );
     if (!practice && (battleDamageVibrationEnabled?.call() ?? false)) {
       final severity = detectFriendlyDamageAlert(
         before: <BattleShipSnapshot>[...friendMain, ...friendEscort],
         after: <BattleShipSnapshot>[
-          ...parsed.friendMain,
-          ...parsed.friendEscort,
+          ...parsedFriendMain,
+          ...parsedFriendEscort,
         ],
       );
       if (severity != null && damageAlertPort != null) {
@@ -458,8 +483,8 @@ final class BattleController extends ChangeNotifier
 
     _current = LiveBattle(
       context: _context,
-      friendMain: parsed.friendMain,
-      friendEscort: parsed.friendEscort,
+      friendMain: parsedFriendMain,
+      friendEscort: parsedFriendEscort,
       enemyMain: parsed.enemyMain,
       enemyEscort: parsed.enemyEscort,
       rank: rank,
@@ -580,24 +605,79 @@ final class BattleController extends ChangeNotifier
 
     // Log to persistent database
     final state = gameState();
+    final isPractice =
+        confirmed.context.practice || confirmed.context.mapAreaId == 0;
     LogbookDatabase.instance
         .insertBattleRecord(
           record,
-          mapName:
-              state.mapName(
-                confirmed.context.mapAreaId,
-                confirmed.context.mapInfoNo,
-              ) ??
-              '',
-          mapDifficulty: state.mapDifficulty(
-            confirmed.context.mapAreaId,
-            confirmed.context.mapInfoNo,
-          ),
-          nodeLabel: confirmed.context.nodeDisplayLabel?.trim() ?? '',
+          mapName: isPractice
+              ? '演习'
+              : (state.mapName(
+                    confirmed.context.mapAreaId,
+                    confirmed.context.mapInfoNo,
+                  ) ??
+                  ''),
+          mapDifficulty: isPractice
+              ? 0
+              : state.mapDifficulty(
+                  confirmed.context.mapAreaId,
+                  confirmed.context.mapInfoNo,
+                ),
+          nodeLabel: isPractice
+              ? '-'
+              : (confirmed.context.nodeDisplayLabel?.trim() ?? ''),
         )
         .catchError((error) {
           debugPrint('战斗记录写入失败: $error');
         });
+  }
+
+  void _applyRetreat() {
+    final current = _current;
+    if (current == null) return;
+    final state = gameState();
+    final escaped = state.combatState.escapedShipIds;
+    if (escaped.isEmpty) return;
+
+    List<BattleShipSnapshot> markEscaped(List<BattleShipSnapshot> ships) {
+      var changed = false;
+      final result = <BattleShipSnapshot>[];
+      for (final ship in ships) {
+        if (!ship.isEscaped &&
+            ship.ownedShipId != null &&
+            escaped.contains(ship.ownedShipId!)) {
+          changed = true;
+          result.add(ship.copyWith(isEscaped: true));
+        } else {
+          result.add(ship);
+        }
+      }
+      return changed ? List.unmodifiable(result) : ships;
+    }
+
+    final friendMain = markEscaped(current.friendMain);
+    final friendEscort = markEscaped(current.friendEscort);
+    if (identical(friendMain, current.friendMain) &&
+        identical(friendEscort, current.friendEscort)) {
+      return;
+    }
+    _current = current.copyWith(
+      friendMain: friendMain,
+      friendEscort: friendEscort,
+    );
+    if (_records.isNotEmpty) {
+      final firstBattle = _records[0].battle;
+      final match = identical(firstBattle, current) ||
+          (firstBattle.context.mapAreaId == current.context.mapAreaId &&
+              firstBattle.context.mapInfoNo == current.context.mapInfoNo &&
+              firstBattle.context.node == current.context.node);
+      if (match) {
+        _records[0] = BattleRecord(
+          battle: _current!,
+          completedAt: _records[0].completedAt,
+        );
+      }
+    }
   }
 
   void _ensureSession(CapturedApiEvent event) {
@@ -621,6 +701,28 @@ final class BattleController extends ChangeNotifier
     }
   }
 
+  List<BattleShipSnapshot> _mergeEscapedFlags(
+    List<BattleShipSnapshot> parsed,
+    List<BattleShipSnapshot> detected,
+  ) {
+    final escapedByPosition = <int, bool>{
+      for (final ship in detected)
+        if (ship.isEscaped) ship.position: true,
+    };
+    if (escapedByPosition.isEmpty) return parsed;
+    var changed = false;
+    final result = <BattleShipSnapshot>[];
+    for (final ship in parsed) {
+      if (escapedByPosition[ship.position] == true && !ship.isEscaped) {
+        changed = true;
+        result.add(ship.copyWith(isEscaped: true));
+      } else {
+        result.add(ship);
+      }
+    }
+    return changed ? List.unmodifiable(result) : parsed;
+  }
+
   List<BattleShipSnapshot> _friendFleet(
     GameState state,
     int deckId,
@@ -633,8 +735,23 @@ final class BattleController extends ChangeNotifier
     if (!enabled) {
       return const <BattleShipSnapshot>[];
     }
+    final escapedIds = state.combatState.escapedShipIds;
     if (previous != null) {
-      return previous;
+      return <BattleShipSnapshot>[
+        for (var index = 0; index < previous.length; index++)
+          () {
+            final ship = previous[index];
+            final isSlotRetreated =
+                index < nowHp.length && _int(nowHp[index]) < 0;
+            final isEscaped =
+                (ship.ownedShipId != null &&
+                    escapedIds.contains(ship.ownedShipId!)) ||
+                isSlotRetreated;
+            return isEscaped && !ship.isEscaped
+                ? ship.copyWith(isEscaped: true)
+                : ship;
+          }(),
+      ];
     }
     final ownedShips = state.shipsForFleet(deckId);
     if (ownedShips.isEmpty && previous != null) {
@@ -642,30 +759,37 @@ final class BattleController extends ChangeNotifier
     }
     return <BattleShipSnapshot>[
       for (var index = 0; index < ownedShips.length; index++)
-        BattleShipSnapshot(
-          masterId: ownedShips[index].masterId,
-          ownedShipId: ownedShips[index].id,
-          name:
-              state.masterForShip(ownedShips[index])?.name ??
-              '舰娘 ${ownedShips[index].masterId}',
-          side: BattleSide.friend,
-          fleetRole: role,
-          position: index,
-          initialHp: _atNonNegative(nowHp, index, ownedShips[index].currentHp),
-          maxHp: _atPositive(maxHp, index, ownedShips[index].maxHp),
-          currentHp: _atNonNegative(nowHp, index, ownedShips[index].currentHp),
-          damageDealt: index < (previous?.length ?? 0)
-              ? previous![index].damageDealt
-              : 0,
-          damageReceived: index < (previous?.length ?? 0)
-              ? previous![index].damageReceived
-              : 0,
-          condition: ownedShips[index].condition,
-          equipmentMasterIds: <int>[
-            for (final equipment in state.equipmentForShip(ownedShips[index]))
-              equipment.owned.masterId,
-          ],
-        ),
+        () {
+          final isSlotRetreated =
+              index < nowHp.length && _int(nowHp[index]) < 0;
+          final isEscaped =
+              escapedIds.contains(ownedShips[index].id) || isSlotRetreated;
+          return BattleShipSnapshot(
+            masterId: ownedShips[index].masterId,
+            ownedShipId: ownedShips[index].id,
+            name:
+                state.masterForShip(ownedShips[index])?.name ??
+                '舰娘 ${ownedShips[index].masterId}',
+            side: BattleSide.friend,
+            fleetRole: role,
+            position: index,
+            initialHp: _atNonNegative(nowHp, index, ownedShips[index].currentHp),
+            maxHp: _atPositive(maxHp, index, ownedShips[index].maxHp),
+            currentHp: _atNonNegative(nowHp, index, ownedShips[index].currentHp),
+            damageDealt: index < (previous?.length ?? 0)
+                ? previous![index].damageDealt
+                : 0,
+            damageReceived: index < (previous?.length ?? 0)
+                ? previous![index].damageReceived
+                : 0,
+            condition: ownedShips[index].condition,
+            equipmentMasterIds: <int>[
+              for (final equipment in state.equipmentForShip(ownedShips[index]))
+                equipment.owned.masterId,
+            ],
+            isEscaped: isEscaped,
+          );
+        }(),
     ];
   }
 

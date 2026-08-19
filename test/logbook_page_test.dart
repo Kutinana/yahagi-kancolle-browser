@@ -845,6 +845,107 @@ void main() {
     expect(find.text('BC·道中'), findsNothing);
   });
 
+  testWidgets('practice sortie displays 演习, node -, enemy - and filters by 演习', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+
+    // Insert practice battle record
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(practice: true),
+          rank: BattleRank.s,
+          friendMain: [
+            BattleShipSnapshot(
+              masterId: 1,
+              name: '矢矧改二乙',
+              side: BattleSide.friend,
+              fleetRole: BattleFleetRole.main,
+              position: 0,
+              initialHp: 54,
+              maxHp: 54,
+              currentHp: 54,
+            ),
+          ],
+          enemyFleetName: '演习对手',
+        ),
+        completedAt: DateTime(2026, 8, 19, 22, 15),
+      ),
+    );
+
+    // Insert regular sortie record
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(
+            mapAreaId: 1,
+            mapInfoNo: 1,
+            node: 1,
+            eventId: 4,
+            eventKind: 1,
+          ),
+          rank: BattleRank.s,
+          friendMain: [
+            BattleShipSnapshot(
+              masterId: 1,
+              name: '矢矧改二乙',
+              side: BattleSide.friend,
+              fleetRole: BattleFleetRole.main,
+              position: 0,
+              initialHp: 54,
+              maxHp: 54,
+              currentHp: 54,
+            ),
+          ],
+          enemyFleetName: '敌侦察舰队',
+        ),
+        completedAt: DateTime(2026, 8, 19, 22, 10),
+      ),
+      mapName: '近海警备',
+    );
+
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify practice row display
+    expect(find.text('演习'), findsOneWidget);
+    expect(find.text('-'), findsWidgets);
+    expect(find.text('普通战斗'), findsNWidgets(2));
+    expect(find.text('近海警备 (1-1)'), findsOneWidget);
+
+    // Open filter panel
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+
+    // Select 演习 in map filter
+    await tester.tap(find.byKey(const Key('logbook-filter-field-map')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('演习').last);
+    await tester.pumpAndSettle();
+
+    // Apply filter
+    await tester.tap(find.byKey(const Key('logbook-filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('演习'), findsOneWidget);
+    expect(find.text('近海警备 (1-1)'), findsNothing);
+  });
+
   testWidgets('construction filter panel uses construction-specific fields', (
     tester,
   ) async {

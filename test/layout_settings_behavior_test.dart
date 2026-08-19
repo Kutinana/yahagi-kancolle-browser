@@ -146,11 +146,12 @@ void main() {
         SharedPreferencesLayoutSettingsStore(),
       );
 
-      expect(controller.headerResourceOrder, hasLength(27));
+      expect(controller.headerResourceOrder, hasLength(28));
       expect(controller.headerResourceOrder.first, headerSenkaId);
       expect(controller.visibleHeaderResourceIds, <String>[
         headerSenkaId,
         'anchorage-timer',
+        'nosaki-timer',
         'material-1',
         'material-2',
         headerShipCapacityId,
@@ -177,9 +178,10 @@ void main() {
         SharedPreferencesLayoutSettingsStore(),
       );
 
-      expect(controller.headerResourceOrder.take(6), <String>[
+      expect(controller.headerResourceOrder.take(7), <String>[
         headerSenkaId,
         'anchorage-timer',
+        'nosaki-timer',
         'material-2',
         headerShipCapacityId,
         headerEquipmentCapacityId,
@@ -188,6 +190,7 @@ void main() {
       expect(controller.visibleHeaderResourceIds, <String>[
         headerSenkaId,
         'anchorage-timer',
+        'nosaki-timer',
         'material-2',
         headerShipCapacityId,
         headerEquipmentCapacityId,

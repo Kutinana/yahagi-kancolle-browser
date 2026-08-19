@@ -94,6 +94,8 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
                         shipId: ship.id,
                         anchorageRepairStartedAt:
                             widget.controller.anchorageRepairStartedAt,
+                        nosakiSparkleStartedAt:
+                            widget.controller.nosakiSparkleStartedAt,
                         now: now,
                       ),
                       specialAttack: ship == ships.first ? specialAttack : null,

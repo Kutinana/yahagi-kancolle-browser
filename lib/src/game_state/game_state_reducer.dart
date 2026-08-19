@@ -249,6 +249,11 @@ class GameStateReducer {
         _requiredMap(data, 'combined battle result'),
         event,
       ),
+      '/kcsapi/api_req_sortie/goback_port' ||
+      '/kcsapi/api_req_combined_battle/goback_port' => _goBackPort(
+        state,
+        event,
+      ),
       '/kcsapi/api_req_mission/result' => _missionResult(state, event, origin),
       '/kcsapi/api_req_mission/start' => _missionStart(
         state,
@@ -904,14 +909,11 @@ class GameStateReducer {
     final targetFleetIndex = state.fleets.indexWhere(
       (fleet) => fleet.id == deckId,
     );
-    if (targetFleetIndex < 0 || position < 0) {
+    if (targetFleetIndex < 0) {
       return state;
     }
 
     final targetFleet = state.fleets[targetFleetIndex];
-    if (position >= targetFleet.slotCount) {
-      return state;
-    }
     final fleets = List<Fleet>.of(state.fleets);
 
     // This mirrors Poi's formation reducer: -2 keeps only the flagship.
@@ -928,6 +930,10 @@ class GameStateReducer {
         serverOrigin: origin,
         updatedAt: event.capturedAt,
       );
+    }
+
+    if (position < 0 || position >= targetFleet.slotCount) {
+      return state;
     }
 
     final previousShipId = position < targetFleet.shipIds.length
@@ -1938,18 +1944,27 @@ class GameStateReducer {
     Map<String, Object?> data,
     CapturedApiEvent event,
   ) {
+    final isStart = event.path.endsWith('/start');
     final nextNode = _asInt(data['api_no']);
     final mapArea = _asInt(data['api_maparea_id']);
     final mapInfo = _asInt(data['api_mapinfo_no']);
     final sortieFleetId = _asInt(event.requestParams['api_deck_id']);
     final landBases = _applyLandBaseRaid(state.landBases, data, mapArea);
+
+    final currentCombat = isStart ? CombatState.empty : state.combatState;
+    final nextEscaped = isStart
+        ? const <int>{}
+        : (Set<int>.from(currentCombat.escapedShipIds)
+          ..addAll(currentCombat.pendingEscapeShipIds));
+
     return state.copyWith(
       landBases: landBases,
-      combatState: state.combatState
+      combatState: currentCombat
           .copyWith(
             sortieFleetId: sortieFleetId > 0 ? sortieFleetId : null,
             mapArea: mapArea,
             mapInfo: mapInfo,
+            escapedShipIds: nextEscaped,
           )
           .moveNext(nextNode),
     );
@@ -2160,11 +2175,89 @@ class GameStateReducer {
       }
     }
 
+    // Parse FCF / escape proposals
+    final escapeFlag = _asInt(data['api_escape_flag']);
+    List<int> pendingEscape = const <int>[];
+    if (escapeFlag > 0) {
+      final decodedEscape = _decodeNestedJson(data['api_escape']);
+      final escapeObj =
+          _optionalMap(decodedEscape) ?? _optionalMap(data['api_escape']);
+      final rawEscape =
+          escapeObj?['api_escape_idx'] ?? data['api_escape_idx'];
+      final rawTow = escapeObj?['api_tow_idx'] ?? data['api_tow_idx'];
+      final indices = <int>[
+        ..._intList(rawEscape),
+        ..._intList(rawTow),
+      ];
+      if (indices.isEmpty) {
+        final singleEscape = _asInt(rawEscape);
+        if (singleEscape > 0) indices.add(singleEscape);
+        final singleTow = _asInt(rawTow);
+        if (singleTow > 0) indices.add(singleTow);
+      }
+
+      final requestedDeckId = _asInt(event.requestParams['api_deck_id']);
+      final battleDeckId = _asInt(data['api_deck_id']);
+      final sortieFleetId = state.combatState.sortieFleetId > 0
+          ? state.combatState.sortieFleetId
+          : (requestedDeckId > 0
+                ? requestedDeckId
+                : (battleDeckId > 0 ? battleDeckId : 1));
+      final isCombined = sortieFleetId == 1 &&
+          (state.combinedFleetType != CombinedFleetType.none ||
+              event.path.contains('combined'));
+      final mainFleet = state.fleets
+          .where((f) => f.id == (isCombined ? 1 : sortieFleetId))
+          .firstOrNull;
+      final escortFleet = isCombined
+          ? state.fleets.where((f) => f.id == 2).firstOrNull
+          : null;
+
+      final shipIds = <int>[];
+      for (final idx in indices) {
+        if (isCombined) {
+          if (idx >= 1 && idx <= 6) {
+            final slot = idx - 1;
+            if (mainFleet != null && slot < mainFleet.shipIds.length) {
+              shipIds.add(mainFleet.shipIds[slot]);
+            }
+          } else if (idx >= 7 && idx <= 12) {
+            final slot = idx - 7;
+            if (escortFleet != null && slot < escortFleet.shipIds.length) {
+              shipIds.add(escortFleet.shipIds[slot]);
+            }
+          }
+        } else {
+          final slot = idx - 1;
+          if (mainFleet != null && slot < mainFleet.shipIds.length) {
+            shipIds.add(mainFleet.shipIds[slot]);
+          }
+        }
+      }
+      pendingEscape = shipIds;
+    }
+
     return state.copyWith(
       memberMapInfos: updatedMemberMapInfos ?? state.memberMapInfos,
       combatState: state.combatState.copyWith(
         dropShipMasterId: dropShipMasterId > 0 ? dropShipMasterId : null,
+        pendingEscapeShipIds: pendingEscape,
       ),
+    );
+  }
+
+  GameState _goBackPort(GameState state, CapturedApiEvent event) {
+    if (state.combatState.pendingEscapeShipIds.isEmpty) {
+      return state;
+    }
+    final nextEscaped = Set<int>.from(state.combatState.escapedShipIds)
+      ..addAll(state.combatState.pendingEscapeShipIds);
+    return state.copyWith(
+      combatState: state.combatState.copyWith(
+        escapedShipIds: nextEscaped,
+        pendingEscapeShipIds: const <int>[],
+      ),
+      updatedAt: event.capturedAt,
     );
   }
 }

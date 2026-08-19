@@ -34,6 +34,7 @@ BattleDamageAlertSeverity? detectFriendlyDamageAlert({
   };
   BattleDamageAlertSeverity? strongest;
   for (final ship in after) {
+    if (ship.isEscaped) continue;
     final previous = beforeByKey[(ship.fleetRole, ship.position)];
     if (previous == null || ship.currentHp >= previous.currentHp) continue;
     final previousBand = _damageBand(previous.currentHp, previous.maxHp);

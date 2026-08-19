@@ -507,17 +507,37 @@ class _CompactBarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isEscaped = ship.isEscaped;
     final ratio = ship.maxHp <= 0
         ? 0.0
         : (ship.currentHp / ship.maxHp).clamp(0.0, 1.0);
     final isZeroHp = ship.currentHp <= 0;
-    final hpValueColor = shipHpValueColor(ratio, isZeroHp: isZeroHp);
-    final hpBarColor = shipHpBarColor(ratio, isZeroHp: isZeroHp);
-    final hpText = ship.damageReceived > 0
-        ? '${ship.currentHp} / ${ship.maxHp} (-${ship.damageReceived})'
-        : '${ship.currentHp} / ${ship.maxHp}';
+    final hpValueColor = isEscaped
+        ? yahagiStatusZeroHp
+        : shipHpValueColor(ratio, isZeroHp: isZeroHp);
+    final hpBarColor = isEscaped
+        ? yahagiStatusZeroHp
+        : shipHpBarColor(ratio, isZeroHp: isZeroHp);
+    final hpText = isEscaped
+        ? '${ship.currentHp} / ${ship.maxHp} (退避)'
+        : (ship.damageReceived > 0
+            ? '${ship.currentHp} / ${ship.maxHp} (-${ship.damageReceived})'
+            : '${ship.currentHp} / ${ship.maxHp}');
 
     Widget hpContent({double opacity = 1, bool pulsing = false}) {
+      if (isEscaped) {
+        return const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            '退避',
+            style: TextStyle(
+              color: Color(0xff8197a5),
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        );
+      }
       final hpNumber = Opacity(
         key: pulsing ? Key('compact-damage-hp-number-$keyName-$index') : null,
         opacity: opacity,
@@ -578,7 +598,10 @@ class _CompactBarRow extends StatelessWidget {
     }
 
     final shouldPulse =
-        ship.side == BattleSide.friend && ratio > 0 && ratio <= 0.75;
+        ship.side == BattleSide.friend &&
+        !isEscaped &&
+        ratio > 0 &&
+        ratio <= 0.75;
     return Padding(
       key: Key('compact-bar-$keyName-$index'),
       padding: const EdgeInsets.fromLTRB(6, 3, 6, 3),

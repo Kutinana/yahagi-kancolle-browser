@@ -71,6 +71,7 @@ class LayoutSettingsController extends ChangeNotifier {
       final migratesAnchorageTimer = !savedOrder.contains(
         headerAnchorageTimerId,
       );
+      final migratesNosakiTimer = !savedOrder.contains(headerNosakiTimerId);
       final migratesShipCapacity = !savedOrder.contains(headerShipCapacityId);
       final migratesEquipmentCapacity = !savedOrder.contains(
         headerEquipmentCapacityId,
@@ -101,6 +102,20 @@ class LayoutSettingsController extends ChangeNotifier {
           headerAnchorageTimerId,
         );
       }
+      if (migratesNosakiTimer &&
+          savedVisible != null &&
+          !controller._visibleHeaderResourceIds!.contains(
+            headerNosakiTimerId,
+          )) {
+        final visible = controller._visibleHeaderResourceIds!;
+        final anchorageIndex = visible.indexOf(headerAnchorageTimerId);
+        final insertIndex = anchorageIndex >= 0
+            ? anchorageIndex + 1
+            : (visible.indexOf(headerSenkaId) >= 0
+                ? visible.indexOf(headerSenkaId) + 1
+                : 0);
+        visible.insert(insertIndex, headerNosakiTimerId);
+      }
       if (savedVisible != null) {
         if (migratesShipCapacity &&
             !controller._visibleHeaderResourceIds!.contains(
@@ -117,6 +132,7 @@ class LayoutSettingsController extends ChangeNotifier {
       }
       if (migratesSenka ||
           migratesAnchorageTimer ||
+          migratesNosakiTimer ||
           migratesShipCapacity ||
           migratesEquipmentCapacity) {
         await headerStore.saveHeaderResourceOrder(

@@ -397,51 +397,73 @@ class _BattleShipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isEscaped = ship.isEscaped;
     final side = ship.side == BattleSide.friend ? 'friend' : 'enemy';
     final ratio = ship.maxHp <= 0
         ? 0.0
         : (ship.currentHp / ship.maxHp).clamp(0.0, 1.0);
     final isZeroHp = ship.currentHp <= 0;
-    final hpValueColor = shipHpValueColor(ratio, isZeroHp: isZeroHp);
-    final hpBarColor = shipHpBarColor(ratio, isZeroHp: isZeroHp);
-    final hpText = ship.damageReceived > 0
-        ? '${ship.currentHp} / ${ship.maxHp} (-${ship.damageReceived})'
-        : '${ship.currentHp} / ${ship.maxHp}';
+    final hpValueColor = isEscaped
+        ? yahagiStatusZeroHp
+        : shipHpValueColor(ratio, isZeroHp: isZeroHp);
+    final hpBarColor = isEscaped
+        ? yahagiStatusZeroHp
+        : shipHpBarColor(ratio, isZeroHp: isZeroHp);
+    final hpText = isEscaped
+        ? '${ship.currentHp} / ${ship.maxHp} (退避)'
+        : (ship.damageReceived > 0
+            ? '${ship.currentHp} / ${ship.maxHp} (-${ship.damageReceived})'
+            : '${ship.currentHp} / ${ship.maxHp}');
 
-    Widget hpContent({double opacity = 1, bool pulsing = false}) => Opacity(
-      key: pulsing
-          ? Key('battle-damage-hp-pulse-$side-$absolutePosition')
-          : null,
-      opacity: opacity,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              hpText,
-              style: TextStyle(
-                color: hpValueColor,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
+    Widget hpContent({double opacity = 1, bool pulsing = false}) {
+      if (isEscaped) {
+        return const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            '退避',
+            style: TextStyle(
+              color: Color(0xff8197a5),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        );
+      }
+      return Opacity(
+        key: pulsing
+            ? Key('battle-damage-hp-pulse-$side-$absolutePosition')
+            : null,
+        opacity: opacity,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                hpText,
+                style: TextStyle(
+                  color: hpValueColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 2),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              minHeight: 6,
-              value: ratio,
-              color: hpBarColor,
-              backgroundColor: const Color(0xff263e4d),
+            const SizedBox(height: 2),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                minHeight: 6,
+                value: ratio,
+                color: hpBarColor,
+                backgroundColor: const Color(0xff263e4d),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    }
 
     Widget rowContent(Widget hp, {Widget? background}) => Stack(
       children: <Widget>[
@@ -463,9 +485,10 @@ class _BattleShipRow extends StatelessWidget {
                           ship.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
+                            color: isEscaped ? const Color(0xff8197a5) : null,
                           ),
                         ),
                       ),
@@ -491,7 +514,10 @@ class _BattleShipRow extends StatelessWidget {
     );
 
     final shouldPulse =
-        ship.side == BattleSide.friend && ratio > 0 && ratio <= 0.75;
+        ship.side == BattleSide.friend &&
+        !isEscaped &&
+        ratio > 0 &&
+        ratio <= 0.75;
     if (!shouldPulse) {
       return rowContent(hpContent());
     }

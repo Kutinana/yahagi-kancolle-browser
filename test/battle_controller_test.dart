@@ -955,6 +955,57 @@ void main() {
     expect(controller.current!.rank, BattleRank.ss);
   });
 
+  test('practice resets map and node context from previous sortie', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer.reduce(state, portEvent);
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    // Sortie to 7-1 node 3
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_req_map/start', <String, Object?>{
+        'api_maparea_id': 7,
+        'api_mapinfo_no': 1,
+        'api_no': 3,
+        'api_bosscell_no': 5,
+        'api_event_id': 4,
+        'api_event_kind': 1,
+      }, sequence: 80),
+    );
+    await controller.idle;
+    expect(controller.current!.context.mapAreaId, 7);
+    expect(controller.current!.context.mapInfoNo, 1);
+    expect(controller.current!.context.node, 3);
+    expect(controller.current!.context.practice, isFalse);
+
+    // Return to port
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_port/port', <String, Object?>{}, sequence: 81),
+    );
+    await controller.idle;
+
+    // Start practice battle
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_req_practice/battle', <String, Object?>{
+        'api_deck_id': 1,
+        'api_f_nowhps': <int>[-1, 30, 15],
+        'api_f_maxhps': <int>[-1, 30, 15],
+        'api_e_nowhps': <int>[-1, 20],
+        'api_e_maxhps': <int>[-1, 20],
+        'api_ship_ke': <int>[-1, 501],
+      }, sequence: 82),
+    );
+    await controller.idle;
+
+    expect(controller.current!.context.practice, isTrue);
+    expect(controller.current!.context.mapAreaId, 0);
+    expect(controller.current!.context.mapInfoNo, 0);
+    expect(controller.current!.context.node, 0);
+    expect(controller.current!.context.nodeTypeLabel, '普通战斗');
+    expect(controller.current!.context.mapLabel, '演习');
+  });
+
   test(
     'does not confirm or persist a result without an active battle',
     () async {

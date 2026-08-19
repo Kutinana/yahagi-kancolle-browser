@@ -5,6 +5,7 @@ import '../game_state/game_state_controller.dart';
 import '../performance/second_tick_scope.dart';
 import 'anchorage_repair_calculator.dart';
 import 'fleet_switcher_bar.dart';
+import 'nosaki_sparkle_view.dart';
 import 'operation_status_views.dart';
 import 'ship_portrait.dart';
 import 'status_density.dart';
@@ -18,7 +19,7 @@ const _green = Color(0xff65d493);
 const _yellow = Color(0xffefbd58);
 const _red = Color(0xffef6f6c);
 
-enum RepairCenterMode { dock, anchorage }
+enum RepairCenterMode { dock, anchorage, nosaki }
 
 @immutable
 class RepairDestination {
@@ -83,6 +84,11 @@ class _RepairCenterViewState extends State<RepairCenterView> {
                   initialFleetId: widget.initialFleetId,
                   onFleetSelected: widget.onFleetSelected,
                 ),
+                RepairCenterMode.nosaki => NosakiSparkleView(
+                  controller: widget.controller,
+                  initialFleetId: widget.initialFleetId,
+                  onFleetSelected: widget.onFleetSelected,
+                ),
               },
             ),
           ),
@@ -107,10 +113,10 @@ class RepairModeTabs extends StatelessWidget {
     return Align(
       alignment: Alignment.centerRight,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 260),
+        constraints: const BoxConstraints(maxWidth: 360),
         child: Container(
           key: const Key('repair-mode-segmented'),
-          width: 260,
+          width: 360,
           height: 38,
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
@@ -134,6 +140,14 @@ class RepairModeTabs extends StatelessWidget {
                   label: '泊地修理',
                   selected: mode == RepairCenterMode.anchorage,
                   onTap: () => onChanged(RepairCenterMode.anchorage),
+                ),
+              ),
+              Expanded(
+                child: _RepairModeTab(
+                  key: const Key('repair-mode-nosaki'),
+                  label: '野埼刷闪',
+                  selected: mode == RepairCenterMode.nosaki,
+                  onTap: () => onChanged(RepairCenterMode.nosaki),
                 ),
               ),
             ],

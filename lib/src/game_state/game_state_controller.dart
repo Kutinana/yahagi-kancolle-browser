@@ -12,6 +12,7 @@ import 'game_state_store.dart';
 import '../logbook/logbook_database.dart';
 import '../logbook/logbook_event_recorder.dart';
 import '../fleet/anchorage_repair_timer.dart';
+import '../fleet/nosaki_sparkle_timer.dart';
 
 final class GameStateController extends ChangeNotifier
     implements GameApiEventConsumer {
@@ -35,6 +36,8 @@ final class GameStateController extends ChangeNotifier
   final FrameNotificationCoalescer _captureNotifications;
   final AnchorageRepairTimerTracker _anchorageRepairTimer =
       AnchorageRepairTimerTracker();
+  final NosakiSparkleTimerTracker _nosakiSparkleTimer =
+      NosakiSparkleTimerTracker();
   final QuestStore? questStore;
   final GameStateStore? gameStateStore;
   Timer? _expirationTimer;
@@ -132,6 +135,7 @@ final class GameStateController extends ChangeNotifier
   String? get lastError => _lastError;
   String? get lastUpdatedPath => _lastUpdatedPath;
   DateTime? get anchorageRepairStartedAt => _anchorageRepairTimer.startedAt;
+  DateTime? get nosakiSparkleStartedAt => _nosakiSparkleTimer.startedAt;
   @override
   Future<void> get idle => _queue;
 
@@ -158,6 +162,11 @@ final class GameStateController extends ChangeNotifier
         final next = _reducer.reduce(previous, event);
         if (!identical(next, previous)) {
           _anchorageRepairTimer.observe(
+            previousState: previous,
+            nextState: next,
+            event: event,
+          );
+          _nosakiSparkleTimer.observe(
             previousState: previous,
             nextState: next,
             event: event,

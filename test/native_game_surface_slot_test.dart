@@ -193,7 +193,7 @@ void main() {
       },
     );
 
-    testWidgets('starts hidden for every non-resumed lifecycle state', (
+    testWidgets('starts hidden for background lifecycle states and visible for inactive', (
       tester,
     ) async {
       addTearDown(() {
@@ -203,7 +203,6 @@ void main() {
         );
       });
       for (final state in <AppLifecycleState>[
-        AppLifecycleState.inactive,
         AppLifecycleState.hidden,
         AppLifecycleState.paused,
         AppLifecycleState.detached,
@@ -232,6 +231,20 @@ void main() {
         );
         await tester.pump();
       }
+
+      final inactiveVisibility = <bool>[];
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pumpWidget(
+        _slotApp(
+          onVisibilityChanged: (value) async => inactiveVisibility.add(value),
+          useCurrentLifecycle: true,
+        ),
+      );
+      await tester.pump();
+      expect(inactiveVisibility, <bool>[true],
+          reason: 'initial inactive state must start visible');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
 
     testWidgets(
@@ -814,9 +827,9 @@ void main() {
       expect(visibility, <bool>[true, false, true, false, true]);
     });
 
-    testWidgets('maps non-resumed app lifecycle states to hidden', (
-      tester,
-    ) async {
+    testWidgets(
+        'maps background app lifecycle states to hidden and keeps inactive visible',
+        (tester) async {
       addTearDown(() {
         tester.binding.resetInternalState();
         tester.binding.handleAppLifecycleStateChanged(
@@ -828,9 +841,14 @@ void main() {
         _slotApp(onVisibilityChanged: (value) async => visibility.add(value)),
       );
       await tester.pump();
+      expect(visibility, <bool>[true]);
+
+      // Inactive (e.g. system menu shade pulled down) keeps surface visible.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      expect(visibility, <bool>[true]);
 
       for (final state in <AppLifecycleState>[
-        AppLifecycleState.inactive,
         AppLifecycleState.hidden,
         AppLifecycleState.paused,
         AppLifecycleState.detached,
@@ -844,8 +862,6 @@ void main() {
       }
 
       expect(visibility, <bool>[
-        true,
-        false,
         true,
         false,
         true,

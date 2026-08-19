@@ -950,6 +950,27 @@ void main() {
       },
     );
 
+    test('formation change with -2 keeps only the flagship (随伴舰一括解除)', () {
+      final reducer = GameStateReducer();
+      var state = reducer.reduce(GameState.empty, portEvent);
+      expect(state.fleets.first.shipIds, <int>[9001, 9002]);
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_hensei/change',
+          const <String, Object?>{},
+          requestParams: const <String, Object?>{
+            'api_id': '1',
+            'api_ship_idx': '-1',
+            'api_ship_id': '-2',
+          },
+        ),
+      );
+
+      expect(state.fleets.first.shipIds, <int>[9001]);
+    });
+
     test('ship3 speed refresh immediately changes the whole fleet speed', () {
       final reducer = GameStateReducer();
       var state = reducer.reduce(

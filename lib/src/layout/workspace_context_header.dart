@@ -23,6 +23,8 @@ class WorkspaceContextHeader extends StatelessWidget {
     this.onSenkaTap,
     this.anchorageRepairStartedAt,
     this.onAnchorageTimerTap,
+    this.nosakiSparkleStartedAt,
+    this.onNosakiTimerTap,
     required this.selectedFleetId,
     this.onFleetSelected,
     this.inventoryShowShips = true,
@@ -51,6 +53,8 @@ class WorkspaceContextHeader extends StatelessWidget {
   final VoidCallback? onSenkaTap;
   final DateTime? anchorageRepairStartedAt;
   final VoidCallback? onAnchorageTimerTap;
+  final DateTime? nosakiSparkleStartedAt;
+  final VoidCallback? onNosakiTimerTap;
   final int selectedFleetId;
   final ValueChanged<int>? onFleetSelected;
   final bool inventoryShowShips;
@@ -86,6 +90,8 @@ class WorkspaceContextHeader extends StatelessWidget {
         onSenkaTap: onSenkaTap,
         anchorageRepairStartedAt: anchorageRepairStartedAt,
         onAnchorageTimerTap: onAnchorageTimerTap,
+        nosakiSparkleStartedAt: nosakiSparkleStartedAt,
+        onNosakiTimerTap: onNosakiTimerTap,
         settingsController: layoutSettingsController,
       );
     }

@@ -30,6 +30,29 @@ void main() {
     );
   });
 
+  test('formats nosaki sparkle elapsed time for the header capsule', () {
+    final startedAt = DateTime.utc(2026, 8, 11, 1, 2, 3);
+
+    expect(
+      formatNosakiSparkleElapsed(
+        startedAt,
+        DateTime.utc(2026, 8, 11, 14, 7, 9),
+      ),
+      '13:05:06',
+    );
+    expect(
+      formatNosakiSparkleElapsed(null, DateTime.utc(2026, 8, 11)),
+      '--:--:--',
+    );
+    expect(
+      formatNosakiSparkleElapsed(
+        startedAt,
+        DateTime.utc(2026, 8, 11, 1, 2, 2),
+      ),
+      '00:00:00',
+    );
+  });
+
   testWidgets('narrow header keeps the empty senka capsule visible', (
     tester,
   ) async {
@@ -56,6 +79,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('header renders nosaki capsule with empty timer', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 500,
+              child: CompactResourceBar(state: GameState()),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('野埼：--:--:--'), findsOneWidget);
+    expect(
+      find.byKey(const Key('header-nosaki-timer-summary')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('anchorage capsule invokes tap without breaking long press', (
     tester,
   ) async {
@@ -72,6 +119,32 @@ void main() {
     );
 
     final timer = find.byKey(const Key('header-resource-anchorage-timer'));
+    await tester.tap(timer);
+    await tester.pump();
+    expect(taps, 1);
+
+    await tester.longPress(timer);
+    await tester.pumpAndSettle();
+    expect(taps, 1);
+    expect(find.byKey(const Key('header-resource-edit-mode')), findsOneWidget);
+  });
+
+  testWidgets('nosaki capsule invokes tap without breaking long press', (
+    tester,
+  ) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: const GameState(),
+            onNosakiTimerTap: () => taps++,
+          ),
+        ),
+      ),
+    );
+
+    final timer = find.byKey(const Key('header-resource-nosaki-timer'));
     await tester.tap(timer);
     await tester.pump();
     expect(taps, 1);
@@ -104,7 +177,7 @@ void main() {
               child: Align(
                 alignment: Alignment.topLeft,
                 child: SizedBox(
-                  width: 420,
+                  width: 600,
                   child: CompactResourceBar(
                     state: state,
                     senka: 1120,

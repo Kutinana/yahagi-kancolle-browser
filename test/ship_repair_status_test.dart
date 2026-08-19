@@ -83,6 +83,35 @@ void main() {
         isNull,
       );
     });
+
+    test('returns nosakiSparkle for companion ship in ready Nosaki fleet', () {
+      final state = GameState(
+        hasMasterData: true,
+        hasPortData: true,
+        masterShips: const <int, MasterShip>{
+          602: MasterShip(id: 602, name: '野埼改', shipTypeId: 1, maxFuel: 100, maxAmmo: 100),
+          501: MasterShip(id: 501, name: '吹雪', shipTypeId: 1, maxFuel: 100, maxAmmo: 100),
+        },
+        ships: const <int, OwnedShip>{
+          1: OwnedShip(id: 1, masterId: 602, level: 80, currentHp: 42, maxHp: 42, condition: 49, currentFuel: 100, currentAmmo: 100),
+          2: OwnedShip(id: 2, masterId: 501, level: 80, currentHp: 50, maxHp: 50, condition: 49, currentFuel: 100, currentAmmo: 100),
+        },
+        fleets: const <Fleet>[
+          Fleet(id: 1, name: '第一舰队', shipIds: <int>[1, 2]),
+        ],
+      );
+
+      final status = shipRepairStatusFor(
+        state: state,
+        shipId: 2,
+        anchorageRepairStartedAt: null,
+        nosakiSparkleStartedAt: startedAt,
+        now: startedAt.add(const Duration(minutes: 5)),
+      );
+
+      expect(status, ShipRepairStatus.nosakiSparkle);
+      expect(status?.label, '刷闪');
+    });
   });
 }
 

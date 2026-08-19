@@ -102,18 +102,22 @@ class CompactResourceBar extends StatefulWidget {
     this.senka,
     this.rank,
     this.anchorageRepairStartedAt,
+    this.nosakiSparkleStartedAt,
     this.settingsController,
     this.onSenkaTap,
     this.onAnchorageTimerTap,
+    this.onNosakiTimerTap,
   });
 
   final GameState state;
   final double? senka;
   final int? rank;
   final DateTime? anchorageRepairStartedAt;
+  final DateTime? nosakiSparkleStartedAt;
   final LayoutSettingsController? settingsController;
   final VoidCallback? onSenkaTap;
   final VoidCallback? onAnchorageTimerTap;
+  final VoidCallback? onNosakiTimerTap;
 
   @override
   State<CompactResourceBar> createState() => _CompactResourceBarState();
@@ -126,9 +130,13 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
   String get _anchorageElapsed =>
       formatAnchorageRepairElapsed(widget.anchorageRepairStartedAt, _now);
 
+  String get _nosakiElapsed =>
+      formatNosakiSparkleElapsed(widget.nosakiSparkleStartedAt, _now);
+
   @override
   Widget build(BuildContext context) {
-    if (widget.anchorageRepairStartedAt == null) {
+    if (widget.anchorageRepairStartedAt == null &&
+        widget.nosakiSparkleStartedAt == null) {
       return _buildWithSettings(context, DateTime.now().toUtc());
     }
     return SecondTickBuilder(
@@ -243,6 +251,7 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                   onTap: switch (id) {
                     headerSenkaId => widget.onSenkaTap,
                     headerAnchorageTimerId => widget.onAnchorageTimerTap,
+                    headerNosakiTimerId => widget.onNosakiTimerTap,
                     _ => null,
                   },
                   onLongPress: () => setState(() => _editing = true),
@@ -250,18 +259,22 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                     message: switch (id) {
                       headerSenkaId => '战果',
                       headerAnchorageTimerId => '泊地修理计时',
+                      headerNosakiTimerId => '野埼刷闪计时',
                       headerShipCapacityId => l10n.shipGirl,
                       headerEquipmentCapacityId => l10n.equipment,
                       _ => headerResourceById[id]!.label,
                     },
                     triggerMode:
-                        id == headerSenkaId || id == headerAnchorageTimerId
+                        id == headerSenkaId ||
+                            id == headerAnchorageTimerId ||
+                            id == headerNosakiTimerId
                         ? TooltipTriggerMode.manual
                         : TooltipTriggerMode.tap,
                     child: SizedBox(
                       width: switch (id) {
                         headerSenkaId => 142,
                         headerAnchorageTimerId => 128,
+                        headerNosakiTimerId => 128,
                         headerShipCapacityId => 118,
                         headerEquipmentCapacityId => 138,
                         _ => 82,
@@ -282,6 +295,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     if (id == headerAnchorageTimerId) {
       return _HeaderAnchorageTimerSummary(elapsed: _anchorageElapsed);
     }
+    if (id == headerNosakiTimerId) {
+      return _HeaderNosakiTimerSummary(elapsed: _nosakiElapsed);
+    }
     if (id == headerShipCapacityId || id == headerEquipmentCapacityId) {
       return _buildCapacityPill(id);
     }
@@ -300,6 +316,12 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     if (id == headerAnchorageTimerId) {
       return _EditableHeaderAnchorageTimerItem(
         elapsed: _anchorageElapsed,
+        visible: visible,
+      );
+    }
+    if (id == headerNosakiTimerId) {
+      return _EditableHeaderNosakiTimerItem(
+        elapsed: _nosakiElapsed,
         visible: visible,
       );
     }
@@ -407,6 +429,14 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                                 controller.toggleHeaderResourceVisible(id),
                           );
                         }
+                        if (id == headerNosakiTimerId) {
+                          return _HeaderNosakiTimerFilterRow(
+                            elapsed: _nosakiElapsed,
+                            visible: visible.contains(id),
+                            onChanged: () =>
+                                controller.toggleHeaderResourceVisible(id),
+                          );
+                        }
                         if (id == headerShipCapacityId ||
                             id == headerEquipmentCapacityId) {
                           final ships = id == headerShipCapacityId;
@@ -496,6 +526,19 @@ String formatAnchorageRepairElapsed(DateTime? startedAt, DateTime now) {
   return '$hours:$minutes:$seconds';
 }
 
+String formatNosakiSparkleElapsed(DateTime? startedAt, DateTime now) {
+  if (startedAt == null) return '--:--:--';
+  final normalizedStart = startedAt.toUtc();
+  final normalizedNow = now.toUtc();
+  final elapsed = normalizedNow.isBefore(normalizedStart)
+      ? Duration.zero
+      : normalizedNow.difference(normalizedStart);
+  final hours = elapsed.inHours.toString().padLeft(2, '0');
+  final minutes = (elapsed.inMinutes % 60).toString().padLeft(2, '0');
+  final seconds = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
+  return '$hours:$minutes:$seconds';
+}
+
 class _HeaderAnchorageTimerSummary extends StatelessWidget {
   const _HeaderAnchorageTimerSummary({required this.elapsed});
 
@@ -518,6 +561,40 @@ class _HeaderAnchorageTimerSummary extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         '泊地：$elapsed',
+        maxLines: 1,
+        style: const TextStyle(
+          color: Color(0xffdce6eb),
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+        ),
+      ),
+    ),
+  );
+}
+
+class _HeaderNosakiTimerSummary extends StatelessWidget {
+  const _HeaderNosakiTimerSummary({required this.elapsed});
+
+  final String elapsed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('header-nosaki-timer-summary'),
+    width: 128,
+    height: 30,
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    decoration: BoxDecoration(
+      color: const Color(0xff142735),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xff213b4b)),
+    ),
+    alignment: Alignment.centerLeft,
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text(
+        '野埼：$elapsed',
         maxLines: 1,
         style: const TextStyle(
           color: Color(0xffdce6eb),
@@ -673,6 +750,25 @@ class _EditableHeaderAnchorageTimerItem extends StatelessWidget {
     child: SizedBox(
       width: 128,
       child: _HeaderAnchorageTimerSummary(elapsed: elapsed),
+    ),
+  );
+}
+
+class _EditableHeaderNosakiTimerItem extends StatelessWidget {
+  const _EditableHeaderNosakiTimerItem({
+    required this.elapsed,
+    required this.visible,
+  });
+
+  final String elapsed;
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: visible ? 1 : 0.42,
+    child: SizedBox(
+      width: 128,
+      child: _HeaderNosakiTimerSummary(elapsed: elapsed),
     ),
   );
 }
@@ -855,6 +951,66 @@ class _HeaderAnchorageTimerFilterRow extends StatelessWidget {
             const Expanded(
               child: Text(
                 '泊地计时',
+                style: TextStyle(
+                  color: Color(0xffdce6eb),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Text(
+              elapsed,
+              style: const TextStyle(
+                color: Color(0xff9fb3bf),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(width: 16),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _HeaderNosakiTimerFilterRow extends StatelessWidget {
+  const _HeaderNosakiTimerFilterRow({
+    required this.elapsed,
+    required this.visible,
+    required this.onChanged,
+  });
+
+  final String elapsed;
+  final bool visible;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    key: const Key('header-resource-filter-row-nosaki-timer'),
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onChanged,
+      child: SizedBox(
+        height: 42,
+        child: Row(
+          children: [
+            Checkbox(
+              key: const Key('header-resource-visible-nosaki-timer'),
+              value: visible,
+              onChanged: (_) => onChanged(),
+              visualDensity: VisualDensity.compact,
+            ),
+            const Icon(
+              Icons.restaurant_rounded,
+              size: 24,
+              color: Color(0xff9fb3bf),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                '野埼计时',
                 style: TextStyle(
                   color: Color(0xffdce6eb),
                   fontSize: 13,

@@ -57,6 +57,7 @@ import 'src/fleet/fleet_summary_card.dart';
 import 'src/fleet/expedition_summary_card.dart';
 import 'src/fleet/repair_summary_card.dart';
 import 'src/fleet/construction_summary_card.dart';
+import 'src/fleet/nosaki_sparkle_calculator.dart';
 import 'src/fleet/pre_sortie_check_summary.dart';
 
 import 'src/game_webview.dart';
@@ -1014,6 +1015,28 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                       );
                                       setState(() {
                                         _repairCenterMode = RepairCenterMode.anchorage;
+                                        _repairCenterInitialFleetId = fleetId;
+                                      });
+                                      _selectWorkspace(3);
+                                    },
+                                    nosakiSparkleStartedAt:
+                                        widget.gameStateController.nosakiSparkleStartedAt,
+                                    onNosakiTimerTap: () {
+                                      final startedAt = widget
+                                          .gameStateController
+                                          .nosakiSparkleStartedAt;
+                                      final now = DateTime.now().toUtc();
+                                      final elapsed =
+                                          startedAt == null || now.isBefore(startedAt)
+                                          ? Duration.zero
+                                          : now.difference(startedAt);
+                                      final fleetId =
+                                          NosakiSparkleCalculator.preferredNosakiSparkleFleetId(
+                                        state: widget.gameStateController.state,
+                                        elapsed: elapsed,
+                                      );
+                                      setState(() {
+                                        _repairCenterMode = RepairCenterMode.nosaki;
                                         _repairCenterInitialFleetId = fleetId;
                                       });
                                       _selectWorkspace(3);

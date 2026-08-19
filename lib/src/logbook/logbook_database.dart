@@ -425,11 +425,11 @@ class LogbookDatabase extends ChangeNotifier {
       for (final ship in ships) {
         if (ship.position == position) return ship.name;
       }
-      return '—';
+      return '-';
     }
 
-    var mainMvp = '—';
-    var escortMvp = '—';
+    var mainMvp = '-';
+    var escortMvp = '-';
     for (final position in battle.mvpPositions) {
       if (position >= 6) {
         escortMvp = nameAt(battle.friendEscort, position - 6);
@@ -437,18 +437,20 @@ class LogbookDatabase extends ChangeNotifier {
         mainMvp = nameAt(battle.friendMain, position);
       }
     }
+    final isPractice =
+        battle.context.practice || battle.context.mapAreaId == 0;
     await db.insert('battle_logs', {
       'timestamp': record.completedAt.millisecondsSinceEpoch,
-      'map_area': battle.context.mapAreaId,
-      'map_no': battle.context.mapInfoNo,
-      'map_name': mapName,
-      'node': battle.context.node,
-      'node_label': nodeLabel,
-      'node_type': battle.context.nodeTypeLabel,
-      'map_difficulty': mapDifficulty,
+      'map_area': isPractice ? 0 : battle.context.mapAreaId,
+      'map_no': isPractice ? 0 : battle.context.mapInfoNo,
+      'map_name': isPractice ? '演习' : mapName,
+      'node': isPractice ? 0 : battle.context.node,
+      'node_label': isPractice ? '-' : nodeLabel,
+      'node_type': isPractice ? '普通战斗' : battle.context.nodeTypeLabel,
+      'map_difficulty': isPractice ? 0 : mapDifficulty,
       'rank': battle.rank.name,
       'drop_ship_id': battle.dropShipMasterId,
-      'enemy_fleet_name': battle.enemyFleetName,
+      'enemy_fleet_name': isPractice ? '-' : battle.enemyFleetName,
       // We can store a brief snapshot of ships or just ignore it for the DB to save space,
       // but for now let's just store the count of alive ships as a simple string or JSON.
       // E.g., '6/6'
@@ -457,10 +459,10 @@ class LogbookDatabase extends ChangeNotifier {
       'enemy_fleet_state':
           '${battle.enemyShips.where((s) => !s.isSunk).length}/${battle.enemyShips.length}',
       'flagship_name': battle.friendMain.isEmpty
-          ? '—'
+          ? '-'
           : battle.friendMain.first.name,
       'escort_flagship_name': battle.friendEscort.isEmpty
-          ? '—'
+          ? '-'
           : battle.friendEscort.first.name,
       'mvp_name': mainMvp,
       'escort_mvp_name': escortMvp,

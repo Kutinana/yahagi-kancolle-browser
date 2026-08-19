@@ -88,6 +88,12 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   Object get _effectiveBoundsSinkIdentity =>
       widget.boundsSinkIdentity ?? widget.onBoundsChanged;
 
+  static bool _isAppVisibleForLifecycle(AppLifecycleState? state) {
+    return state == null ||
+        state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -95,7 +101,7 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     WidgetsBinding.instance.addObserver(this);
     _ignoreErrors(
       _visibility.setAppVisible(
-        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed,
+        _isAppVisibleForLifecycle(WidgetsBinding.instance.lifecycleState),
       ),
     );
     _scheduleMeasurement();
@@ -147,7 +153,7 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _ignoreErrors(
-      _visibility.setAppVisible(state == AppLifecycleState.resumed),
+      _visibility.setAppVisible(_isAppVisibleForLifecycle(state)),
     );
   }
 

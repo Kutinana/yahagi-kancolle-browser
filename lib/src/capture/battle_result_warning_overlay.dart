@@ -21,7 +21,9 @@ bool shouldShowPostBattleWarning(LiveBattle? battle) {
   if (isBossNode) {
     return false;
   }
-  return battle.friendShips.any((ship) => ship.isHeavilyDamaged);
+  return battle.friendShips.any(
+    (ship) => !ship.isEscaped && ship.isHeavilyDamaged,
+  );
 }
 
 class BattleResultWarningOverlay extends StatefulWidget {

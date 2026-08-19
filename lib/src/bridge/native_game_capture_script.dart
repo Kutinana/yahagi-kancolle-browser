@@ -11,11 +11,14 @@ String _buildNativeGameCaptureScript() {
 (() => {
   'use strict';
 
+  const newTargetPaths = new Set($encodedPaths);
+  window.__yahagiTargetPaths = newTargetPaths;
+
   if (window.__yahagiMobileNativeCaptureInstalled === true) return;
   window.__yahagiMobileNativeCaptureInstalled = true;
 
   const targetPrefix = '/kcsapi/';
-  const targetPaths = new Set($encodedPaths);
+  const targetPaths = newTargetPaths;
   const sensitiveKeys = new Set(['api_token', 'api_starttime']);
   const questListPath = '/kcsapi/api_get_member/questlist';
   const questSnapshotCooldownMs = 15000;
@@ -34,6 +37,7 @@ String _buildNativeGameCaptureScript() {
   const targetPath = (value) => {
     try {
       const path = new URL(String(value), window.location.href).pathname;
+      const targetPaths = window.__yahagiTargetPaths || newTargetPaths;
       return path.startsWith(targetPrefix) && targetPaths.has(path)
         ? path
         : null;

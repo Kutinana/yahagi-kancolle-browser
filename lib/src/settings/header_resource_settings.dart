@@ -1,11 +1,13 @@
 const headerSenkaId = 'senka';
 const headerAnchorageTimerId = 'anchorage-timer';
+const headerNosakiTimerId = 'nosaki-timer';
 const headerShipCapacityId = 'ship-capacity';
 const headerEquipmentCapacityId = 'equipment-capacity';
 
 const allHeaderResourceIds = <String>[
   headerSenkaId,
   headerAnchorageTimerId,
+  headerNosakiTimerId,
   'material-1',
   'material-2',
   headerShipCapacityId,
@@ -36,6 +38,7 @@ const allHeaderResourceIds = <String>[
 const defaultVisibleHeaderResourceIds = <String>[
   headerSenkaId,
   headerAnchorageTimerId,
+  headerNosakiTimerId,
   'material-1',
   'material-2',
   headerShipCapacityId,
@@ -55,6 +58,9 @@ List<String> normalizeHeaderResourceOrder(Iterable<String>? saved) {
   }
   if (saved == null || !saved.contains(headerAnchorageTimerId)) {
     result.add(headerAnchorageTimerId);
+  }
+  if (saved == null || !saved.contains(headerNosakiTimerId)) {
+    result.add(headerNosakiTimerId);
   }
   for (final id in saved ?? const <String>[]) {
     if (allHeaderResourceIds.contains(id) && !result.contains(id)) {

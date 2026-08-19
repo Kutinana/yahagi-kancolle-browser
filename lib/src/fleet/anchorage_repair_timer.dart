@@ -25,13 +25,12 @@ class AnchorageRepairTimerTracker {
     }
 
     if (event.path == '/kcsapi/api_req_hensei/change' &&
-        _formationAffectsRepairFleet(previousState, nextState, event)) {
+        !_isBatchUnequip(event)) {
       _startedAt = capturedAt;
       return;
     }
 
-    if (event.path == '/kcsapi/api_req_mission/start' &&
-        _missionAffectsRepairFleet(previousState, event)) {
+    if (event.path == '/kcsapi/api_req_mission/start') {
       _startedAt = capturedAt;
       return;
     }
@@ -43,42 +42,11 @@ class AnchorageRepairTimerTracker {
     }
   }
 
-  bool _formationAffectsRepairFleet(
-    GameState previousState,
-    GameState nextState,
-    CapturedApiEvent event,
-  ) {
-    final affectedFleetIds = <int>{_asInt(event.requestParams['api_id'])}
-      ..removeWhere((id) => id <= 0);
-    final movedShipId = _asInt(event.requestParams['api_ship_id']);
-    if (movedShipId > 0) {
-      for (final fleet in previousState.fleets) {
-        if (fleet.shipIds.contains(movedShipId)) {
-          affectedFleetIds.add(fleet.id);
-        }
-      }
-    }
-    return affectedFleetIds.any(
-      (fleetId) =>
-          _hasRepairShipFlagship(previousState, fleetId) ||
-          _hasRepairShipFlagship(nextState, fleetId),
-    );
+  bool _isBatchUnequip(CapturedApiEvent event) {
+    final shipIdx = _asInt(event.requestParams['api_ship_idx']);
+    final shipId = _asInt(event.requestParams['api_ship_id']);
+    return shipIdx == -1 || shipId == -2;
   }
-
-  bool _missionAffectsRepairFleet(
-    GameState previousState,
-    CapturedApiEvent event,
-  ) {
-    final fleetId = _asInt(event.requestParams['api_deck_id']);
-    return fleetId > 0 && _hasRepairShipFlagship(previousState, fleetId);
-  }
-
-  bool _hasRepairShipFlagship(GameState state, int fleetId) =>
-      AnchorageRepairCalculator.project(
-        state: state,
-        fleetId: fleetId,
-        elapsed: Duration.zero,
-      ).isRepairShipFlagship;
 
   int _asInt(Object? value) =>
       value is int ? value : int.tryParse(value?.toString() ?? '') ?? 0;

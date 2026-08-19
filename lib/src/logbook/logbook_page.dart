@@ -789,30 +789,41 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
         _HeaderCell('敌舰队'),
         _HeaderCell('掉落'),
         _HeaderCell('旗舰'),
-        _HeaderCell('二队旗舰'),
         _HeaderCell('MVP'),
+        _HeaderCell('二队旗舰'),
         _HeaderCell('二队 MVP'),
       ],
       cells: (row) => [
         _TextCell(_formatTime(row['timestamp'])),
         _TextCell(
-          _sortieNodeLabel(
-            row['node'],
-            row['node_type'],
-            resolvedLabel: row['node_label'],
-          ),
+          ((row['map_area'] as int? ?? 0) == 0 &&
+                      (row['map_no'] as int? ?? 0) == 0) ||
+                  row['map_name']?.toString().trim() == '演习'
+              ? '-'
+              : _sortieNodeLabel(
+                  row['node'],
+                  row['node_type'],
+                  resolvedLabel: row['node_label'],
+                ),
         ),
         _TextCell(sortieStatusLabel(row['node_type']), strong: true),
         _RankCell('${row['rank']}'),
-        _TextCell('${row['enemy_fleet_name']}'),
+        _TextCell(
+          ((row['map_area'] as int? ?? 0) == 0 &&
+                      (row['map_no'] as int? ?? 0) == 0) ||
+                  row['map_name']?.toString().trim() == '演习' ||
+                  row['enemy_fleet_name'] == '-'
+              ? '-'
+              : '${row['enemy_fleet_name']}',
+        ),
         _TextCell(
           _dropName(row['drop_ship_id']),
           color: const Color(0xff67bce9),
         ),
-        _TextCell('${row['flagship_name'] ?? '—'}', strong: true),
-        _TextCell('${row['escort_flagship_name'] ?? '—'}', strong: true),
-        _TextCell('${row['mvp_name'] ?? '—'}', strong: true),
-        _TextCell('${row['escort_mvp_name'] ?? '—'}', strong: true),
+        _TextCell(_formatShipName(row['flagship_name']), strong: true),
+        _TextCell(_formatShipName(row['mvp_name']), strong: true),
+        _TextCell(_formatShipName(row['escort_flagship_name']), strong: true),
+        _TextCell(_formatShipName(row['escort_mvp_name']), strong: true),
       ],
     ),
     _LogbookCategory.expedition => _TableSpec(
@@ -904,9 +915,15 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
 
   String _dropName(Object? value) {
     final id = value as int? ?? 0;
-    if (id <= 0) return '—';
+    if (id <= 0) return '-';
     return widget.battleController.gameState().masterShips[id]?.name ??
         'ID: $id';
+  }
+
+  String _formatShipName(Object? raw) {
+    final str = raw?.toString().trim() ?? '';
+    if (str.isEmpty || str == '—' || str == '-') return '-';
+    return str;
   }
 
   String _mapLabel(Map<String, dynamic> row) =>
@@ -949,8 +966,11 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
   }) {
     final area = row['map_area'] as int? ?? 0;
     final map = row['map_no'] as int? ?? 0;
-    final number = '$area-$map';
     final storedName = row['map_name']?.toString().trim() ?? '';
+    if ((area == 0 && map == 0) || storedName == '演习') {
+      return '演习';
+    }
+    final number = '$area-$map';
     final name = storedName.isNotEmpty
         ? storedName
         : widget.battleController.gameState().mapName(area, map);
@@ -1295,8 +1315,9 @@ String _sortieNodeLabel(
   Object? resolvedLabel,
 }) {
   final resolved = resolvedLabel?.toString().trim() ?? '';
+  if (resolved == '-') return '-';
   final label = resolved.isNotEmpty ? resolved : _nodeLabel(node);
-  if (label == '—') return label;
+  if (label == '—' || label == '-') return label;
   final isBoss = nodeType?.toString().toLowerCase().contains('boss') ?? false;
   return '$label·${isBoss ? 'Boss' : '道中'}';
 }

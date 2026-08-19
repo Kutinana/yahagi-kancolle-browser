@@ -74,6 +74,7 @@ class BattleContext {
       : '未知海域';
 
   String get nodeLabel {
+    if (practice) return '演习';
     final label = nodeDisplayLabel?.trim();
     if (label != null && label.isNotEmpty) {
       return '$label点';
@@ -82,11 +83,13 @@ class BattleContext {
   }
 
   String get forecastNodeLabel {
+    if (practice) return '演习';
     final label = nodeDisplayLabel?.trim();
     return label != null && label.isNotEmpty ? label : nodeLabel;
   }
 
   String get nodeTypeLabel {
+    if (practice) return '普通战斗';
     var kind = eventId + 1;
     if (eventId == 4) {
       kind = switch (eventKind) {
@@ -173,6 +176,7 @@ class BattleShipSnapshot {
     this.condition = 49,
     this.equipmentMasterIds = const <int>[],
     this.usedDamageControlItemIds = const <int>[],
+    this.isEscaped = false,
   });
 
   final int masterId;
@@ -189,6 +193,7 @@ class BattleShipSnapshot {
   final int condition;
   final List<int> equipmentMasterIds;
   final List<int> usedDamageControlItemIds;
+  final bool isEscaped;
 
   bool get isSunk => currentHp <= 0;
   bool get isHeavilyDamaged => !isSunk && currentHp * 4 <= maxHp;
@@ -201,6 +206,7 @@ class BattleShipSnapshot {
     int? damageReceived,
     int? condition,
     List<int>? usedDamageControlItemIds,
+    bool? isEscaped,
   }) {
     return BattleShipSnapshot(
       masterId: masterId,
@@ -218,6 +224,7 @@ class BattleShipSnapshot {
       equipmentMasterIds: equipmentMasterIds,
       usedDamageControlItemIds:
           usedDamageControlItemIds ?? this.usedDamageControlItemIds,
+      isEscaped: isEscaped ?? this.isEscaped,
     );
   }
 }

@@ -41,6 +41,8 @@ abstract final class GameCapturePathCatalog {
     '/kcsapi/api_req_sortie/battle',
     '/kcsapi/api_req_sortie/battleresult',
     '/kcsapi/api_req_combined_battle/battleresult',
+    '/kcsapi/api_req_sortie/goback_port',
+    '/kcsapi/api_req_combined_battle/goback_port',
     '/kcsapi/api_req_mission/result',
     '/kcsapi/api_req_mission/start',
     '/kcsapi/api_req_practice/battle_result',
@@ -80,10 +82,16 @@ abstract final class GameCapturePathCatalog {
     '/kcsapi/api_req_practice/battle_result',
   };
 
+  static const Set<String> battleRetreat = <String>{
+    '/kcsapi/api_req_sortie/goback_port',
+    '/kcsapi/api_req_combined_battle/goback_port',
+  };
+
   static const Set<String> battle = <String>{
     ...battleMap,
     ...battlePhases,
     ...battleResults,
+    ...battleRetreat,
     '/kcsapi/api_port/port',
     '/kcsapi/api_start2/getData',
   };
