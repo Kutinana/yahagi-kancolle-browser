@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -32,7 +32,6 @@ class BattleResultWarningOverlay extends StatefulWidget {
     required this.safetySettingsController,
     required this.damageAlertPort,
     required this.child,
-    this.reminderAsDialog = false,
   });
 
   final GameCaptureController gameCaptureController;
@@ -40,7 +39,6 @@ class BattleResultWarningOverlay extends StatefulWidget {
   final SafetySettingsController safetySettingsController;
   final BattleDamageAlertPort damageAlertPort;
   final Widget child;
-  final bool reminderAsDialog;
 
   @override
   State<BattleResultWarningOverlay> createState() =>
@@ -49,15 +47,12 @@ class BattleResultWarningOverlay extends StatefulWidget {
 
 class _BattleResultWarningOverlayState
     extends State<BattleResultWarningOverlay> {
-  OverlayEntry? _reminderOverlayEntry;
-
   @override
   void initState() {
     super.initState();
     widget.gameCaptureController.eventActivity.addListener(
       _onGameCaptureUpdate,
     );
-    widget.battleController.addListener(_onBattleChanged);
   }
 
   @override
@@ -71,43 +66,20 @@ class _BattleResultWarningOverlayState
         _onGameCaptureUpdate,
       );
     }
-    if (oldWidget.battleController != widget.battleController) {
-      oldWidget.battleController.removeListener(_onBattleChanged);
-      widget.battleController.addListener(_onBattleChanged);
-    }
   }
 
   @override
   void dispose() {
-    _clearReminderOverlay();
-    widget.battleController.removeListener(_onBattleChanged);
     widget.gameCaptureController.eventActivity.removeListener(
       _onGameCaptureUpdate,
     );
     super.dispose();
   }
 
-  void _onBattleChanged() {
-    final battle = widget.battleController.current;
-    if (battle == null || battle.displayStage != BattleDisplayStage.result) {
-      _clearReminderOverlay();
-    }
-  }
-
-  void _clearReminderOverlay() {
-    if (_reminderOverlayEntry != null) {
-      if (_reminderOverlayEntry!.mounted) {
-        _reminderOverlayEntry!.remove();
-      }
-      _reminderOverlayEntry = null;
-    }
-  }
-
   void _onGameCaptureUpdate() {
     final event = widget.gameCaptureController.latestEvent;
     if (event == null || !event.path.endsWith('/battleresult')) return;
 
-    // Schedule checking on the next frame so that BattleController has processed the result
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _checkWarning();
@@ -116,44 +88,19 @@ class _BattleResultWarningOverlayState
 
   void _checkWarning() {
     final battle = widget.battleController.current;
-    if (shouldShowPostBattleWarning(battle)) {
-      final mode = widget.safetySettingsController.battleWarningMode;
-      if (mode == BattleWarningMode.off) return;
-      if (widget.safetySettingsController.battleDamageVibrationEnabled) {
-        unawaited(
-          widget.damageAlertPort
-              .alert(BattleDamageAlertSeverity.postBattleWarning)
-              .catchError((Object error) {
-                debugPrint('战后大破警告震动失败: $error');
-              }),
-        );
-      }
-      if (mode == BattleWarningMode.confirm) {
-        _showWarningDialog();
-      } else if (mode == BattleWarningMode.reminder) {
-        _showFlashingReminder();
-      }
+    if (!shouldShowPostBattleWarning(battle)) return;
+    final mode = widget.safetySettingsController.battleWarningMode;
+    if (mode == BattleWarningMode.off) return;
+    if (widget.safetySettingsController.battleDamageVibrationEnabled) {
+      unawaited(
+        widget.damageAlertPort
+            .alert(BattleDamageAlertSeverity.postBattleWarning)
+            .catchError((Object error) {
+              debugPrint('战后大破警告震动失败: $error');
+            }),
+      );
     }
-  }
-
-  void _showFlashingReminder() {
-    if (widget.reminderAsDialog) {
-      _showWarningDialog();
-      return;
-    }
-    _clearReminderOverlay();
-    final overlayState = Overlay.of(context, rootOverlay: true);
-    _reminderOverlayEntry = OverlayEntry(
-      builder: (context) {
-        return Positioned(
-          top: 60,
-          left: 0,
-          right: 0,
-          child: const _FlashingReminder(),
-        );
-      },
-    );
-    overlayState.insert(_reminderOverlayEntry!);
+    _showWarningDialog();
   }
 
   void _showWarningDialog() {
@@ -206,71 +153,5 @@ class _BattleResultWarningOverlayState
   @override
   Widget build(BuildContext context) {
     return widget.child;
-  }
-}
-
-class _FlashingReminder extends StatefulWidget {
-  const _FlashingReminder();
-
-  @override
-  State<_FlashingReminder> createState() => _FlashingReminderState();
-}
-
-class _FlashingReminderState extends State<_FlashingReminder>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          final flash = sin(_controller.value * 5 * pi).abs();
-          return Opacity(opacity: flash.clamp(0.0, 1.0), child: child);
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 32),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.redAccent.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.redAccent.withValues(alpha: 0.5),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Text(
-            (AppLocalizations.of(context) ??
-                    lookupAppLocalizations(const Locale('zh')))
-                .postBattleWarningBanner,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

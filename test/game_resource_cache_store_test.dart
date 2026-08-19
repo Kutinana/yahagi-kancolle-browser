@@ -16,10 +16,17 @@ void main() {
   test('persists all cache modes by stable wire name', () async {
     final store = SharedPreferencesGameResourceCacheStore();
 
-    for (final mode in GameResourceCacheMode.values) {
+    for (final mode in const <GameResourceCacheMode>[
+      GameResourceCacheMode.none,
+      GameResourceCacheMode.full,
+    ]) {
       await store.save(mode);
       expect(await store.load(), mode);
       expect(GameResourceCacheModeWire.fromWireName(mode.wireName), mode);
     }
+    expect(
+      GameResourceCacheModeWire.fromWireName('light'),
+      GameResourceCacheMode.full,
+    );
   });
 }

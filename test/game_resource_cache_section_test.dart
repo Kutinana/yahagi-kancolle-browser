@@ -6,12 +6,12 @@ import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_store.da
 import 'package:yahagi_kancolle_browser/src/settings/game_resource_cache_section.dart';
 
 void main() {
-  testWidgets('shows three modes and the single GB completeness line', (
+  testWidgets('shows two modes and the single GB completeness line', (
     tester,
   ) async {
     final port = _FakePort();
     final controller = GameResourceCacheController(
-      store: _MemoryStore(GameResourceCacheMode.light),
+      store: _MemoryStore(GameResourceCacheMode.full),
       port: port,
     );
     await controller.initialize();
@@ -24,13 +24,30 @@ void main() {
     );
 
     expect(find.byKey(const Key('cache-mode-none')), findsOneWidget);
-    expect(find.byKey(const Key('cache-mode-light')), findsOneWidget);
+    expect(find.byKey(const Key('cache-mode-light')), findsNothing);
     expect(find.byKey(const Key('cache-mode-full')), findsOneWidget);
-    expect(find.textContaining('固定基础资源清单'), findsOneWidget);
+    expect(find.text('本地缓存'), findsOneWidget);
+    expect(find.textContaining('固定基础资源清单（约 5.49 GB）'), findsOneWidget);
     expect(find.textContaining('游玩时自动缓存'), findsOneWidget);
-    expect(find.text('6.84 GB（84.2%）'), findsOneWidget);
+    expect(find.text('6.84 GB'), findsOneWidget);
     expect(find.textContaining('/ 8.12 GB'), findsNothing);
     expect(find.textContaining('1,284'), findsNothing);
+
+    final textCenterY = tester
+        .getCenter(find.byKey(const Key('cache-completeness-line')))
+        .dy;
+    final buttonCenterY = tester
+        .getCenter(find.byKey(const Key('cache-check-integrity')))
+        .dy;
+    expect((textCenterY - buttonCenterY).abs(), lessThan(4.0));
+
+    final noneLeft = tester.getTopLeft(find.text('无本地缓存')).dx;
+    final fullLeft = tester.getTopLeft(find.text('本地缓存')).dx;
+    final completenessLeft = tester
+        .getTopLeft(find.byKey(const Key('cache-completeness-line')))
+        .dx;
+    expect(fullLeft, noneLeft);
+    expect(completenessLeft, noneLeft);
   });
 
   testWidgets('integrity check hides diagnostics but keeps repair action', (

@@ -30,6 +30,62 @@ mixin SettingsUIHelpers {
     );
   }
 
+  Widget buildActionTile({
+    Key? key,
+    required String title,
+    Key? titleKey,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+    bool enabled = true,
+  }) {
+    return InkWell(
+      key: key,
+      onTap: enabled ? onTap : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    title,
+                    key: titleKey,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: enabled ? null : const Color(0xff526776),
+                    ),
+                  ),
+                  if (subtitle != null) ...<Widget>[
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: enabled
+                            ? const Color(0xff8197a5)
+                            : const Color(0xff526776),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (trailing != null) ...<Widget>[
+              const SizedBox(width: 12),
+              trailing,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget buildSwitchTile({
     required String title,
     Key? titleKey,

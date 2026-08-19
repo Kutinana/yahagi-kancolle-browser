@@ -146,49 +146,6 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                       onChanged:
                           layoutSettingsController.setEnhancedDamagePulse,
                     ),
-                    if (toolbarDisplayController != null) ...<Widget>[
-                      const Divider(color: Color(0xff294052), height: 1),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: Text(
-                                l10n.gameToolbar,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            SegmentedButton<GameToolbarDisplayMode>(
-                              showSelectedIcon: false,
-                              segments: <ButtonSegment<GameToolbarDisplayMode>>[
-                                ButtonSegment<GameToolbarDisplayMode>(
-                                  value: GameToolbarDisplayMode.autoHide,
-                                  label: Text(l10n.toolbarAutoHide),
-                                ),
-                                ButtonSegment<GameToolbarDisplayMode>(
-                                  value: GameToolbarDisplayMode.persistent,
-                                  label: Text(l10n.toolbarPersistent),
-                                ),
-                              ],
-                              selected: <GameToolbarDisplayMode>{
-                                toolbarDisplayController!.mode,
-                              },
-                              onSelectionChanged: (selection) {
-                                toolbarDisplayController!.setMode(
-                                  selection.single,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),

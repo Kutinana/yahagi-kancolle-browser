@@ -32,7 +32,7 @@ void main() {
     );
   }
 
-  testWidgets('shows all four rendering modes with native activity last', (
+  testWidgets('shows all four rendering modes with native activity first', (
     tester,
   ) async {
     final state = await createController();
@@ -40,17 +40,20 @@ void main() {
 
     await tester.pumpWidget(app(state.controller));
 
-    expect(find.byKey(const Key('rendering-mode-standard')), findsOneWidget);
-    expect(
-      find.byKey(const Key('rendering-mode-compatibility')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('rendering-mode-canvas')), findsOneWidget);
     expect(
       find.byKey(const Key('rendering-mode-native-activity')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('rendering-mode-compatibility')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('rendering-mode-standard')), findsOneWidget);
+    expect(find.byKey(const Key('rendering-mode-canvas')), findsOneWidget);
 
+    final nativeActivityTop = tester
+        .getTopLeft(find.byKey(const Key('rendering-mode-native-activity')))
+        .dy;
     final compatibilityTop = tester
         .getTopLeft(find.byKey(const Key('rendering-mode-compatibility')))
         .dy;
@@ -60,23 +63,17 @@ void main() {
     final canvasTop = tester
         .getTopLeft(find.byKey(const Key('rendering-mode-canvas')))
         .dy;
-    final nativeActivityTop = tester
-        .getTopLeft(find.byKey(const Key('rendering-mode-native-activity')))
-        .dy;
+    expect(nativeActivityTop, lessThan(compatibilityTop));
     expect(compatibilityTop, lessThan(standardTop));
     expect(standardTop, lessThan(canvasTop));
-    expect(canvasTop, lessThan(nativeActivityTop));
 
     for (final key in const <Key>[
+      Key('rendering-mode-native-activity'),
       Key('rendering-mode-compatibility'),
       Key('rendering-mode-standard'),
       Key('rendering-mode-canvas'),
-      Key('rendering-mode-native-activity'),
     ]) {
-      final tile = tester.widget<ListTile>(find.byKey(key));
-      expect(tile.contentPadding, const EdgeInsets.only(left: 4, right: 16));
-      expect(tile.minLeadingWidth, 0);
-      expect(tile.horizontalTitleGap, 0);
+      expect(find.byKey(key), findsOneWidget);
     }
 
     final titleLefts = <double>[
@@ -98,13 +95,13 @@ void main() {
     expect(titleLefts[2], titleLefts[0]);
     expect(titleLefts[3], titleLefts[0]);
 
-    expect(find.text('标准模式（推荐）'), findsOneWidget);
-    expect(find.text('高性能模式'), findsOneWidget);
+    expect(find.text('均衡模式（推荐）'), findsOneWidget);
+    expect(find.text('轻量模式'), findsOneWidget);
     expect(find.text('兼容模式'), findsOneWidget);
-    expect(find.text('原生直连（实验）'), findsOneWidget);
-    expect(find.textContaining('性能损耗平均'), findsOneWidget);
-    expect(find.textContaining('性能损耗大，可能会卡顿'), findsOneWidget);
-    expect(find.textContaining('内存稳定性'), findsOneWidget);
+    expect(find.text('原生直连（推荐）'), findsOneWidget);
+    expect(find.textContaining('兼顾游戏性能与设备兼容性'), findsOneWidget);
+    expect(find.textContaining('减少部分合成开销'), findsOneWidget);
+    expect(find.textContaining('更低的合成开销'), findsOneWidget);
     expect(find.textContaining('华为'), findsNothing);
     expect(find.textContaining('荣耀'), findsNothing);
   });
@@ -191,7 +188,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('rendering-mode-progress')), findsOneWidget);
-    final canvasTile = tester.widget<ListTile>(
+    final canvasTile = tester.widget<InkWell>(
       find.byKey(const Key('rendering-mode-canvas')),
     );
     expect(canvasTile.onTap, isNull);

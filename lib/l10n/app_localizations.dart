@@ -540,13 +540,13 @@ abstract class AppLocalizations {
   /// No description provided for @clearWebCache.
   ///
   /// In zh, this message translates to:
-  /// **'清理游戏 Web 缓存'**
+  /// **'清理浏览器网页缓存'**
   String get clearWebCache;
 
   /// No description provided for @clearWebCacheDesc.
   ///
   /// In zh, this message translates to:
-  /// **'清除游戏加载的图片、音频等静态资源缓存。'**
+  /// **'清除 WebView 网页内核的临时页面与脚本数据。'**
   String get clearWebCacheDesc;
 
   /// No description provided for @fleetBrief.
@@ -626,6 +626,48 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'出击前检查'**
   String get preSortieCheck;
+
+  /// No description provided for @sortieCheckShipsMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰娘'**
+  String get sortieCheckShipsMode;
+
+  /// No description provided for @sortieCheckMapsMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'海域'**
+  String get sortieCheckMapsMode;
+
+  /// No description provided for @mapHpGauges.
+  ///
+  /// In zh, this message translates to:
+  /// **'海域血量'**
+  String get mapHpGauges;
+
+  /// No description provided for @noMapGaugeData.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无海域血量数据'**
+  String get noMapGaugeData;
+
+  /// No description provided for @noMapGaugeDataHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请在游戏中进入出击海域以同步数据'**
+  String get noMapGaugeDataHint;
+
+  /// No description provided for @showClearedMaps.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示已攻略'**
+  String get showClearedMaps;
+
+  /// No description provided for @allMapsCleared.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有海域已攻略完成'**
+  String get allMapsCleared;
 
   /// No description provided for @forecast.
   ///
@@ -732,13 +774,13 @@ abstract class AppLocalizations {
   /// No description provided for @clearWebCacheConfirmTitle.
   ///
   /// In zh, this message translates to:
-  /// **'清理游戏 Web 缓存'**
+  /// **'清理浏览器网页缓存'**
   String get clearWebCacheConfirmTitle;
 
   /// No description provided for @clearWebCacheConfirmDesc.
   ///
   /// In zh, this message translates to:
-  /// **'确定要清除游戏缓存吗？这将会删除已下载的图片、音频等静态资源，下次进入游戏或加载立绘时可能会消耗较多流量和时间。'**
+  /// **'确定要清除浏览器网页缓存吗？这将会删除 WebView 网页内核缓存的临时数据，不影响已下载的游戏本地资源包。'**
   String get clearWebCacheConfirmDesc;
 
   /// No description provided for @confirmClear.
@@ -921,12 +963,6 @@ abstract class AppLocalizations {
   /// **'关闭'**
   String get battleWarningOff;
 
-  /// No description provided for @battleWarningReminder.
-  ///
-  /// In zh, this message translates to:
-  /// **'闪烁提醒'**
-  String get battleWarningReminder;
-
   /// No description provided for @battleWarningConfirm.
   ///
   /// In zh, this message translates to:
@@ -972,7 +1008,7 @@ abstract class AppLocalizations {
   /// No description provided for @webCacheCleared.
   ///
   /// In zh, this message translates to:
-  /// **'已清理游戏 Web 缓存'**
+  /// **'已清理浏览器网页缓存'**
   String get webCacheCleared;
 
   /// No description provided for @clearLogbook.
@@ -2441,25 +2477,25 @@ abstract class AppLocalizations {
   /// No description provided for @gameRenderingModeStandard.
   ///
   /// In zh, this message translates to:
-  /// **'高性能模式'**
+  /// **'轻量模式'**
   String get gameRenderingModeStandard;
 
   /// No description provided for @gameRenderingModeStandardDesc.
   ///
   /// In zh, this message translates to:
-  /// **'Texture Layer + WebGL，保留工具栏模糊效果。性能损耗大，可能会卡顿。'**
+  /// **'Texture Layer + WebGL，减少部分合成开销，部分设备可能存在显示或触控兼容问题。'**
   String get gameRenderingModeStandardDesc;
 
   /// No description provided for @gameRenderingModeCompatibility.
   ///
   /// In zh, this message translates to:
-  /// **'标准模式（推荐）'**
+  /// **'均衡模式（推荐）'**
   String get gameRenderingModeCompatibility;
 
   /// No description provided for @gameRenderingModeCompatibilityDesc.
   ///
   /// In zh, this message translates to:
-  /// **'Hybrid Composition + WebGL，关闭工具栏模糊；性能损耗平均。'**
+  /// **'Hybrid Composition + WebGL，兼顾游戏性能与设备兼容性。'**
   String get gameRenderingModeCompatibilityDesc;
 
   /// No description provided for @gameRenderingModeCanvas.
@@ -2471,19 +2507,19 @@ abstract class AppLocalizations {
   /// No description provided for @gameRenderingModeCanvasDesc.
   ///
   /// In zh, this message translates to:
-  /// **'Hybrid Composition + Canvas，关闭工具栏模糊；兼容性优先，画面性能可能降低。'**
+  /// **'Hybrid Composition + Canvas，绕过 WebGL，优先解决部分 GPU / WebGL 兼容问题，画面性能可能降低。'**
   String get gameRenderingModeCanvasDesc;
 
   /// No description provided for @gameRenderingModeNativeActivity.
   ///
   /// In zh, this message translates to:
-  /// **'原生直连（实验）'**
+  /// **'原生直连（推荐）'**
   String get gameRenderingModeNativeActivity;
 
   /// No description provided for @gameRenderingModeNativeActivityDesc.
   ///
   /// In zh, this message translates to:
-  /// **'Activity 直接承载 WebView，保留当前 Poi 布局；用于验证长时间运行时的内存稳定性。'**
+  /// **'Activity Direct WebView + WebGL，理论上具有更低的合成开销与更好的原生兼容性。'**
   String get gameRenderingModeNativeActivityDesc;
 
   /// No description provided for @gameRenderingModeConfirmTitle.
@@ -3263,13 +3299,13 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheFull.
   ///
   /// In zh, this message translates to:
-  /// **'完整缓存'**
+  /// **'本地缓存'**
   String get gameResourceCacheFull;
 
   /// No description provided for @gameResourceCacheFullDesc.
   ///
   /// In zh, this message translates to:
-  /// **'预下载固定基础资源清单（约 5.8 GB）；新内容会在游玩时自动缓存。'**
+  /// **'预下载固定基础资源清单（约 5.49 GB）；新内容会在游玩时自动缓存。'**
   String get gameResourceCacheFullDesc;
 
   /// No description provided for @gameResourceCacheStart.

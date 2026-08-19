@@ -218,6 +218,12 @@ class GameStateReducer {
         event,
         origin,
       ),
+      '/kcsapi/api_req_map/select_eventmap_rank' => _selectEventMapRank(
+        state,
+        _optionalMap(data) ?? const <String, Object?>{},
+        event,
+        origin,
+      ),
       '/kcsapi/api_req_map/start' => _mapStartOrNext(
         state,
         _requiredMap(data, 'map data'),
@@ -236,6 +242,11 @@ class GameStateReducer {
       '/kcsapi/api_req_sortie/battleresult' => _battleResult(
         state,
         _requiredMap(data, 'battle result'),
+        event,
+      ),
+      '/kcsapi/api_req_combined_battle/battleresult' => _battleResult(
+        state,
+        _requiredMap(data, 'combined battle result'),
         event,
       ),
       '/kcsapi/api_req_mission/result' => _missionResult(state, event, origin),
@@ -1199,12 +1210,13 @@ class GameStateReducer {
     String origin,
   ) {
     final mapDifficulties = Map<int, int>.from(state.mapDifficulties);
+    final memberMapInfos = Map<int, MemberMapInfo>.from(state.memberMapInfos);
+
     for (final value in _optionalList(data['api_map_info'])) {
       final item = _optionalMap(value);
       final mapId = _asInt(item?['api_id']);
-      final eventMap = _optionalMap(item?['api_eventmap']);
-      final rank = _asInt(eventMap?['api_selected_rank']);
-      if (item == null || mapId <= 0 || eventMap == null) continue;
+      if (item == null || mapId <= 0) continue;
+
       MasterMapInfo? master;
       for (final candidate in state.masterMapInfos.values) {
         if (candidate.id == mapId) {
@@ -1212,15 +1224,75 @@ class GameStateReducer {
           break;
         }
       }
-      final areaId = master?.mapAreaId ?? mapId ~/ 10;
-      final mapNo = master?.mapNo ?? mapId % 10;
+      final areaId = master?.mapAreaId ?? (mapId >= 10 ? mapId ~/ 10 : mapId);
+      final mapNo = master?.mapNo ?? (mapId >= 10 ? mapId % 10 : 1);
       if (areaId <= 0 || mapNo <= 0) continue;
       final key = areaId * 100 + mapNo;
+
+      final cleared = _asInt(item['api_cleared']) > 0;
+      final defeatCount = item['api_defeat_count'] != null
+          ? _asInt(item['api_defeat_count'])
+          : null;
+      var requiredDefeatCount = item['api_required_defeat_count'] != null
+          ? _asInt(item['api_required_defeat_count'])
+          : master?.requiredDefeatCount;
+      if ((requiredDefeatCount == null || requiredDefeatCount <= 0) &&
+          _knownDefaultRequiredDefeatCounts.containsKey(key)) {
+        requiredDefeatCount = _knownDefaultRequiredDefeatCounts[key];
+      }
+
+      final eventMap = _optionalMap(item['api_eventmap']);
+      final rank = _asInt(eventMap?['api_selected_rank']);
       if (rank > 0) {
         mapDifficulties[key] = rank;
       } else {
         mapDifficulties.remove(key);
       }
+
+      final gaugeType = item['api_gauge_type'] != null
+          ? _asInt(item['api_gauge_type'])
+          : null;
+      final gaugeNum = item['api_gauge_num'] != null
+          ? _asInt(item['api_gauge_num'])
+          : null;
+      final gaugeMaxNum = item['api_gauge_max_num'] != null
+          ? _asInt(item['api_gauge_max_num'])
+          : (eventMap != null && eventMap['api_gauge_max_num'] != null
+              ? _asInt(eventMap['api_gauge_max_num'])
+              : null);
+
+      final currentHp = eventMap != null && eventMap['api_now_maphp'] != null
+          ? _asInt(eventMap['api_now_maphp'])
+          : (item['api_now_maphp'] != null
+              ? _asInt(item['api_now_maphp'])
+              : null);
+      final maxHp = eventMap != null && eventMap['api_max_maphp'] != null
+          ? _asInt(eventMap['api_max_maphp'])
+          : (item['api_max_maphp'] != null
+              ? _asInt(item['api_max_maphp'])
+              : master?.maxMapHp);
+
+      memberMapInfos[key] = MemberMapInfo(
+        id: mapId,
+        mapAreaId: areaId,
+        mapNo: mapNo,
+        name: master?.name ?? '',
+        operationText: master?.operationText ?? '',
+        cleared: cleared,
+        defeatCount: defeatCount,
+        requiredDefeatCount: requiredDefeatCount,
+        currentHp: currentHp,
+        maxHp: maxHp,
+        gaugeType:
+            gaugeType ??
+            (eventMap != null ? _asInt(eventMap['api_gauge_type']) : null),
+        gaugeNum:
+            gaugeNum ??
+            (eventMap != null ? _asInt(eventMap['api_gauge_num']) : null),
+        gaugeMaxNum: gaugeMaxNum,
+        selectedRank: rank > 0 ? rank : null,
+        isEvent: eventMap != null || areaId >= 20,
+      );
     }
 
     List<LandBaseState>? bases;
@@ -1248,6 +1320,64 @@ class GameStateReducer {
     return state.copyWith(
       landBases: bases,
       mapDifficulties: mapDifficulties,
+      memberMapInfos: memberMapInfos,
+      serverOrigin: origin,
+      updatedAt: event.capturedAt,
+    );
+  }
+
+  GameState _selectEventMapRank(
+    GameState state,
+    Map<String, Object?> data,
+    CapturedApiEvent event,
+    String origin,
+  ) {
+    final areaId = _asInt(event.requestParams['api_maparea_id']);
+    final mapNo = _asInt(event.requestParams['api_map_no']);
+    final rank = _asInt(event.requestParams['api_rank']);
+    final key = areaId * 100 + mapNo;
+    final mapDifficulties = Map<int, int>.of(state.mapDifficulties);
+    if (rank > 0) {
+      mapDifficulties[key] = rank;
+    } else {
+      mapDifficulties.remove(key);
+    }
+
+    final rawMapHp = _optionalMap(data['api_maphp']);
+    final memberMapInfos = Map<int, MemberMapInfo>.of(state.memberMapInfos);
+    final existing = memberMapInfos[key];
+    if (existing != null || rawMapHp != null) {
+      final nowHp = rawMapHp != null && rawMapHp['api_now_maphp'] != null
+          ? _asInt(rawMapHp['api_now_maphp'])
+          : existing?.currentHp;
+      final maxHp = rawMapHp != null && rawMapHp['api_max_maphp'] != null
+          ? _asInt(rawMapHp['api_max_maphp'])
+          : existing?.maxHp;
+      final gaugeType = rawMapHp != null && rawMapHp['api_gauge_type'] != null
+          ? _asInt(rawMapHp['api_gauge_type'])
+          : existing?.gaugeType;
+      final gaugeNum = rawMapHp != null && rawMapHp['api_gauge_num'] != null
+          ? _asInt(rawMapHp['api_gauge_num'])
+          : existing?.gaugeNum;
+      final gaugeMaxNum = rawMapHp != null && rawMapHp['api_gauge_max_num'] != null
+          ? _asInt(rawMapHp['api_gauge_max_num'])
+          : existing?.gaugeMaxNum;
+
+      if (existing != null) {
+        memberMapInfos[key] = existing.copyWith(
+          selectedRank: rank > 0 ? rank : null,
+          currentHp: nowHp,
+          maxHp: maxHp,
+          gaugeType: gaugeType,
+          gaugeNum: gaugeNum,
+          gaugeMaxNum: gaugeMaxNum,
+        );
+      }
+    }
+
+    return state.copyWith(
+      mapDifficulties: mapDifficulties,
+      memberMapInfos: memberMapInfos,
       serverOrigin: origin,
       updatedAt: event.capturedAt,
     );
@@ -1524,12 +1654,21 @@ class GameStateReducer {
           name.isEmpty) {
         continue;
       }
+      final reqDefeat = item['api_required_defeat_count'] != null
+          ? _asInt(item['api_required_defeat_count'])
+          : null;
+      final maxMapHp = item['api_max_maphp'] != null
+          ? _asInt(item['api_max_maphp'])
+          : null;
       result[mapAreaId * 100 + mapNo] = MasterMapInfo(
         id: id,
         mapAreaId: mapAreaId,
         mapNo: mapNo,
         name: name,
         operationText: _asString(item['api_opetext']),
+        requiredDefeatCount:
+            reqDefeat != null && reqDefeat > 0 ? reqDefeat : null,
+        maxMapHp: maxMapHp != null && maxMapHp > 0 ? maxMapHp : null,
       );
     }
     return result;
@@ -1951,7 +2090,78 @@ class GameStateReducer {
   ) {
     final getShip = _optionalMap(data['api_get_ship']);
     final dropShipMasterId = _asInt(getShip?['api_ship_id']);
+
+    final mapArea = state.combatState.mapArea;
+    final mapInfoNo = state.combatState.mapInfo;
+    Map<int, MemberMapInfo>? updatedMemberMapInfos;
+
+    final rawMapHp =
+        _optionalMap(data['api_maphp']) ?? _optionalMap(data['api_map_hp']);
+    if (rawMapHp != null &&
+        mapArea != null &&
+        mapArea > 0 &&
+        mapInfoNo != null &&
+        mapInfoNo > 0) {
+      final key = mapArea * 100 + mapInfoNo;
+      final existing = state.memberMapInfos[key];
+      if (existing != null) {
+        final nowHp = rawMapHp['api_now_maphp'] != null
+            ? _asInt(rawMapHp['api_now_maphp'])
+            : existing.currentHp;
+        final maxHp = rawMapHp['api_max_maphp'] != null
+            ? _asInt(rawMapHp['api_max_maphp'])
+            : existing.maxHp;
+        final gaugeNum = rawMapHp['api_gauge_num'] != null
+            ? _asInt(rawMapHp['api_gauge_num'])
+            : existing.gaugeNum;
+        final gaugeMaxNum = rawMapHp['api_gauge_max_num'] != null
+            ? _asInt(rawMapHp['api_gauge_max_num'])
+            : existing.gaugeMaxNum;
+        final gaugeType = rawMapHp['api_gauge_type'] != null
+            ? _asInt(rawMapHp['api_gauge_type'])
+            : existing.gaugeType;
+
+        final newMapInfos = Map<int, MemberMapInfo>.from(state.memberMapInfos);
+        newMapInfos[key] = existing.copyWith(
+          currentHp: nowHp,
+          maxHp: maxHp,
+          gaugeNum: gaugeNum,
+          gaugeMaxNum: gaugeMaxNum,
+          gaugeType: gaugeType,
+        );
+        updatedMemberMapInfos = newMapInfos;
+      }
+    }
+
+    final rawLandingHp = _optionalMap(data['api_landing_hp']);
+    if (rawLandingHp != null &&
+        mapArea != null &&
+        mapArea > 0 &&
+        mapInfoNo != null &&
+        mapInfoNo > 0) {
+      final key = mapArea * 100 + mapInfoNo;
+      final existing =
+          (updatedMemberMapInfos ?? state.memberMapInfos)[key];
+      if (existing != null) {
+        final nowHp = rawLandingHp['api_now_hp'] != null
+            ? _asInt(rawLandingHp['api_now_hp'])
+            : existing.currentHp;
+        final maxHp = rawLandingHp['api_max_hp'] != null
+            ? _asInt(rawLandingHp['api_max_hp'])
+            : existing.maxHp;
+        final newMapInfos = Map<int, MemberMapInfo>.from(
+          updatedMemberMapInfos ?? state.memberMapInfos,
+        );
+        newMapInfos[key] = existing.copyWith(
+          currentHp: nowHp,
+          maxHp: maxHp,
+        );
+        updatedMemberMapInfos = newMapInfos;
+      }
+    }
+
     return state.copyWith(
+      memberMapInfos: updatedMemberMapInfos ?? state.memberMapInfos,
       combatState: state.combatState.copyWith(
         dropShipMasterId: dropShipMasterId > 0 ? dropShipMasterId : null,
       ),
@@ -2027,3 +2237,17 @@ int _limitQuestCount(int current, int minimum, int maximum) {
   final raised = current < minimum ? minimum : current;
   return raised > maximum ? maximum : raised;
 }
+
+const Map<int, int> _knownDefaultRequiredDefeatCounts = <int, int>{
+  105: 4, // 1-5
+  106: 7, // 1-6
+  205: 4, // 2-5
+  305: 4, // 3-5
+  405: 5, // 4-5
+  505: 5, // 5-5
+  605: 6, // 6-5
+  702: 3, // 7-2
+  703: 3, // 7-3
+  704: 3, // 7-4
+  705: 3, // 7-5
+};

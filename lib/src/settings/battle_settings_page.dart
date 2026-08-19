@@ -58,10 +58,6 @@ class BattleSettingsPage extends StatelessWidget with SettingsUIHelpers {
                             child: Text(l10n.battleWarningOff),
                           ),
                           DropdownMenuItem(
-                            value: BattleWarningMode.reminder,
-                            child: Text(l10n.battleWarningReminder),
-                          ),
-                          DropdownMenuItem(
                             value: BattleWarningMode.confirm,
                             child: Text(l10n.battleWarningConfirm),
                           ),

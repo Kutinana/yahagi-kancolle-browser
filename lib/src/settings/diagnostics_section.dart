@@ -139,12 +139,14 @@ class DiagnosticsSection extends StatelessWidget {
       };
 
   String _renderingPipelineSummary(GameRenderingMode mode) {
+    if (mode.usesActivityWebView) {
+      return 'Activity Direct · WebGL';
+    }
     final composition = mode.usesHybridComposition
         ? 'Hybrid Composition'
         : 'Texture Layer';
     final renderer = mode.usesCanvasRenderer ? 'Canvas' : 'WebGL';
-    final blur = mode.enablesToolbarBlur ? 'on' : 'off';
-    return '$composition · $renderer · Backdrop blur: $blur';
+    return '$composition · $renderer';
   }
 
   String _browserStateLabel(AppLocalizations l10n, GamePageLoadState state) {

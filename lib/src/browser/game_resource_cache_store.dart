@@ -6,6 +6,7 @@ extension GameResourceCacheModeWire on GameResourceCacheMode {
   String get wireName => name;
 
   static GameResourceCacheMode fromWireName(String? value) {
+    if (value == 'light') return GameResourceCacheMode.full;
     return GameResourceCacheMode.values.firstWhere(
       (mode) => mode.wireName == value,
       orElse: () => GameResourceCacheMode.none,

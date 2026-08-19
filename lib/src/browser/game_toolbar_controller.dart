@@ -5,14 +5,19 @@ import 'package:flutter/foundation.dart';
 enum GameSurfaceStage { localPrototype, login, game }
 
 final class GameToolbarController extends ChangeNotifier {
-  GameToolbarController({this.autoHideDuration = const Duration(seconds: 5)}) {
-    _scheduleAutoHide();
+  GameToolbarController({
+    this.autoHideDuration = const Duration(seconds: 5),
+    bool initiallyVisible = false,
+  }) : _isVisible = initiallyVisible {
+    if (_isVisible) {
+      _scheduleAutoHide();
+    }
   }
 
   final Duration autoHideDuration;
 
   GameSurfaceStage _stage = GameSurfaceStage.localPrototype;
-  bool _isVisible = true;
+  bool _isVisible;
   Timer? _autoHideTimer;
 
   GameSurfaceStage get stage => _stage;
@@ -23,10 +28,19 @@ final class GameToolbarController extends ChangeNotifier {
       return;
     }
     _stage = stage;
-    if (stage == GameSurfaceStage.game) {
+  }
+
+  void toggle() {
+    if (_isVisible) {
       collapse();
     } else {
       reveal();
+    }
+  }
+
+  void resetAutoHide() {
+    if (_isVisible) {
+      _scheduleAutoHide();
     }
   }
 

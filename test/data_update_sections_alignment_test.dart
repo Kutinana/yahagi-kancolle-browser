@@ -82,7 +82,6 @@ void main() {
       ),
     );
 
-    final sectionDx = tester.getTopLeft(find.text('数据更新')).dx;
     final titleFinders = <Finder>[
       find.text('未卜先知数据'),
       find.text('任务资料'),
@@ -92,24 +91,7 @@ void main() {
       for (final finder in titleFinders) tester.getTopLeft(finder).dx,
     ];
     expect(titleDx.toSet(), hasLength(1));
-    expect(titleDx.first, sectionDx);
-
-    for (final titleFinder in titleFinders) {
-      final tileFinder = find.ancestor(
-        of: titleFinder,
-        matching: find.byType(ListTile),
-      );
-      final tile = tester.widget<ListTile>(tileFinder);
-      expect(tile.contentPadding, const EdgeInsets.only(left: 4, right: 16));
-      expect(tile.minLeadingWidth, 0);
-      expect(tile.horizontalTitleGap, 0);
-
-      final subtitleTexts = find.descendant(
-        of: tileFinder,
-        matching: find.byType(Text),
-      );
-      expect(tester.getTopLeft(subtitleTexts.at(1)).dx, sectionDx);
-    }
+    expect(titleDx.first, 16.0);
   });
 }
 

@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum BattleWarningMode { off, reminder, confirm }
+enum BattleWarningMode { off, confirm }
 
 abstract class SafetySettingsStore {
   Future<BattleWarningMode> loadWarningMode();

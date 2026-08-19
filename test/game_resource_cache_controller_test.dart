@@ -9,7 +9,7 @@ void main() {
   test('formats completeness as one capacity line', () {
     expect(
       formatCacheCompleteness(6840000000, 8120000000),
-      '6.84 GB（84.2%）',
+      '6.84 GB',
     );
   });
 
@@ -18,9 +18,9 @@ void main() {
     () async {
       final port = FakePort()
         ..nextStatus = const GameResourceCacheStatus(
-          mode: GameResourceCacheMode.light,
+          mode: GameResourceCacheMode.full,
           state: GameResourceCacheState.idle,
-          cachedBytes: 1250000000,
+          cachedBytes: 0,
           maxBytes: 10000000000,
           targetBytes: 0,
           downloadedBytes: 0,
@@ -37,7 +37,7 @@ void main() {
       );
       await controller.initialize();
 
-      expect(controller.completenessLine, '0.00 GB（--）');
+      expect(controller.completenessLine, '0.00 GB');
       controller.dispose();
     },
   );
@@ -69,7 +69,7 @@ void main() {
     () async {
       final port = FakePort()
         ..nextStatus = const GameResourceCacheStatus(
-          mode: GameResourceCacheMode.light,
+          mode: GameResourceCacheMode.full,
           state: GameResourceCacheState.downloading,
           cachedBytes: 6840000000,
           maxBytes: 10000000000,
@@ -83,14 +83,14 @@ void main() {
           capacityBlocked: false,
         );
       final controller = GameResourceCacheController(
-        store: MemoryStore(GameResourceCacheMode.light),
+        store: MemoryStore(GameResourceCacheMode.full),
         port: port,
       );
 
       await controller.initialize();
 
       expect(controller.status.state, GameResourceCacheState.downloading);
-      expect(controller.completenessLine, '6.84 GB（84.2%）');
+      expect(controller.completenessLine, '6.84 GB');
       controller.dispose();
     },
   );

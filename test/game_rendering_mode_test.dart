@@ -2,14 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode.dart';
 
 void main() {
-  test('standard mode keeps the current texture WebGL path', () {
+  test('standard mode keeps the texture WebGL path without blur', () {
     const mode = GameRenderingMode.standard;
 
     expect(mode.usesActivityWebView, isFalse);
     expect(mode.usesPlatformView, isTrue);
     expect(mode.usesHybridComposition, isFalse);
     expect(mode.usesCanvasRenderer, isFalse);
-    expect(mode.enablesToolbarBlur, isTrue);
+    expect(mode.enablesToolbarBlur, isFalse);
   });
 
   test('compatibility mode uses hybrid WebGL without toolbar blur', () {

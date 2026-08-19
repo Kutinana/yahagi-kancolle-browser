@@ -13,7 +13,7 @@ enum GameRenderingMode {
 
   bool get usesCanvasRenderer => this == canvasCompatibility;
 
-  bool get enablesToolbarBlur => this == standard;
+  bool get enablesToolbarBlur => false;
 
   String get storageName => name;
 }

@@ -16,6 +16,25 @@ class GameStateSerializer {
       'mapDifficulties': state.mapDifficulties.map(
         (key, value) => MapEntry(key.toString(), value),
       ),
+      'memberMapInfos': state.memberMapInfos.map(
+        (key, value) => MapEntry(key.toString(), {
+          'id': value.id,
+          'mapAreaId': value.mapAreaId,
+          'mapNo': value.mapNo,
+          'name': value.name,
+          'operationText': value.operationText,
+          'cleared': value.cleared,
+          'defeatCount': value.defeatCount,
+          'requiredDefeatCount': value.requiredDefeatCount,
+          'currentHp': value.currentHp,
+          'maxHp': value.maxHp,
+          'gaugeType': value.gaugeType,
+          'gaugeNum': value.gaugeNum,
+          'gaugeMaxNum': value.gaugeMaxNum,
+          'selectedRank': value.selectedRank,
+          'isEvent': value.isEvent,
+        }),
+      ),
       'quests': state.quests.map(
         (k, v) => MapEntry(k.toString(), {
           'id': v.id,
@@ -176,6 +195,36 @@ class GameStateSerializer {
         }
       }
 
+      final memberMapInfos = <int, MemberMapInfo>{};
+      final rawMemberMapInfos = map['memberMapInfos'];
+      if (rawMemberMapInfos is Map) {
+        for (final entry in rawMemberMapInfos.entries) {
+          final key = int.tryParse('${entry.key}');
+          final item = entry.value;
+          if (key == null || key <= 0 || item is! Map) continue;
+          final id = _int(item['id']) ?? key;
+          final mapAreaId = _int(item['mapAreaId']) ?? (key ~/ 100);
+          final mapNo = _int(item['mapNo']) ?? (key % 100);
+          memberMapInfos[key] = MemberMapInfo(
+            id: id,
+            mapAreaId: mapAreaId,
+            mapNo: mapNo,
+            name: _string(item['name']),
+            operationText: _string(item['operationText']),
+            cleared: item['cleared'] == true,
+            defeatCount: _int(item['defeatCount']),
+            requiredDefeatCount: _int(item['requiredDefeatCount']),
+            currentHp: _int(item['currentHp']),
+            maxHp: _int(item['maxHp']),
+            gaugeType: _int(item['gaugeType']),
+            gaugeNum: _int(item['gaugeNum']),
+            gaugeMaxNum: _int(item['gaugeMaxNum']),
+            selectedRank: _int(item['selectedRank']),
+            isEvent: item['isEvent'] == true,
+          );
+        }
+      }
+
       final fleets = <Fleet>[];
       final rawFleets = map['fleets'];
       if (rawFleets is List) {
@@ -286,6 +335,7 @@ class GameStateSerializer {
         furnitureCoins: _int(map['furnitureCoins']) ?? 0,
         hasFurnitureCoinData: map['hasFurnitureCoinData'] == true,
         mapDifficulties: mapDifficulties,
+        memberMapInfos: memberMapInfos,
         quests: quests,
         hasQuestData: map['hasQuestData'] == true,
         activeQuestCount: _int(map['activeQuestCount']) ?? 0,

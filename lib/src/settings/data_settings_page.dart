@@ -66,19 +66,10 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
           children: <Widget>[
             buildSectionTitle(l10n.logoutAndClear),
             buildCard(
-              child: ListTile(
-                title: Text(
-                  l10n.logoutAndClear,
-                  key: const Key('settings-logout-label'),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Text(
-                  l10n.logoutAndClearDesc,
-                  style: const TextStyle(color: Color(0xff8197a5)),
-                ),
+              child: buildActionTile(
+                title: l10n.logoutAndClear,
+                titleKey: const Key('settings-logout-label'),
+                subtitle: l10n.logoutAndClearDesc,
                 trailing: const Icon(Icons.logout, color: Color(0xffd4a85f)),
                 onTap: () => _logoutAndClear(context, l10n),
               ),
@@ -154,19 +145,22 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 ),
               ),
             ],
+            if (gameResourceCacheController case final controller?) ...<Widget>[
+              const SizedBox(height: 24),
+              buildSectionTitle(l10n.gameResourceCacheTitle),
+              buildCard(
+                child: GameResourceCacheSection(controller: controller),
+              ),
+            ],
             const SizedBox(height: 24),
             buildSectionTitle(l10n.storageAndCache),
             buildCard(
               child: Column(
                 children: <Widget>[
-                  if (gameResourceCacheController case final controller?) ...[
-                    GameResourceCacheSection(controller: controller),
-                    const Divider(color: Color(0xff294052), height: 1),
-                  ],
-                  ListTile(
+                  buildActionTile(
                     key: const Key('settings-clear-quest-cache'),
-                    title: Text(l10n.clearQuestCache),
-                    subtitle: Text(l10n.clearQuestCacheDesc),
+                    title: l10n.clearQuestCache,
+                    subtitle: l10n.clearQuestCacheDesc,
                     trailing: const Icon(Icons.delete_outline),
                     onTap: () async {
                       await gameStateController.clearQuestsCache();
@@ -178,18 +172,18 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                     },
                   ),
                   const Divider(color: Color(0xff294052), height: 1),
-                  ListTile(
+                  buildActionTile(
                     key: const Key('settings-clear-logbook'),
-                    title: Text(l10n.clearLogbook),
-                    subtitle: Text(l10n.clearLogbookDesc),
+                    title: l10n.clearLogbook,
+                    subtitle: l10n.clearLogbookDesc,
                     trailing: const Icon(Icons.delete_forever_outlined),
                     onTap: () => _clearLogbook(context, l10n),
                   ),
                   const Divider(color: Color(0xff294052), height: 1),
-                  ListTile(
+                  buildActionTile(
                     key: const Key('settings-clear-web-cache'),
-                    title: Text(l10n.clearWebCache),
-                    subtitle: Text(l10n.clearWebCacheDesc),
+                    title: l10n.clearWebCache,
+                    subtitle: l10n.clearWebCacheDesc,
                     trailing: const Icon(Icons.cleaning_services_outlined),
                     onTap: () => _clearWebCache(context, l10n),
                   ),

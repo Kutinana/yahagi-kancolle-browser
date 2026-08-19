@@ -51,53 +51,21 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.storage_outlined),
-              title: Text(l10n.gameResourceCacheTitle),
-              subtitle: Text(l10n.gameResourceCacheDesc),
-            ),
-            RadioGroup<GameResourceCacheMode>(
-              groupValue: controller.mode,
-              onChanged: controller.busy
-                  ? (_) {}
-                  : (value) {
-                      if (value != null) controller.setMode(value);
-                    },
-              child: Column(
-                children: <Widget>[
-                  _modeTile(
-                    mode: GameResourceCacheMode.none,
-                    title: l10n.gameResourceCacheNone,
-                    subtitle: l10n.gameResourceCacheNoneDesc,
-                  ),
-                  _modeTile(
-                    mode: GameResourceCacheMode.light,
-                    title: l10n.gameResourceCacheLight,
-                    subtitle: l10n.gameResourceCacheLightDesc,
-                  ),
-                  _modeTile(
-                    mode: GameResourceCacheMode.full,
-                    title: l10n.gameResourceCacheFull,
-                    subtitle: l10n.gameResourceCacheFullDesc,
-                  ),
-                ],
-              ),
+            _modeTile(
+              mode: GameResourceCacheMode.none,
+              title: l10n.gameResourceCacheNone,
+              subtitle: l10n.gameResourceCacheNoneDesc,
             ),
             const Divider(color: Color(0xff294052), height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-              child: Text(
-                controller.completenessLine,
-                key: const Key('cache-completeness-line'),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+            _modeTile(
+              mode: GameResourceCacheMode.full,
+              title: l10n.gameResourceCacheFull,
+              subtitle: l10n.gameResourceCacheFullDesc,
             ),
+            const Divider(color: Color(0xff294052), height: 1),
             if (status.capacityBlocked)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
                   l10n.gameResourceCacheCapacityBlocked,
                   style: const TextStyle(color: Color(0xffffb4a9)),
@@ -105,18 +73,27 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
               ),
             if (status.waitingForWifi)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
                   l10n.gameResourceCacheWaitingForWifi,
                   style: const TextStyle(color: Color(0xff9bc7e4)),
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              padding: const EdgeInsets.fromLTRB(16, 8, 12, 12),
               child: Wrap(
-                spacing: 8,
+                spacing: 12,
                 runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
+                  Text(
+                    controller.completenessLine,
+                    key: const Key('cache-completeness-line'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   if (controller.mode != GameResourceCacheMode.none)
                     FilledButton.icon(
                       key: const Key('cache-download-toggle'),
@@ -179,12 +156,54 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
     required GameResourceCacheMode mode,
     required String title,
     required String subtitle,
-  }) => RadioListTile<GameResourceCacheMode>(
-    key: Key('cache-mode-${mode.name}'),
-    value: mode,
-    title: Text(title),
-    subtitle: Text(subtitle),
-  );
+  }) {
+    final selected = widget.controller.mode == mode;
+    return InkWell(
+      key: Key('cache-mode-${mode.name}'),
+      onTap: widget.controller.busy || selected
+          ? null
+          : () => widget.controller.setMode(mode),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xff8197a5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color:
+                  selected ? const Color(0xff70c7bc) : const Color(0xff8197a5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _checkIntegrity() async {
     await widget.controller.checkIntegrity();

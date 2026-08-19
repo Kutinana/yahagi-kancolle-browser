@@ -262,8 +262,8 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                       width: switch (id) {
                         headerSenkaId => 142,
                         headerAnchorageTimerId => 128,
-                        headerShipCapacityId => 108,
-                        headerEquipmentCapacityId => 122,
+                        headerShipCapacityId => 118,
+                        headerEquipmentCapacityId => 138,
                         _ => 82,
                       },
                       child: _buildDisplayItem(id),
@@ -305,7 +305,7 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     }
     if (id == headerShipCapacityId || id == headerEquipmentCapacityId) {
       return _EditableHeaderCapacityItem(
-        width: id == headerShipCapacityId ? 108 : 122,
+        width: id == headerShipCapacityId ? 118 : 138,
         visible: visible,
         child: _buildCapacityPill(id),
       );
@@ -466,15 +466,18 @@ class _HeaderCapacityPill extends StatelessWidget {
       border: Border.all(color: const Color(0xff315064)),
     ),
     alignment: Alignment.center,
-    child: Text(
-      '$label: ${current ?? '—'} / ${maximum ?? '—'}',
-      maxLines: 1,
-      softWrap: false,
-      style: const TextStyle(
-        color: Color(0xffdce6eb),
-        fontSize: 12.5,
-        fontWeight: FontWeight.w700,
-        fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        '$label: ${current ?? '—'} / ${maximum ?? '—'}',
+        maxLines: 1,
+        softWrap: false,
+        style: const TextStyle(
+          color: Color(0xffdce6eb),
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+        ),
       ),
     ),
   );

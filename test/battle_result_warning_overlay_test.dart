@@ -52,41 +52,35 @@ void main() {
     expect(shouldShowPostBattleWarning(battle), isTrue);
   });
 
-  for (final mode in <BattleWarningMode>[
-    BattleWarningMode.confirm,
-    BattleWarningMode.reminder,
-  ]) {
-    testWidgets('${mode.name} warning vibrates once when shown', (
-      tester,
-    ) async {
-      final fixture = await _WarningOverlayFixture.create(mode: mode);
-      addTearDown(fixture.dispose);
-
-      await fixture.pump(tester);
-      await fixture.showWarning(tester);
-
-      expect(fixture.alerts.alerts, <BattleDamageAlertSeverity>[
-        BattleDamageAlertSeverity.postBattleWarning,
-      ]);
-      if (mode == BattleWarningMode.confirm) {
-        expect(find.byType(AlertDialog), findsOneWidget);
-      }
-      await tester.pumpWidget(const SizedBox.shrink());
-    });
-  }
-
-  testWidgets('native direct reminder mode uses a dialog instead of overlay', (
+  testWidgets('confirm warning vibrates once and shows a dialog', (
     tester,
   ) async {
     final fixture = await _WarningOverlayFixture.create(
-      mode: BattleWarningMode.reminder,
+      mode: BattleWarningMode.confirm,
     );
     addTearDown(fixture.dispose);
 
-    await fixture.pump(tester, reminderAsDialog: true);
+    await fixture.pump(tester);
     await fixture.showWarning(tester);
 
+    expect(fixture.alerts.alerts, <BattleDamageAlertSeverity>[
+      BattleDamageAlertSeverity.postBattleWarning,
+    ]);
     expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('off mode neither vibrates nor shows a dialog', (tester) async {
+    final fixture = await _WarningOverlayFixture.create(
+      mode: BattleWarningMode.off,
+    );
+    addTearDown(fixture.dispose);
+
+    await fixture.pump(tester);
+    await fixture.showWarning(tester);
+
+    expect(fixture.alerts.alerts, isEmpty);
+    expect(find.byType(AlertDialog), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -94,7 +88,7 @@ void main() {
     tester,
   ) async {
     final fixture = await _WarningOverlayFixture.create(
-      mode: BattleWarningMode.reminder,
+      mode: BattleWarningMode.confirm,
       vibrationEnabled: false,
     );
     addTearDown(fixture.dispose);
@@ -150,19 +144,17 @@ final class _WarningOverlayFixture {
     );
   }
 
-  Future<void> pump(WidgetTester tester, {bool reminderAsDialog = false}) =>
-      tester.pumpWidget(
-        MaterialApp(
-          home: BattleResultWarningOverlay(
-            gameCaptureController: captureController,
-            battleController: battleController,
-            safetySettingsController: settingsController,
-            damageAlertPort: alerts,
-            reminderAsDialog: reminderAsDialog,
-            child: const SizedBox.expand(),
-          ),
-        ),
-      );
+  Future<void> pump(WidgetTester tester) => tester.pumpWidget(
+    MaterialApp(
+      home: BattleResultWarningOverlay(
+        gameCaptureController: captureController,
+        battleController: battleController,
+        safetySettingsController: settingsController,
+        damageAlertPort: alerts,
+        child: const SizedBox.expand(),
+      ),
+    ),
+  );
 
   Future<void> showWarning(WidgetTester tester) async {
     battleController

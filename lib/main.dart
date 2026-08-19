@@ -591,14 +591,11 @@ class YahagiApp extends StatelessWidget {
   }
 
   Widget _buildGameSurface() {
-    final nativeActivityMode =
-        gameRenderingModeController?.mode.usesActivityWebView ?? false;
     Widget withBattleWarning(Widget child) => BattleResultWarningOverlay(
       gameCaptureController: gameCaptureController,
       battleController: battleController,
       safetySettingsController: safetySettingsController,
       damageAlertPort: const MethodChannelBattleDamageAlertPort(),
-      reminderAsDialog: nativeActivityMode,
       child: child,
     );
 
@@ -827,8 +824,86 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     );
   }
 
+  void _selectWorkspace(int index) {
+    if (index != 0) {
+      widget.toolbarController.collapse();
+    }
+    if (_workspaceIndex != index) {
+      setState(() => _workspaceIndex = index);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    Widget buildHeaderToolbar() => AnimatedBuilder(
+      animation: Listenable.merge([
+        widget.browserController,
+        widget.audioController,
+        ?widget.gameRenderingModeController,
+      ]),
+      builder: (context, _) => GameBrowserToolbar(
+        enableBackdropBlur:
+            widget.gameRenderingModeController?.mode.enablesToolbarBlur ?? true,
+        interactionEnabled:
+            !(widget.gameRenderingModeController?.isBusy ?? false),
+        mode: widget.browserController.mode,
+        loadState: widget.browserController.loadState,
+        displayAddress: widget.browserController.displayAddress,
+        onBack: () async {
+          widget.toolbarController.resetAutoHide();
+          await widget.browserController.goBack();
+        },
+        onReload: () async {
+          widget.toolbarController.resetAutoHide();
+          await widget.browserController.reload();
+        },
+        onHome: () async {
+          widget.toolbarController.resetAutoHide();
+          await widget.browserController.goHome();
+        },
+        onEnterDmm: () async {
+          widget.toolbarController.resetAutoHide();
+          await widget.browserController.enterDmmLoginTest();
+        },
+        isMuted: widget.audioController.isMuted,
+        audioEnabled: widget.audioController.canToggle,
+        onToggleMuted: () async {
+          widget.toolbarController.resetAutoHide();
+          await widget.audioController.toggleMuted();
+        },
+        onCollapse: widget.toolbarController.collapse,
+        onFitScreen: () {
+          widget.toolbarController.resetAutoHide();
+          widget.browserController.fitGameScreen();
+        },
+        onScreenshot: widget.gameScreenshotController == null
+            ? null
+            : () async {
+                widget.toolbarController.resetAutoHide();
+                final l10n = AppLocalizations.of(context)!;
+                final messenger = ScaffoldMessenger.of(context);
+                messenger
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    SnackBar(content: Text(l10n.screenshotSaving)),
+                  );
+                await WidgetsBinding.instance.endOfFrame;
+                if (!context.mounted) return;
+                final result = await widget.gameScreenshotController!.capture();
+                if (!context.mounted) return;
+                final message = result.path != null
+                    ? l10n.screenshotSaved(result.path!)
+                    : result.errorMessage == null
+                    ? l10n.screenshotFailed
+                    : '${l10n.screenshotFailed}\n${result.errorMessage}';
+                messenger
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(SnackBar(content: Text(message)));
+              },
+        persistent: false,
+      ),
+    );
+
     return Scaffold(
       body: SafeArea(
         left: false,
@@ -839,105 +914,206 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
           children: [
             Container(
               height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: const BoxDecoration(
                 color: Color(0xff122431),
                 border: Border(bottom: BorderSide(color: Color(0xff294052))),
               ),
-              child: Row(
-                children: [
-                  Image.asset(
-                    'assets/app_icon.png',
-                    width: 22,
-                    height: 22,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'ヤハギ',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge(<Listenable>[
-                        widget.gameStateController,
-                        if (widget.senkaController != null)
-                          widget.senkaController!,
-                      ]),
-                      builder: (context, _) => WorkspaceContextHeader(
-                        workspaceIndex: _workspaceIndex,
-                        state: widget.gameStateController.state,
-                        senkaState: widget.senkaController?.state,
-                        onSenkaTap: widget.senkaController == null
-                            ? null
-                            : () => setState(() => _workspaceIndex = 9),
-                        anchorageRepairStartedAt:
-                            widget.gameStateController.anchorageRepairStartedAt,
-                        onAnchorageTimerTap: () {
-                          final startedAt = widget
-                              .gameStateController
-                              .anchorageRepairStartedAt;
-                          final now = DateTime.now().toUtc();
-                          final elapsed =
-                              startedAt == null || now.isBefore(startedAt)
-                              ? Duration.zero
-                              : now.difference(startedAt);
-                          final fleetId = preferredAnchorageRepairFleetId(
-                            state: widget.gameStateController.state,
-                            elapsed: elapsed,
-                          );
-                          setState(() {
-                            _repairCenterMode = RepairCenterMode.anchorage;
-                            _repairCenterInitialFleetId = fleetId;
-                            _workspaceIndex = 3;
-                          });
-                        },
-                        layoutSettingsController:
-                            widget.layoutSettingsController,
-                        selectedFleetId: _fleetCenterInitialFleetId ?? 1,
-                        onFleetSelected: (fleetId) {
-                          setState(() {
-                            _fleetCenterInitialFleetId = fleetId;
-                          });
-                        },
-                        inventoryShowShips: _inventoryShowShips,
-                        onInventorySectionChanged: (value) {
-                          setState(() => _inventoryShowShips = value);
-                        },
-                        logbookTabIndex: _logbookTabIndex,
-                        onLogbookTabChanged: (value) {
-                          setState(() => _logbookTabIndex = value);
-                        },
-                        settingsTabIndex: _settingsTabIndex,
-                        onSettingsTabChanged: (value) {
-                          setState(() => _settingsTabIndex = value);
-                        },
-                        repairMode: _repairCenterMode,
-                        onRepairModeChanged: (mode) {
-                          setState(() => _repairCenterMode = mode);
-                        },
-                        questMode: _questCenterMode,
-                        questFilters: _questFilters,
-                        questTranslationEnabled: _questTranslationEnabled,
-                        onQuestTranslationChanged: (enabled) {
-                          setState(() => _questTranslationEnabled = enabled);
-                        },
-                        onQuestModeChanged: (mode) {
-                          setState(() => _questCenterMode = mode);
-                        },
-                        expeditionMode: _expeditionCenterMode,
-                        onExpeditionModeChanged: (mode) {
-                          setState(() => _expeditionCenterMode = mode);
-                        },
-                        constructionMode: _constructionCenterMode,
-                        onConstructionModeChanged: (mode) {
-                          setState(() => _constructionCenterMode = mode);
-                        },
+              child: AnimatedBuilder(
+                animation: widget.toolbarController,
+                builder: (context, _) {
+                  final isGameWorkspace = _workspaceIndex == 0;
+                  final isToolbarVisible =
+                      isGameWorkspace && widget.toolbarController.isVisible;
+                  return Row(
+                    children: [
+                      Material(
+                        color: isToolbarVisible
+                            ? const Color(0xff1a3447)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        child: InkWell(
+                          key: const Key('yahagi-brand-button'),
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: isGameWorkspace
+                              ? widget.toolbarController.toggle
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'assets/app_icon.png',
+                                  width: 22,
+                                  height: 22,
+                                  fit: BoxFit.contain,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'ヤハギ',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                if (isGameWorkspace) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    isToolbarVisible
+                                        ? Icons.chevron_left
+                                        : Icons.chevron_right,
+                                    size: 16,
+                                    color: isToolbarVisible
+                                        ? const Color(0xffd4a85f)
+                                        : const Color(0xff8197a5),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Stack(
+                          alignment: Alignment.centerLeft,
+                          children: [
+                            AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: isToolbarVisible ? 0.0 : 1.0,
+                              child: IgnorePointer(
+                                ignoring: isToolbarVisible,
+                                child: AnimatedBuilder(
+                                  animation: Listenable.merge(<Listenable>[
+                                    widget.gameStateController,
+                                    if (widget.senkaController != null)
+                                      widget.senkaController!,
+                                  ]),
+                                  builder: (context, _) => WorkspaceContextHeader(
+                                    workspaceIndex: _workspaceIndex,
+                                    state: widget.gameStateController.state,
+                                    senkaState: widget.senkaController?.state,
+                                    onSenkaTap: widget.senkaController == null
+                                        ? null
+                                        : () => _selectWorkspace(9),
+                                    anchorageRepairStartedAt:
+                                        widget.gameStateController.anchorageRepairStartedAt,
+                                    onAnchorageTimerTap: () {
+                                      final startedAt = widget
+                                          .gameStateController
+                                          .anchorageRepairStartedAt;
+                                      final now = DateTime.now().toUtc();
+                                      final elapsed =
+                                          startedAt == null || now.isBefore(startedAt)
+                                          ? Duration.zero
+                                          : now.difference(startedAt);
+                                      final fleetId = preferredAnchorageRepairFleetId(
+                                        state: widget.gameStateController.state,
+                                        elapsed: elapsed,
+                                      );
+                                      setState(() {
+                                        _repairCenterMode = RepairCenterMode.anchorage;
+                                        _repairCenterInitialFleetId = fleetId;
+                                      });
+                                      _selectWorkspace(3);
+                                    },
+                                    layoutSettingsController:
+                                        widget.layoutSettingsController,
+                                    selectedFleetId: _fleetCenterInitialFleetId ?? 1,
+                                    onFleetSelected: (fleetId) {
+                                      setState(() {
+                                        _fleetCenterInitialFleetId = fleetId;
+                                      });
+                                    },
+                                    inventoryShowShips: _inventoryShowShips,
+                                    onInventorySectionChanged: (value) {
+                                      setState(() => _inventoryShowShips = value);
+                                    },
+                                    logbookTabIndex: _logbookTabIndex,
+                                    onLogbookTabChanged: (value) {
+                                      setState(() => _logbookTabIndex = value);
+                                    },
+                                    settingsTabIndex: _settingsTabIndex,
+                                    onSettingsTabChanged: (value) {
+                                      setState(() => _settingsTabIndex = value);
+                                    },
+                                    repairMode: _repairCenterMode,
+                                    onRepairModeChanged: (mode) {
+                                      setState(() => _repairCenterMode = mode);
+                                    },
+                                    questMode: _questCenterMode,
+                                    questFilters: _questFilters,
+                                    questTranslationEnabled: _questTranslationEnabled,
+                                    onQuestTranslationChanged: (enabled) {
+                                      setState(() => _questTranslationEnabled = enabled);
+                                    },
+                                    onQuestModeChanged: (mode) {
+                                      setState(() => _questCenterMode = mode);
+                                    },
+                                    expeditionMode: _expeditionCenterMode,
+                                    onExpeditionModeChanged: (mode) {
+                                      setState(() => _expeditionCenterMode = mode);
+                                    },
+                                    constructionMode: _constructionCenterMode,
+                                    onConstructionModeChanged: (mode) {
+                                      setState(() => _constructionCenterMode = mode);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                            IgnorePointer(
+                              ignoring: !isToolbarVisible,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 240),
+                                reverseDuration:
+                                    const Duration(milliseconds: 200),
+                                transitionBuilder: (child, animation) {
+                                  final slide = Tween<Offset>(
+                                    begin: const Offset(-0.2, 0),
+                                    end: Offset.zero,
+                                  ).animate(
+                                    CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.easeOutCubic,
+                                    ),
+                                  );
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: SlideTransition(
+                                      position: slide,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: isToolbarVisible
+                                    ? KeyedSubtree(
+                                        key: const Key('game-toolbar-visible'),
+                                        child: Listener(
+                                          onPointerDown: (_) => widget
+                                              .toolbarController
+                                              .beginInteraction(),
+                                          onPointerUp: (_) => widget
+                                              .toolbarController
+                                              .endInteraction(),
+                                          onPointerCancel: (_) => widget
+                                              .toolbarController
+                                              .endInteraction(),
+                                          child: buildHeaderToolbar(),
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(
+                                        key: Key('game-toolbar-hidden'),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             Expanded(
@@ -952,9 +1128,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                     selectedIndex: _workspaceIndex,
                     onRight:
                         widget.layoutSettingsController.workspaceMenuOnRight,
-                    onSelected: (index) {
-                      setState(() => _workspaceIndex = index);
-                    },
+                    onSelected: _selectWorkspace,
                   ),
                   Expanded(
                     child: Stack(
@@ -1002,96 +1176,9 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     ),
                                   ),
                                 );
-                                Widget buildToolbar(
-                                  bool persistent,
-                                ) => AnimatedBuilder(
-                                  animation: Listenable.merge([
-                                    widget.browserController,
-                                    widget.audioController,
-                                    ?widget.gameRenderingModeController,
-                                  ]),
-                                  builder: (context, _) => GameBrowserToolbar(
-                                    enableBackdropBlur:
-                                        widget
-                                            .gameRenderingModeController
-                                            ?.mode
-                                            .enablesToolbarBlur ??
-                                        true,
-                                    interactionEnabled:
-                                        !(widget
-                                                .gameRenderingModeController
-                                                ?.isBusy ??
-                                            false),
-                                    mode: widget.browserController.mode,
-                                    loadState:
-                                        widget.browserController.loadState,
-                                    displayAddress:
-                                        widget.browserController.displayAddress,
-                                    onBack: widget.browserController.goBack,
-                                    onReload: widget.browserController.reload,
-                                    onHome: widget.browserController.goHome,
-                                    onEnterDmm: widget
-                                        .browserController
-                                        .enterDmmLoginTest,
-                                    isMuted: widget.audioController.isMuted,
-                                    audioEnabled:
-                                        widget.audioController.canToggle,
-                                    onToggleMuted:
-                                        widget.audioController.toggleMuted,
-                                    onCollapse:
-                                        widget.toolbarController.collapse,
-                                    onFitScreen:
-                                        widget.browserController.fitGameScreen,
-                                    onScreenshot:
-                                        widget.gameScreenshotController == null
-                                        ? null
-                                        : () async {
-                                            final l10n = AppLocalizations.of(
-                                              context,
-                                            )!;
-                                            final messenger =
-                                                ScaffoldMessenger.of(context);
-                                            messenger
-                                              ..hideCurrentSnackBar()
-                                              ..showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    l10n.screenshotSaving,
-                                                  ),
-                                                ),
-                                              );
-                                            await WidgetsBinding
-                                                .instance
-                                                .endOfFrame;
-                                            if (!context.mounted) return;
-                                            final result = await widget
-                                                .gameScreenshotController!
-                                                .capture();
-                                            if (!context.mounted) return;
-                                            final message = result.path != null
-                                                ? l10n.screenshotSaved(
-                                                    result.path!,
-                                                  )
-                                                : result.errorMessage == null
-                                                ? l10n.screenshotFailed
-                                                : '${l10n.screenshotFailed}\n'
-                                                      '${result.errorMessage}';
-                                            messenger
-                                              ..hideCurrentSnackBar()
-                                              ..showSnackBar(
-                                                SnackBar(
-                                                  content: Text(message),
-                                                ),
-                                              );
-                                          },
-                                    persistent: persistent,
-                                  ),
-                                );
                                 final gameWidget = GameBrowserOverlay(
                                   controller: widget.toolbarController,
-                                  persistent: persistentToolbar,
                                   gameSurface: gameSurfaceWrapper,
-                                  toolbar: buildToolbar(persistentToolbar),
                                 );
 
                                 final infoWidget = _InformationPanel(
@@ -1109,36 +1196,32 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                   onOpenFleet: (fleetId) {
                                     setState(() {
                                       _fleetCenterInitialFleetId = fleetId;
-                                      _workspaceIndex = 1;
                                     });
+                                    _selectWorkspace(1);
                                   },
                                   onOpenRepair: (destination) {
                                     setState(() {
                                       _repairCenterMode = destination.mode;
                                       _repairCenterInitialFleetId =
                                           destination.fleetId;
-                                      _workspaceIndex = 3;
                                     });
+                                    _selectWorkspace(3);
                                   },
-                                  onOpenConstruction: () {
-                                    setState(() => _workspaceIndex = 4);
-                                  },
-                                  onOpenExpedition: () {
-                                    setState(() => _workspaceIndex = 2);
-                                  },
+                                  onOpenConstruction: () => _selectWorkspace(4),
+                                  onOpenExpedition: () => _selectWorkspace(2),
                                   onOpenQuest: (questId) {
                                     setState(() {
                                       _questCenterInitialQuestId = questId;
-                                      _workspaceIndex = 5;
                                     });
+                                    _selectWorkspace(5);
                                   },
                                   onOpenExpeditionCheck: (fleetId) {
                                     setState(() {
                                       _expeditionCheckFleetId = fleetId;
                                       _expeditionCenterMode =
                                           ExpeditionSummaryMode.check;
-                                      _workspaceIndex = 2;
                                     });
+                                    _selectWorkspace(2);
                                   },
                                 );
 

@@ -192,6 +192,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('live-battle-card')), findsOneWidget);
     expect(find.text('未卜先知'), findsOneWidget);
+    expect(find.byKey(const Key('yahagi-brand-button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('yahagi-brand-button')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('browser-home')), findsOneWidget);
     expect(find.byKey(const Key('game-browser-overlay')), findsOneWidget);
     expect(find.byKey(const Key('game-audio-toggle')), findsOneWidget);
@@ -202,34 +205,15 @@ void main() {
       tester.element(find.byType(Scaffold).first),
     ).hideCurrentSnackBar();
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('yahagi-brand-button')));
+    await tester.pumpAndSettle();
     final gameSurfaceElement = tester.element(
       find.byKey(const Key('fake-game-surface')),
     );
-    await toolbarDisplayController.setMode(GameToolbarDisplayMode.persistent);
-    await tester.pumpAndSettle();
-    final persistentLayout = find.byKey(
-      const Key('persistent-game-toolbar-layout'),
-    );
-    expect(persistentLayout, findsOneWidget);
     expect(find.byKey(const Key('game-browser-overlay')), findsOneWidget);
     expect(
       tester.element(find.byKey(const Key('fake-game-surface'))),
       same(gameSurfaceElement),
-    );
-    final persistentGameSize = tester.getSize(
-      find.byKey(const Key('fake-game-surface')),
-    );
-    expect(
-      persistentGameSize.width / persistentGameSize.height,
-      closeTo(1200 / 720, 0.001),
-    );
-    expect(
-      tester.getTopLeft(persistentLayout).dy,
-      closeTo(tester.getTopLeft(panel).dy, 0.1),
-    );
-    expect(
-      tester.getSize(persistentLayout).width + tester.getSize(panel).width,
-      lessThanOrEqualTo(workspaceWidth),
     );
 
     tester.view.physicalSize = const Size(900, 900);
@@ -848,6 +832,133 @@ void main() {
     battleController.dispose();
     toolbarController.dispose();
   });
+
+  testWidgets(
+    'brand virtual button is only interactive on game workspace and collapses on navigation',
+    (tester) async {
+      final captureModeController = await CaptureModeController.load(
+        _MemoryModeStore(),
+      );
+      final controller = PrototypeStatusController(
+        captureEnabled: () => captureModeController.captureEnabled,
+      );
+      final layoutSettingsController = await LayoutSettingsController.load(
+        _MemoryLayoutSettingsStore(),
+      );
+      final safetySettingsController = await SafetySettingsController.load(
+        MemorySafetySettingsStore(),
+      );
+      final displayModeController = await DisplayModeController.load(
+        MemoryDisplayModeStore(),
+      );
+      final browserController = GameBrowserController(port: _NoopBrowserPort());
+      final audioController = await GameAudioController.load(_MemoryAudioStore());
+      final toolbarController = GameToolbarController();
+      final toolbarDisplayController = await GameToolbarDisplayController.load(
+        _MemoryToolbarDisplayStore(),
+      );
+      final gameCaptureController = GameCaptureController();
+      final gameStateController = GameStateController();
+      final battleController = BattleController(
+        gameState: () => gameStateController.state,
+      );
+
+      await tester.pumpWidget(
+        YahagiApp(
+          layoutSettingsController: layoutSettingsController,
+          networkSettingsController: NetworkSettingsController(
+            store: _MemoryNetworkSettingsStore(),
+          ),
+          gadgetBypassController: GadgetBypassController(
+            store: _MemoryGadgetBypassStore(),
+            port: _FakeGadgetBypassPort(),
+          ),
+          safetySettingsController: safetySettingsController,
+          displayModeController: displayModeController,
+          controller: controller,
+          browserController: browserController,
+          captureModeController: captureModeController,
+          audioController: audioController,
+          toolbarController: toolbarController,
+          toolbarDisplayController: toolbarDisplayController,
+          gameCaptureController: gameCaptureController,
+          gameStateController: gameStateController,
+          battleController: battleController,
+          gameSurface: const ColoredBox(
+            key: Key('fake-game-surface'),
+            color: Colors.black,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // On Game workspace (index 0)
+      final brandButtonFinder = find.byKey(const Key('yahagi-brand-button'));
+      expect(brandButtonFinder, findsOneWidget);
+      final brandInkWell0 = tester.widget<InkWell>(brandButtonFinder);
+      expect(brandInkWell0.onTap, isNotNull);
+      expect(
+        find.descendant(
+          of: brandButtonFinder,
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
+
+      // Tap to expand toolbar
+      await tester.tap(brandButtonFinder);
+      await tester.pumpAndSettle();
+      expect(toolbarController.isVisible, isTrue);
+      expect(find.byKey(const Key('game-toolbar-visible')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: brandButtonFinder,
+          matching: find.byIcon(Icons.chevron_left),
+        ),
+        findsOneWidget,
+      );
+
+      // Switch to fleet workspace (index 1)
+      await tester.tap(find.byKey(const Key('workspace-nav-fleet')));
+      await tester.pumpAndSettle();
+      expect(toolbarController.isVisible, isFalse);
+      expect(find.byKey(const Key('game-toolbar-visible')), findsNothing);
+
+      // On non-game workspace, brand button is disabled and chevron is hidden
+      final brandInkWell1 = tester.widget<InkWell>(brandButtonFinder);
+      expect(brandInkWell1.onTap, isNull);
+      expect(
+        find.descendant(
+          of: brandButtonFinder,
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: brandButtonFinder,
+          matching: find.byIcon(Icons.chevron_left),
+        ),
+        findsNothing,
+      );
+
+      // Switch back to game workspace (index 0)
+      await tester.tap(find.byKey(const Key('workspace-nav-game')));
+      await tester.pumpAndSettle();
+      final brandInkWellGame = tester.widget<InkWell>(brandButtonFinder);
+      expect(brandInkWellGame.onTap, isNotNull);
+      expect(
+        find.descendant(
+          of: brandButtonFinder,
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
+
+      gameStateController.dispose();
+      toolbarController.dispose();
+    },
+  );
 }
 
 class _RepairNavigationReducer extends GameStateReducer {

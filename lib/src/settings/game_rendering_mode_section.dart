@@ -30,6 +30,17 @@ class GameRenderingModeSection extends StatelessWidget {
               key: Key('rendering-mode-progress'),
               minHeight: 2,
             ),
+          if (!kIsWeb &&
+              defaultTargetPlatform == TargetPlatform.android) ...<Widget>[
+            _modeTile(
+              context,
+              key: const Key('rendering-mode-native-activity'),
+              mode: GameRenderingMode.nativeActivityExperimental,
+              title: l10n.gameRenderingModeNativeActivity,
+              subtitle: l10n.gameRenderingModeNativeActivityDesc,
+            ),
+            const Divider(color: Color(0xff294052), height: 1),
+          ],
           _modeTile(
             context,
             key: const Key('rendering-mode-compatibility'),
@@ -53,17 +64,6 @@ class GameRenderingModeSection extends StatelessWidget {
             title: l10n.gameRenderingModeCanvas,
             subtitle: l10n.gameRenderingModeCanvasDesc,
           ),
-          if (!kIsWeb &&
-              defaultTargetPlatform == TargetPlatform.android) ...<Widget>[
-            const Divider(color: Color(0xff294052), height: 1),
-            _modeTile(
-              context,
-              key: const Key('rendering-mode-native-activity'),
-              mode: GameRenderingMode.nativeActivityExperimental,
-              title: l10n.gameRenderingModeNativeActivity,
-              subtitle: l10n.gameRenderingModeNativeActivityDesc,
-            ),
-          ],
         ],
       ),
     );
@@ -77,22 +77,50 @@ class GameRenderingModeSection extends StatelessWidget {
     required String subtitle,
   }) {
     final selected = controller.mode == mode;
-    return ListTile(
+    return InkWell(
       key: key,
-      contentPadding: const EdgeInsets.only(left: 4, right: 16),
-      minLeadingWidth: 0,
-      horizontalTitleGap: 0,
-      enabled: !controller.isBusy,
-      selected: selected,
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        color: selected ? const Color(0xff70c7bc) : null,
-      ),
       onTap: controller.isBusy || selected
           ? null
           : () => _requestChange(context, mode),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xff8197a5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color:
+                  selected ? const Color(0xff70c7bc) : const Color(0xff8197a5),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

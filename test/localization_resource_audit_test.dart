@@ -135,6 +135,9 @@ void main() {
       // “升序/降序” are standard sorting terms in both Chinese scripts.
       'sortAscending',
       'sortDescending',
+      'sortieCheckMapsMode',
+      'mapHpGauges',
+      'allMapsCleared',
     };
     const reviewedJa = <String>{
       'appTitle',
@@ -142,6 +145,7 @@ void main() {
       // 入渠 and 泊地 are the established Japanese in-game repair mode names.
       'repairDockMode',
       'anchorageRepairMode',
+      'sortieCheckMapsMode',
       'firepower',
       'torpedo',
       'airPower',

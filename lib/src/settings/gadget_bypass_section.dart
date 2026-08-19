@@ -95,25 +95,46 @@ class _GadgetBypassSectionState extends State<GadgetBypassSection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            SwitchListTile(
-              key: const Key('gadget-bypass-switch'),
-              value: controller.enabled,
-              activeTrackColor: const Color(0xffb98a28),
-              activeThumbColor: const Color(0xff403923),
-              title: Text(
-                l10n.gadgetBypassEnable,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          l10n.gadgetBypassEnable,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          l10n.gadgetBypassDesc,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xff8197a5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Switch(
+                    key: const Key('gadget-bypass-switch'),
+                    value: controller.enabled,
+                    activeTrackColor: const Color(0xffb98a28),
+                    activeThumbColor: const Color(0xff403923),
+                    onChanged: controller.isApplying || !controller.supported
+                        ? null
+                        : _setEnabled,
+                  ),
+                ],
               ),
-              subtitle: Text(
-                l10n.gadgetBypassDesc,
-                style: const TextStyle(fontSize: 12, color: Color(0xff8197a5)),
-              ),
-              onChanged: controller.isApplying || !controller.supported
-                  ? null
-                  : _setEnabled,
             ),
             if (!controller.supported)
               Padding(

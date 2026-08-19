@@ -168,6 +168,8 @@ class MasterMapInfo {
     required this.mapNo,
     required this.name,
     this.operationText = '',
+    this.requiredDefeatCount,
+    this.maxMapHp,
   });
 
   final int id;
@@ -175,6 +177,8 @@ class MasterMapInfo {
   final int mapNo;
   final String name;
   final String operationText;
+  final int? requiredDefeatCount;
+  final int? maxMapHp;
 
   String get displayName {
     final operation = operationText.trim();
@@ -184,6 +188,152 @@ class MasterMapInfo {
       return name;
     }
     return '$name/$operation';
+  }
+}
+
+class MemberMapInfo {
+  const MemberMapInfo({
+    required this.id,
+    required this.mapAreaId,
+    required this.mapNo,
+    this.name = '',
+    this.operationText = '',
+    this.cleared = false,
+    this.defeatCount,
+    this.requiredDefeatCount,
+    this.currentHp,
+    this.maxHp,
+    this.gaugeType,
+    this.gaugeNum,
+    this.gaugeMaxNum,
+    this.selectedRank,
+    this.isEvent = false,
+  });
+
+  final int id;
+  final int mapAreaId;
+  final int mapNo;
+  final String name;
+  final String operationText;
+  final bool cleared;
+  final int? defeatCount;
+  final int? requiredDefeatCount;
+  final int? currentHp;
+  final int? maxHp;
+  final int? gaugeType;
+  final int? gaugeNum;
+  final int? gaugeMaxNum;
+  final int? selectedRank;
+  final bool isEvent;
+
+  String get code => '$mapAreaId-$mapNo';
+
+  String get displayName {
+    if (name.isNotEmpty) return name;
+    final operation = operationText.trim();
+    if (operation.isEmpty || operation == name) return name;
+    return '$name/$operation';
+  }
+
+  bool get isExtra =>
+      !isEvent &&
+      (mapNo >= 5 ||
+          (mapAreaId == 1 && mapNo == 6) ||
+          (mapAreaId == 1 && mapNo == 5));
+
+  bool get isSpNormal =>
+      !isEvent &&
+      !isExtra &&
+      ((mapAreaId == 7 && mapNo >= 2) ||
+          (gaugeMaxNum != null && gaugeMaxNum! > 1));
+
+  String get categoryTag {
+    if (isEvent) return 'Event';
+    if (isExtra) return 'Extra';
+    if (isSpNormal) return 'SP Normal';
+    return 'Normal';
+  }
+
+  String? get rankName => switch (selectedRank) {
+    4 => '甲',
+    3 => '乙',
+    2 => '丙',
+    1 => '丁',
+    _ => null,
+  };
+
+  bool get hasGauge => isEvent || isExtra || isSpNormal;
+
+  int get currentGaugeValue {
+    if (currentHp != null && maxHp != null && maxHp! > 0) {
+      return currentHp!;
+    }
+    if (requiredDefeatCount != null && requiredDefeatCount! > 0) {
+      final req = requiredDefeatCount!;
+      final count = defeatCount ?? (cleared ? req : 0);
+      final current = req - count;
+      return current.clamp(0, req);
+    }
+    return 0;
+  }
+
+  int get maxGaugeValue {
+    if (currentHp != null && maxHp != null && maxHp! > 0) {
+      return maxHp!;
+    }
+    if (requiredDefeatCount != null && requiredDefeatCount! > 0) {
+      return requiredDefeatCount!;
+    }
+    return 0;
+  }
+
+  bool get isGaugeCleared {
+    if (isEvent) {
+      return cleared || (currentHp != null && currentHp! <= 0);
+    }
+    return currentGaugeValue <= 0;
+  }
+
+  double get percentage {
+    final max = maxGaugeValue;
+    if (max <= 0) return isGaugeCleared ? 0.0 : 1.0;
+    return (currentGaugeValue / max).clamp(0.0, 1.0);
+  }
+
+  MemberMapInfo copyWith({
+    int? id,
+    int? mapAreaId,
+    int? mapNo,
+    String? name,
+    String? operationText,
+    bool? cleared,
+    int? defeatCount,
+    int? requiredDefeatCount,
+    int? currentHp,
+    int? maxHp,
+    int? gaugeType,
+    int? gaugeNum,
+    int? gaugeMaxNum,
+    int? selectedRank,
+    bool? isEvent,
+  }) {
+    return MemberMapInfo(
+      id: id ?? this.id,
+      mapAreaId: mapAreaId ?? this.mapAreaId,
+      mapNo: mapNo ?? this.mapNo,
+      name: name ?? this.name,
+      operationText: operationText ?? this.operationText,
+      cleared: cleared ?? this.cleared,
+      defeatCount: defeatCount ?? this.defeatCount,
+      requiredDefeatCount: requiredDefeatCount ?? this.requiredDefeatCount,
+      currentHp: currentHp ?? this.currentHp,
+      maxHp: maxHp ?? this.maxHp,
+      gaugeType: gaugeType ?? this.gaugeType,
+      gaugeNum: gaugeNum ?? this.gaugeNum,
+      gaugeMaxNum: gaugeMaxNum ?? this.gaugeMaxNum,
+      selectedRank: selectedRank ?? this.selectedRank,
+      isEvent: isEvent ?? this.isEvent,
+    );
   }
 }
 
@@ -632,6 +782,7 @@ class GameState {
     this.masterMissions = const <int, MasterMission>{},
     this.masterMapInfos = const <int, MasterMapInfo>{},
     Map<int, int> mapDifficulties = const <int, int>{},
+    this.memberMapInfos = const <int, MemberMapInfo>{},
     this.ships = const <int, OwnedShip>{},
     this.slotItems = const <int, OwnedSlotItem>{},
     this.fleets = const <Fleet>[],
@@ -676,6 +827,7 @@ class GameState {
   final Map<int, MasterMission> masterMissions;
   final Map<int, MasterMapInfo> masterMapInfos;
   final Map<int, int>? _mapDifficulties;
+  final Map<int, MemberMapInfo> memberMapInfos;
   final Map<int, OwnedShip> ships;
   final Map<int, OwnedSlotItem> slotItems;
   final List<Fleet> fleets;
@@ -756,6 +908,7 @@ class GameState {
     Map<int, MasterMission>? masterMissions,
     Map<int, MasterMapInfo>? masterMapInfos,
     Map<int, int>? mapDifficulties,
+    Map<int, MemberMapInfo>? memberMapInfos,
     Map<int, OwnedShip>? ships,
     Map<int, OwnedSlotItem>? slotItems,
     List<Fleet>? fleets,
@@ -788,6 +941,7 @@ class GameState {
       masterMissions: masterMissions ?? this.masterMissions,
       masterMapInfos: masterMapInfos ?? this.masterMapInfos,
       mapDifficulties: mapDifficulties ?? this.mapDifficulties,
+      memberMapInfos: memberMapInfos ?? this.memberMapInfos,
       ships: ships ?? this.ships,
       slotItems: slotItems ?? this.slotItems,
       fleets: fleets ?? this.fleets,

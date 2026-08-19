@@ -238,10 +238,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clearQuestCacheDesc => '清除本地缓存的脱敏任务数据，重启应用后需进入游戏内任务面板重新获取';
 
   @override
-  String get clearWebCache => '清理游戏 Web 缓存';
+  String get clearWebCache => '清理浏览器网页缓存';
 
   @override
-  String get clearWebCacheDesc => '清除游戏加载的图片、音频等静态资源缓存。';
+  String get clearWebCacheDesc => '清除 WebView 网页内核的临时页面与脚本数据。';
 
   @override
   String get fleetBrief => '编队简报';
@@ -281,6 +281,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get preSortieCheck => '出击前检查';
+
+  @override
+  String get sortieCheckShipsMode => '舰娘';
+
+  @override
+  String get sortieCheckMapsMode => '海域';
+
+  @override
+  String get mapHpGauges => '海域血量';
+
+  @override
+  String get noMapGaugeData => '暂无海域血量数据';
+
+  @override
+  String get noMapGaugeDataHint => '请在游戏中进入出击海域以同步数据';
+
+  @override
+  String get showClearedMaps => '显示已攻略';
+
+  @override
+  String get allMapsCleared => '所有海域已攻略完成';
 
   @override
   String get forecast => '未卜先知';
@@ -334,11 +355,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inProgress => '进行中';
 
   @override
-  String get clearWebCacheConfirmTitle => '清理游戏 Web 缓存';
+  String get clearWebCacheConfirmTitle => '清理浏览器网页缓存';
 
   @override
   String get clearWebCacheConfirmDesc =>
-      '确定要清除游戏缓存吗？这将会删除已下载的图片、音频等静态资源，下次进入游戏或加载立绘时可能会消耗较多流量和时间。';
+      '确定要清除浏览器网页缓存吗？这将会删除 WebView 网页内核缓存的临时数据，不影响已下载的游戏本地资源包。';
 
   @override
   String get confirmClear => '确定清除';
@@ -434,9 +455,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get battleWarningOff => '关闭';
 
   @override
-  String get battleWarningReminder => '闪烁提醒';
-
-  @override
   String get battleWarningConfirm => '弹框确认';
 
   @override
@@ -458,7 +476,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get questCacheCleared => '已清除任务数据本地缓存';
 
   @override
-  String get webCacheCleared => '已清理游戏 Web 缓存';
+  String get webCacheCleared => '已清理浏览器网页缓存';
 
   @override
   String get clearLogbook => '清理航海日志数据';
@@ -1246,32 +1264,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameRenderingModeTitle => '游戏渲染模式';
 
   @override
-  String get gameRenderingModeStandard => '高性能模式';
+  String get gameRenderingModeStandard => '轻量模式';
 
   @override
   String get gameRenderingModeStandardDesc =>
-      'Texture Layer + WebGL，保留工具栏模糊效果。性能损耗大，可能会卡顿。';
+      'Texture Layer + WebGL，减少部分合成开销，部分设备可能存在显示或触控兼容问题。';
 
   @override
-  String get gameRenderingModeCompatibility => '标准模式（推荐）';
+  String get gameRenderingModeCompatibility => '均衡模式（推荐）';
 
   @override
   String get gameRenderingModeCompatibilityDesc =>
-      'Hybrid Composition + WebGL，关闭工具栏模糊；性能损耗平均。';
+      'Hybrid Composition + WebGL，兼顾游戏性能与设备兼容性。';
 
   @override
   String get gameRenderingModeCanvas => '兼容模式';
 
   @override
   String get gameRenderingModeCanvasDesc =>
-      'Hybrid Composition + Canvas，关闭工具栏模糊；兼容性优先，画面性能可能降低。';
+      'Hybrid Composition + Canvas，绕过 WebGL，优先解决部分 GPU / WebGL 兼容问题，画面性能可能降低。';
 
   @override
-  String get gameRenderingModeNativeActivity => '原生直连（实验）';
+  String get gameRenderingModeNativeActivity => '原生直连（推荐）';
 
   @override
   String get gameRenderingModeNativeActivityDesc =>
-      'Activity 直接承载 WebView，保留当前 Poi 布局；用于验证长时间运行时的内存稳定性。';
+      'Activity Direct WebView + WebGL，理论上具有更低的合成开销与更好的原生兼容性。';
 
   @override
   String get gameRenderingModeConfirmTitle => '切换游戏渲染模式？';
@@ -1679,10 +1697,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameResourceCacheLightDesc => '缓存启动文件、常用 UI、已持有舰娘立绘和装备资源。';
 
   @override
-  String get gameResourceCacheFull => '完整缓存';
+  String get gameResourceCacheFull => '本地缓存';
 
   @override
-  String get gameResourceCacheFullDesc => '预下载固定基础资源清单（约 5.8 GB）；新内容会在游玩时自动缓存。';
+  String get gameResourceCacheFullDesc =>
+      '预下载固定基础资源清单（约 5.49 GB）；新内容会在游玩时自动缓存。';
 
   @override
   String get gameResourceCacheStart => '开始下载';
@@ -1979,10 +1998,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get clearQuestCacheDesc => '清除本機快取的脫敏任務資料，重啟應用程式後需進入遊戲內任務面板重新獲取';
 
   @override
-  String get clearWebCache => '清理遊戲 Web 快取';
+  String get clearWebCache => '清理瀏覽器網頁快取';
 
   @override
-  String get clearWebCacheDesc => '清除遊戲載入的圖片、音訊等靜態資源快取。';
+  String get clearWebCacheDesc => '清除 WebView 網頁核心的暫存頁面與指令碼資料。';
 
   @override
   String get fleetBrief => '艦隊簡報';
@@ -2022,6 +2041,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get preSortieCheck => '出擊前檢查';
+
+  @override
+  String get sortieCheckShipsMode => '艦娘';
+
+  @override
+  String get sortieCheckMapsMode => '海域';
+
+  @override
+  String get mapHpGauges => '海域血量';
+
+  @override
+  String get noMapGaugeData => '暫無海域血量數據';
+
+  @override
+  String get noMapGaugeDataHint => '請在遊戲中進入出擊海域以同步數據';
+
+  @override
+  String get showClearedMaps => '顯示已攻略';
+
+  @override
+  String get allMapsCleared => '所有海域已攻略完成';
 
   @override
   String get forecast => '未卜先知';
@@ -2075,11 +2115,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get inProgress => '進行中';
 
   @override
-  String get clearWebCacheConfirmTitle => '清理遊戲 Web 快取';
+  String get clearWebCacheConfirmTitle => '清理瀏覽器網頁快取';
 
   @override
   String get clearWebCacheConfirmDesc =>
-      '確定要清除遊戲快取嗎？這將會刪除已下載的圖片、音訊等靜態資源，下次進入遊戲或載入立繪時可能會消耗較多流量和時間。';
+      '確定要清除瀏覽器網頁快取嗎？這將會刪除 WebView 網頁核心快取的暫存資料，不影響已下載的遊戲本機資源包。';
 
   @override
   String get confirmClear => '確定清除';
@@ -2175,9 +2215,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get battleWarningOff => '關閉';
 
   @override
-  String get battleWarningReminder => '閃爍提醒';
-
-  @override
   String get battleWarningConfirm => '彈框確認';
 
   @override
@@ -2200,7 +2237,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get questCacheCleared => '已清除任務資料本機快取';
 
   @override
-  String get webCacheCleared => '已清理遊戲 Web 快取';
+  String get webCacheCleared => '已清理瀏覽器網頁快取';
 
   @override
   String get clearLogbook => '清理航海日誌資料';
@@ -2988,32 +3025,32 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameRenderingModeTitle => '遊戲渲染模式';
 
   @override
-  String get gameRenderingModeStandard => '高效能模式';
+  String get gameRenderingModeStandard => '輕量模式';
 
   @override
   String get gameRenderingModeStandardDesc =>
-      'Texture Layer + WebGL，保留工具列模糊效果。效能損耗大，可能會卡頓。';
+      'Texture Layer + WebGL，減少部分合成開銷，部分裝置可能存在顯示或觸控相容性問題。';
 
   @override
-  String get gameRenderingModeCompatibility => '標準模式（推薦）';
+  String get gameRenderingModeCompatibility => '均衡模式（推薦）';
 
   @override
   String get gameRenderingModeCompatibilityDesc =>
-      'Hybrid Composition + WebGL，關閉工具列模糊；效能損耗平均。';
+      'Hybrid Composition + WebGL，兼顧遊戲效能與裝置相容性。';
 
   @override
   String get gameRenderingModeCanvas => '相容模式';
 
   @override
   String get gameRenderingModeCanvasDesc =>
-      'Hybrid Composition + Canvas，關閉工具列模糊；相容性優先，畫面效能可能降低。';
+      'Hybrid Composition + Canvas，繞過 WebGL，優先解決部分 GPU / WebGL 相容性問題，畫面效能可能降低。';
 
   @override
-  String get gameRenderingModeNativeActivity => '原生直連（實驗）';
+  String get gameRenderingModeNativeActivity => '原生直連（推薦）';
 
   @override
   String get gameRenderingModeNativeActivityDesc =>
-      'Activity 直接承載 WebView，保留目前的 Poi 版面配置；用於驗證長時間執行時的記憶體穩定性。';
+      'Activity Direct WebView + WebGL，理論上具有更低的合成開銷與更好的原生相容性。';
 
   @override
   String get gameRenderingModeConfirmTitle => '切換遊戲渲染模式？';
@@ -3421,11 +3458,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameResourceCacheLightDesc => '快取啟動檔案、常用 UI、已持有艦娘立繪與裝備資源。';
 
   @override
-  String get gameResourceCacheFull => '完整快取';
+  String get gameResourceCacheFull => '本機快取';
 
   @override
   String get gameResourceCacheFullDesc =>
-      '預先下載固定基礎資源清單（約 5.8 GB）；新內容會在遊玩時自動快取。';
+      '預先下載固定基礎資源清單（約 5.49 GB）；新內容會在遊玩時自動快取。';
 
   @override
   String get gameResourceCacheStart => '開始下載';

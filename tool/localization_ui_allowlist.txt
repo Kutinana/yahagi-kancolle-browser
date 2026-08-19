@@ -31,3 +31,7 @@
 "lib/src/quest/quest_translation_fallbacks.dart|【强化反潜战力】强化海防舰反潜兵装"
 "lib/src/quest/quest_translation_fallbacks.dart|【续：强化反潜战力】进一步扩充反潜兵装"
 "lib/src/quest/quest_translation_fallbacks.dart|【新型反潜兵装开发】开发反潜喷进爆雷炮"
+"lib/src/game_state/game_state.dart|甲"
+"lib/src/game_state/game_state.dart|乙"
+"lib/src/game_state/game_state.dart|丙"
+"lib/src/game_state/game_state.dart|丁"

@@ -241,10 +241,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'ローカルにキャッシュされた任務データを消去します。アプリ再起動後にゲーム内の任務画面で再取得する必要があります。';
 
   @override
-  String get clearWebCache => 'ゲーム Web キャッシュの消去';
+  String get clearWebCache => 'ブラウザのWebキャッシュを消去';
 
   @override
-  String get clearWebCacheDesc => 'ゲームが読み込んだ画像や音声などの静的リソースのキャッシュを消去します。';
+  String get clearWebCacheDesc => 'WebView エンジンが保持する一時的なページやスクリプトデータを消去します。';
 
   @override
   String get fleetBrief => '編成情報';
@@ -284,6 +284,27 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get preSortieCheck => '出撃前検査';
+
+  @override
+  String get sortieCheckShipsMode => '艦娘';
+
+  @override
+  String get sortieCheckMapsMode => '海域';
+
+  @override
+  String get mapHpGauges => '海域ゲージ';
+
+  @override
+  String get noMapGaugeData => '海域ゲージデータがありません';
+
+  @override
+  String get noMapGaugeDataHint => 'ゲーム内で出撃海域を開いて同期してください';
+
+  @override
+  String get showClearedMaps => '攻略済みを表示';
+
+  @override
+  String get allMapsCleared => 'すべての海域を攻略済みです';
 
   @override
   String get forecast => '戦闘予測';
@@ -337,11 +358,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inProgress => '進行中';
 
   @override
-  String get clearWebCacheConfirmTitle => 'ゲーム Web キャッシュの消去';
+  String get clearWebCacheConfirmTitle => 'ブラウザのWebキャッシュを消去';
 
   @override
   String get clearWebCacheConfirmDesc =>
-      'ゲームのキャッシュを消去しますか？ダウンロード済みの画像や音声などの静的リソースが削除されるため、次回起動時や立ち絵の読み込み時に多くの通信量と時間がかかる場合があります。';
+      'ブラウザのWebキャッシュを消去しますか？WebView が保持する一時データを削除します。ダウンロード済みのローカルリソースには影響しません。';
 
   @override
   String get confirmClear => '消去する';
@@ -437,9 +458,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get battleWarningOff => 'オフ';
 
   @override
-  String get battleWarningReminder => '点滅通知';
-
-  @override
   String get battleWarningConfirm => '確認ダイアログ';
 
   @override
@@ -462,7 +480,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get questCacheCleared => '任務データのローカルキャッシュを消去しました';
 
   @override
-  String get webCacheCleared => 'ゲーム Web キャッシュを消去しました';
+  String get webCacheCleared => 'ブラウザのWebキャッシュを消去しました';
 
   @override
   String get clearLogbook => '航海日誌データの消去';
@@ -1254,32 +1272,32 @@ class AppLocalizationsJa extends AppLocalizations {
   String get gameRenderingModeTitle => 'ゲーム描画モード';
 
   @override
-  String get gameRenderingModeStandard => '高性能モード';
+  String get gameRenderingModeStandard => '軽量モード';
 
   @override
   String get gameRenderingModeStandardDesc =>
-      'Texture Layer + WebGL。ツールバーのぼかし効果を維持します。性能負荷が大きく、動作が重くなる場合があります。';
+      'Texture Layer + WebGL。一部の合成負荷を軽減しますが、一部の端末で表示やタッチの互換性問題が発生する場合があります。';
 
   @override
-  String get gameRenderingModeCompatibility => '標準モード（推奨）';
+  String get gameRenderingModeCompatibility => '均衡モード（推奨）';
 
   @override
   String get gameRenderingModeCompatibilityDesc =>
-      'Hybrid Composition + WebGL。ぼかしを無効化します。性能負荷は平均的です。';
+      'Hybrid Composition + WebGL。ゲーム性能と端末互換性を両立します。';
 
   @override
   String get gameRenderingModeCanvas => '互換モード';
 
   @override
   String get gameRenderingModeCanvasDesc =>
-      'Hybrid Composition + Canvas。互換性を優先するため、描画性能が低下する場合があります。';
+      'Hybrid Composition + Canvas。WebGL を回避し、GPU / WebGL の互換性問題を優先的に解決します。描画性能が低下する場合があります。';
 
   @override
-  String get gameRenderingModeNativeActivity => 'ネイティブ直結（実験）';
+  String get gameRenderingModeNativeActivity => 'ネイティブ直結（推奨）';
 
   @override
   String get gameRenderingModeNativeActivityDesc =>
-      'Activity が WebView を直接ホストし、現在の Poi レイアウトを維持します。長時間動作時のメモリ安定性を検証するためのモードです。';
+      'Activity Direct WebView + WebGL。理論上、合成負荷が低く、ネイティブ互換性に優れています。';
 
   @override
   String get gameRenderingModeConfirmTitle => 'ゲーム描画モードを切り替えますか？';
@@ -1690,11 +1708,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get gameResourceCacheLightDesc => '起動ファイル、主要 UI、保有艦娘と装備のリソースを保存します。';
 
   @override
-  String get gameResourceCacheFull => '完全キャッシュ';
+  String get gameResourceCacheFull => 'ローカルキャッシュ';
 
   @override
   String get gameResourceCacheFullDesc =>
-      '固定の基本リソース一覧（約 5.8 GB）を事前取得します。新しい内容はプレイ中に自動保存されます。';
+      '固定の基本リソース一覧（約 5.49 GB）を事前取得します。新しい内容はプレイ中に自動保存されます。';
 
   @override
   String get gameResourceCacheStart => 'ダウンロード開始';

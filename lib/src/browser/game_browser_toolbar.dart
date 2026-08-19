@@ -54,19 +54,22 @@ class GameBrowserToolbar extends StatelessWidget {
         persistent &&
         screenSize.width > screenSize.height &&
         screenSize.shortestSide < 600;
-    final toolbarHeight = isLandscapePhone ? 36.0 : (persistent ? 42.0 : 48.0);
-    final persistentActionSize = isLandscapePhone ? 34.0 : 40.0;
-    final navigationActionSize = isLandscapePhone ? 34.0 : 36.0;
+    final toolbarHeight = isLandscapePhone ? 36.0 : (persistent ? 42.0 : 34.0);
+    final persistentActionSize =
+        isLandscapePhone ? 34.0 : (persistent ? 40.0 : 28.0);
+    final navigationActionSize =
+        isLandscapePhone ? 34.0 : (persistent ? 36.0 : 28.0);
     final toolbar = Container(
       height: toolbarHeight,
       decoration: BoxDecoration(
-        color: const Color(0xff0a1622).withValues(alpha: 0.65),
+        color: const Color(0xff0a1622).withValues(alpha: 0.9),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(persistent ? 12 : 8),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           if (isRealWeb) ...[
             _ToolbarButton(
               key: const Key('browser-back'),
@@ -89,42 +92,52 @@ class GameBrowserToolbar extends StatelessWidget {
               onPressed: interactionEnabled ? onHome : null,
               size: navigationActionSize,
             ),
-          ] else
+          ] else ...[
+            _ToolbarButton(
+              key: const Key('browser-reload'),
+              icon: Icons.refresh,
+              tooltip: l10n.reload,
+              onPressed: interactionEnabled ? onReload : null,
+              size: navigationActionSize,
+            ),
             TextButton.icon(
               key: const Key('browser-enter-dmm'),
               onPressed: interactionEnabled ? onEnterDmm : null,
-              icon: const Icon(Icons.login, size: 17),
-              label: Text(l10n.enterDmm),
+              icon: const Icon(Icons.login, size: 15),
+              label: Text(l10n.enterDmm, style: const TextStyle(fontSize: 12)),
             ),
-          if (!persistent) ...<Widget>[
-            const SizedBox(width: 6),
-            Expanded(
+          ],
+          if (!persistent && displayAddress.isNotEmpty) ...<Widget>[
+            const SizedBox(width: 4),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
               child: Container(
-                height: 28,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                height: 24,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.03),
+                    color: Colors.white.withValues(alpha: 0.04),
                   ),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
                       Icons.lock_outline,
-                      size: 12,
+                      size: 11,
                       color: Color(0xff70c7bc),
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
+                    const SizedBox(width: 4),
+                    Flexible(
                       child: Text(
                         displayAddress,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xff9bb0bb),
-                          fontSize: 12,
+                          fontSize: 11,
                         ),
                       ),
                     ),
@@ -135,26 +148,24 @@ class GameBrowserToolbar extends StatelessWidget {
           ],
           if (loadState == GamePageLoadState.loading)
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+              padding: EdgeInsets.symmetric(horizontal: 6),
               child: SizedBox.square(
-                dimension: 15,
+                dimension: 14,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-            )
-          else
-            const SizedBox(width: 2),
+            ),
+          const SizedBox(width: 2),
           SizedBox.square(
             dimension: persistentActionSize,
             child: IconButton(
               key: const Key('game-audio-toggle'),
               padding: EdgeInsets.zero,
               tooltip: isMuted ? l10n.enableGameAudio : l10n.disableGameAudio,
-              onPressed: interactionEnabled && audioEnabled
-                  ? onToggleMuted
-                  : null,
+              onPressed:
+                  interactionEnabled && audioEnabled ? onToggleMuted : null,
               icon: Icon(
                 isMuted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
-                size: 19,
+                size: persistent ? 19 : 16,
               ),
             ),
           ),
@@ -165,10 +176,10 @@ class GameBrowserToolbar extends StatelessWidget {
               padding: EdgeInsets.zero,
               tooltip: l10n.takeScreenshot,
               onPressed: interactionEnabled ? onScreenshot : null,
-              icon: const Icon(
+              icon: Icon(
                 Icons.camera_alt_outlined,
-                size: 19,
-                color: Color(0xffd4a85f),
+                size: persistent ? 19 : 16,
+                color: const Color(0xffd4a85f),
               ),
             ),
           ),
@@ -179,24 +190,26 @@ class GameBrowserToolbar extends StatelessWidget {
               padding: EdgeInsets.zero,
               tooltip: l10n.fitGameScreen,
               onPressed: interactionEnabled ? onFitScreen : null,
-              icon: const Icon(Icons.crop_free, size: 18),
+              icon: Icon(Icons.crop_free, size: persistent ? 18 : 16),
             ),
           ),
           if (!persistent)
-            IconButton(
-              key: const Key('browser-toolbar-collapse'),
-              constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-              padding: EdgeInsets.zero,
-              tooltip: l10n.collapseToolbar,
-              onPressed: interactionEnabled ? onCollapse : null,
-              icon: const Icon(Icons.keyboard_arrow_up, size: 22),
+            SizedBox.square(
+              dimension: persistentActionSize,
+              child: IconButton(
+                key: const Key('browser-toolbar-collapse'),
+                padding: EdgeInsets.zero,
+                tooltip: l10n.collapseToolbar,
+                onPressed: interactionEnabled ? onCollapse : null,
+                icon: const Icon(Icons.chevron_left, size: 18),
+              ),
             ),
           const SizedBox(width: 4),
         ],
       ),
     );
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(persistent ? 12 : 8),
       child: enableBackdropBlur
           ? BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),

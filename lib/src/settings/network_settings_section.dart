@@ -360,70 +360,33 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
                 ),
               ),
 
-            RadioGroup<NetworkMode>(
-              groupValue: _selectedMode,
-              onChanged: _onModeChanged,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  RadioListTile<NetworkMode>(
-                    title: Text(
-                      l10n.systemNetwork,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      l10n.systemNetworkDesc,
-                      style: const TextStyle(
-                        color: Color(0xff8197a5),
-                        fontSize: 12,
-                      ),
-                    ),
-                    value: NetworkMode.system,
-                    activeColor: const Color(0xffd4a85f),
-                  ),
-                  RadioListTile<NetworkMode>(
-                    title: Text(
-                      l10n.httpProxy,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      l10n.httpProxyDesc,
-                      style: const TextStyle(
-                        color: Color(0xff8197a5),
-                        fontSize: 12,
-                      ),
-                    ),
-                    value: NetworkMode.httpProxy,
-                    activeColor: const Color(0xffd4a85f),
-                    enabled: isProxySupported,
-                  ),
-                  RadioListTile<NetworkMode>(
-                    title: Text(
-                      l10n.socks5Proxy,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      l10n.socks5ProxyDesc,
-                      style: const TextStyle(
-                        color: Color(0xff8197a5),
-                        fontSize: 12,
-                      ),
-                    ),
-                    value: NetworkMode.socks5Proxy,
-                    activeColor: const Color(0xffd4a85f),
-                    enabled: isProxySupported,
-                  ),
-                ],
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _networkModeTile(
+                  key: const Key('network-mode-system'),
+                  mode: NetworkMode.system,
+                  title: l10n.systemNetwork,
+                  subtitle: l10n.systemNetworkDesc,
+                  enabled: true,
+                ),
+                const Divider(color: Color(0xff294052), height: 1),
+                _networkModeTile(
+                  key: const Key('network-mode-http'),
+                  mode: NetworkMode.httpProxy,
+                  title: l10n.httpProxy,
+                  subtitle: l10n.httpProxyDesc,
+                  enabled: isProxySupported,
+                ),
+                const Divider(color: Color(0xff294052), height: 1),
+                _networkModeTile(
+                  key: const Key('network-mode-socks5'),
+                  mode: NetworkMode.socks5Proxy,
+                  title: l10n.socks5Proxy,
+                  subtitle: l10n.socks5ProxyDesc,
+                  enabled: isProxySupported,
+                ),
+              ],
             ),
 
             if (_selectedMode != NetworkMode.system)
@@ -554,6 +517,69 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
           ],
         );
       },
+    );
+  }
+
+  Widget _networkModeTile({
+    Key? key,
+    required NetworkMode mode,
+    required String title,
+    required String subtitle,
+    required bool enabled,
+  }) {
+    final selected = _selectedMode == mode;
+    return InkWell(
+      key: key,
+      onTap: enabled
+          ? () {
+              if (!selected) _onModeChanged(mode);
+            }
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: enabled ? null : const Color(0xff526776),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: enabled
+                          ? const Color(0xff8197a5)
+                          : const Color(0xff526776),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: selected
+                  ? const Color(0xffd4a85f)
+                  : enabled
+                      ? const Color(0xff8197a5)
+                      : const Color(0xff526776),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

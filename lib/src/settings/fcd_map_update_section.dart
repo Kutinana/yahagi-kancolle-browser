@@ -15,42 +15,58 @@ final class FcdMapUpdateSection extends StatelessWidget {
     const metadataStyle = TextStyle(color: Color(0xff8197a5));
     return AnimatedBuilder(
       animation: controller,
-      builder: (context, _) => ListTile(
-        contentPadding: const EdgeInsets.only(left: 4, right: 16),
-        minLeadingWidth: 0,
-        horizontalTitleGap: 0,
-        title: Text(
-          l10n.fcdMapDataTitle,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-        subtitle: Wrap(
-          spacing: 16,
-          runSpacing: 2,
-          children: [
-            Text(
-              l10n.fcdMapDataVersion(controller.version.toString()),
-              style: metadataStyle,
-            ),
-            Text(
-              controller.lastCheckedAt == null
-                  ? l10n.fcdMapNeverChecked
-                  : l10n.fcdMapLastChecked(
-                      _formatTime(controller.lastCheckedAt!.toLocal()),
+      builder: (context, _) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    l10n.fcdMapDataTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                     ),
-              style: metadataStyle,
+                  ),
+                  const SizedBox(height: 3),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 2,
+                    children: [
+                      Text(
+                        l10n.fcdMapDataVersion(controller.version.toString()),
+                        style: metadataStyle,
+                      ),
+                      Text(
+                        controller.lastCheckedAt == null
+                            ? l10n.fcdMapNeverChecked
+                            : l10n.fcdMapLastChecked(
+                                _formatTime(controller.lastCheckedAt!.toLocal()),
+                              ),
+                        style: metadataStyle,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              key: const Key('fcd-map-check-button'),
+              tooltip: l10n.fcdMapCheckUpdates,
+              onPressed: controller.isChecking ? null : () => _check(context),
+              icon: controller.isChecking
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.sync, color: Color(0xffd4a85f)),
             ),
           ],
-        ),
-        trailing: IconButton(
-          key: const Key('fcd-map-check-button'),
-          tooltip: l10n.fcdMapCheckUpdates,
-          onPressed: controller.isChecking ? null : () => _check(context),
-          icon: controller.isChecking
-              ? const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.sync, color: Color(0xffd4a85f)),
         ),
       ),
     );

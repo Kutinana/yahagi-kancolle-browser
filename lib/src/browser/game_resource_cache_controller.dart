@@ -5,12 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'game_resource_cache_channel.dart';
 import 'game_resource_cache_store.dart';
 
-String formatCacheCompleteness(int cachedBytes, int targetBytes) {
+String formatCacheCompleteness(int cachedBytes, [int? targetBytes]) {
   final cachedGb = cachedBytes / 1000000000;
-  final percent = targetBytes <= 0
-      ? 0.0
-      : (cachedBytes / targetBytes * 100).clamp(0.0, 100.0);
-  return '${cachedGb.toStringAsFixed(2)} GB（${percent.toStringAsFixed(1)}%）';
+  return '${cachedGb.toStringAsFixed(2)} GB';
 }
 
 final class GameResourceCacheController extends ChangeNotifier {
@@ -35,9 +32,8 @@ final class GameResourceCacheController extends ChangeNotifier {
   GameResourceCacheStatus get status => _status;
   bool get initialized => _initialized;
   bool get busy => _busy;
-  String get completenessLine => _status.targetBytes > 0
-      ? formatCacheCompleteness(_status.cachedBytes, _status.targetBytes)
-      : '0.00 GB（--）';
+  String get completenessLine =>
+      formatCacheCompleteness(_status.cachedBytes, _status.targetBytes);
 
   Future<void> initialize() async {
     _mode = await _store.load();
