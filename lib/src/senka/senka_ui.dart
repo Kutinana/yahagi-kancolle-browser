@@ -23,11 +23,13 @@ class SenkaPanel extends StatelessWidget {
     required this.child,
     this.trailing,
     this.compact = false,
+    this.headerHeight,
   });
   final String title;
   final Widget child;
   final Widget? trailing;
   final bool compact;
+  final double? headerHeight;
   @override
   Widget build(BuildContext context) => Material(
     color: senkaPanel,
@@ -40,7 +42,7 @@ class SenkaPanel extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: trailing == null ? (compact ? 28 : 36) : 44,
+            height: headerHeight ?? (compact ? 28 : 36),
             color: senkaPanelAlt,
             padding: EdgeInsets.symmetric(horizontal: compact ? 7 : 11),
             child: Row(

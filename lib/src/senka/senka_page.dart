@@ -4,7 +4,6 @@ import 'senka_calendar_view.dart';
 import 'senka_calculator_view.dart';
 import 'senka_controller.dart';
 import 'senka_info_view.dart';
-import 'senka_state.dart';
 import 'senka_ui.dart';
 
 enum _SenkaSection { info, calendar, calculator }
@@ -29,12 +28,13 @@ class _SenkaPageState extends State<SenkaPage> {
           final compact =
               constraints.maxHeight <= 450 || constraints.maxWidth <= 450;
           final state = widget.controller.state;
+          final instant = widget.now ?? DateTime.now().toUtc();
           return Padding(
             padding: EdgeInsets.all(compact ? 4 : 10),
             child: Column(
               children: [
                 SizedBox(
-                  height: compact ? 40 : 44,
+                  height: 44,
                   child: Row(
                     children: [
                       _tab('info', '战果信息', _SenkaSection.info, compact),
@@ -60,13 +60,13 @@ class _SenkaPageState extends State<SenkaPage> {
                     ),
                     _SenkaSection.calendar => SenkaCalendarView(
                       state: state,
-                      now: widget.now ?? toJst(DateTime.now().toUtc()),
+                      now: instant,
                       compact: compact,
                     ),
                     _SenkaSection.calculator => SenkaCalculatorView(
                       state: state,
                       controller: widget.controller,
-                      now: widget.now ?? toJst(DateTime.now().toUtc()),
+                      now: instant,
                       compact: compact,
                     ),
                   },

@@ -79,4 +79,20 @@ void main() {
     expect(result.dailyRequired, 10);
     expect(result.todayRemaining, 6);
   });
+
+  test('UTC 17:30 跨过 JST 战果日边界时不偏日', () {
+    final state = SenkaState.forMonth('2026-08').copyWith(
+      targetSenka: 31,
+      days: const {'2026-08-31': SenkaDayRecord(experience: 5)},
+    );
+
+    final result = SenkaCalculationResult.fromState(
+      state,
+      now: DateTime.utc(2026, 8, 30, 17, 30),
+    );
+
+    expect(result.remainingDays, 1);
+    expect(result.dailyRequired, 31);
+    expect(result.todayRemaining, 26);
+  });
 }

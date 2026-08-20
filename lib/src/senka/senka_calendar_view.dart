@@ -25,9 +25,11 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
     super.didUpdateWidget(oldWidget);
     final oldMonth = parseSenkaMonthKey(oldWidget.state.monthKey);
     final newMonth = parseSenkaMonthKey(widget.state.monthKey);
+    final oldDate = senkaBusinessDate(oldWidget.now);
+    final newDate = senkaBusinessDate(widget.now);
     if (oldMonth != newMonth ||
-        oldWidget.now.year != widget.now.year ||
-        oldWidget.now.month != widget.now.month) {
+        oldDate.year != newDate.year ||
+        oldDate.month != newDate.month) {
       selected = _initialSelection(widget.state, widget.now);
     }
   }
@@ -35,8 +37,9 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
   @override
   Widget build(BuildContext context) {
     final parsed = parseSenkaMonthKey(widget.state.monthKey);
-    final year = parsed?.year ?? widget.now.year;
-    final month = parsed?.month ?? widget.now.month;
+    final currentDate = senkaBusinessDate(widget.now);
+    final year = parsed?.year ?? currentDate.year;
+    final month = parsed?.month ?? currentDate.month;
     final first = DateTime(year, month, 1);
     final leading = first.weekday - 1;
     final count = DateTime(year, month + 1, 0).day;
@@ -59,7 +62,7 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
         children: [
           Container(
             key: const Key('calendar-weekday-background'),
-            height: widget.compact ? 24 : 32,
+            height: widget.compact ? 20 : 32,
             color: senkaWeekdayBackground,
             child: Row(
               key: const Key('calendar-weekday-row'),
@@ -106,7 +109,7 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
           ),
           Container(
             key: const Key('senka-day-detail'),
-            height: widget.compact ? 28 : 38,
+            height: widget.compact ? 22 : 38,
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: senkaLine)),
             ),
@@ -217,9 +220,12 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
 }
 
 DateTime _initialSelection(SenkaState state, DateTime now) {
+  final currentDate = senkaBusinessDate(now);
   final month = parseSenkaMonthKey(state.monthKey);
-  if (month == null) return DateTime(now.year, now.month, now.day);
-  return now.year == month.year && now.month == month.month
-      ? DateTime(month.year, month.month, now.day)
+  if (month == null) {
+    return DateTime(currentDate.year, currentDate.month, currentDate.day);
+  }
+  return currentDate.year == month.year && currentDate.month == month.month
+      ? DateTime(month.year, month.month, currentDate.day)
       : DateTime(month.year, month.month, 1);
 }

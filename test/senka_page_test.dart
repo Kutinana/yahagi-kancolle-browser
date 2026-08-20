@@ -3,6 +3,7 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_calendar_view.dart';
+import 'package:yahagi_kancolle_browser/src/senka/senka_calculator_view.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_controller.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
@@ -115,6 +116,31 @@ void main() {
       Tristate.isTrue,
     );
     semantics.dispose();
+  });
+
+  testWidgets('SenkaPage 默认向子页传递未平移的 UTC instant', (tester) async {
+    final before = DateTime.now().toUtc();
+    await pumpSenkaWithoutNow(tester, controller, const Size(844, 390));
+    final calendarNow = tester
+        .widget<SenkaCalendarView>(find.byType(SenkaCalendarView))
+        .now;
+    final afterCalendar = DateTime.now().toUtc();
+    expect(calendarNow.isUtc, isTrue);
+    expect(
+      calendarNow.isBefore(before) || calendarNow.isAfter(afterCalendar),
+      isFalse,
+    );
+    await tester.tap(find.byKey(const Key('senka-tab-calculator')));
+    await tester.pump();
+    final calculatorNow = tester
+        .widget<SenkaCalculatorView>(find.byType(SenkaCalculatorView))
+        .now;
+    final afterCalculator = DateTime.now().toUtc();
+    expect(calculatorNow.isUtc, isTrue);
+    expect(
+      calculatorNow.isBefore(before) || calculatorNow.isAfter(afterCalculator),
+      isFalse,
+    );
   });
 
   testWidgets('信息页横屏左右等宽，方形与竖屏顺序滚动', (tester) async {
@@ -333,7 +359,7 @@ void main() {
     await pumpCalendar(
       tester,
       sampleState(),
-      DateTime(2026, 8, 10),
+      DateTime.utc(2026, 8, 10, 3),
       const Size(800, 700),
     );
     await tester.tap(find.byKey(const Key('calendar-cell-15')));
@@ -351,7 +377,7 @@ void main() {
     await pumpCalendar(
       tester,
       september,
-      DateTime(2026, 9, 8),
+      DateTime.utc(2026, 9, 8, 3),
       const Size(800, 700),
     );
     expect(
@@ -365,12 +391,30 @@ void main() {
     await pumpCalendar(
       tester,
       SenkaState.forMonth('2026-10'),
-      DateTime(2026, 9, 30),
+      DateTime.utc(2026, 9, 30, 3),
       const Size(800, 700),
     );
     expect(
       tester
           .getSemantics(find.bySemanticsLabel('2026年10月1日，战果0.00'))
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('日历内部将 UTC instant 转为 JST 战果日', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCalendar(
+      tester,
+      SenkaState.forMonth('2026-08'),
+      DateTime.utc(2026, 8, 30, 17, 30),
+      const Size(800, 700),
+    );
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('2026年8月31日，战果0.00'))
           .flagsCollection
           .isSelected,
       Tristate.isTrue,
@@ -641,6 +685,40 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('手机横竖屏主交互命中区均不小于 44px', (tester) async {
+    for (final size in const [Size(844, 390), Size(390, 844)]) {
+      await pumpSenka(tester, controller, size);
+      await tester.tap(find.byKey(const Key('senka-tab-info')));
+      await tester.pump();
+      for (final tab in const ['info', 'calendar', 'calculator']) {
+        expect(
+          tester.getRect(find.byKey(Key('senka-tab-$tab'))).height,
+          greaterThanOrEqualTo(44),
+        );
+      }
+      for (final action in const ['senka-favorite-1-1', 'senka-hide-1-1']) {
+        final rect = tester.getRect(find.byKey(Key(action)));
+        expect(rect.width, greaterThanOrEqualTo(44));
+        expect(rect.height, greaterThanOrEqualTo(44));
+      }
+      await tester.tap(find.byKey(const Key('senka-tab-calendar')));
+      await tester.pump();
+      final calendarCell = tester.getRect(
+        find.byKey(const Key('calendar-cell-10')),
+      );
+      expect(calendarCell.width, greaterThanOrEqualTo(44));
+      expect(calendarCell.height, greaterThanOrEqualTo(44));
+      await tester.tap(find.byKey(const Key('senka-tab-calculator')));
+      await tester.pump();
+      final reward = tester.getRect(
+        find.byKey(const Key('senka-toggle-eo-15')),
+      );
+      expect(reward.width, greaterThanOrEqualTo(44));
+      expect(reward.height, greaterThanOrEqualTo(44));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('390×844 在 1.3 倍文字下三页无溢出且关键内容可滚动', (tester) async {
     await pumpSenka(tester, controller, const Size(390, 844), textScale: 1.3);
     await dragUntilVisible(
@@ -706,13 +784,37 @@ Future<void> pumpSenka(
           Expanded(
             child: SenkaPage(
               controller: controller,
-              now: DateTime(2026, 8, 10),
+              now: DateTime.utc(2026, 8, 10, 3),
             ),
           ),
         ],
       ),
     ),
   );
+  await tester.pump();
+}
+
+Future<void> pumpSenkaWithoutNow(
+  WidgetTester tester,
+  SenkaController controller,
+  Size size,
+) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: ThemeData.dark(useMaterial3: true),
+      home: Row(
+        children: [
+          const SizedBox(width: 58),
+          Expanded(child: SenkaPage(controller: controller)),
+        ],
+      ),
+    ),
+  );
+  await tester.tap(find.byKey(const Key('senka-tab-calendar')));
   await tester.pump();
 }
 

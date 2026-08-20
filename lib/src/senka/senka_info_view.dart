@@ -114,7 +114,7 @@ double _sortiePanelHeight(SenkaState state, bool showHidden, bool compact) {
       .length;
   const panelHeaderHeight = 44.0;
   final tableHeaderHeight = compact ? 28.0 : 36.0;
-  const dataRowHeight = 40.0;
+  const dataRowHeight = 44.0;
   return panelHeaderHeight + tableHeaderHeight + rowCount * dataRowHeight + 2;
 }
 
@@ -343,6 +343,7 @@ class _SortiePanel extends StatelessWidget {
     return SenkaPanel(
       title: '出击海域统计',
       compact: compact,
+      headerHeight: 44,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -408,7 +409,7 @@ class _SortiePanel extends StatelessWidget {
 
   Widget _sortieData(SenkaSortieStats stats) => SizedBox(
     key: Key('senka-sortie-row-${stats.mapKey}'),
-    height: 40,
+    height: 44,
     child: DecoratedBox(
       decoration: BoxDecoration(
         color: state.favoriteSortieMapKeys.contains(stats.mapKey)
@@ -456,8 +457,8 @@ class _SortiePanel extends StatelessWidget {
                     excludeSemantics: true,
                     child: SizedBox(
                       key: Key('senka-favorite-${stats.mapKey}'),
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       child: InkWell(
                         onTap: () =>
                             controller.toggleSortieFavorite(stats.mapKey),
@@ -487,8 +488,8 @@ class _SortiePanel extends StatelessWidget {
                     excludeSemantics: true,
                     child: SizedBox(
                       key: Key('senka-hide-${stats.mapKey}'),
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       child: InkWell(
                         onTap: () =>
                             controller.toggleSortieHidden(stats.mapKey),

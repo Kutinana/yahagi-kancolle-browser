@@ -411,7 +411,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                 for (final item in items)
                   SizedBox(
                     width: width,
-                    height: 40,
+                    height: 44,
                     child: _reward(item, quest),
                   ),
               ],
@@ -543,7 +543,7 @@ double _taskPanelHeight(BuildContext context, double width, bool compact) {
   final titleHeight =
       MediaQuery.textScalerOf(context).scale(titleFontSize) * 1.3;
   final titleGap = compact ? 3.0 : 6.0;
-  const chipHeight = 40.0;
+  const chipHeight = 44.0;
   final groupCounts = [
     senkaEoCatalog.length,
     senkaQuarterlyQuestCatalog.length,
