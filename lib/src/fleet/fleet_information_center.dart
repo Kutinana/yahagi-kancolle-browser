@@ -939,24 +939,28 @@ class _FleetFocusPanel extends StatelessWidget {
                                             ship.effectiveSpeed(master),
                                           ).foreground,
                                         ),
-                                        for (final mechanism in mechanisms.take(
-                                          1,
-                                        )) ...[
+                                        for (final mechanism in mechanisms) ...[
                                           const SizedBox(width: 4),
                                           _MiniBadge(
-                                            text: mechanism.label,
-                                            color:
-                                                mechanism.tone ==
-                                                    MechanismTone.antiAir
-                                                ? const Color(0xffffc861)
-                                                : const Color(0xff8ec6e8),
+                                            text: mechanism.effectiveShortLabel,
+                                            color: switch (mechanism.tone) {
+                                              MechanismTone.antiAir =>
+                                                const Color(0xffffc861),
+                                              MechanismTone.specialAttack =>
+                                                const Color(0xffff8b88),
+                                              MechanismTone.nightAttack =>
+                                                const Color(0xffbfa4ff),
+                                              MechanismTone.neutral ||
+                                              MechanismTone.antiSubmarine =>
+                                                const Color(0xff8ec6e8),
+                                            },
                                           ),
                                         ],
                                         if (specialAttack != null) ...[
                                           const SizedBox(width: 4),
-                                          const _MiniBadge(
-                                            text: '特殊攻击',
-                                            color: Color(0xffff8b88),
+                                          _MiniBadge(
+                                            text: specialAttack!.effectiveShortLabel,
+                                            color: const Color(0xffff8b88),
                                           ),
                                         ],
                                         const SizedBox(width: 4),
@@ -1300,6 +1304,19 @@ class _ShipParameterDetails extends StatelessWidget {
       ('射程', _rangeText(ship.effectiveRange(master))),
       ('运', '${ship.luck}'),
     ];
+    final shipMechanisms = detectShipCombatMechanisms(state, ship);
+    final fleet = state.fleetForShip(ship.id);
+    final specialAttack =
+        fleet != null && _isSpecialAttackParticipant(state, fleet, ship)
+        ? detectFleetSpecialAttack(state, fleet)
+        : null;
+    final allMechanisms = <EquipmentMechanismDisplay>[
+      ...shipMechanisms,
+      if (specialAttack != null) specialAttack,
+    ];
+
+    final totalCount = stats.length + allMechanisms.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1312,40 +1329,146 @@ class _ShipParameterDetails extends StatelessWidget {
               crossAxisSpacing: 6,
               mainAxisSpacing: 6,
             ),
-            itemCount: stats.length,
-            itemBuilder: (context, index) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
+            itemCount: totalCount,
+            itemBuilder: (context, index) {
+              if (index < stats.length) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff102331),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          stats[index].$1,
+                          style: const TextStyle(
+                            color: Color(0xff8197a5),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        stats[index].$2,
+                        style: const TextStyle(
+                          color: Color(0xffe1e9ed),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final mech = allMechanisms[index - stats.length];
+              final valueText = mech.rate != null
+                  ? '${(mech.rate! * 100).round()}%'
+                  : '有效';
+              final labelColor = switch (mech.tone) {
+                MechanismTone.antiAir => const Color(0xffffc861),
+                MechanismTone.specialAttack => const Color(0xffff8b88),
+                MechanismTone.nightAttack => const Color(0xffbfa4ff),
+                MechanismTone.neutral ||
+                MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
+              };
+
+              return Material(
                 color: const Color(0xff102331),
                 borderRadius: BorderRadius.circular(7),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      stats[index].$1,
-                      style: const TextStyle(
-                        color: Color(0xff8197a5),
-                        fontSize: 11,
-                      ),
+                child: InkWell(
+                  onTap: () => _showMechanismDetails(context, mech),
+                  borderRadius: BorderRadius.circular(7),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            mech.shortLabel ?? mech.label,
+                            style: TextStyle(
+                              color: labelColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          valueText,
+                          style: const TextStyle(
+                            color: Color(0xffe1e9ed),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    stats[index].$2,
-                    style: const TextStyle(
-                      color: Color(0xffe1e9ed),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ],
     );
+  }
+
+  static Future<void> _showMechanismDetails(
+    BuildContext context,
+    EquipmentMechanismDisplay mechanism,
+  ) {
+    final foregroundColor = switch (mechanism.tone) {
+      MechanismTone.antiAir => const Color(0xffffc861),
+      MechanismTone.specialAttack => const Color(0xffff8b88),
+      MechanismTone.nightAttack => const Color(0xffbfa4ff),
+      MechanismTone.neutral ||
+      MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
+    };
+
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xff142735),
+        title: Text(
+          mechanism.label,
+          style: TextStyle(
+            color: foregroundColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          mechanism.description,
+          style: const TextStyle(color: Color(0xffe1e9ed), height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static bool _isSpecialAttackParticipant(
+    GameState state,
+    Fleet fleet,
+    OwnedShip ship,
+  ) {
+    final specialAttack = detectFleetSpecialAttack(state, fleet);
+    if (specialAttack == null) return false;
+    final shipIndex = fleet.shipIds.indexOf(ship.id);
+    if (shipIndex < 0) return false;
+
+    return switch (specialAttack.label) {
+      'Nelson Touch' => shipIndex == 0 || shipIndex == 2 || shipIndex == 4,
+      'Colorado Touch' => shipIndex >= 0 && shipIndex <= 2,
+      '潜水舰队攻击' => shipIndex >= 0 && shipIndex <= 3,
+      _ => shipIndex == 0 || shipIndex == 1,
+    };
   }
 
   static String _rangeText(int range) => switch (range) {
@@ -1657,7 +1780,8 @@ class _ShipRow extends StatelessWidget {
     final specialMechanism = specialAttack == null
         ? null
         : EquipmentMechanismDisplay(
-            label: AppLocalizations.of(context)?.specialAttack ?? '特殊攻击',
+            label: specialAttack!.label,
+            shortLabel: specialAttack!.effectiveShortLabel,
             description:
                 '${specialAttack!.label}\n\n${specialAttack!.description}',
             tone: MechanismTone.specialAttack,
@@ -2315,12 +2439,14 @@ class _ShipRow extends StatelessWidget {
       backgroundColor = switch (mechanism.tone) {
         MechanismTone.antiAir => const Color(0xff4b3a1d),
         MechanismTone.specialAttack => const Color(0xff5a2528),
+        MechanismTone.nightAttack => const Color(0xff392854),
         MechanismTone.neutral ||
         MechanismTone.antiSubmarine => const Color(0xff29445a),
       };
       foregroundColor = switch (mechanism.tone) {
         MechanismTone.antiAir => const Color(0xffffc861),
         MechanismTone.specialAttack => const Color(0xffff8b88),
+        MechanismTone.nightAttack => const Color(0xffbfa4ff),
         MechanismTone.neutral ||
         MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
       };
@@ -2332,7 +2458,7 @@ class _ShipRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        mechanism.label,
+        mechanism.effectiveShortLabel,
         maxLines: 1,
         softWrap: false,
         style: TextStyle(
@@ -2487,25 +2613,34 @@ class _EquipmentDetails extends StatelessWidget {
 }
 
 class _MechanismChip extends StatelessWidget {
-  const _MechanismChip({required this.mechanism, this.isSpecialAttack = false});
+  const _MechanismChip({
+    required this.mechanism,
+    this.isSpecialAttack = false,
+    this.showRate = false,
+  });
 
   final EquipmentMechanismDisplay mechanism;
   final bool isSpecialAttack;
+  final bool showRate;
 
   @override
   Widget build(BuildContext context) {
     final backgroundColor = switch (mechanism.tone) {
       MechanismTone.antiAir => const Color(0xff4b3a1d),
       MechanismTone.specialAttack => const Color(0xff5a2528),
+      MechanismTone.nightAttack => const Color(0xff392854),
       MechanismTone.neutral ||
       MechanismTone.antiSubmarine => const Color(0xff29445a),
     };
     final foregroundColor = switch (mechanism.tone) {
       MechanismTone.antiAir => const Color(0xffffc861),
       MechanismTone.specialAttack => const Color(0xffff8b88),
+      MechanismTone.nightAttack => const Color(0xffbfa4ff),
       MechanismTone.neutral ||
       MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
     };
+    final label =
+        showRate ? mechanism.detailedShortLabel : mechanism.effectiveShortLabel;
     return Material(
       color: isSpecialAttack ? const Color(0xff5a2528) : backgroundColor,
       borderRadius: BorderRadius.circular(5),
@@ -2515,7 +2650,7 @@ class _MechanismChip extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           child: Text(
-            mechanism.label,
+            label,
             style: TextStyle(
               color: isSpecialAttack
                   ? const Color(0xffff8b88)
@@ -2542,6 +2677,7 @@ class _MechanismChip extends StatelessWidget {
                 : switch (mechanism.tone) {
                     MechanismTone.antiAir => const Color(0xffffc861),
                     MechanismTone.specialAttack => const Color(0xffff8b88),
+                    MechanismTone.nightAttack => const Color(0xffbfa4ff),
                     MechanismTone.neutral ||
                     MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
                   },

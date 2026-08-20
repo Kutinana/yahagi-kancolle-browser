@@ -10,6 +10,7 @@ import '../capture/game_capture_controller.dart';
 import '../diagnostics/diagnostic_controller.dart';
 import '../prototype_status_controller.dart';
 import '../game_state/game_state_controller.dart';
+import '../senka/senka_controller.dart';
 import 'layout_settings_controller.dart';
 import 'display_mode_controller.dart';
 import 'safety_settings_controller.dart';
@@ -41,6 +42,7 @@ class SettingsPage extends StatelessWidget {
     required this.gameCaptureController,
     required this.prototypeStatusController,
     required this.gameStateController,
+    this.senkaController,
     this.gameResourceCacheController,
     required this.safetySettingsController,
     required this.currentVersion,
@@ -70,6 +72,7 @@ class SettingsPage extends StatelessWidget {
   final GameCaptureController gameCaptureController;
   final PrototypeStatusController prototypeStatusController;
   final GameStateController gameStateController;
+  final SenkaController? senkaController;
   final GameResourceCacheController? gameResourceCacheController;
   final SafetySettingsController safetySettingsController;
   final bool showTitle;
@@ -119,6 +122,7 @@ class SettingsPage extends StatelessWidget {
           gameCaptureController: gameCaptureController,
           prototypeStatusController: prototypeStatusController,
           gameStateController: gameStateController,
+          senkaController: senkaController,
           gameResourceCacheController: gameResourceCacheController,
           diagnosticController: diagnosticController,
           showDeveloperDiagnostics: showDeveloperDiagnostics,

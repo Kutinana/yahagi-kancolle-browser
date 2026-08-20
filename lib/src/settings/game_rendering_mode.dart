@@ -23,6 +23,6 @@ abstract final class GameRenderingModeCodec {
     for (final mode in GameRenderingMode.values) {
       if (mode.storageName == value) return mode;
     }
-    return GameRenderingMode.compatibility;
+    return GameRenderingMode.nativeActivityExperimental;
   }
 }

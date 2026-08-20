@@ -138,6 +138,7 @@ void main() {
       'sortieCheckMapsMode',
       'mapHpGauges',
       'allMapsCleared',
+      'gameRenderingModeCompatibility',
     };
     const reviewedJa = <String>{
       'appTitle',

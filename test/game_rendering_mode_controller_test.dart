@@ -13,7 +13,7 @@ void main() {
   test('shared preferences store defaults and round-trips', () async {
     final store = SharedPreferencesGameRenderingModeStore();
 
-    expect(await store.load(), GameRenderingMode.compatibility);
+    expect(await store.load(), GameRenderingMode.nativeActivityExperimental);
     await store.save(GameRenderingMode.canvasCompatibility);
     expect(await store.load(), GameRenderingMode.canvasCompatibility);
   });
@@ -34,13 +34,15 @@ void main() {
   });
 
   test('selecting the active mode does not save or restart', () async {
-    final store = _CountingStore(GameRenderingMode.compatibility);
+    final store = _CountingStore(GameRenderingMode.nativeActivityExperimental);
     final controller = await GameRenderingModeController.load(store);
     final port = _RecordingRestartPort();
     controller.attachRestartPort(port);
     addTearDown(controller.dispose);
 
-    final result = await controller.changeMode(GameRenderingMode.compatibility);
+    final result = await controller.changeMode(
+      GameRenderingMode.nativeActivityExperimental,
+    );
 
     expect(result.status, GameRenderingModeChangeStatus.unchanged);
     expect(store.saveCount, 0);
@@ -74,7 +76,9 @@ void main() {
     controller.attachRestartPort(port);
     addTearDown(controller.dispose);
 
-    final result = await controller.changeMode(GameRenderingMode.compatibility);
+    final result = await controller.changeMode(
+      GameRenderingMode.nativeActivityExperimental,
+    );
 
     expect(result.status, GameRenderingModeChangeStatus.saveFailed);
     expect(controller.mode, GameRenderingMode.standard);
@@ -82,7 +86,7 @@ void main() {
   });
 
   test(
-    'restart failure rolls back persisted and active mode to compatibility',
+    'restart failure rolls back persisted and active mode to nativeActivityExperimental',
     () async {
       final store = MemoryGameRenderingModeStore();
       final controller = await GameRenderingModeController.load(store);
@@ -95,11 +99,14 @@ void main() {
       );
 
       expect(result.status, GameRenderingModeChangeStatus.rolledBack);
-      expect(controller.mode, GameRenderingMode.compatibility);
-      expect(await store.load(), GameRenderingMode.compatibility);
+      expect(controller.mode, GameRenderingMode.nativeActivityExperimental);
+      expect(
+        await store.load(),
+        GameRenderingMode.nativeActivityExperimental,
+      );
       expect(port.modes, <GameRenderingMode>[
         GameRenderingMode.canvasCompatibility,
-        GameRenderingMode.compatibility,
+        GameRenderingMode.nativeActivityExperimental,
       ]);
     },
   );

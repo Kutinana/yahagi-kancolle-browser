@@ -44,7 +44,7 @@ void main() {
   });
 
   test(
-    'stored names round-trip and invalid values fall back to compatibility',
+    'stored names round-trip and invalid values fall back to nativeActivityExperimental',
     () {
       for (final mode in GameRenderingMode.values) {
         expect(GameRenderingModeCodec.decode(mode.storageName), mode);
@@ -52,11 +52,11 @@ void main() {
 
       expect(
         GameRenderingModeCodec.decode(null),
-        GameRenderingMode.compatibility,
+        GameRenderingMode.nativeActivityExperimental,
       );
       expect(
         GameRenderingModeCodec.decode('broken'),
-        GameRenderingMode.compatibility,
+        GameRenderingMode.nativeActivityExperimental,
       );
     },
   );

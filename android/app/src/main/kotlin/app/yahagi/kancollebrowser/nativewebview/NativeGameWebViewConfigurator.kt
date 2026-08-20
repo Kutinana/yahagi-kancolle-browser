@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.os.Build
 import android.view.View
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -19,18 +20,24 @@ internal enum class NativeGameWebViewConfigurationAction {
     HARDWARE_LAYER,
     ACCEPT_COOKIE,
     ACCEPT_THIRD_PARTY_COOKIES,
+    PRESENTATION_BRIDGE_SET,
     WEB_VIEW_CLIENT_SET,
     WEB_CHROME_CLIENT_SET,
 }
 
 /** Applies the deliberately narrow configuration used by the native game WebView. */
 internal object NativeGameWebViewConfigurator {
-    fun configure(webView: WebView, client: WebViewClient) = configure(webView, client) {}
+    fun configure(
+        webView: WebView,
+        client: WebViewClient,
+        onPresentationStateChanged: (Boolean) -> Unit = {},
+    ) = configure(webView, client, onPresentationStateChanged) {}
 
     @SuppressLint("ObsoleteSdkInt", "SetJavaScriptEnabled")
     internal fun configure(
         webView: WebView,
         client: WebViewClient,
+        onPresentationStateChanged: (Boolean) -> Unit,
         onApplied: (NativeGameWebViewConfigurationAction) -> Unit,
     ) {
         webView.settings.apply {
@@ -59,10 +66,27 @@ internal object NativeGameWebViewConfigurator {
                 onApplied(NativeGameWebViewConfigurationAction.ACCEPT_THIRD_PARTY_COOKIES)
             }
         }
+        webView.addJavascriptInterface(
+            NativeGamePresentationBridge(onPresentationStateChanged),
+            "YahagiPresentation",
+        )
+        onApplied(NativeGameWebViewConfigurationAction.PRESENTATION_BRIDGE_SET)
         webView.webViewClient = client
         onApplied(NativeGameWebViewConfigurationAction.WEB_VIEW_CLIENT_SET)
         webView.webChromeClient = WebChromeClient()
         onApplied(NativeGameWebViewConfigurationAction.WEB_CHROME_CLIENT_SET)
+    }
+}
+
+internal class NativeGamePresentationBridge(
+    private val onPresentationStateChanged: (Boolean) -> Unit,
+) {
+    @JavascriptInterface
+    fun postMessage(message: String) {
+        when (message) {
+            "game" -> onPresentationStateChanged(true)
+            "web" -> onPresentationStateChanged(false)
+        }
     }
 }
 

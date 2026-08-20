@@ -67,6 +67,13 @@ void main() {
       BattleDamageAlertSeverity.postBattleWarning,
     ]);
     expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('大破安全警告'), findsOneWidget);
+    expect(find.text('出击舰队中存在大破舰娘！'), findsOneWidget);
+    expect(
+      find.text('继续进击前，请确认大破舰的管损及退避状态；无法确保安全时请撤退！'),
+      findsOneWidget,
+    );
+    expect(find.text('确认了解'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

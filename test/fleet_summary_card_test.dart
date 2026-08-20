@@ -32,7 +32,7 @@ void main() {
     await tester.pump();
 
     final level = tester.widget<Text>(find.text('Lv. 50'));
-    final mechanism = tester.widget<Text>(find.text('先制对潜'));
+    final mechanism = tester.widget<Text>(find.text('先反'));
     expect(mechanism.style?.fontSize, level.style?.fontSize);
     expect(mechanism.style?.fontWeight, level.style?.fontWeight);
     expect(find.byKey(const Key('fleet-focus-mechanism-9001')), findsOneWidget);

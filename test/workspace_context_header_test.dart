@@ -5,6 +5,7 @@ import 'package:yahagi_kancolle_browser/src/game_state/combat_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart';
 import 'package:yahagi_kancolle_browser/src/quest/quest_center_page.dart';
+import 'package:yahagi_kancolle_browser/src/senka/senka_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
 
 Widget _localizedApp({required Widget home, Locale? locale}) => MaterialApp(
@@ -192,7 +193,10 @@ void main() {
     );
   });
 
-  testWidgets('senka workspace shows the formal page title', (tester) async {
+  testWidgets('senka workspace shows the formal page title and tabs', (
+    tester,
+  ) async {
+    SenkaCenterMode? changedMode;
     await tester.pumpWidget(
       _localizedApp(
         home: Scaffold(
@@ -200,6 +204,8 @@ void main() {
             workspaceIndex: 9,
             state: state,
             selectedFleetId: 1,
+            senkaMode: SenkaCenterMode.info,
+            onSenkaModeChanged: (mode) => changedMode = mode,
           ),
         ),
       ),
@@ -207,6 +213,22 @@ void main() {
 
     expect(find.byKey(const Key('workspace-title-senka')), findsOneWidget);
     expect(find.text('战果'), findsOneWidget);
+    expect(find.byKey(const Key('senka-mode-tabs')), findsOneWidget);
+    expect(find.byKey(const Key('senka-tab-info')), findsOneWidget);
+    expect(find.byKey(const Key('senka-tab-calendar')), findsOneWidget);
+    expect(find.byKey(const Key('senka-tab-calculator')), findsOneWidget);
+
+    final title = tester.getRect(
+      find.byKey(const Key('workspace-title-senka')),
+    );
+    final switcher = tester.getRect(
+      find.byKey(const Key('senka-mode-tabs')),
+    );
+    expect(switcher.left, greaterThan(title.right));
+    expect(switcher.height, 38);
+
+    await tester.tap(find.byKey(const Key('senka-tab-calendar')));
+    expect(changedMode, SenkaCenterMode.calendar);
   });
 
   testWidgets('quest workspace switches between active and all quests', (

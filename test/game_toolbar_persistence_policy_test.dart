@@ -4,6 +4,33 @@ import 'package:yahagi_kancolle_browser/src/browser/game_toolbar_display_control
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode.dart';
 
 void main() {
+  test('native direct mode reserves only 10px in portrait', () {
+    expect(
+      portraitGamePanelExtraExtent(
+        displayMode: GameToolbarDisplayMode.autoHide,
+        renderingMode: GameRenderingMode.nativeActivityExperimental,
+      ),
+      10,
+    );
+  });
+
+  test('existing modes keep their portrait toolbar extent', () {
+    expect(
+      portraitGamePanelExtraExtent(
+        displayMode: GameToolbarDisplayMode.autoHide,
+        renderingMode: GameRenderingMode.standard,
+      ),
+      0,
+    );
+    expect(
+      portraitGamePanelExtraExtent(
+        displayMode: GameToolbarDisplayMode.persistent,
+        renderingMode: GameRenderingMode.standard,
+      ),
+      42,
+    );
+  });
+
   test('native direct mode always uses a persistent toolbar', () {
     expect(
       shouldUsePersistentGameToolbar(

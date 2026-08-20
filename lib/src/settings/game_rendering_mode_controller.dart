@@ -28,7 +28,9 @@ final class SharedPreferencesGameRenderingModeStore
 }
 
 final class MemoryGameRenderingModeStore implements GameRenderingModeStore {
-  MemoryGameRenderingModeStore([this._mode = GameRenderingMode.compatibility]);
+  MemoryGameRenderingModeStore([
+    this._mode = GameRenderingMode.nativeActivityExperimental,
+  ]);
 
   GameRenderingMode _mode;
 
@@ -130,9 +132,11 @@ final class GameRenderingModeController extends ChangeNotifier {
         );
       } catch (error) {
         try {
-          await _store.save(GameRenderingMode.compatibility);
-          await restartPort.restart(GameRenderingMode.compatibility);
-          _mode = GameRenderingMode.compatibility;
+          await _store.save(GameRenderingMode.nativeActivityExperimental);
+          await restartPort.restart(
+            GameRenderingMode.nativeActivityExperimental,
+          );
+          _mode = GameRenderingMode.nativeActivityExperimental;
           return _finish(
             GameRenderingModeChangeResult(
               GameRenderingModeChangeStatus.rolledBack,

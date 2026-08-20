@@ -1,5 +1,7 @@
 import 'senka_catalog.dart';
 
+const int currentSenkaExperienceTrackingVersion = 1;
+
 enum SenkaRankDirection { up, down, same, unknown }
 
 String senkaMapKey(int areaId, int mapNo) => '$areaId-$mapNo';
@@ -224,6 +226,7 @@ class SenkaRankingRow {
 class SenkaState {
   SenkaState({
     required this.monthKey,
+    this.experienceTrackingVersion = currentSenkaExperienceTrackingVersion,
     this.serverOrigin = '',
     this.memberId = 0,
     this.nickname = '',
@@ -267,6 +270,7 @@ class SenkaState {
       SenkaState(monthKey: monthKey);
 
   final String monthKey;
+  final int experienceTrackingVersion;
   final String serverOrigin;
   final int memberId;
   final String nickname;
@@ -367,6 +371,7 @@ class SenkaState {
 
   SenkaState copyWith({
     String? monthKey,
+    int? experienceTrackingVersion,
     String? serverOrigin,
     int? memberId,
     String? nickname,
@@ -404,6 +409,8 @@ class SenkaState {
             : _replaceCompleted(this.questStatuses, completedQuestIds));
     return SenkaState(
       monthKey: monthKey ?? this.monthKey,
+      experienceTrackingVersion:
+          experienceTrackingVersion ?? this.experienceTrackingVersion,
       serverOrigin: serverOrigin ?? this.serverOrigin,
       memberId: memberId ?? this.memberId,
       nickname: nickname ?? this.nickname,
@@ -436,6 +443,7 @@ class SenkaState {
 
   Map<String, Object?> toJson() => {
     'monthKey': monthKey,
+    'experienceTrackingVersion': experienceTrackingVersion,
     'serverOrigin': serverOrigin,
     'memberId': memberId,
     'nickname': nickname,
@@ -519,6 +527,7 @@ class SenkaState {
     }
     final restored = SenkaState(
       monthKey: monthKey,
+      experienceTrackingVersion: _int(value['experienceTrackingVersion']),
       serverOrigin: '${value['serverOrigin'] ?? ''}',
       memberId: _int(value['memberId']),
       nickname: '${value['nickname'] ?? ''}',
@@ -583,6 +592,21 @@ class SenkaState {
       hiddenSortieMapKeys: restored.hiddenSortieMapKeys,
     );
   }
+}
+
+SenkaState migrateSenkaExperienceTracking(SenkaState state) {
+  if (state.experienceTrackingVersion >=
+      currentSenkaExperienceTrackingVersion) {
+    return state;
+  }
+  return state.copyWith(
+    experienceTrackingVersion: currentSenkaExperienceTrackingVersion,
+    clearLatestExperience: true,
+    days: {
+      for (final entry in state.days.entries)
+        entry.key: SenkaDayRecord(eo: entry.value.eo, quest: entry.value.quest),
+    },
+  );
 }
 
 SenkaState migrateSenkaStateToMonth(SenkaState state, String monthKey) {

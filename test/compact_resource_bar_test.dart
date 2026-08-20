@@ -195,7 +195,7 @@ void main() {
     final senkaDecoration =
         tester.widget<Container>(senka).decoration! as BoxDecoration;
     final senkaBorder = senkaDecoration.border! as Border;
-    expect(senkaBorder.top.color, const Color(0xff213b4b));
+    expect(senkaBorder.top.color, const Color(0xff315064));
 
     final first = find.byKey(const Key('header-resource-ship-capacity'));
     expect(first, findsOneWidget);

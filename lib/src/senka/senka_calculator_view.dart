@@ -119,25 +119,6 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
     return SenkaPanel(
       title: '战果计算',
       compact: widget.compact,
-      trailing: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: widget.compact ? 7 : 10,
-          vertical: widget.compact ? 3 : 4,
-        ),
-        decoration: BoxDecoration(
-          color: senkaLine.withValues(alpha: .34),
-          border: Border.all(color: senkaLine),
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Text(
-          '实时计算',
-          style: TextStyle(
-            color: senkaMuted,
-            fontSize: widget.compact ? 8 : 10,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
       child: Padding(
         padding: EdgeInsets.all(widget.compact ? 7 : 12),
         child: Column(
@@ -190,23 +171,23 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                     const Divider(height: 1, color: senkaLine),
                     Expanded(
                       child: _metricRow(
-                        '剩余日数',
-                        '${result.remainingDays}',
-                        '素战果',
-                        senkaNumber(result.baseSenka),
-                        firstKey: const Key('senka-metric-remaining-days'),
-                        secondKey: const Key('senka-metric-base-senka'),
-                      ),
-                    ),
-                    const Divider(height: 1, color: senkaLine),
-                    Expanded(
-                      child: _metricRow(
                         '每日所需',
                         senkaNumber(result.dailyRequired),
                         '今日剩余',
                         senkaNumber(result.todayRemaining),
                         firstKey: const Key('senka-metric-daily-required'),
                         secondKey: const Key('senka-metric-today-remaining'),
+                      ),
+                    ),
+                    const Divider(height: 1, color: senkaLine),
+                    Expanded(
+                      child: _metricRow(
+                        '素战果',
+                        senkaNumber(result.baseSenka),
+                        '剩余日数',
+                        '${result.remainingDays}',
+                        firstKey: const Key('senka-metric-base-senka'),
+                        secondKey: const Key('senka-metric-remaining-days'),
                       ),
                     ),
                   ],
@@ -406,74 +387,81 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
       widget.state,
       now: widget.now,
     );
-    return SenkaPanel(
-      title: 'EO · 战果奖励矩阵',
-      compact: widget.compact,
-      trailing: Text(
-        '单击循环切换状态',
-        style: TextStyle(
-          color: senkaMuted,
-          fontSize: widget.compact ? 8 : 10,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      child: Column(
-        children: [
-          Expanded(child: _taskGroups(scrollContent, horizontal)),
-          Container(
-            key: const Key('senka-calculator-footer'),
-            height: widget.compact ? 28 : 38,
-            decoration: const BoxDecoration(
-              color: senkaPanelAlt,
-              border: Border(top: BorderSide(color: senkaLine)),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: widget.compact ? 5 : 10),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '黄色 ✕：计划放置   绿色 ✓：计划完成   灰色删除线：已完成',
-                      maxLines: 1,
-                      style: _footerStyle().copyWith(color: senkaMuted),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    '计划 EO 战果奖励 +${senkaNumber(result.plannedEo)}',
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    style: _footerStyle(),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    '计划任务战果奖励 +${senkaNumber(result.plannedQuest)}',
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    style: _footerStyle(),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    '合计：${senkaNumber(result.plannedEo + result.plannedQuest)} 战果',
-                    maxLines: 1,
-                    textAlign: TextAlign.right,
-                    style: _footerStyle().copyWith(color: senkaGold),
-                  ),
-                ),
-              ],
-            ),
+    return Column(
+      children: [
+        Expanded(child: _taskGroups(scrollContent, horizontal)),
+        Container(
+          key: const Key('senka-calculator-footer'),
+          height: widget.compact ? 28 : 38,
+          decoration: const BoxDecoration(
+            color: senkaPanelAlt,
+            border: Border(top: BorderSide(color: senkaLine)),
           ),
-        ],
-      ),
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 5 : 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    style: _footerStyle(),
+                    children: [
+                      const TextSpan(text: '计划 EO 战果奖励 '),
+                      TextSpan(
+                        text: '+${senkaNumber(result.plannedEo)}',
+                        style: const TextStyle(
+                          color: senkaGold,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  textAlign: TextAlign.left,
+                ),
+              ),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    style: _footerStyle(),
+                    children: [
+                      const TextSpan(text: '计划任务战果奖励 '),
+                      TextSpan(
+                        text: '+${senkaNumber(result.plannedQuest)}',
+                        style: const TextStyle(
+                          color: senkaGold,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    style: _footerStyle(),
+                    children: [
+                      const TextSpan(text: '合计 '),
+                      TextSpan(
+                        text:
+                            '+${senkaNumber(result.plannedEo + result.plannedQuest)}',
+                        style: const TextStyle(
+                          color: senkaGold,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -483,20 +471,12 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
       children: [
         _group(
           'EO 战果奖励',
-          '放置 → 计划 → 完成',
           'eo',
           senkaEoCatalog,
           quest: false,
-          columns: 2,
+          legend: '黄色＋✕：计划放置，不计入预计战果，绿色＋✓：计划完成，计入预计战果，灰色＋○：已经完成，不再重复计算。',
         ),
-        _group(
-          '季度战果任务',
-          '放置 → 计划 → 完成',
-          'quarterly',
-          senkaQuarterlyQuestCatalog,
-          quest: true,
-          columns: 2,
-        ),
+        _group('季度战果任务', 'quarterly', senkaQuarterlyQuestCatalog, quest: true),
         if (horizontal)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,7 +484,6 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
               Expanded(
                 child: _group(
                   '年度战果任务',
-                  '手动选择',
                   'annual',
                   senkaAnnualQuestCatalog,
                   quest: true,
@@ -512,11 +491,10 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                   last: true,
                 ),
               ),
-              SizedBox(width: widget.compact ? 5 : 8),
+              SizedBox(width: widget.compact ? 5 : 7),
               Expanded(
                 child: _group(
                   '单次战果任务',
-                  '手动选择',
                   'one-time',
                   senkaOneTimeQuestCatalog,
                   quest: true,
@@ -527,27 +505,18 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
             ],
           )
         else ...[
-          _group(
-            '年度战果任务',
-            '手动选择',
-            'annual',
-            senkaAnnualQuestCatalog,
-            quest: true,
-            columns: 1,
-          ),
+          _group('年度战果任务', 'annual', senkaAnnualQuestCatalog, quest: true),
           _group(
             '单次战果任务',
-            '手动选择',
             'one-time',
             senkaOneTimeQuestCatalog,
             quest: true,
-            columns: 1,
             last: true,
           ),
         ],
       ],
     );
-    final padding = EdgeInsets.all(widget.compact ? 5 : 9);
+    final padding = EdgeInsets.only(bottom: widget.compact ? 4 : 7);
     return scrollContent
         ? SingleChildScrollView(padding: padding, child: groups)
         : Padding(padding: padding, child: groups);
@@ -555,76 +524,90 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
 
   TextStyle _footerStyle() => TextStyle(
     color: senkaText,
-    fontSize: widget.compact ? 8 : 11,
+    fontSize: widget.compact ? 11 : 13,
     fontWeight: FontWeight.w800,
   );
 
   Widget _group(
     String title,
-    String caption,
     String groupKey,
     List<SenkaCatalogItem> items, {
     required bool quest,
-    required int columns,
+    String? legend,
+    int? columns,
     bool last = false,
   }) => Padding(
-    padding: EdgeInsets.only(bottom: last ? 0 : (widget.compact ? 6 : 10)),
+    padding: EdgeInsets.only(bottom: last ? 0 : (widget.compact ? 4 : 7)),
     child: Container(
       key: Key('senka-task-group-$groupKey'),
-      padding: EdgeInsets.all(widget.compact ? 5 : 8),
-      decoration: BoxDecoration(
-        color: senkaPanelAlt.withValues(alpha: .52),
-        border: Border.all(color: senkaLine),
-        borderRadius: BorderRadius.circular(widget.compact ? 6 : 9),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
+      child: Container(
+        key: Key('senka-task-group-frame-$groupKey'),
+        padding: EdgeInsets.all(widget.compact ? 5 : 7),
+        decoration: BoxDecoration(
+          color: senkaPanelAlt.withValues(alpha: .58),
+          border: Border.all(color: senkaLine.withValues(alpha: .82)),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
                   title,
                   maxLines: 1,
                   style: TextStyle(
                     color: senkaText,
-                    fontSize: widget.compact ? 10 : 13,
+                    fontSize: widget.compact ? 12 : 15,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-              ),
-              Text(
-                caption,
-                maxLines: 1,
-                style: TextStyle(
-                  color: senkaMuted,
-                  fontSize: widget.compact ? 7 : 9,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: widget.compact ? 2 : 4),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final spacing = widget.compact ? 4.0 : 7.0;
-              final width =
-                  (constraints.maxWidth - (columns - 1) * spacing) / columns;
-              return Wrap(
-                spacing: spacing,
-                runSpacing: widget.compact ? 0 : 2,
-                children: [
-                  for (final item in items)
-                    SizedBox(
-                      width: width,
-                      height: 44,
-                      child: _reward(item, quest),
+                if (legend != null) ...[
+                  SizedBox(width: widget.compact ? 5 : 8),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        legend,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: senkaMuted,
+                          fontSize: widget.compact ? 8 : 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
+                  ),
                 ],
-              );
-            },
-          ),
-        ],
+              ],
+            ),
+            SizedBox(height: widget.compact ? 2 : 3),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final colCount =
+                    columns ??
+                    _taskColumns(constraints.maxWidth, widget.compact);
+                final spacing = widget.compact ? 3.0 : 5.0;
+                final width =
+                    (constraints.maxWidth - (colCount - 1) * spacing) /
+                    colCount;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: 0,
+                  children: [
+                    for (final item in items)
+                      SizedBox(
+                        width: width,
+                        height: 44,
+                        child: _reward(item, quest),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -635,17 +618,142 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
             ? widget.state.questStatuses[item.id]
             : widget.state.eoStatuses[item.id]) ??
         SenkaRewardStatus.deferred;
-    final color = switch (status) {
-      SenkaRewardStatus.deferred => senkaYellow,
-      SenkaRewardStatus.planned => senkaGreen,
-      SenkaRewardStatus.completed => senkaMuted,
-    };
+
+    final rewardStyle = _RewardVisualStyle.resolve(status);
+    final contentColor = rewardStyle.accent;
+    final labelColor = rewardStyle.text;
     final statusLabel = switch (status) {
       SenkaRewardStatus.deferred => '计划放置',
       SenkaRewardStatus.planned => '计划完成（计预计）',
       SenkaRewardStatus.completed => '已完成',
     };
     final keyPrefix = quest ? 'quest' : 'eo';
+    final rewardContent = Stack(
+      fit: StackFit.expand,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 7 : 9),
+          child: Center(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Expanded(
+                  child: Row(
+                    key: Key('senka-reward-leading-$keyPrefix-${item.id}'),
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        switch (status) {
+                          SenkaRewardStatus.deferred => '✕',
+                          SenkaRewardStatus.planned => '✓',
+                          SenkaRewardStatus.completed => '○',
+                        },
+                        style: TextStyle(
+                          color: contentColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          height: 1,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item.matrixLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            color: labelColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                SizedBox(
+                  key: Key('senka-reward-value-$keyPrefix-${item.id}'),
+                  width: widget.compact ? 50 : 56,
+                  child: Text(
+                    '+${senkaNumber(item.senka)}',
+                    maxLines: 1,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: contentColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      height: 1,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (status == SenkaRewardStatus.completed)
+          Positioned.fill(
+            child: Center(
+              child: SizedBox(
+                key: Key('senka-strike-$keyPrefix-${item.id}'),
+                width: double.infinity,
+                height: 1.2,
+                child: ColoredBox(
+                  color: const Color(0xffb8c1c7).withValues(alpha: .78),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+    final visibleSurface = SizedBox(
+      height: 36,
+      width: double.infinity,
+      child: DecoratedBox(
+        key: Key('senka-reward-visual-$keyPrefix-${item.id}'),
+        decoration: rewardStyle.decoration,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Material(
+                  key: Key('senka-reward-surface-$keyPrefix-${item.id}'),
+                  color: Colors.transparent,
+                  child: rewardContent,
+                ),
+              ),
+              Positioned(
+                top: 1,
+                left: 5,
+                right: 5,
+                child: IgnorePointer(
+                  child: SizedBox(
+                    key: Key('senka-reward-highlight-$keyPrefix-${item.id}'),
+                    height: 1,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: .2),
+                            Colors.white.withValues(alpha: .03),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
     return Semantics(
       label: '${item.label}，$statusLabel，${senkaNumber(item.senka)} 战果',
       button: true,
@@ -658,88 +766,11 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
           key: Key('senka-toggle-$keyPrefix-${item.id}'),
           color: Colors.transparent,
           child: InkWell(
+            borderRadius: BorderRadius.circular(5),
             onTap: () => quest
                 ? widget.controller.cycleQuestReward(item.id)
                 : widget.controller.cycleEoReward(item.id),
-            child: Center(
-              child: SizedBox(
-                height: widget.compact ? 32 : 36,
-                width: double.infinity,
-                child: Material(
-                  key: Key('senka-reward-surface-$keyPrefix-${item.id}'),
-                  color: color.withValues(alpha: .13),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: color.withValues(alpha: .75)),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: widget.compact ? 6 : 9,
-                        ),
-                        child: Row(
-                          children: [
-                            if (status != SenkaRewardStatus.completed) ...[
-                              Text(
-                                status == SenkaRewardStatus.planned ? '✓' : '✕',
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: widget.compact ? 9 : 12,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(width: 3),
-                            ],
-                            Expanded(
-                              child: Text(
-                                item.matrixLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: widget.compact ? 9 : 11,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            SizedBox(
-                              width: widget.compact ? 38 : 49,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  '+${senkaNumber(item.senka)}',
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                    color: color,
-                                    fontSize: widget.compact ? 8 : 10,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (status == SenkaRewardStatus.completed)
-                        Positioned.fill(
-                          child: Center(
-                            child: SizedBox(
-                              key: Key('senka-strike-$keyPrefix-${item.id}'),
-                              width: double.infinity,
-                              height: 1,
-                              child: ColoredBox(color: color),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            child: Center(child: visibleSurface),
           ),
         ),
       ),
@@ -747,15 +778,72 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
   }
 }
 
-double _taskPanelHeight(BuildContext context, double _, bool compact) {
+class _RewardVisualStyle {
+  const _RewardVisualStyle({
+    required this.gradient,
+    required this.border,
+    required this.text,
+    required this.accent,
+  });
+
+  final List<Color> gradient;
+  final Color border;
+  final Color text;
+  final Color accent;
+
+  static _RewardVisualStyle resolve(SenkaRewardStatus status) =>
+      switch (status) {
+        SenkaRewardStatus.completed => const _RewardVisualStyle(
+          gradient: [Color(0xff4b565e), Color(0xff323b42)],
+          border: Color(0xff69757d),
+          text: Color(0xffc4ccd1),
+          accent: Color(0xffb8c1c7),
+        ),
+        SenkaRewardStatus.planned => const _RewardVisualStyle(
+          gradient: [Color(0xff23694f), Color(0xff174b3a)],
+          border: Color(0xff3b8064),
+          text: Color(0xffe4f4eb),
+          accent: Color(0xffafe5ca),
+        ),
+        SenkaRewardStatus.deferred => const _RewardVisualStyle(
+          gradient: [Color(0xff735116), Color(0xff4a350f)],
+          border: Color(0xff9b731e),
+          text: Color(0xfff3d988),
+          accent: Color(0xfff4c85b),
+        ),
+      };
+
+  BoxDecoration get decoration => BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: gradient,
+    ),
+    border: Border.all(color: border.withValues(alpha: .72)),
+    borderRadius: BorderRadius.circular(5),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: .25),
+        blurRadius: 3,
+        offset: const Offset(0, 1),
+      ),
+    ],
+  );
+}
+
+int _taskColumns(double width, bool compact) =>
+    width >= 380 ? 4 : (width >= 200 ? 2 : 1);
+
+double _taskPanelHeight(BuildContext context, double width, bool compact) {
   final padding = compact ? 5.0 : 9.0;
-  final spacing = compact ? 0.0 : 2.0;
-  final groupGap = compact ? 6.0 : 10.0;
-  final groupPadding = compact ? 5.0 : 8.0;
-  final titleFontSize = compact ? 10.0 : 13.0;
+  final contentWidth = width - padding * 2 - 2;
+  final columns = _taskColumns(contentWidth, compact);
+  final groupPadding = compact ? 5.0 : 7.0;
+  final groupGap = compact ? 4.0 : 7.0;
+  final titleFontSize = compact ? 12.0 : 15.0;
   final titleHeight =
-      MediaQuery.textScalerOf(context).scale(titleFontSize) * 1.3;
-  final titleGap = compact ? 3.0 : 6.0;
+      MediaQuery.textScalerOf(context).scale(titleFontSize) * 1.4;
+  final titleGap = compact ? 2.0 : 3.0;
   const chipHeight = 44.0;
   final groupCounts = [
     senkaEoCatalog.length,
@@ -763,20 +851,15 @@ double _taskPanelHeight(BuildContext context, double _, bool compact) {
     senkaAnnualQuestCatalog.length,
     senkaOneTimeQuestCatalog.length,
   ];
-  const groupColumns = [2, 2, 1, 1];
   var groupsHeight = 0.0;
   for (var index = 0; index < groupCounts.length; index++) {
-    final rows = (groupCounts[index] / groupColumns[index]).ceil();
+    final rows = (groupCounts[index] / columns).ceil();
     groupsHeight +=
-        groupPadding * 2 +
-        titleHeight +
-        titleGap +
-        rows * chipHeight +
-        (rows - 1) * spacing;
-    if (index < groupCounts.length - 1) groupsHeight += groupGap;
+        groupPadding * 2 + titleHeight + titleGap + rows * chipHeight;
+    if (index < groupCounts.length - 1) {
+      groupsHeight += groupGap;
+    }
   }
-  final panelHeader = compact ? 28.0 : 36.0;
   final footer = compact ? 28.0 : 38.0;
-  // Leave a small allowance for the font's platform-specific line metrics.
-  return panelHeader + footer + padding * 2 + groupsHeight + 24;
+  return footer + padding * 2 + groupsHeight + 40;
 }

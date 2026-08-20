@@ -11,16 +11,20 @@ class SenkaInfoView extends StatefulWidget {
     required this.state,
     required this.controller,
     required this.compact,
+    this.onOpenSortieLog,
   });
   final SenkaState state;
   final SenkaController controller;
   final bool compact;
+  final VoidCallback? onOpenSortieLog;
   @override
   State<SenkaInfoView> createState() => _SenkaInfoViewState();
 }
 
 class _SenkaInfoViewState extends State<SenkaInfoView> {
   bool showHidden = false;
+  String timeFilter = 'month';
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
@@ -39,7 +43,10 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
         compact: widget.compact,
         showHidden: showHidden,
         onShowHidden: (value) => setState(() => showHidden = value),
+        timeFilter: timeFilter,
+        onTimeFilterChanged: (value) => setState(() => timeFilter = value),
         scrollRows: horizontal,
+        onOpenSortieLog: widget.onOpenSortieLog,
       );
       final gap = widget.compact ? 4.0 : 10.0;
       if (horizontal) {
@@ -113,9 +120,16 @@ double _sortiePanelHeight(SenkaState state, bool showHidden, bool compact) {
       )
       .length;
   const panelHeaderHeight = 44.0;
-  final tableHeaderHeight = compact ? 28.0 : 36.0;
+  final subHeaderHeight = compact ? 26.0 : 34.0;
+  const filterBarHeight = 44.0;
+  final tableHeaderHeight = compact ? 26.0 : 34.0;
   const dataRowHeight = 44.0;
-  return panelHeaderHeight + tableHeaderHeight + rowCount * dataRowHeight + 2;
+  return panelHeaderHeight +
+      subHeaderHeight +
+      filterBarHeight +
+      tableHeaderHeight +
+      rowCount * dataRowHeight +
+      8;
 }
 
 class _ServerOverview extends StatelessWidget {
@@ -125,28 +139,126 @@ class _ServerOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = state.playerRankingRow;
-    return SenkaPanel(
-      title: '服务器概况',
-      compact: compact,
+    return Material(
+      color: senkaPanel,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: senkaLine),
+        borderRadius: BorderRadius.circular(compact ? 7 : 11),
+      ),
       child: Padding(
-        padding: EdgeInsets.all(compact ? 7 : 12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 16,
+          vertical: compact ? 6 : 10,
+        ),
+        child: Row(
           children: [
-            SenkaLabelValue(
-              '所在服务器',
-              senkaServerName(state.serverOrigin),
-              compact: compact,
+            Expanded(
+              flex: 50,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '所在服务器',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: senkaMuted,
+                      fontSize: compact ? 10 : 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: compact ? 2 : 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      senkaServerName(state.serverOrigin),
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: senkaText,
+                        fontSize: compact ? 16 : 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            SenkaLabelValue(
-              '当前战果',
-              senkaNumber(current.senka),
-              compact: compact,
+            Container(
+              width: 1,
+              height: compact ? 44 : 60,
+              color: senkaLine,
+              margin: EdgeInsets.symmetric(horizontal: compact ? 10 : 18),
             ),
-            SenkaLabelValue(
-              '当前排名',
-              senkaInteger(current.rank),
-              compact: compact,
+            Expanded(
+              flex: 50,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '战果',
+                        style: TextStyle(
+                          color: senkaMuted,
+                          fontSize: compact ? 11 : 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            senkaNumber(current.senka),
+                            style: TextStyle(
+                              color: senkaYellow,
+                              fontSize: compact ? 22 : 30,
+                              fontWeight: FontWeight.w900,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: compact ? 8 : 12),
+                  Row(
+                    children: [
+                      Text(
+                        '排名',
+                        style: TextStyle(
+                          color: senkaMuted,
+                          fontSize: compact ? 11 : 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            senkaInteger(current.rank),
+                            style: TextStyle(
+                              color: senkaYellow,
+                              fontSize: compact ? 22 : 30,
+                              fontWeight: FontWeight.w900,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -160,24 +272,48 @@ class _RankingPanel extends StatelessWidget {
   final SenkaState state;
   final bool compact;
   @override
-  Widget build(BuildContext context) => SenkaPanel(
-    title: '战果排名',
-    compact: compact,
-    child: Padding(
-      padding: EdgeInsets.all(compact ? 4 : 8),
-      child: Column(
-        children: [
-          Expanded(child: _row('顺位', '战果', '变化', compact, header: true)),
-          for (final rank in const [5, 20, 100, 501])
-            Expanded(
-              key: Key('ranking-row-$rank'),
-              child: _anchorRow(rank, state.rankingRow(rank), compact),
-            ),
-          Expanded(child: _playerRow(state.playerRankingRow, compact)),
-        ],
+  Widget build(BuildContext context) {
+    final timeStr = _formatRankingTime(state.latestRankingUpdatedAt);
+    return SenkaPanel(
+      title: '战果排名',
+      compact: compact,
+      trailing: Text(
+        '更新：$timeStr',
+        style: TextStyle(
+          color: senkaMuted,
+          fontSize: compact ? 9 : 11,
+          fontWeight: FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
       ),
-    ),
-  );
+      child: Padding(
+        padding: EdgeInsets.all(compact ? 4 : 8),
+        child: Column(
+          children: [
+            Expanded(child: _row('顺位', '战果', '变化', compact, header: true)),
+            for (final rank in const [5, 20, 100, 501])
+              Expanded(
+                key: Key('ranking-row-$rank'),
+                child: _anchorRow(rank, state.rankingRow(rank), compact),
+              ),
+            Container(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              child: Text(
+                '当前',
+                style: TextStyle(
+                  color: senkaMuted,
+                  fontSize: compact ? 9 : 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Expanded(child: _playerRow(state.playerRankingRow, compact)),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _anchorRow(int rank, SenkaRankingRow row, bool compact) =>
       DecoratedBox(
@@ -197,9 +333,9 @@ class _RankingPanel extends StatelessWidget {
 
   Widget _playerRow(SenkaRankingRow row, bool compact) => DecoratedBox(
     decoration: BoxDecoration(
-      color: senkaYellow.withValues(alpha: .14),
-      border: Border.all(color: senkaYellow.withValues(alpha: .65)),
-      borderRadius: BorderRadius.circular(5),
+      color: const Color(0xff0b1e2a),
+      border: Border.all(color: const Color(0xff8a6628), width: 1.2),
+      borderRadius: BorderRadius.circular(6),
     ),
     child: Row(
       children: [
@@ -210,20 +346,21 @@ class _RankingPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 4),
+                  padding: const EdgeInsets.only(left: 6),
                   child: Text(
                     senkaInteger(row.rank),
                     key: const Key('player-rank'),
-                    style: _style(compact),
+                    style: _style(compact).copyWith(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
               Expanded(
                 child: Text(
                   _rankDelta(row),
-                  style: _style(
-                    compact,
-                  ).copyWith(color: _rankColor(row.rankDirection)),
+                  style: _style(compact).copyWith(
+                    color: _rankColor(row.rankDirection),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -234,7 +371,7 @@ class _RankingPanel extends StatelessWidget {
           child: Text(
             senkaNumber(row.senka),
             key: const Key('player-senka'),
-            style: _style(compact),
+            style: _style(compact).copyWith(fontWeight: FontWeight.w800),
           ),
         ),
         Expanded(
@@ -242,7 +379,9 @@ class _RankingPanel extends StatelessWidget {
           child: Text(
             _delta(row.senkaDelta),
             key: const Key('player-senka-delta'),
-            style: _style(compact).copyWith(color: senkaGreen),
+            style: _style(
+              compact,
+            ).copyWith(color: senkaGreen, fontWeight: FontWeight.w800),
           ),
         ),
       ],
@@ -316,14 +455,21 @@ class _SortiePanel extends StatelessWidget {
     required this.compact,
     required this.showHidden,
     required this.onShowHidden,
+    required this.timeFilter,
+    required this.onTimeFilterChanged,
     required this.scrollRows,
+    this.onOpenSortieLog,
   });
   final SenkaState state;
   final SenkaController controller;
   final bool compact;
   final bool showHidden;
   final ValueChanged<bool> onShowHidden;
+  final String timeFilter;
+  final ValueChanged<String> onTimeFilterChanged;
   final bool scrollRows;
+  final VoidCallback? onOpenSortieLog;
+
   @override
   Widget build(BuildContext context) {
     final rows =
@@ -340,55 +486,145 @@ class _SortiePanel extends StatelessWidget {
                 (state.favoriteSortieMapKeys.contains(a.mapKey) ? 1 : 0);
             return favorite != 0 ? favorite : a.mapKey.compareTo(b.mapKey);
           });
+
+    final totalSorties = rows.fold<int>(0, (sum, s) => sum + s.sorties);
+    final totalBoss = rows.fold<int>(0, (sum, s) => sum + s.bossArrivals);
+    final totalS = rows.fold<int>(0, (sum, s) => sum + s.sWins);
+
     return SenkaPanel(
       title: '出击海域统计',
       compact: compact,
-      headerHeight: 44,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '显示隐藏',
-            style: TextStyle(color: senkaMuted, fontSize: compact ? 9 : 12),
-          ),
-          SizedBox(width: compact ? 2 : 4),
-          Semantics(
-            label: '显示隐藏海域',
-            button: true,
-            toggled: showHidden,
-            excludeSemantics: true,
-            child: SizedBox(
-              key: const Key('senka-show-hidden'),
-              width: 44,
-              height: 44,
-              child: InkWell(
-                onTap: () => onShowHidden(!showHidden),
-                child: Center(
-                  child: SizedBox(
-                    width: compact ? 30 : 38,
-                    height: compact ? 24 : 30,
-                    child: FittedBox(
-                      child: IgnorePointer(
-                        child: Switch(
-                          value: showHidden,
-                          activeThumbColor: senkaGold,
-                          onChanged: (_) {},
-                        ),
-                      ),
-                    ),
-                  ),
+      headerHeight: compact ? 34 : 44,
+      trailing: Semantics(
+        button: true,
+        label: '最近记录',
+        excludeSemantics: true,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: const Key('senka-recent-records'),
+            onTap: onOpenSortieLog,
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xff142b3a),
+                border: Border.all(color: const Color(0xff2a4c62)),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '最近记录',
+                style: TextStyle(
+                  color: senkaText,
+                  fontSize: compact ? 10 : 12,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
       child: Column(
         children: [
-          SizedBox(
-            height: compact ? 28 : 36,
+          Container(
+            height: compact ? 26 : 34,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: const BoxDecoration(
+              color: Color(0xff071822),
+              border: Border(bottom: BorderSide(color: senkaLine)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _summaryMetric('本月出击', '$totalSorties', compact),
+                _summaryMetric('Boss 到达', '$totalBoss', compact),
+                _summaryMetric('S 胜', '$totalS', compact),
+              ],
+            ),
+          ),
+          Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              children: [
+                Container(
+                  height: compact ? 24 : 28,
+                  decoration: BoxDecoration(
+                    color: const Color(0xff0b1e2a),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: senkaLine),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _timeFilterButton(
+                        '本月',
+                        'month',
+                        timeFilter == 'month',
+                        compact,
+                      ),
+                      _timeFilterButton(
+                        '今日',
+                        'today',
+                        timeFilter == 'today',
+                        compact,
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Semantics(
+                  label: '显示隐藏海域',
+                  button: true,
+                  toggled: showHidden,
+                  excludeSemantics: true,
+                  child: Container(
+                    key: const Key('senka-show-hidden'),
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    child: InkWell(
+                      onTap: () => onShowHidden(!showHidden),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(
+                            showHidden
+                                ? Icons.check_box
+                                : Icons.check_box_outline_blank,
+                            size: compact ? 14 : 18,
+                            color: showHidden ? senkaGold : senkaMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '显示已隐藏',
+                            style: TextStyle(
+                              color: showHidden ? senkaText : senkaMuted,
+                              fontSize: compact ? 10 : 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            height: compact ? 26 : 34,
+            decoration: const BoxDecoration(
+              color: Color(0xff091a26),
+              border: Border(
+                top: BorderSide(color: senkaLine),
+                bottom: BorderSide(color: senkaLine),
+              ),
+            ),
             child: _sortieRow(
-              const ['海域', 'Boss', '出击', 'S', 'A', '操作'],
+              const ['海域', 'Boss', '出击', 'S / A', '操作'],
               compact,
               header: true,
             ),
@@ -397,126 +633,212 @@ class _SortiePanel extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 itemCount: rows.length,
-                itemBuilder: (context, index) => _sortieData(rows[index]),
+                itemBuilder: (context, index) =>
+                    _sortieData(rows[index], index),
               ),
             )
           else
-            for (final row in rows) _sortieData(row),
+            for (var i = 0; i < rows.length; i++) _sortieData(rows[i], i),
         ],
       ),
     );
   }
 
-  Widget _sortieData(SenkaSortieStats stats) => SizedBox(
-    key: Key('senka-sortie-row-${stats.mapKey}'),
-    height: 44,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: state.favoriteSortieMapKeys.contains(stats.mapKey)
-            ? senkaGold.withValues(alpha: .08)
-            : Colors.transparent,
-        border: const Border(top: BorderSide(color: senkaLine)),
+  Widget _summaryMetric(String label, String value, bool compact) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        label,
+        style: TextStyle(
+          color: senkaMuted,
+          fontSize: compact ? 9 : 12,
+          fontWeight: FontWeight.w700,
+        ),
       ),
-      child: Row(
-        children: [
-          _cell(
-            Text(stats.mapKey, maxLines: 1, style: _sortieStyle(compact)),
-            18,
+      const SizedBox(width: 6),
+      Text(
+        value,
+        style: TextStyle(
+          color: senkaText,
+          fontSize: compact ? 11 : 14,
+          fontWeight: FontWeight.w900,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    ],
+  );
+
+  Widget _timeFilterButton(
+    String label,
+    String value,
+    bool active,
+    bool compact,
+  ) => Material(
+    color: active ? const Color(0xff3b2f1e) : Colors.transparent,
+    borderRadius: BorderRadius.circular(5),
+    child: InkWell(
+      onTap: () => onTimeFilterChanged(value),
+      borderRadius: BorderRadius.circular(5),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 12,
+          vertical: compact ? 2 : 4,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? const Color(0xffffdc88) : senkaMuted,
+            fontSize: compact ? 10 : 12,
+            fontWeight: FontWeight.w800,
           ),
-          _cell(
-            Text(
-              '${stats.bossArrivals}',
-              maxLines: 1,
-              style: _sortieStyle(compact),
-            ),
-            14,
-          ),
-          _cell(
-            Text('${stats.sorties}', maxLines: 1, style: _sortieStyle(compact)),
-            14,
-          ),
-          _cell(
-            Text('${stats.sWins}', maxLines: 1, style: _sortieStyle(compact)),
-            10,
-          ),
-          _cell(
-            Text('${stats.aWins}', maxLines: 1, style: _sortieStyle(compact)),
-            10,
-          ),
-          Expanded(
-            flex: 28,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Tooltip(
-                  message: '收藏海域 ${stats.mapKey}',
-                  child: Semantics(
-                    button: true,
-                    toggled: state.favoriteSortieMapKeys.contains(stats.mapKey),
-                    label: '收藏海域 ${stats.mapKey}',
-                    excludeSemantics: true,
-                    child: SizedBox(
-                      key: Key('senka-favorite-${stats.mapKey}'),
-                      width: 44,
-                      height: 44,
-                      child: InkWell(
-                        onTap: () =>
-                            controller.toggleSortieFavorite(stats.mapKey),
-                        child: Center(
-                          child: Text(
-                            '★',
-                            style: _sortieStyle(compact).copyWith(
-                              color:
-                                  state.favoriteSortieMapKeys.contains(
-                                    stats.mapKey,
-                                  )
-                                  ? senkaGold
-                                  : senkaMuted,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Tooltip(
-                  message: '隐藏海域 ${stats.mapKey}',
-                  child: Semantics(
-                    button: true,
-                    toggled: state.hiddenSortieMapKeys.contains(stats.mapKey),
-                    label: '隐藏海域 ${stats.mapKey}',
-                    excludeSemantics: true,
-                    child: SizedBox(
-                      key: Key('senka-hide-${stats.mapKey}'),
-                      width: 44,
-                      height: 44,
-                      child: InkWell(
-                        onTap: () =>
-                            controller.toggleSortieHidden(stats.mapKey),
-                        child: Center(
-                          child: Text(
-                            '⊘',
-                            style: _sortieStyle(compact).copyWith(
-                              color:
-                                  state.hiddenSortieMapKeys.contains(
-                                    stats.mapKey,
-                                  )
-                                  ? senkaRed
-                                  : senkaMuted,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     ),
   );
+
+  Widget _sortieData(SenkaSortieStats stats, int index) {
+    final isFavorite = state.favoriteSortieMapKeys.contains(stats.mapKey);
+    final isHidden = state.hiddenSortieMapKeys.contains(stats.mapKey);
+    final isEven = index % 2 == 0;
+    final rowBg = isFavorite
+        ? const Color(0xff182c2b)
+        : (isEven ? const Color(0xff0d2230) : const Color(0xff06141e));
+    final rowHeight = compact ? 30.0 : 36.0;
+
+    return SizedBox(
+      key: Key('senka-sortie-row-${stats.mapKey}'),
+      height: rowHeight,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: rowBg,
+          border: Border(
+            top: const BorderSide(color: Color(0xff173245), width: 0.5),
+            bottom: const BorderSide(color: Color(0xff173245), width: 0.5),
+            left: isFavorite
+                ? const BorderSide(color: senkaGold, width: 3.0)
+                : BorderSide.none,
+          ),
+        ),
+        child: Row(
+          children: [
+            _cell(
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isFavorite)
+                    Text(
+                      '★ ',
+                      style: _sortieStyle(compact).copyWith(color: senkaGold),
+                    ),
+                  Text(
+                    stats.mapKey,
+                    maxLines: 1,
+                    style: _sortieStyle(compact).copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              20,
+            ),
+            _cell(
+              Text(
+                '${stats.bossArrivals}',
+                maxLines: 1,
+                style: _sortieStyle(compact).copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              14,
+            ),
+            _cell(
+              Text(
+                '${stats.sorties}',
+                maxLines: 1,
+                style: _sortieStyle(compact).copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              14,
+            ),
+            _cell(
+              Text(
+                '${stats.sWins} / ${stats.aWins}',
+                maxLines: 1,
+                style: _sortieStyle(compact).copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              20,
+            ),
+            Expanded(
+              flex: 26,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Tooltip(
+                    message: '收藏海域 ${stats.mapKey}',
+                    child: Semantics(
+                      button: true,
+                      toggled: isFavorite,
+                      label: '收藏海域 ${stats.mapKey}',
+                      excludeSemantics: true,
+                      child: SizedBox(
+                        key: Key('senka-favorite-${stats.mapKey}'),
+                        width: rowHeight,
+                        height: rowHeight,
+                        child: InkWell(
+                          onTap: () =>
+                              controller.toggleSortieFavorite(stats.mapKey),
+                          child: Center(
+                            child: Icon(
+                              isFavorite ? Icons.star : Icons.star_border,
+                              size: compact ? 17 : 20,
+                              color: isFavorite ? senkaGold : senkaMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: '隐藏海域 ${stats.mapKey}',
+                    child: Semantics(
+                      button: true,
+                      toggled: isHidden,
+                      label: '隐藏海域 ${stats.mapKey}',
+                      excludeSemantics: true,
+                      child: SizedBox(
+                        key: Key('senka-hide-${stats.mapKey}'),
+                        width: rowHeight,
+                        height: rowHeight,
+                        child: InkWell(
+                          onTap: () =>
+                              controller.toggleSortieHidden(stats.mapKey),
+                          child: Center(
+                            child: Icon(
+                              Icons.block,
+                              size: compact ? 15 : 18,
+                              color: isHidden ? senkaRed : senkaMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 Widget _sortieRow(
@@ -525,12 +847,11 @@ Widget _sortieRow(
   bool header = false,
 }) => Row(
   children: [
-    _cell(Text(values[0], style: _sortieStyle(compact, header: header)), 18),
+    _cell(Text(values[0], style: _sortieStyle(compact, header: header)), 20),
     _cell(Text(values[1], style: _sortieStyle(compact, header: header)), 14),
     _cell(Text(values[2], style: _sortieStyle(compact, header: header)), 14),
-    _cell(Text(values[3], style: _sortieStyle(compact, header: header)), 10),
-    _cell(Text(values[4], style: _sortieStyle(compact, header: header)), 10),
-    _cell(Text(values[5], style: _sortieStyle(compact, header: header)), 28),
+    _cell(Text(values[3], style: _sortieStyle(compact, header: header)), 20),
+    _cell(Text(values[4], style: _sortieStyle(compact, header: header)), 26),
   ],
 );
 Widget _cell(Widget child, int flex) => Expanded(
@@ -543,3 +864,15 @@ TextStyle _sortieStyle(bool compact, {bool header = false}) => TextStyle(
   fontWeight: header ? FontWeight.w800 : FontWeight.w700,
   fontFeatures: const [FontFeature.tabularFigures()],
 );
+
+String _formatRankingTime(DateTime? time) {
+  if (time == null) return '--';
+  final t = time.toLocal();
+  final year = t.year.toString().padLeft(4, '0');
+  final month = t.month.toString().padLeft(2, '0');
+  final day = t.day.toString().padLeft(2, '0');
+  final hour = t.hour.toString().padLeft(2, '0');
+  final minute = t.minute.toString().padLeft(2, '0');
+  final second = t.second.toString().padLeft(2, '0');
+  return '$year-$month-$day $hour:$minute:$second';
+}

@@ -49,9 +49,14 @@ class ActivityWebViewHost internal constructor(
     private val context: Context,
     private val contentRoot: FrameLayout,
     private val eventSink: NativeGameWebViewEventSink,
+    private val onPresentationStateChanged: (Boolean) -> Unit = {},
     private val webViewFactory: (Context) -> WebView = { context -> WebView(context) },
     private val configureWebView: (WebView, WebViewClient) -> Unit = { webView, client ->
-        NativeGameWebViewConfigurator.configure(webView, client)
+        NativeGameWebViewConfigurator.configure(
+            webView,
+            client,
+            onPresentationStateChanged,
+        )
     },
     private val webViewCleanup: NativeGameWebViewCleanup = AndroidNativeGameWebViewCleanup,
 ) {
@@ -59,13 +64,19 @@ class ActivityWebViewHost internal constructor(
         context: Context,
         contentRoot: FrameLayout,
         eventSink: NativeGameWebViewEventSink,
+        onPresentationStateChanged: (Boolean) -> Unit = {},
     ) : this(
         context = context,
         contentRoot = contentRoot,
         eventSink = eventSink,
+        onPresentationStateChanged = onPresentationStateChanged,
         webViewFactory = { factoryContext -> WebView(factoryContext) },
         configureWebView = { webView, client ->
-            NativeGameWebViewConfigurator.configure(webView, client)
+            NativeGameWebViewConfigurator.configure(
+                webView,
+                client,
+                onPresentationStateChanged,
+            )
         },
         webViewCleanup = AndroidNativeGameWebViewCleanup,
     )

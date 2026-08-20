@@ -58,7 +58,7 @@ class _ResourceItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xff142735),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xff213b4b)),
+        border: Border.all(color: const Color(0xff315064)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
@@ -505,9 +505,10 @@ class _HeaderCapacityPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       border: Border.all(color: const Color(0xff315064)),
     ),
-    alignment: Alignment.center,
+    alignment: Alignment.centerLeft,
     child: FittedBox(
       fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
       child: Text(
         '$label: ${current ?? '—'} / ${maximum ?? '—'}',
         maxLines: 1,
@@ -565,7 +566,7 @@ class _HeaderAnchorageTimerSummary extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xff142735),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xff213b4b)),
+        border: Border.all(color: const Color(0xff315064)),
       ),
       alignment: Alignment.centerLeft,
       child: FittedBox(
@@ -602,7 +603,7 @@ class _HeaderNosakiTimerSummary extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xff142735),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xff213b4b)),
+        border: Border.all(color: const Color(0xff315064)),
       ),
       alignment: Alignment.centerLeft,
       child: FittedBox(
@@ -638,7 +639,7 @@ class _HeaderSenkaSummary extends StatelessWidget {
     decoration: BoxDecoration(
       color: const Color(0xff142735),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xff213b4b)),
+      border: Border.all(color: const Color(0xff315064)),
     ),
     alignment: Alignment.centerLeft,
     child: FittedBox(
@@ -677,7 +678,7 @@ class _HeaderResourceItem extends StatelessWidget {
     decoration: BoxDecoration(
       color: const Color(0xff142735),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xff213b4b)),
+      border: Border.all(color: const Color(0xff315064)),
     ),
     child: Row(
       children: [

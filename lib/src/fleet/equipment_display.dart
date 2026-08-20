@@ -19,16 +19,31 @@ class EquipmentStatDisplay {
 class EquipmentMechanismDisplay {
   const EquipmentMechanismDisplay({
     required this.label,
+    this.shortLabel,
     required this.description,
     this.tone = MechanismTone.neutral,
+    this.rate,
   });
 
   final String label;
+  final String? shortLabel;
   final String description;
   final MechanismTone tone;
+  final double? rate;
+
+  String get effectiveShortLabel => shortLabel ?? label;
+
+  String get detailedShortLabel {
+    final base = shortLabel ?? label;
+    if (rate != null) {
+      final percent = (rate! * 100).round();
+      return '$base $percent%';
+    }
+    return base;
+  }
 }
 
-enum MechanismTone { neutral, antiSubmarine, antiAir, specialAttack }
+enum MechanismTone { neutral, antiSubmarine, antiAir, specialAttack, nightAttack }
 
 List<EquipmentStatDisplay> equipmentStatDisplays(
   MasterSlotItem item, {

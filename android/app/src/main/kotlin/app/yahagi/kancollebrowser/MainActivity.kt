@@ -558,6 +558,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 this,
                 contentRoot,
                 nativeChannel.eventSinkFor(nativeAttachment),
+                ::applyNativeGamePresentation,
             )
         } catch (error: Exception) {
             startup.onCreateFailed()

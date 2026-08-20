@@ -95,10 +95,10 @@ void main() {
     expect(titleLefts[2], titleLefts[0]);
     expect(titleLefts[3], titleLefts[0]);
 
-    expect(find.text('均衡模式（推荐）'), findsOneWidget);
+    expect(find.text('均衡模式'), findsOneWidget);
     expect(find.text('轻量模式'), findsOneWidget);
     expect(find.text('兼容模式'), findsOneWidget);
-    expect(find.text('原生直连（推荐）'), findsOneWidget);
+    expect(find.text('原生独立渲染（推荐）'), findsOneWidget);
     expect(find.textContaining('兼顾游戏性能与设备兼容性'), findsOneWidget);
     expect(find.textContaining('减少部分合成开销'), findsOneWidget);
     expect(find.textContaining('更低的合成开销'), findsOneWidget);
@@ -144,7 +144,7 @@ void main() {
     await tester.tap(find.byKey(const Key('rendering-mode-cancel')));
     await tester.pumpAndSettle();
 
-    expect(state.controller.mode, GameRenderingMode.compatibility);
+    expect(state.controller.mode, GameRenderingMode.nativeActivityExperimental);
     expect(state.port.modes, isEmpty);
   });
 

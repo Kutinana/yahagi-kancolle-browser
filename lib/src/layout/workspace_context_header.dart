@@ -12,6 +12,7 @@ import '../improvement/improvement_planner_controller.dart';
 import '../logbook/logbook_page.dart';
 import '../quest/quest_center_page.dart';
 import '../settings/layout_settings_controller.dart';
+import '../senka/senka_page.dart' show SenkaCenterMode;
 import '../senka/senka_state.dart';
 
 class WorkspaceContextHeader extends StatelessWidget {
@@ -44,6 +45,8 @@ class WorkspaceContextHeader extends StatelessWidget {
     this.onExpeditionModeChanged,
     this.constructionMode = ConstructionCenterMode.construction,
     this.onConstructionModeChanged,
+    this.senkaMode = SenkaCenterMode.info,
+    this.onSenkaModeChanged,
     this.layoutSettingsController,
   });
 
@@ -74,6 +77,8 @@ class WorkspaceContextHeader extends StatelessWidget {
   final ValueChanged<ExpeditionSummaryMode>? onExpeditionModeChanged;
   final ConstructionCenterMode constructionMode;
   final ValueChanged<ConstructionCenterMode>? onConstructionModeChanged;
+  final SenkaCenterMode senkaMode;
+  final ValueChanged<SenkaCenterMode>? onSenkaModeChanged;
   final LayoutSettingsController? layoutSettingsController;
 
   @override
@@ -276,6 +281,11 @@ class WorkspaceContextHeader extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
+          const Spacer(),
+          SenkaModeTabs(
+            mode: senkaMode,
+            onChanged: onSenkaModeChanged ?? (_) {},
+          ),
         ],
       );
     }
@@ -367,6 +377,70 @@ class ConstructionModeTabs extends StatelessWidget {
                             : const Color(0xff9fb3bf),
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class SenkaModeTabs extends StatelessWidget {
+  const SenkaModeTabs({
+    super.key,
+    required this.mode,
+    required this.onChanged,
+  });
+
+  final SenkaCenterMode mode;
+  final ValueChanged<SenkaCenterMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('senka-mode-tabs'),
+      width: 360,
+      height: 38,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xff0b202d),
+        border: Border.all(color: const Color(0xff315064)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          for (final value in SenkaCenterMode.values)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: mode == value,
+                label: value.label,
+                excludeSemantics: true,
+                child: Material(
+                  key: Key('senka-tab-${value.name}'),
+                  color: mode == value
+                      ? const Color(0xff8a6628)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => onChanged(value),
+                    child: Center(
+                      child: Text(
+                        value.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: mode == value
+                              ? const Color(0xffffdc88)
+                              : const Color(0xff9fb3bf),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),

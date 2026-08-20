@@ -14,7 +14,6 @@ enum ExpeditionConditionKind {
   lineOfSight,
   greatSuccessRate,
   allSparkled,
-  higherLevelFlagship,
   daihatsuFill,
 }
 

@@ -247,6 +247,48 @@ class AppLocalizationsJa extends AppLocalizations {
   String get clearWebCacheDesc => 'WebView エンジンが保持する一時的なページやスクリプトデータを消去します。';
 
   @override
+  String get baseSenkaResetTitle => '素戦果をリセット';
+
+  @override
+  String get baseSenkaResetDesc =>
+      '今月の累計素戦果を 0.00 にします。EO・任務・その他の戦果データには影響しません。';
+
+  @override
+  String get baseSenkaResetConfirmTitle => '素戦果をリセット';
+
+  @override
+  String get baseSenkaResetConfirmDesc =>
+      '今月の累計素戦果をリセットしますか？日別の EO・任務報酬は保持され、以後の経験値増分は 0.00 から加算されます。';
+
+  @override
+  String get baseSenkaResetSuccess => '今月の累計素戦果をリセットしました';
+
+  @override
+  String get baseSenkaManualTitle => '素戦果を手動入力';
+
+  @override
+  String baseSenkaCurrentValue(String value) {
+    return '今月の累計：$value 戦果';
+  }
+
+  @override
+  String get baseSenkaManualDialogTitle => '今月の累計素戦果を入力';
+
+  @override
+  String get baseSenkaManualInputLabel => '今月の累計素戦果';
+
+  @override
+  String get baseSenkaManualInvalid => '0 以上の数値を小数点以下 2 桁まで入力してください';
+
+  @override
+  String baseSenkaSetSuccess(String value) {
+    return '今月の累計素戦果を $value に設定しました';
+  }
+
+  @override
+  String get baseSenkaSaveFailed => '素戦果を保存できませんでした。もう一度お試しください';
+
+  @override
   String get fleetBrief => '編成情報';
 
   @override
@@ -1276,21 +1318,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get gameRenderingModeStandardDesc =>
-      'Texture Layer + WebGL。一部の合成負荷を軽減しますが、一部の端末で表示やタッチの互換性問題が発生する場合があります。';
+      'Flutter PlatformView + Texture Layer + WebGL。一部の合成負荷を軽減しますが、一部の端末で表示やタッチの互換性問題が発生する場合があります。';
 
   @override
-  String get gameRenderingModeCompatibility => '均衡モード（推奨）';
+  String get gameRenderingModeCompatibility => '均衡モード';
 
   @override
   String get gameRenderingModeCompatibilityDesc =>
-      'Hybrid Composition + WebGL。ゲーム性能と端末互換性を両立します。';
+      'Flutter PlatformView + Hybrid Composition + WebGL。ゲーム性能と端末互換性を両立します。';
 
   @override
   String get gameRenderingModeCanvas => '互換モード';
 
   @override
   String get gameRenderingModeCanvasDesc =>
-      'Hybrid Composition + Canvas。WebGL を回避し、GPU / WebGL の互換性問題を優先的に解決します。描画性能が低下する場合があります。';
+      'Flutter PlatformView + Hybrid Composition + Canvas。WebGL を回避し、GPU / WebGL の互換性問題を優先的に解決します。描画性能が低下する場合があります。';
 
   @override
   String get gameRenderingModeNativeActivity => 'ネイティブ直結（推奨）';

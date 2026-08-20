@@ -20,6 +20,7 @@ import 'capture/capture_mode.dart';
 import 'capture/capture_mode_controller.dart';
 import 'capture/game_capture_controller.dart';
 import 'game_webview.dart';
+import 'layout/window_metrics_recovery_scheduler.dart';
 import 'prototype_status_controller.dart';
 import 'settings/game_frame_rate_settings.dart';
 import 'settings/network_settings_controller.dart';
@@ -91,6 +92,64 @@ final class MethodChannelNativeActivityGameWebViewPort
   Future<void> dispose() => _delegate.dispose();
 }
 
+final class _BoundsRecoveringNativeActivityGameWebViewPort
+    implements NativeActivityGameWebViewPort {
+  _BoundsRecoveringNativeActivityGameWebViewPort({
+    required this.delegate,
+    required this.recoverBounds,
+  });
+
+  final NativeActivityGameWebViewPort delegate;
+  final Future<void> Function() recoverBounds;
+
+  @override
+  Stream<NativeGameWebViewEvent> get events => delegate.events;
+
+  @override
+  Future<int> create() => delegate.create();
+
+  @override
+  Future<void> setBounds(NativeGameWebViewBounds bounds) =>
+      delegate.setBounds(bounds);
+
+  @override
+  Future<void> setVisible(bool visible) => delegate.setVisible(visible);
+
+  @override
+  Future<void> loadUri(Uri uri) => delegate.loadUri(uri);
+
+  @override
+  Future<void> showLocalHome() => delegate.showLocalHome();
+
+  @override
+  Future<void> reload() => delegate.reload();
+
+  @override
+  Future<bool> canGoBack() => delegate.canGoBack();
+
+  @override
+  Future<void> goBack() => delegate.goBack();
+
+  @override
+  Future<void> runJavaScript(String javascript) =>
+      delegate.runJavaScript(javascript);
+
+  @override
+  Future<void> fitGameScreen() async {
+    await recoverBounds();
+    await delegate.fitGameScreen();
+  }
+
+  @override
+  Future<void> clearCache() => delegate.clearCache();
+
+  @override
+  Future<void> clearSession() => delegate.clearSession();
+
+  @override
+  Future<void> dispose() => delegate.dispose();
+}
+
 typedef NativeActivityGameWebViewPortFactory =
     NativeActivityGameWebViewPort Function();
 
@@ -152,6 +211,11 @@ final class _NativeActivityGameSurfaceState
   late Duration _cleanupTimeout;
   late final Future<void> Function(NativeGameWebViewBounds) _boundsSink;
   late final Future<void> Function(bool) _visibilitySink;
+  final GlobalKey _surfaceSlotKey = GlobalKey(
+    debugLabel: 'native-game-surface-slot',
+  );
+  final WindowMetricsRecoveryScheduler _windowMetricsRecoveryScheduler =
+      WindowMetricsRecoveryScheduler();
   final List<NativeGameWebViewEvent> _pendingEvents =
       <NativeGameWebViewEvent>[];
 
@@ -199,7 +263,13 @@ final class _NativeActivityGameSurfaceState
     widget.networkSettingsController?.addListener(_onNetworkSettingsChanged);
     widget.captureModeController?.addListener(_onCaptureModeChanged);
 
-    final port = widget.portFactory?.call() ?? _createDefaultPort();
+    final delegate = widget.portFactory?.call() ?? _createDefaultPort();
+    final port = delegate == null
+        ? null
+        : _BoundsRecoveringNativeActivityGameWebViewPort(
+            delegate: delegate,
+            recoverBounds: _synchronizeNativeBounds,
+          );
     _port = port;
     if (port == null) {
       _startupState = GameStartupState.error;
@@ -289,6 +359,40 @@ final class _NativeActivityGameSurfaceState
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _frameRateRuntimeController?.onLifecycleChanged(state);
+    if (state == AppLifecycleState.resumed) {
+      _windowMetricsRecoveryScheduler.schedule(() {
+        final port = _port;
+        if (!_active || !mounted || port == null || _generationId == null) {
+          return;
+        }
+        unawaited(
+          port.fitGameScreen().catchError((
+            Object error,
+            StackTrace stackTrace,
+          ) {
+            debugPrint(
+              'Native game surface resume recovery failed: '
+              '$error\n$stackTrace',
+            );
+          }),
+        );
+      });
+    }
+  }
+
+  Future<void> _synchronizeNativeBounds() async {
+    if (!_active || !mounted) return;
+    setState(() {});
+    await WidgetsBinding.instance.endOfFrame;
+    if (!_active || !mounted) return;
+    final slotContext = _surfaceSlotKey.currentContext;
+    if (slotContext == null || !slotContext.mounted) return;
+    final bounds = readNativeGameSurfaceBounds(
+      slotContext.findRenderObject(),
+      devicePixelRatio: View.of(slotContext).devicePixelRatio,
+    );
+    if (bounds == null) return;
+    await _onBoundsChanged(bounds);
   }
 
   bool _startupDependenciesChanged(
@@ -1034,6 +1138,7 @@ final class _NativeActivityGameSurfaceState
     return Stack(
       children: <Widget>[
         NativeGameSurfaceSlot(
+          key: _surfaceSlotKey,
           onBoundsChanged: _boundsSink,
           onVisibilityChanged: _visibilitySink,
           routeObserver: widget.routeObserver,
@@ -1112,6 +1217,7 @@ final class _NativeActivityGameSurfaceState
   @override
   void dispose() {
     _active = false;
+    _windowMetricsRecoveryScheduler.dispose();
     WidgetsBinding.instance.removeObserver(this);
     widget.onGenerationChanged?.call(-1);
     _frameRateRuntimeController?.dispose();

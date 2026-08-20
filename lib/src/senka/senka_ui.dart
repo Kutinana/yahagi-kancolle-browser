@@ -12,6 +12,13 @@ const senkaYellow = Color(0xffe4b34e);
 const senkaRed = Color(0xffec7777);
 const senkaWeekdayBackground = Color(0xff071923);
 
+const senkaPlannedCard = Color(0xff0d2b45);
+const senkaPlannedBorder = Color(0xff3a8fe0);
+const senkaCompletedCard = Color(0xff091a26);
+const senkaCompletedBorder = Color(0xff224259);
+const senkaDeferredCard = Color(0xff091a26);
+const senkaDeferredBorder = Color(0xfff0b83e);
+
 String senkaNumber(num? value) =>
     value == null ? '--' : value.toStringAsFixed(2);
 String senkaInteger(int? value) => value?.toString() ?? '--';

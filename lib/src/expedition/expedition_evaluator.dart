@@ -93,7 +93,7 @@ class ExpeditionEvaluator {
         return [
           ExpeditionConditionResult(
             kind: ExpeditionConditionKind.flagshipType,
-            label: '旗舰舰种符合要求',
+            label: '旗舰舰种为${formatExpeditionFlagshipType(requirement.value)}',
             actual: actual == requirement.value ? '已满足' : '未满足',
             passed: actual == requirement.value,
           ),
@@ -229,21 +229,6 @@ class ExpeditionEvaluator {
           : _roundedRate(
               sparkled * 15 + 15 + (math.sqrt(level) + level / 10).floor(),
             );
-      final highest = ships.isEmpty
-          ? 0
-          : ships.map((s) => s.level).reduce(math.max);
-      conditions.add(
-        ExpeditionConditionResult(
-          kind: ExpeditionConditionKind.higherLevelFlagship,
-          label: '舰队最高等级舰为旗舰',
-          actual: rate >= 100
-              ? '大成功率已达 100%'
-              : level >= highest
-              ? '已满足'
-              : '未满足',
-          passed: rate >= 100 || level >= highest,
-        ),
-      );
     } else {
       rate = allSparkled ? _roundedRate(ships.length * 15 + 20) : 0;
       conditions.add(

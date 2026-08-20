@@ -269,9 +269,6 @@ String _greatSuccessStrategyFor(int missionId) {
     missionId: missionId,
   );
   final kinds = result.greatSuccessConditions.map((item) => item.kind).toSet();
-  if (kinds.contains(ExpeditionConditionKind.higherLevelFlagship)) {
-    return 'flagship';
-  }
   if (kinds.contains(ExpeditionConditionKind.drumCount)) {
     final required = _requiredValue(
       result.greatSuccessConditions
@@ -280,6 +277,18 @@ String _greatSuccessStrategyFor(int missionId) {
     );
     final thresholds = _drumRateThresholds(missionId);
     return 'drum:${thresholds.$1}:${thresholds.$2}:$required';
+  }
+  final flagshipProbe = const ExpeditionEvaluator().evaluate(
+    state: const GameState(
+      ships: <int, OwnedShip>{
+        1: OwnedShip(id: 1, masterId: 1, level: 1, condition: 49),
+      },
+    ),
+    fleet: const Fleet(id: 2, name: 'audit', shipIds: <int>[1]),
+    missionId: missionId,
+  );
+  if (flagshipProbe.greatSuccessRate > 0) {
+    return 'flagship';
   }
   return 'standard';
 }

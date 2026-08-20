@@ -32,6 +32,37 @@ void main() {
     expect(state.monthRecorded, 3.85);
   });
 
+  test('较小或相等经验快照不降低基准且只计算真实正增量', () {
+    var state = SenkaState.forMonth('2026-08');
+    state = reducer.reduce(
+      state,
+      apiEvent('/kcsapi/api_get_member/basic', {
+        'api_experience': 15000000,
+      }, atJst: DateTime(2026, 8, 19, 10)),
+    );
+    state = reducer.reduce(
+      state,
+      apiEvent('/kcsapi/api_req_mission/result', {
+        'api_member_exp': 200,
+      }, atJst: DateTime(2026, 8, 19, 11)),
+    );
+    state = reducer.reduce(
+      state,
+      apiEvent('/kcsapi/api_port/port', {
+        'api_basic': {'api_experience': 15000000},
+      }, atJst: DateTime(2026, 8, 19, 12)),
+    );
+    state = reducer.reduce(
+      state,
+      apiEvent('/kcsapi/api_req_sortie/battleresult', {
+        'api_member_exp': 15001000,
+      }, atJst: DateTime(2026, 8, 19, 13)),
+    );
+
+    expect(state.latestExperience, 15001000);
+    expect(state.day(DateTime(2026, 8, 19)).experience, closeTo(.7, 1e-9));
+  });
+
   test('地图信息自动同步九个 EO 并记录新增战果', () {
     var state = SenkaState.forMonth('2026-08');
     state = reducer.reduce(

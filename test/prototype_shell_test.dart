@@ -39,6 +39,7 @@ import 'package:yahagi_kancolle_browser/src/fleet/anchorage_repair_view.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_information_center.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/repair_summary_card.dart';
+import 'package:yahagi_kancolle_browser/src/logbook/logbook_page.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 
 void main() {
@@ -638,6 +639,13 @@ void main() {
       senkaButton.style?.backgroundColor?.resolve(<WidgetState>{}),
       const Color(0xff2b2c22),
     );
+
+    await tester.tap(find.byKey(const Key('senka-recent-records')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LogbookPage), findsOneWidget);
+    expect(find.byKey(const Key('logbook-table-sortie')), findsOneWidget);
+
     senkaController.dispose();
     toolbarController.dispose();
   });

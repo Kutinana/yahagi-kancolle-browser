@@ -565,7 +565,7 @@ void main() {
     tester,
   ) async {
     final controller = await GameRenderingModeController.load(
-      MemoryGameRenderingModeStore(),
+      MemoryGameRenderingModeStore(GameRenderingMode.compatibility),
     );
     addTearDown(controller.dispose);
     var beforeRestartCalls = 0;

@@ -33,6 +33,8 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
   bool _disposed = false;
 
   SenkaState get state => _state;
+  double get monthBaseSenka =>
+      _state.days.values.fold(0, (sum, record) => sum + record.experience);
   @override
   Future<void> get idle => _queue;
 
@@ -49,7 +51,9 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     }
     if (_disposed || loaded == null || _revision != revisionAtStart) return;
     final month = currentSenkaMonthKey(_now());
-    final migrated = migrateSenkaStateToMonth(loaded, month);
+    final migrated = migrateSenkaExperienceTracking(
+      migrateSenkaStateToMonth(loaded, month),
+    );
     _state = migrated;
     final revision = ++_revision;
     notifyListeners();
@@ -105,6 +109,33 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     _replace(_state.copyWith(targetSenka: normalized));
   }
 
+  Future<bool> resetBaseSenka() => setBaseSenka(0);
+
+  Future<bool> setBaseSenka(double value) async {
+    if (!value.isFinite || value < 0 || _disposed) return false;
+    final normalized = (value * 100).roundToDouble() / 100;
+    final businessDate = senkaBusinessDate(_now());
+    final current = migrateSenkaStateToMonth(
+      _state,
+      currentSenkaMonthKey(_now()),
+    );
+    final days = <String, SenkaDayRecord>{
+      for (final entry in current.days.entries)
+        entry.key: SenkaDayRecord(eo: entry.value.eo, quest: entry.value.quest),
+    };
+    final key = dateKey(businessDate);
+    final today = days[key] ?? const SenkaDayRecord();
+    if (normalized > 0 || today.eo > 0 || today.quest > 0) {
+      days[key] = SenkaDayRecord(
+        experience: normalized,
+        eo: today.eo,
+        quest: today.quest,
+      );
+    }
+    final updated = current.copyWith(days: days);
+    return _replaceForSettings(_rebaseLatestPlayerRanking(updated));
+  }
+
   void toggleSortieFavorite(String mapKey) {
     if (!_canToggleSortieMap(mapKey)) return;
     final values = Set<String>.of(_state.favoriteSortieMapKeys);
@@ -131,6 +162,27 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     _enqueue(() => _saveIfCurrent(next, revision));
   }
 
+  Future<bool> _replaceForSettings(SenkaState next) {
+    if (_disposed) return Future<bool>.value(false);
+    _state = next;
+    final revision = ++_revision;
+    notifyListeners();
+    final result = Completer<bool>();
+    _enqueue(() async {
+      if (_disposed) {
+        if (!result.isCompleted) result.complete(false);
+        return;
+      }
+      try {
+        await _saveIfCurrent(next, revision);
+        if (!result.isCompleted) result.complete(true);
+      } catch (_) {
+        if (!result.isCompleted) result.complete(false);
+      }
+    });
+    return result.future;
+  }
+
   void _enqueue(Future<void> Function() operation) {
     final scheduled = _queue.then<void>(
       (_) => operation(),
@@ -150,4 +202,24 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     _captureNotifications.dispose();
     super.dispose();
   }
+}
+
+SenkaState _rebaseLatestPlayerRanking(SenkaState state) {
+  final playerHistory = state.rankingHistory['player'];
+  if (playerHistory == null || playerHistory.isEmpty) return state;
+  final latest = playerHistory.last;
+  final rankingHistory = <String, List<SenkaRankingSnapshot>>{
+    for (final entry in state.rankingHistory.entries)
+      entry.key: List<SenkaRankingSnapshot>.of(entry.value),
+  };
+  rankingHistory['player'] = <SenkaRankingSnapshot>[
+    ...playerHistory.take(playerHistory.length - 1),
+    SenkaRankingSnapshot(
+      rank: latest.rank,
+      senka: latest.senka,
+      capturedAt: latest.capturedAt,
+      localSenkaAtCapture: state.monthRecorded,
+    ),
+  ];
+  return state.copyWith(rankingHistory: rankingHistory);
 }

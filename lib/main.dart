@@ -421,6 +421,16 @@ bool shouldUsePersistentGameToolbar({
       (renderingMode?.usesActivityWebView ?? false);
 }
 
+double portraitGamePanelExtraExtent({
+  required GameToolbarDisplayMode? displayMode,
+  required GameRenderingMode? renderingMode,
+}) {
+  if (renderingMode?.usesActivityWebView ?? false) {
+    return 10;
+  }
+  return displayMode == GameToolbarDisplayMode.persistent ? 42 : 0;
+}
+
 Widget buildGameSurfaceForRenderingMode({
   required GameRenderingMode mode,
   required Key key,
@@ -772,6 +782,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   ExpeditionSummaryMode _expeditionCenterMode = ExpeditionSummaryMode.summary;
   ConstructionCenterMode _constructionCenterMode =
       ConstructionCenterMode.construction;
+  SenkaCenterMode _senkaCenterMode = SenkaCenterMode.info;
 
   @override
   void initState() {
@@ -1105,6 +1116,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                         () => _constructionCenterMode = mode,
                                       );
                                     },
+                                    senkaMode: _senkaCenterMode,
+                                    onSenkaModeChanged: (mode) {
+                                      setState(() => _senkaCenterMode = mode);
+                                    },
                                   ),
                                 ),
                               ),
@@ -1206,8 +1221,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                             .clamp(0.5, 0.75);
                                   final gameFlex = (gameAreaRatio * 1000)
                                       .round();
-                                  final persistentToolbar =
-                                      shouldUsePersistentGameToolbar(
+                                  final portraitGamePanelExtra =
+                                      portraitGamePanelExtraExtent(
                                         displayMode: widget
                                             .toolbarDisplayController
                                             ?.mode,
@@ -1282,7 +1297,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                   final gamePanelExtent = isLandscape
                                       ? availableWidth * gameFlex / 1000
                                       : (constraints.maxWidth * 720 / 1200 +
-                                                (persistentToolbar ? 42 : 0))
+                                                portraitGamePanelExtra)
                                             .clamp(
                                               0.0,
                                               constraints.maxHeight -
@@ -1460,6 +1475,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             gameCaptureController: widget.gameCaptureController,
                             prototypeStatusController: widget.controller,
                             gameStateController: widget.gameStateController,
+                            senkaController: widget.senkaController,
                             gameResourceCacheController:
                                 widget.gameResourceCacheController,
                             safetySettingsController:
@@ -1492,7 +1508,14 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                           ),
                         if (_workspaceIndex == 9 &&
                             widget.senkaController != null)
-                          SenkaPage(controller: widget.senkaController!),
+                          SenkaPage(
+                            controller: widget.senkaController!,
+                            mode: _senkaCenterMode,
+                            onOpenSortieLog: () {
+                              setState(() => _logbookTabIndex = 0);
+                              _selectWorkspace(6);
+                            },
+                          ),
                       ],
                     ),
                   ),

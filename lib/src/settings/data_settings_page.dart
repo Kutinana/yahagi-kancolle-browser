@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../battle/fcd_map_controller.dart';
@@ -14,6 +15,7 @@ import '../improvement/improvement_planner_controller.dart';
 import '../logbook/logbook_database.dart';
 import '../prototype_status_controller.dart';
 import '../quest/quest_catalog_controller.dart';
+import '../senka/senka_controller.dart';
 import 'diagnostic_user_section.dart';
 import 'diagnostics_section.dart';
 import 'fcd_map_update_section.dart';
@@ -30,6 +32,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     required this.gameCaptureController,
     required this.prototypeStatusController,
     required this.gameStateController,
+    this.senkaController,
     this.gameResourceCacheController,
     this.diagnosticController,
     this.showDeveloperDiagnostics = false,
@@ -44,6 +47,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final GameCaptureController gameCaptureController;
   final PrototypeStatusController prototypeStatusController;
   final GameStateController gameStateController;
+  final SenkaController? senkaController;
   final GameResourceCacheController? gameResourceCacheController;
   final DiagnosticController? diagnosticController;
   final bool showDeveloperDiagnostics;
@@ -157,6 +161,38 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
             buildCard(
               child: Column(
                 children: <Widget>[
+                  if (senkaController case final controller?) ...<Widget>[
+                    AnimatedBuilder(
+                      animation: controller,
+                      builder: (context, _) => buildActionTile(
+                        key: const Key('settings-base-senka-summary'),
+                        title: l10n.baseSenkaManualInputLabel,
+                        subtitle: l10n.baseSenkaCurrentValue(
+                          controller.monthBaseSenka.toStringAsFixed(2),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            IconButton(
+                              key: const Key('settings-set-base-senka'),
+                              tooltip: l10n.baseSenkaManualTitle,
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed: () =>
+                                  _setBaseSenka(context, l10n, controller),
+                            ),
+                            IconButton(
+                              key: const Key('settings-reset-base-senka'),
+                              tooltip: l10n.baseSenkaResetTitle,
+                              icon: const Icon(Icons.restart_alt),
+                              onPressed: () =>
+                                  _resetBaseSenka(context, l10n, controller),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(color: Color(0xff294052), height: 1),
+                  ],
                   buildActionTile(
                     key: const Key('settings-clear-quest-cache'),
                     title: l10n.clearQuestCache,
@@ -256,6 +292,68 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     }
   }
 
+  Future<void> _resetBaseSenka(
+    BuildContext context,
+    AppLocalizations l10n,
+    SenkaController controller,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('settings-reset-base-senka-dialog'),
+        title: Text(l10n.baseSenkaResetConfirmTitle),
+        content: Text(l10n.baseSenkaResetConfirmDesc),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            key: const Key('settings-reset-base-senka-confirm'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.confirmClear),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final saved = await controller.resetBaseSenka();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved ? l10n.baseSenkaResetSuccess : l10n.baseSenkaSaveFailed,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setBaseSenka(
+    BuildContext context,
+    AppLocalizations l10n,
+    SenkaController controller,
+  ) async {
+    final value = await showDialog<double>(
+      context: context,
+      builder: (_) => _BaseSenkaInputDialog(
+        l10n: l10n,
+        initialValue: controller.monthBaseSenka,
+      ),
+    );
+    if (value == null) return;
+    final saved = await controller.setBaseSenka(value);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved
+              ? l10n.baseSenkaSetSuccess(value.toStringAsFixed(2))
+              : l10n.baseSenkaSaveFailed,
+        ),
+      ),
+    );
+  }
+
   Future<void> _clearLogbook(
     BuildContext context,
     AppLocalizations l10n,
@@ -303,5 +401,87 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
           ),
         ) ??
         false;
+  }
+}
+
+class _BaseSenkaInputDialog extends StatefulWidget {
+  const _BaseSenkaInputDialog({required this.l10n, required this.initialValue});
+
+  final AppLocalizations l10n;
+  final double initialValue;
+
+  @override
+  State<_BaseSenkaInputDialog> createState() => _BaseSenkaInputDialogState();
+}
+
+class _BaseSenkaInputDialogState extends State<_BaseSenkaInputDialog> {
+  late final TextEditingController _input;
+  bool _invalid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _input = TextEditingController(
+      text: widget.initialValue.toStringAsFixed(2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    key: const Key('settings-base-senka-dialog'),
+    title: Text(widget.l10n.baseSenkaManualDialogTitle),
+    content: TextField(
+      key: const Key('settings-base-senka-input'),
+      controller: _input,
+      autofocus: true,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: <TextInputFormatter>[
+        TextInputFormatter.withFunction((oldValue, newValue) {
+          return RegExp(r'^\d*(?:\.\d{0,2})?$').hasMatch(newValue.text)
+              ? newValue
+              : oldValue;
+        }),
+      ],
+      decoration: InputDecoration(
+        labelText: widget.l10n.baseSenkaManualInputLabel,
+        error: _invalid
+            ? Text(
+                widget.l10n.baseSenkaManualInvalid,
+                key: const Key('settings-base-senka-error'),
+              )
+            : null,
+      ),
+      onChanged: (_) {
+        if (_invalid) setState(() => _invalid = false);
+      },
+    ),
+    actions: <Widget>[
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: Text(widget.l10n.cancel),
+      ),
+      TextButton(
+        key: const Key('settings-base-senka-save'),
+        onPressed: _submit,
+        child: Text(widget.l10n.confirm),
+      ),
+    ],
+  );
+
+  void _submit() {
+    final raw = _input.text.trim();
+    final parsed = double.tryParse(raw);
+    final valid = RegExp(r'^\d+(?:\.\d{1,2})?$').hasMatch(raw);
+    if (!valid || parsed == null || !parsed.isFinite) {
+      setState(() => _invalid = true);
+      return;
+    }
+    Navigator.pop(context, parsed);
   }
 }

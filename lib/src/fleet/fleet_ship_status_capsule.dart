@@ -69,9 +69,10 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
     final ammoRatio = _ratio(ship.currentAmmo, master?.maxAmmo ?? 0);
     final equipment = state.equipmentForShip(ship);
     final shipMechanisms = detectShipCombatMechanisms(state, ship);
-    final mechanism = shipMechanisms.isNotEmpty
-        ? shipMechanisms.first
-        : widget.specialAttack;
+    final allMechanisms = <EquipmentMechanismDisplay>[
+      ...shipMechanisms,
+      if (widget.specialAttack != null) widget.specialAttack!,
+    ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -162,14 +163,21 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                       text: '疲劳 ${ship.condition}',
                                       color: shipFatigueColor(ship.condition),
                                     ),
-                                    if (mechanism != null) ...<Widget>[
+                                    for (var i = 0;
+                                        i < allMechanisms.length;
+                                        i++) ...<Widget>[
                                       const SizedBox(width: 4),
                                       MiniBadge(
                                         key: Key(
-                                          'fleet-focus-mechanism-${ship.id}',
+                                          i == 0
+                                              ? 'fleet-focus-mechanism-${ship.id}'
+                                              : 'fleet-focus-mechanism-${ship.id}-$i',
                                         ),
-                                        text: mechanism.label,
-                                        color: _mechanismColor(mechanism.tone),
+                                        text:
+                                            allMechanisms[i].effectiveShortLabel,
+                                        color: _mechanismColor(
+                                          allMechanisms[i].tone,
+                                        ),
                                       ),
                                     ],
                                   ],
@@ -423,6 +431,7 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
 Color _mechanismColor(MechanismTone tone) => switch (tone) {
   MechanismTone.antiAir => const Color(0xffffc861),
   MechanismTone.specialAttack => const Color(0xffff8b88),
+  MechanismTone.nightAttack => const Color(0xffbfa4ff),
   MechanismTone.neutral ||
   MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
 };

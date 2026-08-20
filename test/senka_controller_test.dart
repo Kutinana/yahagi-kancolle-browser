@@ -57,7 +57,10 @@ void main() {
         senkaOneTimeQuestCatalog.single.label,
         '改装特務空母「Gambier Bay Mk.II」抜錨！',
       );
-      expect(senkaOneTimeQuestCatalog.single.shortName, '火球炮');
+      expect(
+        senkaOneTimeQuestCatalog.single.shortName,
+        '改装特務空母『Gambier Bay Mk.II』抜錨！',
+      );
       expect(senkaOneTimeQuestCatalog.single.senka, 800);
       expect(
         senkaOneTimeQuestCatalog.single.category,
@@ -66,13 +69,10 @@ void main() {
     });
 
     test('服务器来源解析 w01 到 w20 且非法来源安全降级', () {
-      expect(
-        senkaServerName('https://w01y.kancolle-server.com'),
-        '横須賀鎮守府（横须贺）',
-      );
-      expect(senkaServerName('https://w01.kancolle-server.com'), '横須賀鎮守府（横须贺）');
-      expect(senkaServerName('https://w14p.kancolle-server.com'), '単冠湾泊地（单冠湾）');
-      expect(senkaServerName('https://w20i.kancolle-server.com'), '柱島泊地（柱岛）');
+      expect(senkaServerName('https://w01y.kancolle-server.com'), '横須賀鎮守府');
+      expect(senkaServerName('https://w01.kancolle-server.com'), '横須賀鎮守府');
+      expect(senkaServerName('https://w14p.kancolle-server.com'), '単冠湾泊地');
+      expect(senkaServerName('https://w20i.kancolle-server.com'), '柱島泊地');
       expect(senkaServerName('https://w21.invalid'), '未知服务器');
       expect(senkaServerName('ftp://w01.kancolle-server.com'), '未知服务器');
       expect(senkaServerName('https://w01.evil.example'), '未知服务器');
@@ -86,6 +86,55 @@ void main() {
   });
 
   group('战果状态持久化', () {
+    test('旧追踪版本只清零素战果与经验基准并保留其他当月数据', () {
+      final legacy = SenkaState.fromJson({
+        'monthKey': '2026-08',
+        'latestExperience': 15222492,
+        'days': {
+          '2026-08-19': {'experience': 51472.0353, 'eo': 75, 'quest': 80},
+        },
+        'targetSenka': 4000,
+        'calculatorCurrentSenka': 168,
+        'eoStatuses': {'15': 'completed'},
+        'questStatuses': {'854': 'planned'},
+        'sortieStats': {
+          '1-5': {'areaId': 1, 'mapNo': 5, 'sorties': 4},
+        },
+      });
+
+      final migrated = migrateSenkaExperienceTracking(legacy);
+
+      expect(
+        migrated.experienceTrackingVersion,
+        currentSenkaExperienceTrackingVersion,
+      );
+      expect(migrated.latestExperience, isNull);
+      expect(migrated.day(DateTime(2026, 8, 19)).experience, 0);
+      expect(migrated.day(DateTime(2026, 8, 19)).eo, 75);
+      expect(migrated.day(DateTime(2026, 8, 19)).quest, 80);
+      expect(migrated.targetSenka, 4000);
+      expect(migrated.calculatorCurrentSenka, 168);
+      expect(migrated.eoStatuses[15], SenkaRewardStatus.completed);
+      expect(migrated.questStatuses[854], SenkaRewardStatus.planned);
+      expect(migrated.sortieStats['1-5']?.sorties, 4);
+    });
+
+    test('当前追踪版本 JSON 往返不会重复清零素战果', () {
+      final original = SenkaState.forMonth('2026-08').copyWith(
+        latestExperience: 15222492,
+        days: const {
+          '2026-08-19': SenkaDayRecord(experience: 12.34, eo: 75, quest: 80),
+        },
+      );
+      final restored = SenkaState.fromJson(
+        jsonDecode(jsonEncode(original.toJson())),
+      );
+
+      expect(migrateSenkaExperienceTracking(restored), same(restored));
+      expect(restored.day(DateTime(2026, 8, 19)).experience, 12.34);
+      expect(restored.latestExperience, 15222492);
+    });
+
     test('新状态字段与出击统计完整往返', () {
       final original = SenkaState.forMonth('2026-08').copyWith(
         serverOrigin: 'https://w14p.kancolle-server.com',
@@ -475,6 +524,39 @@ void main() {
     expect(store.saveCount, 1);
   });
 
+  test('初始化旧追踪档案时清洗异常素战果并立即保存新版本', () async {
+    final store = MemorySenkaStore(
+      SenkaState(
+        monthKey: '2026-08',
+        experienceTrackingVersion: 0,
+        latestExperience: 15222492,
+        days: const {
+          '2026-08-19': SenkaDayRecord(
+            experience: 51472.0353,
+            eo: 75,
+            quest: 80,
+          ),
+        },
+        targetSenka: 4000,
+      ),
+    );
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 20, 3),
+    );
+
+    await controller.initialize();
+
+    expect(controller.state.experienceTrackingVersion, 1);
+    expect(controller.state.latestExperience, isNull);
+    expect(controller.state.day(DateTime(2026, 8, 19)).experience, 0);
+    expect(controller.state.day(DateTime(2026, 8, 19)).eo, 75);
+    expect(controller.state.day(DateTime(2026, 8, 19)).quest, 80);
+    expect(controller.state.targetSenka, 4000);
+    expect(store.saveCount, 1);
+    expect(store.saved?.toJson(), controller.state.toJson());
+  });
+
   test('加载旧月份只保留账号身份并创建当月档案', () async {
     final store = MemorySenkaStore(
       SenkaState.forMonth('2026-07').copyWith(
@@ -568,6 +650,121 @@ void main() {
     expect(controller.state.targetSenka, 0);
     expect(store.saveCount, 1);
   });
+
+  test('归零和手动填写只替换本月素战果并继续自动累计', () async {
+    final store = MemorySenkaStore(
+      SenkaState.forMonth('2026-08').copyWith(
+        latestExperience: 15000000,
+        days: const {
+          '2026-08-19': SenkaDayRecord(
+            experience: 12.34,
+            eo: 75,
+            quest: 80,
+          ),
+          '2026-08-20': SenkaDayRecord(
+            experience: 2.18,
+            eo: 100,
+            quest: 200,
+          ),
+        },
+        rankingHistory: {
+          'player': [
+            SenkaRankingSnapshot(
+              rank: 4100,
+              senka: 160,
+              capturedAt: DateTime.utc(2026, 8, 19, 3),
+              localSenkaAtCapture: 400,
+            ),
+            SenkaRankingSnapshot(
+              rank: 4094,
+              senka: 168,
+              capturedAt: DateTime.utc(2026, 8, 20, 3),
+              localSenkaAtCapture: 51624.2186,
+            ),
+          ],
+          '5': [
+            SenkaRankingSnapshot(
+              rank: 5,
+              senka: 6153,
+              capturedAt: DateTime.utc(2026, 8, 20, 3),
+              localSenkaAtCapture: 51624.2186,
+            ),
+          ],
+        },
+      ),
+    );
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 20, 3),
+    );
+    await controller.initialize();
+
+    expect(await controller.resetBaseSenka(), isTrue);
+    expect(controller.monthBaseSenka, 0);
+    expect(controller.state.latestExperience, 15000000);
+    expect(controller.state.day(DateTime(2026, 8, 19)).eo, 75);
+    expect(controller.state.day(DateTime(2026, 8, 19)).quest, 80);
+    expect(controller.state.day(DateTime(2026, 8, 20)).eo, 100);
+    expect(controller.state.day(DateTime(2026, 8, 20)).quest, 200);
+    expect(controller.state.playerRankingRow.senkaDelta, 0);
+    expect(controller.state.playerRankingRow.rank, 4094);
+    expect(controller.state.playerRankingRow.senka, 168);
+    expect(controller.state.rankingHistory['player'], hasLength(2));
+    expect(
+      controller.state.rankingHistory['player']!.last.capturedAt,
+      DateTime.utc(2026, 8, 20, 3),
+    );
+    expect(
+      controller.state.rankingHistory['player']!.first.localSenkaAtCapture,
+      400,
+    );
+    expect(
+      controller.state.rankingHistory['5']!.single.localSenkaAtCapture,
+      51624.2186,
+    );
+    expect(store.saveCount, 1);
+
+    expect(await controller.setBaseSenka(123.45), isTrue);
+    expect(controller.monthBaseSenka, 123.45);
+    expect(controller.state.day(DateTime(2026, 8, 19)).experience, 0);
+    expect(controller.state.day(DateTime(2026, 8, 20)).experience, 123.45);
+    expect(controller.state.playerRankingRow.senkaDelta, 0);
+    expect(store.saveCount, 2);
+
+    controller.accept(
+      event('/kcsapi/api_req_sortie/battleresult', {
+        'api_member_exp': 15001000,
+      }),
+    );
+    await controller.idle;
+    expect(controller.monthBaseSenka, closeTo(124.15, 1e-9));
+    expect(controller.state.playerRankingRow.senkaDelta, closeTo(0.7, 1e-9));
+    expect(store.saveCount, 3);
+  });
+
+  test('手动填写拒绝负数与非有限值且保存失败会返回 false', () async {
+    final store = RecoveringSenkaStore(failSaveCount: 1);
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 20, 3),
+    );
+
+    expect(await controller.setBaseSenka(-1), isFalse);
+    expect(await controller.setBaseSenka(double.nan), isFalse);
+    expect(await controller.setBaseSenka(double.infinity), isFalse);
+    expect(store.saveAttempts, 0);
+
+    expect(await controller.setBaseSenka(12.34), isFalse);
+    expect(controller.monthBaseSenka, 12.34);
+    expect(store.saveAttempts, 1);
+    expect(store.saveCount, 0);
+    expect(await controller.setBaseSenka(56.78), isTrue);
+    expect(controller.monthBaseSenka, 56.78);
+    expect(store.saveAttempts, 2);
+    expect(store.saveCount, 1);
+  });
+
+
 
   test('海域收藏和隐藏仅操作已有统计的规范 key 且互不排斥', () async {
     final store = MemorySenkaStore();

@@ -244,6 +244,47 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clearWebCacheDesc => '清除 WebView 网页内核的临时页面与脚本数据。';
 
   @override
+  String get baseSenkaResetTitle => '素战果归零';
+
+  @override
+  String get baseSenkaResetDesc => '将本月累计素战果设为 0.00，不影响 EO、任务和其他战果数据。';
+
+  @override
+  String get baseSenkaResetConfirmTitle => '素战果归零';
+
+  @override
+  String get baseSenkaResetConfirmDesc =>
+      '确定将本月累计素战果归零吗？每日 EO 与任务奖励记录会保留，后续经验增量将从 0.00 继续累计。';
+
+  @override
+  String get baseSenkaResetSuccess => '本月累计素战果已归零';
+
+  @override
+  String get baseSenkaManualTitle => '手动填写素战果';
+
+  @override
+  String baseSenkaCurrentValue(String value) {
+    return '本月累计：$value 战果';
+  }
+
+  @override
+  String get baseSenkaManualDialogTitle => '填写本月累计素战果';
+
+  @override
+  String get baseSenkaManualInputLabel => '本月累计素战果';
+
+  @override
+  String get baseSenkaManualInvalid => '请输入非负数字，最多保留两位小数';
+
+  @override
+  String baseSenkaSetSuccess(String value) {
+    return '本月累计素战果已设为 $value';
+  }
+
+  @override
+  String get baseSenkaSaveFailed => '素战果保存失败，请重试';
+
+  @override
   String get fleetBrief => '编队简报';
 
   @override
@@ -936,16 +977,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get postBattleWarningTitle => '战后安全警告';
+  String get postBattleWarningTitle => '大破安全警告';
 
   @override
   String get postBattleWarningHeadline => '出击舰队中存在大破舰娘！';
 
   @override
-  String get postBattleWarningBody => '请在接下来的选择界面务必点击“撤退”，切勿强行进击以免沉船！';
+  String get postBattleWarningBody => '继续进击前，请确认大破舰的管损及退避状态；无法确保安全时请撤退！';
 
   @override
-  String get acknowledgeAndRetreat => '确认了解并撤退';
+  String get acknowledgeAndRetreat => '确认了解';
 
   @override
   String get postBattleWarningBanner => '战后安全警告：出击舰队中存在大破舰娘！请注意撤退！';
@@ -1268,24 +1309,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameRenderingModeStandardDesc =>
-      'Texture Layer + WebGL，减少部分合成开销，部分设备可能存在显示或触控兼容问题。';
+      'Flutter PlatformView + Texture Layer + WebGL，减少部分合成开销，部分设备可能存在显示或触控兼容问题。';
 
   @override
-  String get gameRenderingModeCompatibility => '均衡模式（推荐）';
+  String get gameRenderingModeCompatibility => '均衡模式';
 
   @override
   String get gameRenderingModeCompatibilityDesc =>
-      'Hybrid Composition + WebGL，兼顾游戏性能与设备兼容性。';
+      'Flutter PlatformView + Hybrid Composition + WebGL，兼顾游戏性能与设备兼容性。';
 
   @override
   String get gameRenderingModeCanvas => '兼容模式';
 
   @override
   String get gameRenderingModeCanvasDesc =>
-      'Hybrid Composition + Canvas，绕过 WebGL，优先解决部分 GPU / WebGL 兼容问题，画面性能可能降低。';
+      'Flutter PlatformView + Hybrid Composition + Canvas，绕过 WebGL，优先解决部分 GPU / WebGL 兼容问题，画面性能可能降低。';
 
   @override
-  String get gameRenderingModeNativeActivity => '原生直连（推荐）';
+  String get gameRenderingModeNativeActivity => '原生独立渲染（推荐）';
 
   @override
   String get gameRenderingModeNativeActivityDesc =>
@@ -2002,6 +2043,47 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get clearWebCacheDesc => '清除 WebView 網頁核心的暫存頁面與指令碼資料。';
+
+  @override
+  String get baseSenkaResetTitle => '素戰果歸零';
+
+  @override
+  String get baseSenkaResetDesc => '將本月累計素戰果設為 0.00，不影響 EO、任務和其他戰果資料。';
+
+  @override
+  String get baseSenkaResetConfirmTitle => '素戰果歸零';
+
+  @override
+  String get baseSenkaResetConfirmDesc =>
+      '確定將本月累計素戰果歸零嗎？每日 EO 與任務獎勵記錄會保留，後續經驗增量將從 0.00 繼續累計。';
+
+  @override
+  String get baseSenkaResetSuccess => '本月累計素戰果已歸零';
+
+  @override
+  String get baseSenkaManualTitle => '手動填寫素戰果';
+
+  @override
+  String baseSenkaCurrentValue(String value) {
+    return '本月累計：$value 戰果';
+  }
+
+  @override
+  String get baseSenkaManualDialogTitle => '填寫本月累計素戰果';
+
+  @override
+  String get baseSenkaManualInputLabel => '本月累計素戰果';
+
+  @override
+  String get baseSenkaManualInvalid => '請輸入非負數字，最多保留兩位小數';
+
+  @override
+  String baseSenkaSetSuccess(String value) {
+    return '本月累計素戰果已設為 $value';
+  }
+
+  @override
+  String get baseSenkaSaveFailed => '素戰果儲存失敗，請重試';
 
   @override
   String get fleetBrief => '艦隊簡報';
@@ -3029,24 +3111,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameRenderingModeStandardDesc =>
-      'Texture Layer + WebGL，減少部分合成開銷，部分裝置可能存在顯示或觸控相容性問題。';
+      'Flutter PlatformView + Texture Layer + WebGL，減少部分合成開銷，部分裝置可能存在顯示或觸控相容性問題。';
 
   @override
-  String get gameRenderingModeCompatibility => '均衡模式（推薦）';
+  String get gameRenderingModeCompatibility => '均衡模式';
 
   @override
   String get gameRenderingModeCompatibilityDesc =>
-      'Hybrid Composition + WebGL，兼顧遊戲效能與裝置相容性。';
+      'Flutter PlatformView + Hybrid Composition + WebGL，兼顧遊戲效能與裝置相容性。';
 
   @override
   String get gameRenderingModeCanvas => '相容模式';
 
   @override
   String get gameRenderingModeCanvasDesc =>
-      'Hybrid Composition + Canvas，繞過 WebGL，優先解決部分 GPU / WebGL 相容性問題，畫面效能可能降低。';
+      'Flutter PlatformView + Hybrid Composition + Canvas，繞過 WebGL，優先解決部分 GPU / WebGL 相容性問題，畫面效能可能降低。';
 
   @override
-  String get gameRenderingModeNativeActivity => '原生直連（推薦）';
+  String get gameRenderingModeNativeActivity => '原生獨立渲染（推薦）';
 
   @override
   String get gameRenderingModeNativeActivityDesc =>

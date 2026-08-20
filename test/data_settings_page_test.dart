@@ -51,6 +51,8 @@ void main() {
     expect(find.byKey(const Key('settings-clear-quest-cache')), findsOneWidget);
     expect(find.byKey(const Key('settings-clear-logbook')), findsOneWidget);
     expect(find.byKey(const Key('settings-clear-web-cache')), findsOneWidget);
+    expect(find.byKey(const Key('settings-reset-base-senka')), findsNothing);
+    expect(find.byKey(const Key('settings-set-base-senka')), findsNothing);
     expect(find.text('安全边界'), findsOneWidget);
   });
 

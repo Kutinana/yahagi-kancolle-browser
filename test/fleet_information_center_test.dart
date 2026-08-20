@@ -1313,7 +1313,7 @@ void main() {
     final shipSpeed = tester.widget<Text>(
       find.descendant(of: identityTop, matching: find.text('高速+')),
     );
-    final openingAsw = tester.widget<Text>(find.text('先制对潜'));
+    final openingAsw = tester.widget<Text>(find.text('先反'));
     final fatigue = tester.widget<Text>(find.text('疲劳 49'));
     expect(
       tester.getSize(find.byKey(const Key('ship-identity-9001'))).width,
@@ -1352,7 +1352,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: identityTop, matching: find.text('先制对潜')),
+      find.descendant(of: identityTop, matching: find.text('先反')),
       findsOneWidget,
     );
     final levelPosition = tester.getTopLeft(
@@ -1365,7 +1365,7 @@ void main() {
       find.descendant(of: identityTop, matching: find.text('高速+')),
     );
     final openingAswPosition = tester.getTopLeft(
-      find.descendant(of: identityTop, matching: find.text('先制对潜')),
+      find.descendant(of: identityTop, matching: find.text('先反')),
     );
     expect(levelPosition.dx, lessThan(typePosition.dx));
     expect(typePosition.dx, lessThan(speedPosition.dx));
@@ -2163,6 +2163,116 @@ void main() {
       expect(find.text('入渠'), findsNWidgets(2));
       expect(find.byKey(const Key('fleet-fatigue-badge-9001')), findsOneWidget);
       expect(find.byKey(const Key('fleet-fatigue-badge-9002')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'ship parameter details renders mechanism capsules at bottom with rate',
+    (tester) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1280, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final start2Evt = kcsapiEvent(
+        '/kcsapi/api_start2/getData',
+        <String, Object?>{
+          'api_mst_stype': <Object?>[
+            <String, Object?>{'api_id': 10, 'api_name': '航空戦艦'},
+          ],
+          'api_mst_ship': <Object?>[
+            <String, Object?>{
+              'api_id': 553,
+              'api_name': '伊势改二',
+              'api_stype': 10,
+              'api_ctype': 2,
+              'api_sortno': 82,
+              'api_slot_num': 5,
+            },
+          ],
+          'api_mst_slotitem': <Object?>[
+            <String, Object?>{
+              'api_id': 274,
+              'api_name': '12cm 30连装喷进炮改二',
+              'api_type': <int>[0, 0, 21, 15, 0],
+              'api_tyku': 8,
+            },
+          ],
+        },
+      );
+
+      final portEvt = kcsapiEvent(
+        '/kcsapi/api_port/port',
+        <String, Object?>{
+          'api_ship': <Object?>[
+            <String, Object?>{
+              'api_id': 1001,
+              'api_ship_id': 553,
+              'api_lv': 99,
+              'api_nowhp': 77,
+              'api_maxhp': 77,
+              'api_karyoku': <int>[88, 88],
+              'api_soukou': <int>[80, 80],
+              'api_raisou': <int>[0, 0],
+              'api_taiku': <int>[95, 95],
+              'api_kaihi': <int>[70, 70],
+              'api_taisen': <int>[0, 0],
+              'api_sakuteki': <int>[50, 50],
+              'api_lucky': <int>[40, 40],
+              'api_soku': 10,
+              'api_leng': 3,
+              'api_slot': <int>[2001, -1, -1, -1, -1],
+              'api_slot_ex': 0,
+              'api_onslot': <int>[0, 0, 0, 0, 0],
+              'api_fuel': 100,
+              'api_bull': 100,
+              'api_cond': 49,
+            },
+          ],
+          'api_deck_port': <Object?>[
+            <String, Object?>{
+              'api_id': 1,
+              'api_name': '第1舰队',
+              'api_ship': <int>[1001, -1, -1, -1, -1, -1],
+            },
+          ],
+        },
+      );
+
+      final slotItemEvt = kcsapiEvent(
+        '/kcsapi/api_get_member/slot_item',
+        <Object?>[
+          <String, Object?>{
+            'api_id': 2001,
+            'api_slotitem_id': 274,
+            'api_level': 0,
+          },
+        ],
+      );
+
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(start2Evt)
+        ..accept(portEvt)
+        ..accept(slotItemEvt);
+      await controller.idle;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 1280,
+              height: 800,
+              child: FleetInformationCenter(controller: controller),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final rocketChip = find.textContaining('喷2');
+      expect(rocketChip, findsWidgets);
     },
   );
 }

@@ -549,6 +549,78 @@ abstract class AppLocalizations {
   /// **'清除 WebView 网页内核的临时页面与脚本数据。'**
   String get clearWebCacheDesc;
 
+  /// No description provided for @baseSenkaResetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'素战果归零'**
+  String get baseSenkaResetTitle;
+
+  /// No description provided for @baseSenkaResetDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'将本月累计素战果设为 0.00，不影响 EO、任务和其他战果数据。'**
+  String get baseSenkaResetDesc;
+
+  /// No description provided for @baseSenkaResetConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'素战果归零'**
+  String get baseSenkaResetConfirmTitle;
+
+  /// No description provided for @baseSenkaResetConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定将本月累计素战果归零吗？每日 EO 与任务奖励记录会保留，后续经验增量将从 0.00 继续累计。'**
+  String get baseSenkaResetConfirmDesc;
+
+  /// No description provided for @baseSenkaResetSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月累计素战果已归零'**
+  String get baseSenkaResetSuccess;
+
+  /// No description provided for @baseSenkaManualTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动填写素战果'**
+  String get baseSenkaManualTitle;
+
+  /// No description provided for @baseSenkaCurrentValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月累计：{value} 战果'**
+  String baseSenkaCurrentValue(String value);
+
+  /// No description provided for @baseSenkaManualDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'填写本月累计素战果'**
+  String get baseSenkaManualDialogTitle;
+
+  /// No description provided for @baseSenkaManualInputLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月累计素战果'**
+  String get baseSenkaManualInputLabel;
+
+  /// No description provided for @baseSenkaManualInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入非负数字，最多保留两位小数'**
+  String get baseSenkaManualInvalid;
+
+  /// No description provided for @baseSenkaSetSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月累计素战果已设为 {value}'**
+  String baseSenkaSetSuccess(String value);
+
+  /// No description provided for @baseSenkaSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'素战果保存失败，请重试'**
+  String get baseSenkaSaveFailed;
+
   /// No description provided for @fleetBrief.
   ///
   /// In zh, this message translates to:
@@ -1907,7 +1979,7 @@ abstract class AppLocalizations {
   /// No description provided for @postBattleWarningTitle.
   ///
   /// In zh, this message translates to:
-  /// **'战后安全警告'**
+  /// **'大破安全警告'**
   String get postBattleWarningTitle;
 
   /// No description provided for @postBattleWarningHeadline.
@@ -1919,13 +1991,13 @@ abstract class AppLocalizations {
   /// No description provided for @postBattleWarningBody.
   ///
   /// In zh, this message translates to:
-  /// **'请在接下来的选择界面务必点击“撤退”，切勿强行进击以免沉船！'**
+  /// **'继续进击前，请确认大破舰的管损及退避状态；无法确保安全时请撤退！'**
   String get postBattleWarningBody;
 
   /// No description provided for @acknowledgeAndRetreat.
   ///
   /// In zh, this message translates to:
-  /// **'确认了解并撤退'**
+  /// **'确认了解'**
   String get acknowledgeAndRetreat;
 
   /// No description provided for @postBattleWarningBanner.
@@ -2483,19 +2555,19 @@ abstract class AppLocalizations {
   /// No description provided for @gameRenderingModeStandardDesc.
   ///
   /// In zh, this message translates to:
-  /// **'Texture Layer + WebGL，减少部分合成开销，部分设备可能存在显示或触控兼容问题。'**
+  /// **'Flutter PlatformView + Texture Layer + WebGL，减少部分合成开销，部分设备可能存在显示或触控兼容问题。'**
   String get gameRenderingModeStandardDesc;
 
   /// No description provided for @gameRenderingModeCompatibility.
   ///
   /// In zh, this message translates to:
-  /// **'均衡模式（推荐）'**
+  /// **'均衡模式'**
   String get gameRenderingModeCompatibility;
 
   /// No description provided for @gameRenderingModeCompatibilityDesc.
   ///
   /// In zh, this message translates to:
-  /// **'Hybrid Composition + WebGL，兼顾游戏性能与设备兼容性。'**
+  /// **'Flutter PlatformView + Hybrid Composition + WebGL，兼顾游戏性能与设备兼容性。'**
   String get gameRenderingModeCompatibilityDesc;
 
   /// No description provided for @gameRenderingModeCanvas.
@@ -2507,13 +2579,13 @@ abstract class AppLocalizations {
   /// No description provided for @gameRenderingModeCanvasDesc.
   ///
   /// In zh, this message translates to:
-  /// **'Hybrid Composition + Canvas，绕过 WebGL，优先解决部分 GPU / WebGL 兼容问题，画面性能可能降低。'**
+  /// **'Flutter PlatformView + Hybrid Composition + Canvas，绕过 WebGL，优先解决部分 GPU / WebGL 兼容问题，画面性能可能降低。'**
   String get gameRenderingModeCanvasDesc;
 
   /// No description provided for @gameRenderingModeNativeActivity.
   ///
   /// In zh, this message translates to:
-  /// **'原生直连（推荐）'**
+  /// **'原生独立渲染（推荐）'**
   String get gameRenderingModeNativeActivity;
 
   /// No description provided for @gameRenderingModeNativeActivityDesc.

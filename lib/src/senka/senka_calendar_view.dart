@@ -62,8 +62,9 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
         children: [
           Container(
             key: const Key('calendar-weekday-background'),
-            height: widget.compact ? 20 : 32,
-            color: senkaWeekdayBackground,
+            height: widget.compact ? 22 : 32,
+            color: const Color(0xff071822),
+            padding: EdgeInsets.symmetric(horizontal: widget.compact ? 2 : 6),
             child: Row(
               key: const Key('calendar-weekday-row'),
               children: [
@@ -73,8 +74,8 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
                       child: Text(
                         day,
                         style: TextStyle(
-                          color: senkaText,
-                          fontSize: widget.compact ? 10 : 13,
+                          color: const Color(0xff8fa7b7),
+                          fontSize: widget.compact ? 11 : 14,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -84,32 +85,39 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
             ),
           ),
           Expanded(
-            child: Column(
-              children: [
-                for (var week = 0; week < 6; week++)
-                  Expanded(
-                    key: Key('calendar-week-row-$week'),
-                    child: Row(
-                      children: [
-                        for (var weekday = 0; weekday < 7; weekday++)
-                          Expanded(
-                            child: _cell(
-                              year,
-                              month,
-                              week * 7 + weekday,
-                              leading,
-                              count,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: widget.compact ? 2 : 6,
+                vertical: widget.compact ? 2 : 4,
+              ),
+              child: Column(
+                children: [
+                  for (var week = 0; week < 6; week++)
+                    Expanded(
+                      key: Key('calendar-week-row-$week'),
+                      child: Row(
+                        children: [
+                          for (var weekday = 0; weekday < 7; weekday++)
+                            Expanded(
+                              child: _cell(
+                                year,
+                                month,
+                                week * 7 + weekday,
+                                leading,
+                                count,
+                                currentDate,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           Container(
             key: const Key('senka-day-detail'),
-            height: widget.compact ? 22 : 38,
+            height: widget.compact ? 24 : 38,
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: senkaLine)),
             ),
@@ -126,7 +134,14 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
     );
   }
 
-  Widget _cell(int year, int month, int slot, int leading, int count) {
+  Widget _cell(
+    int year,
+    int month,
+    int slot,
+    int leading,
+    int count,
+    DateTime currentDate,
+  ) {
     final day = slot - leading + 1;
     final inMonth = day >= 1 && day <= count;
     final date = inMonth ? DateTime(year, month, day) : null;
@@ -138,49 +153,85 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
         date.year == selected.year &&
         date.month == selected.month &&
         date.day == selected.day;
+    final isToday = inMonth &&
+        date!.year == currentDate.year &&
+        date.month == currentDate.month &&
+        date.day == currentDate.day;
+
+    final isFuture = date != null && date.isAfter(currentDate);
+    final displayValue = date == null
+        ? ''
+        : (isFuture && record.total == 0
+            ? '-'
+            : (record.total == 0
+                ? '0.0'
+                : record.total.toStringAsFixed(
+                    record.total * 10 % 1 == 0 ? 1 : 2,
+                  )));
+
+    final Color backgroundColor = chosen
+        ? const Color(0xff8a6628)
+        : const Color(0xff0b1e2a);
+
+    final Color dayNumberColor = chosen
+        ? Colors.white
+        : (inMonth ? senkaText : Colors.transparent);
+
+    final Color valueColor = chosen
+        ? const Color(0xffffdc88)
+        : (isFuture && record.total == 0 ? const Color(0xff627d8e) : senkaGold);
+
+    final Border? border = chosen
+        ? Border.all(color: const Color(0xffe4b34e), width: 1.5)
+        : (isToday
+            ? Border.all(color: const Color(0xff8a6628), width: 1.5)
+            : Border.all(color: const Color(0xff1c3545), width: 1));
+
     final cell = Material(
       key: Key(inMonth ? 'calendar-cell-$day' : 'calendar-cell-out-$slot'),
-      color: chosen ? senkaGold.withValues(alpha: .12) : senkaPanel,
+      color: Colors.transparent,
       child: InkWell(
         onTap: date == null ? null : () => setState(() => selected = date),
-        child: Container(
-          decoration: const BoxDecoration(
-            border: Border(
-              right: BorderSide(color: senkaLine),
-              bottom: BorderSide(color: senkaLine),
-            ),
-          ),
-          padding: EdgeInsets.all(widget.compact ? 2 : 5),
-          child: inMonth
-              ? Stack(
+        child: inMonth
+            ? Container(
+                margin: EdgeInsets.all(widget.compact ? 1.5 : 2.5),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(widget.compact ? 5 : 7),
+                  border: border,
+                ),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Align(
-                      alignment: Alignment.topLeft,
-                      child: Text(
-                        '$day',
-                        style: TextStyle(
-                          color: senkaText,
-                          fontSize: widget.compact ? 11 : 16,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    Text(
+                      '$day',
+                      style: TextStyle(
+                        color: dayNumberColor,
+                        fontSize: widget.compact ? 15 : 21,
+                        fontWeight: FontWeight.w800,
+                        height: 1.05,
                       ),
                     ),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: Text(
-                        senkaNumber(record.total),
-                        maxLines: 1,
-                        style: TextStyle(
-                          color: senkaGold,
-                          fontSize: widget.compact ? 9 : 13,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    SizedBox(height: widget.compact ? 1 : 2),
+                    Text(
+                      displayValue,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: valueColor,
+                        fontSize: widget.compact ? 12 : 16,
+                        fontWeight: FontWeight.w700,
+                        height: 1.05,
+                        fontFeatures: const [
+                          FontFeature.tabularFigures(),
+                        ],
                       ),
                     ),
                   ],
-                )
-              : const SizedBox.shrink(),
-        ),
+                ),
+              )
+            : const SizedBox.shrink(),
       ),
     );
     if (date == null) return ExcludeSemantics(child: cell);
@@ -201,17 +252,22 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
           label,
           style: TextStyle(
             color: senkaText,
-            fontSize: widget.compact ? 10 : 14,
+            fontSize: widget.compact ? 11 : 13,
             fontWeight: FontWeight.w800,
           ),
         ),
-        SizedBox(width: widget.compact ? 3 : 7),
-        Text(
-          '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)}',
-          style: TextStyle(
-            color: senkaGold,
-            fontSize: widget.compact ? 10 : 14,
-            fontWeight: FontWeight.w800,
+        SizedBox(width: widget.compact ? 2 : 5),
+        Flexible(
+          child: Text(
+            '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: senkaGold,
+              fontSize: widget.compact ? 11 : 13,
+              fontWeight: FontWeight.w800,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],

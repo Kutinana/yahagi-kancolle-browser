@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/expedition/expedition_evaluator.dart';
+import 'package:yahagi_kancolle_browser/src/expedition/expedition_rule_catalog.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 
 void main() {
@@ -82,6 +83,50 @@ void main() {
         '舰队构成：1CL+3DD/DE or 1CL+2DE or 1DD+3DE or 1CT+2DE or '
         '1CVE+2DD or 1CVE+2DE',
       );
+    });
+
+    test('旗舰舰种条件像 Poi 一样写明所需舰种', () {
+      const expectedTypeLabels = <int, String>{
+        3: '轻巡洋舰（CL）',
+        5: '重巡洋舰（CA）',
+        7: '轻空母（CVL）',
+        16: '水上机母舰（AV）',
+        20: '潜水母舰（AS）',
+        21: '练习巡洋舰（CT）',
+      };
+
+      final flagshipRequirements = expeditionRules.values.expand(
+        (rule) => rule.requirements
+            .where(
+              (requirement) =>
+                  requirement.type == ExpeditionRequirementType.flagshipType,
+            )
+            .map((requirement) => (rule.id, requirement.value)),
+      );
+
+      for (final (missionId, shipTypeId) in flagshipRequirements) {
+        expect(
+          expectedTypeLabels,
+          contains(shipTypeId),
+          reason: '远征 $missionId 使用了尚未命名的旗舰舰种 $shipTypeId',
+        );
+        final condition = const ExpeditionEvaluator()
+            .evaluate(
+              state: GameState.empty,
+              fleet: const Fleet(id: 2, name: '第二舰队'),
+              missionId: missionId,
+            )
+            .normalConditions
+            .firstWhere(
+              (item) => item.kind == ExpeditionConditionKind.flagshipType,
+            );
+
+        expect(
+          condition.label,
+          '旗舰舰种为${expectedTypeLabels[shipTypeId]}',
+          reason: '远征 $missionId',
+        );
+      }
     });
 
     test(
@@ -199,7 +244,7 @@ void main() {
       },
     );
 
-    test('100 percent flagship rate waives the highest-level check', () {
+    test('旗舰不是最高等级舰时只按实际大成功率判断', () {
       final result = const ExpeditionEvaluator().evaluate(
         state: GameState(
           masterShips: <int, MasterShip>{
@@ -207,27 +252,31 @@ void main() {
             701: MasterShip(id: 701, name: '僚舰', shipTypeId: 2),
           },
           ships: <int, OwnedShip>{
-            1: OwnedShip(id: 1, masterId: 700, level: 1, condition: 50),
+            1: OwnedShip(
+              id: 1,
+              masterId: 700,
+              level: 20,
+              condition: 50,
+              firepower: 50,
+              antiAir: 70,
+              antiSub: 180,
+            ),
             2: OwnedShip(id: 2, masterId: 701, level: 99, condition: 50),
             3: OwnedShip(id: 3, masterId: 701, level: 99, condition: 50),
             4: OwnedShip(id: 4, masterId: 701, level: 99, condition: 50),
-            5: OwnedShip(id: 5, masterId: 701, level: 99, condition: 50),
-            6: OwnedShip(id: 6, masterId: 701, level: 99, condition: 50),
           },
         ),
-        fleet: Fleet(id: 2, name: '第二舰队', shipIds: <int>[1, 2, 3, 4, 5, 6]),
+        fleet: Fleet(id: 2, name: '第二舰队', shipIds: <int>[1, 2, 3, 4]),
         missionId: 101,
+        greatSuccessTarget: 80,
       );
 
-      expect(result.greatSuccessRate, greaterThanOrEqualTo(100));
+      expect(result.greatSuccessRate, 81.82);
+      expect(result.normalPassed, isTrue);
+      expect(result.greatSuccessPassed, isTrue);
       expect(
-        result.greatSuccessConditions
-            .firstWhere(
-              (item) =>
-                  item.kind == ExpeditionConditionKind.higherLevelFlagship,
-            )
-            .passed,
-        isTrue,
+        result.greatSuccessConditions.map((condition) => condition.label),
+        isNot(contains('舰队最高等级舰为旗舰')),
       );
     });
 

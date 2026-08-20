@@ -35,7 +35,9 @@ class SenkaReducer {
             (stateMonth.year * 12 + stateMonth.month)) {
       return state;
     }
-    var current = migrateSenkaStateToMonth(state, monthKey);
+    var current = migrateSenkaExperienceTracking(
+      migrateSenkaStateToMonth(state, monthKey),
+    );
     if (_isSortieLifecyclePath(event.path) &&
         current.latestSortieEventAt != null &&
         event.capturedAt.isBefore(current.latestSortieEventAt!)) {
@@ -270,9 +272,10 @@ class SenkaReducer {
     };
     if (experience <= 0) return state;
     final previous = state.latestExperience;
-    if (previous == null || experience <= previous) {
+    if (previous == null) {
       return state.copyWith(latestExperience: experience);
     }
+    if (experience <= previous) return state;
     final gained = (experience - previous) * experienceToSenkaRate;
     return _addDay(
       state.copyWith(latestExperience: experience),

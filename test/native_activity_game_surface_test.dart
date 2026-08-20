@@ -28,6 +28,48 @@ import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
 
 void main() {
+  testWidgets('manual fit resends native bounds before fitting the page', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.calls.clear();
+
+    final operation = fixture.browserController.fitGameScreen();
+    await tester.pump();
+    await operation;
+
+    expect(
+      fixture.port.calls.where((call) => call == 'bounds' || call == 'fit'),
+      <String>['bounds', 'fit'],
+    );
+  });
+
+  testWidgets('resuming the app resynchronizes native game bounds', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(() async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await fixture.dispose();
+    });
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.calls.clear();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    fixture.port.calls.clear();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump();
+
+    expect(fixture.port.calls, contains('bounds'));
+  });
+
   test(
     'default startup orchestrator delegates network capture audio and frame rate in order',
     () async {

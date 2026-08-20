@@ -46,6 +46,12 @@ void main() {
     );
   });
 
+  test('alignment yields to an open DMM purchase dialog', () {
+    expect(gamePageAlignmentScript, contains("dialog[open]"));
+    expect(gamePageAlignmentScript, contains('hasBlockingPageDialog'));
+    expect(gamePageAlignmentScript, contains('!hasBlockingPageDialog()'));
+  });
+
   test('alignment removes every game-only lock outside the game surface', () {
     expect(
       gamePageAlignmentScript,

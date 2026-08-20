@@ -866,6 +866,15 @@ class GameState {
     return <OwnedShip>[for (final id in fleet.shipIds) ?ships[id]];
   }
 
+  Fleet? fleetForShip(int shipId) {
+    for (final fleet in fleets) {
+      if (fleet.shipIds.contains(shipId)) {
+        return fleet;
+      }
+    }
+    return null;
+  }
+
   MasterShip? masterForShip(OwnedShip ship) => masterShips[ship.masterId];
 
   MasterShipType? typeForShip(OwnedShip ship) {

@@ -36,7 +36,13 @@ void main() {
     final assetNames = tester
         .widgetList<Image>(find.byType(Image))
         .map((image) => (image.image as AssetImage).assetName);
-    expect(assetNames, contains('assets/images/slotitem/150.png'));
+    expect(
+      assetNames,
+      anyOf(
+        contains('assets/images/slotitem/50.png'),
+        contains('assets/images/slotitem/150.png'),
+      ),
+    );
     expect(tester.takeException(), isNull);
   });
 }

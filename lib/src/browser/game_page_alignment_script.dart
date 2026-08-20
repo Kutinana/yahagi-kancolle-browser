@@ -86,6 +86,9 @@ const String gamePageAlignmentScript = r'''
       return href.includes('/login') || href.includes('accounts.dmm.');
     });
 
+  const hasBlockingPageDialog = () =>
+    Boolean(document.querySelector('dialog[open]'));
+
   const notifyPresentationState = (hasGameSurface) => {
     const nextState = hasGameSurface ? 'game' : 'web';
     if (window.__yahagiMobilePresentationState === nextState) return;
@@ -147,7 +150,8 @@ const String gamePageAlignmentScript = r'''
       isGamePage &&
       !isAccountPage &&
       hasGameSurface &&
-      !hasAuthenticationControls();
+      !hasAuthenticationControls() &&
+      !hasBlockingPageDialog();
 
     if (shouldUseGamePresentation) {
       applyGamePresentation();

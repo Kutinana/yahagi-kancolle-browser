@@ -154,9 +154,9 @@ class ExpeditionStrings {
             : value.label,
       ExpeditionConditionKind.flagshipType =>
         _ja
-            ? '旗艦艦種条件'
+            ? '旗艦艦種：${_localizedFlagshipType(value.label, japanese: true)}'
             : traditional
-            ? '旗艦艦種條件'
+            ? '旗艦艦種為${_localizedFlagshipType(value.label, traditional: true)}'
             : value.label,
       ExpeditionConditionKind.levelSum =>
         _ja
@@ -224,12 +224,6 @@ class ExpeditionStrings {
             : traditional
             ? '艦隊全體處於戰意高昂'
             : value.label,
-      ExpeditionConditionKind.higherLevelFlagship =>
-        _ja
-            ? '艦隊最高レベル艦が旗艦'
-            : traditional
-            ? '艦隊最高等級艦為旗艦'
-            : value.label,
       ExpeditionConditionKind.daihatsuFill =>
         _ja
             ? '可能な限り大発動艇または特大発動艇を搭載'
@@ -237,6 +231,65 @@ class ExpeditionStrings {
             ? '盡可能多攜帶大發動艇或特大發動艇'
             : value.label,
     };
+  }
+
+  String _localizedFlagshipType(
+    String label, {
+    bool japanese = false,
+    bool traditional = false,
+  }) {
+    final code = RegExp(r'（([A-Z]+)）').firstMatch(label)?.group(1) ?? '';
+    final unknownTypeId = RegExp(r'舰种 (\d+)').firstMatch(label)?.group(1);
+    if (code.isEmpty && unknownTypeId != null) {
+      return japanese || traditional
+          ? '艦種 $unknownTypeId'
+          : '舰种 $unknownTypeId';
+    }
+    final name = switch (code) {
+      'CL' =>
+        japanese
+            ? '軽巡洋艦'
+            : traditional
+            ? '輕巡洋艦'
+            : '轻巡洋舰',
+      'CA' =>
+        japanese
+            ? '重巡洋艦'
+            : traditional
+            ? '重巡洋艦'
+            : '重巡洋舰',
+      'CVL' =>
+        japanese
+            ? '軽空母'
+            : traditional
+            ? '輕空母'
+            : '轻空母',
+      'AV' =>
+        japanese
+            ? '水上機母艦'
+            : traditional
+            ? '水上機母艦'
+            : '水上机母舰',
+      'AS' =>
+        japanese
+            ? '潜水母艦'
+            : traditional
+            ? '潛水母艦'
+            : '潜水母舰',
+      'CT' =>
+        japanese
+            ? '練習巡洋艦'
+            : traditional
+            ? '練習巡洋艦'
+            : '练习巡洋舰',
+      _ =>
+        japanese
+            ? '指定艦種'
+            : traditional
+            ? '指定艦種'
+            : '指定舰种',
+    };
+    return code.isEmpty ? name : '$name（$code）';
   }
 
   String conditionActual(ExpeditionConditionResult value) {

@@ -41,7 +41,7 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('原生直连（推荐）'), findsOneWidget);
+    expect(find.textContaining('原生独立渲染（推荐）'), findsOneWidget);
     expect(find.textContaining('Activity Direct'), findsOneWidget);
     expect(find.textContaining('WebGL'), findsOneWidget);
   });
