@@ -152,10 +152,10 @@ void main() {
         headerSenkaId,
         'anchorage-timer',
         'nosaki-timer',
-        'material-1',
-        'material-2',
         headerShipCapacityId,
         headerEquipmentCapacityId,
+        'material-1',
+        'material-2',
         'material-3',
         'material-4',
         'material-5',
@@ -182,9 +182,9 @@ void main() {
         headerSenkaId,
         'anchorage-timer',
         'nosaki-timer',
-        'material-2',
         headerShipCapacityId,
         headerEquipmentCapacityId,
+        'material-2',
         'material-1',
       ]);
       expect(controller.visibleHeaderResourceIds, <String>[
@@ -195,21 +195,11 @@ void main() {
         headerShipCapacityId,
         headerEquipmentCapacityId,
       ]);
-      final material2Index = controller.headerResourceOrder.indexOf(
-        'material-2',
-      );
-      expect(
-        controller.headerResourceOrder.sublist(
-          material2Index + 1,
-          material2Index + 3,
-        ),
-        <String>[headerShipCapacityId, headerEquipmentCapacityId],
-      );
     },
   );
 
   test(
-    'complete legacy header order inserts capacities after ammunition',
+    'complete legacy header order inserts capacities after timers',
     () async {
       final legacyOrder = <String>[
         for (final id in allHeaderResourceIds)
@@ -220,6 +210,7 @@ void main() {
         'layout_visible_header_resource_ids': <String>[
           headerSenkaId,
           headerAnchorageTimerId,
+          headerNosakiTimerId,
           'material-1',
           'material-2',
         ],
@@ -228,13 +219,13 @@ void main() {
       final controller = await LayoutSettingsController.load(
         SharedPreferencesLayoutSettingsStore(),
       );
-      final material2Index = controller.headerResourceOrder.indexOf(
-        'material-2',
+      final nosakiIndex = controller.headerResourceOrder.indexOf(
+        headerNosakiTimerId,
       );
       expect(
         controller.headerResourceOrder.sublist(
-          material2Index + 1,
-          material2Index + 3,
+          nosakiIndex + 1,
+          nosakiIndex + 3,
         ),
         <String>[headerShipCapacityId, headerEquipmentCapacityId],
       );

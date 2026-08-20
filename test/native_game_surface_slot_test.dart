@@ -777,7 +777,7 @@ void main() {
       expect(visibility, <bool>[true, false, true]);
     });
 
-    testWidgets('stays visible when a PopupRoute like a menu or dialog opens', (
+    testWidgets('stays visible when a non-modal popup like a menu opens', (
       tester,
     ) async {
       final observer = YahagiGameRouteObserver();
@@ -794,23 +794,56 @@ void main() {
       await tester.pump();
       expect(visibility, <bool>[true]);
 
-      // Push a PopupRoute (like PopupMenuButton or showDialog)
+      // Push a non-modal popup (like PopupMenuButton with no barrier)
       unawaited(
         navigatorKey.currentState!.push<void>(
-          RawDialogRoute<void>(
-            pageBuilder: (_, __, ___) => const Text('menu'),
-            barrierDismissible: true,
-            barrierLabel: 'barrier',
-          ),
+          _TestNonModalPopupRoute(),
         ),
       );
       await tester.pumpAndSettle();
-      // Must stay visible throughout popup route
+      // Must stay visible throughout non-modal popup menu
       expect(visibility, <bool>[true]);
 
       navigatorKey.currentState!.pop();
       await tester.pumpAndSettle();
       expect(visibility, <bool>[true]);
+    });
+
+    testWidgets('hides when a modal dialog opens and restores on pop', (
+      tester,
+    ) async {
+      final observer = YahagiGameRouteObserver();
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final visibility = <bool>[];
+
+      await tester.pumpWidget(
+        _slotApp(
+          navigatorKey: navigatorKey,
+          observer: observer,
+          onVisibilityChanged: (value) async => visibility.add(value),
+        ),
+      );
+      await tester.pump();
+      expect(visibility, <bool>[true]);
+
+      // Push a modal dialog (like showDialog with barrier)
+      unawaited(
+        navigatorKey.currentState!.push<void>(
+          RawDialogRoute<void>(
+            pageBuilder: (_, __, ___) => const Text('dialog'),
+            barrierDismissible: true,
+            barrierLabel: 'barrier',
+            barrierColor: Colors.black54,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Must hide during modal dialog
+      expect(visibility, <bool>[true, false]);
+
+      navigatorKey.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(visibility, <bool>[true, false, true]);
     });
 
     testWidgets('calibrates route visibility when its observer changes', (
@@ -1016,3 +1049,24 @@ Future<void> _ignoreVisibility(bool _) async {}
 Future<void> _ignoreBounds(NativeGameWebViewBounds _) async {}
 
 final Object _defaultBoundsSinkIdentity = Object();
+
+final class _TestNonModalPopupRoute extends PopupRoute<void> {
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  bool get barrierDismissible => true;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 10);
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) => const Text('menu');
+}

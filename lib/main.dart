@@ -35,6 +35,7 @@ import 'src/browser/game_application_restart_port.dart';
 import 'src/browser/game_resource_cache_controller.dart';
 import 'src/browser/game_resource_manifest_builder.dart';
 import 'src/browser/game_resource_manifest_consumer.dart';
+import 'src/browser/native_game_surface_slot.dart';
 import 'src/capture/battle_result_warning_overlay.dart';
 import 'src/capture/capture_mode_controller.dart';
 import 'src/capture/capture_mode_store.dart';
@@ -407,26 +408,6 @@ Future<void> main() async {
     unawaited(fcdMapController.checkForUpdates());
     unawaited(questCatalogController.checkForUpdates());
   });
-}
-
-class YahagiGameRouteObserver extends RouteObserver<ModalRoute<dynamic>> {
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (route is! PageRoute<dynamic>) {
-      super.didPush(route, null);
-      return;
-    }
-    super.didPush(route, previousRoute);
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (route is! PageRoute<dynamic>) {
-      super.didPop(route, null);
-      return;
-    }
-    super.didPop(route, previousRoute);
-  }
 }
 
 final RouteObserver<ModalRoute<dynamic>> yahagiGameRouteObserver =

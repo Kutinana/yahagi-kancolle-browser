@@ -197,7 +197,7 @@ void main() {
     final senkaBorder = senkaDecoration.border! as Border;
     expect(senkaBorder.top.color, const Color(0xff213b4b));
 
-    final first = find.byKey(const Key('header-resource-material-1'));
+    final first = find.byKey(const Key('header-resource-ship-capacity'));
     expect(first, findsOneWidget);
     expect(
       find.byKey(const Key('header-resource-anchorage-timer')),

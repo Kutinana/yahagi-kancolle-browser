@@ -8,10 +8,10 @@ const allHeaderResourceIds = <String>[
   headerSenkaId,
   headerAnchorageTimerId,
   headerNosakiTimerId,
-  'material-1',
-  'material-2',
   headerShipCapacityId,
   headerEquipmentCapacityId,
+  'material-1',
+  'material-2',
   'material-3',
   'material-4',
   'material-5',
@@ -39,10 +39,10 @@ const defaultVisibleHeaderResourceIds = <String>[
   headerSenkaId,
   headerAnchorageTimerId,
   headerNosakiTimerId,
-  'material-1',
-  'material-2',
   headerShipCapacityId,
   headerEquipmentCapacityId,
+  'material-1',
+  'material-2',
   'material-3',
   'material-4',
   'material-5',
@@ -53,36 +53,43 @@ const defaultVisibleHeaderResourceIds = <String>[
 
 List<String> normalizeHeaderResourceOrder(Iterable<String>? saved) {
   final result = <String>[];
-  if (saved == null || !saved.contains(headerSenkaId)) {
-    result.add(headerSenkaId);
-  }
-  if (saved == null || !saved.contains(headerAnchorageTimerId)) {
-    result.add(headerAnchorageTimerId);
-  }
-  if (saved == null || !saved.contains(headerNosakiTimerId)) {
-    result.add(headerNosakiTimerId);
-  }
-  for (final id in saved ?? const <String>[]) {
-    if (allHeaderResourceIds.contains(id) && !result.contains(id)) {
-      result.add(id);
+  if (saved != null) {
+    for (final id in saved) {
+      if (allHeaderResourceIds.contains(id) && !result.contains(id)) {
+        result.add(id);
+      }
     }
   }
   for (final id in allHeaderResourceIds) {
     if (result.contains(id)) continue;
+    if (id == headerSenkaId) {
+      result.insert(0, id);
+      continue;
+    }
+    if (id == headerAnchorageTimerId) {
+      final senkaIndex = result.indexOf(headerSenkaId);
+      result.insert(senkaIndex < 0 ? 0 : senkaIndex + 1, id);
+      continue;
+    }
+    if (id == headerNosakiTimerId) {
+      final anchorageIndex = result.indexOf(headerAnchorageTimerId);
+      final senkaIndex = result.indexOf(headerSenkaId);
+      final insertIndex = anchorageIndex >= 0
+          ? anchorageIndex + 1
+          : (senkaIndex >= 0 ? senkaIndex + 1 : 0);
+      result.insert(insertIndex, id);
+      continue;
+    }
     if (id == headerShipCapacityId) {
-      final ammunitionIndex = result.indexOf('material-2');
-      result.insert(
-        ammunitionIndex < 0 ? result.length : ammunitionIndex + 1,
-        id,
-      );
+      final nosakiIndex = result.indexOf(headerNosakiTimerId);
+      final insertIndex = nosakiIndex >= 0 ? nosakiIndex + 1 : 0;
+      result.insert(insertIndex, id);
       continue;
     }
     if (id == headerEquipmentCapacityId) {
-      final shipCapacityIndex = result.indexOf(headerShipCapacityId);
-      result.insert(
-        shipCapacityIndex < 0 ? result.length : shipCapacityIndex + 1,
-        id,
-      );
+      final shipIndex = result.indexOf(headerShipCapacityId);
+      final insertIndex = shipIndex >= 0 ? shipIndex + 1 : result.length;
+      result.insert(insertIndex, id);
       continue;
     }
     result.add(id);

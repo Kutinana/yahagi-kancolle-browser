@@ -376,13 +376,33 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   }
 }
 
+/// Returns true if [route] obscures or overlays the screen in a way that requires
+/// hiding the underlying native game WebView (e.g. full-screen [PageRoute], modal [DialogRoute],
+/// or [ModalBottomSheetRoute]).
+/// Returns false for non-modal popup overlays like [PopupMenuButton] or dropdown menus.
+bool shouldRouteHideGameSurface(Route<dynamic>? route) {
+  if (route == null) return false;
+  if (route is PageRoute<dynamic>) return true;
+  if (route is RawDialogRoute<dynamic>) return true;
+  if (route is ModalBottomSheetRoute<dynamic>) return true;
+  if (route is ModalRoute<dynamic>) {
+    final barrierColor = route.barrierColor;
+    if (barrierColor != null &&
+        barrierColor != Colors.transparent &&
+        barrierColor.alpha > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// A [RouteObserver] that only notifies [RouteAware.didPushNext] and [RouteAware.didPopNext]
-/// for actual full-screen [PageRoute] transitions, preventing [PopupRoute]s (such as dropdown
-/// menus, popup menus, dialogs, and bottom sheets) from accidentally hiding the native game surface.
+/// for modal routes (such as full-screen pages or modal dialogs), preventing lightweight non-modal
+/// overlays (like popup menus and dropdowns) from accidentally hiding the native game surface.
 class YahagiGameRouteObserver extends RouteObserver<ModalRoute<dynamic>> {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (route is! PageRoute<dynamic>) {
+    if (!shouldRouteHideGameSurface(route)) {
       super.didPush(route, null);
       return;
     }
@@ -391,7 +411,7 @@ class YahagiGameRouteObserver extends RouteObserver<ModalRoute<dynamic>> {
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (route is! PageRoute<dynamic>) {
+    if (!shouldRouteHideGameSurface(route)) {
       super.didPop(route, null);
       return;
     }
