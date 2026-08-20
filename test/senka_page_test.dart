@@ -444,6 +444,58 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('计算页复制Demo横屏双列紧凑矩阵', (tester) async {
+    for (final size in const [Size(1280, 680), Size(844, 390)]) {
+      await pumpCalculator(tester, controller, size);
+
+      final eo15 = tester.getRect(
+        find.byKey(const Key('senka-toggle-eo-15')),
+      );
+      final eo16 = tester.getRect(
+        find.byKey(const Key('senka-toggle-eo-16')),
+      );
+      final eo25 = tester.getRect(
+        find.byKey(const Key('senka-toggle-eo-25')),
+      );
+      expect(eo15.top, closeTo(eo16.top, 1));
+      expect(eo25.top, greaterThan(eo15.top));
+
+      final quest854 = tester.getRect(
+        find.byKey(const Key('senka-toggle-quest-854')),
+      );
+      final quest888 = tester.getRect(
+        find.byKey(const Key('senka-toggle-quest-888')),
+      );
+      final quest893 = tester.getRect(
+        find.byKey(const Key('senka-toggle-quest-893')),
+      );
+      expect(quest854.top, closeTo(quest888.top, 1));
+      expect(quest893.top, greaterThan(quest854.top));
+
+      final annual = tester.getRect(
+        find.byKey(const Key('senka-task-group-annual')),
+      );
+      final oneTime = tester.getRect(
+        find.byKey(const Key('senka-task-group-one-time')),
+      );
+      expect(annual.top, closeTo(oneTime.top, 1));
+      expect(annual.right, lessThan(oneTime.left));
+
+      expect(find.byKey(const Key('senka-projected-card')), findsOneWidget);
+      expect(find.byKey(const Key('senka-metrics-grid')), findsOneWidget);
+      final hitTarget = tester.getRect(
+        find.byKey(const Key('senka-toggle-eo-15')),
+      );
+      final surface = tester.getRect(
+        find.byKey(const Key('senka-reward-surface-eo-15')),
+      );
+      expect(hitTarget.height, greaterThanOrEqualTo(44));
+      expect(surface.height, lessThan(hitTarget.height));
+      expect(surface.center.dy, closeTo(hitTarget.center.dy, 1));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('计算输入实时更新，无效值保留且负数归零', (tester) async {
     await pumpCalculator(tester, controller, const Size(1280, 680));
     await tester.enterText(
