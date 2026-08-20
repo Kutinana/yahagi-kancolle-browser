@@ -409,8 +409,28 @@ Future<void> main() async {
   });
 }
 
+class YahagiGameRouteObserver extends RouteObserver<ModalRoute<dynamic>> {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute<dynamic>) {
+      super.didPush(route, null);
+      return;
+    }
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute<dynamic>) {
+      super.didPop(route, null);
+      return;
+    }
+    super.didPop(route, previousRoute);
+  }
+}
+
 final RouteObserver<ModalRoute<dynamic>> yahagiGameRouteObserver =
-    RouteObserver<ModalRoute<dynamic>>();
+    YahagiGameRouteObserver();
 
 bool shouldUsePersistentGameToolbar({
   required GameToolbarDisplayMode? displayMode,
@@ -998,52 +1018,64 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     onSenkaTap: widget.senkaController == null
                                         ? null
                                         : () => _selectWorkspace(9),
-                                    anchorageRepairStartedAt:
-                                        widget.gameStateController.anchorageRepairStartedAt,
+                                    anchorageRepairStartedAt: widget
+                                        .gameStateController
+                                        .anchorageRepairStartedAt,
                                     onAnchorageTimerTap: () {
                                       final startedAt = widget
                                           .gameStateController
                                           .anchorageRepairStartedAt;
                                       final now = DateTime.now().toUtc();
                                       final elapsed =
-                                          startedAt == null || now.isBefore(startedAt)
+                                          startedAt == null ||
+                                              now.isBefore(startedAt)
                                           ? Duration.zero
                                           : now.difference(startedAt);
-                                      final fleetId = preferredAnchorageRepairFleetId(
-                                        state: widget.gameStateController.state,
-                                        elapsed: elapsed,
-                                      );
+                                      final fleetId =
+                                          preferredAnchorageRepairFleetId(
+                                            state: widget
+                                                .gameStateController
+                                                .state,
+                                            elapsed: elapsed,
+                                          );
                                       setState(() {
-                                        _repairCenterMode = RepairCenterMode.anchorage;
+                                        _repairCenterMode =
+                                            RepairCenterMode.anchorage;
                                         _repairCenterInitialFleetId = fleetId;
                                       });
                                       _selectWorkspace(3);
                                     },
-                                    nosakiSparkleStartedAt:
-                                        widget.gameStateController.nosakiSparkleStartedAt,
+                                    nosakiSparkleStartedAt: widget
+                                        .gameStateController
+                                        .nosakiSparkleStartedAt,
                                     onNosakiTimerTap: () {
                                       final startedAt = widget
                                           .gameStateController
                                           .nosakiSparkleStartedAt;
                                       final now = DateTime.now().toUtc();
                                       final elapsed =
-                                          startedAt == null || now.isBefore(startedAt)
+                                          startedAt == null ||
+                                              now.isBefore(startedAt)
                                           ? Duration.zero
                                           : now.difference(startedAt);
                                       final fleetId =
                                           NosakiSparkleCalculator.preferredNosakiSparkleFleetId(
-                                        state: widget.gameStateController.state,
-                                        elapsed: elapsed,
-                                      );
+                                            state: widget
+                                                .gameStateController
+                                                .state,
+                                            elapsed: elapsed,
+                                          );
                                       setState(() {
-                                        _repairCenterMode = RepairCenterMode.nosaki;
+                                        _repairCenterMode =
+                                            RepairCenterMode.nosaki;
                                         _repairCenterInitialFleetId = fleetId;
                                       });
                                       _selectWorkspace(3);
                                     },
                                     layoutSettingsController:
                                         widget.layoutSettingsController,
-                                    selectedFleetId: _fleetCenterInitialFleetId ?? 1,
+                                    selectedFleetId:
+                                        _fleetCenterInitialFleetId ?? 1,
                                     onFleetSelected: (fleetId) {
                                       setState(() {
                                         _fleetCenterInitialFleetId = fleetId;
@@ -1051,7 +1083,9 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     },
                                     inventoryShowShips: _inventoryShowShips,
                                     onInventorySectionChanged: (value) {
-                                      setState(() => _inventoryShowShips = value);
+                                      setState(
+                                        () => _inventoryShowShips = value,
+                                      );
                                     },
                                     logbookTabIndex: _logbookTabIndex,
                                     onLogbookTabChanged: (value) {
@@ -1067,20 +1101,28 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     },
                                     questMode: _questCenterMode,
                                     questFilters: _questFilters,
-                                    questTranslationEnabled: _questTranslationEnabled,
+                                    questTranslationEnabled:
+                                        _questTranslationEnabled,
                                     onQuestTranslationChanged: (enabled) {
-                                      setState(() => _questTranslationEnabled = enabled);
+                                      setState(
+                                        () =>
+                                            _questTranslationEnabled = enabled,
+                                      );
                                     },
                                     onQuestModeChanged: (mode) {
                                       setState(() => _questCenterMode = mode);
                                     },
                                     expeditionMode: _expeditionCenterMode,
                                     onExpeditionModeChanged: (mode) {
-                                      setState(() => _expeditionCenterMode = mode);
+                                      setState(
+                                        () => _expeditionCenterMode = mode,
+                                      );
                                     },
                                     constructionMode: _constructionCenterMode,
                                     onConstructionModeChanged: (mode) {
-                                      setState(() => _constructionCenterMode = mode);
+                                      setState(
+                                        () => _constructionCenterMode = mode,
+                                      );
                                     },
                                   ),
                                 ),
@@ -1090,18 +1132,20 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                               ignoring: !isToolbarVisible,
                               child: AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 240),
-                                reverseDuration:
-                                    const Duration(milliseconds: 200),
+                                reverseDuration: const Duration(
+                                  milliseconds: 200,
+                                ),
                                 transitionBuilder: (child, animation) {
-                                  final slide = Tween<Offset>(
-                                    begin: const Offset(-0.2, 0),
-                                    end: Offset.zero,
-                                  ).animate(
-                                    CurvedAnimation(
-                                      parent: animation,
-                                      curve: Curves.easeOutCubic,
-                                    ),
-                                  );
+                                  final slide =
+                                      Tween<Offset>(
+                                        begin: const Offset(-0.2, 0),
+                                        end: Offset.zero,
+                                      ).animate(
+                                        CurvedAnimation(
+                                          parent: animation,
+                                          curve: Curves.easeOutCubic,
+                                        ),
+                                      );
                                   return FadeTransition(
                                     opacity: animation,
                                     child: SlideTransition(
@@ -1163,174 +1207,177 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             enabled: _workspaceIndex == 0,
                             child: Offstage(
                               offstage: _workspaceIndex != 0,
-                            child: LayoutBuilder(
-                              key: const Key('game-workspace'),
-                              builder: (context, constraints) {
-                                final isLandscape = !usesVerticalWorkspace(
-                                  Size(
-                                    constraints.maxWidth,
-                                    constraints.maxHeight,
-                                  ),
-                                );
-                                final gameAreaRatio =
-                                    widget.layoutSettingsController.autoZoom
-                                    ? 0.65
-                                    : widget
-                                          .layoutSettingsController
-                                          .gameAreaRatio
-                                          .clamp(0.5, 0.75);
-                                final gameFlex = (gameAreaRatio * 1000).round();
-                                final persistentToolbar =
-                                    shouldUsePersistentGameToolbar(
-                                      displayMode:
-                                          widget.toolbarDisplayController?.mode,
-                                      renderingMode: widget
-                                          .gameRenderingModeController
-                                          ?.mode,
-                                    );
-                                final gameSurfaceWrapper = ColoredBox(
-                                  color: const Color(0xff0a1823),
-                                  child: Center(
-                                    child: AspectRatio(
-                                      aspectRatio: 1200 / 720,
-                                      child: GameSurfaceBoundary(
-                                        child: widget.gameSurface,
-                                      ),
+                              child: LayoutBuilder(
+                                key: const Key('game-workspace'),
+                                builder: (context, constraints) {
+                                  final isLandscape = !usesVerticalWorkspace(
+                                    Size(
+                                      constraints.maxWidth,
+                                      constraints.maxHeight,
                                     ),
-                                  ),
-                                );
-                                final gameWidget = GameBrowserOverlay(
-                                  controller: widget.toolbarController,
-                                  gameSurface: gameSurfaceWrapper,
-                                );
-
-                                final infoWidget = _InformationPanel(
-                                  layoutSettingsController:
-                                      widget.layoutSettingsController,
-                                  controller: widget.controller,
-                                  browserController: widget.browserController,
-                                  captureModeController:
-                                      widget.captureModeController,
-                                  gameCaptureController:
-                                      widget.gameCaptureController,
-                                  gameStateController:
-                                      widget.gameStateController,
-                                  battleController: widget.battleController,
-                                  onOpenFleet: (fleetId) {
-                                    setState(() {
-                                      _fleetCenterInitialFleetId = fleetId;
-                                    });
-                                    _selectWorkspace(1);
-                                  },
-                                  onOpenRepair: (destination) {
-                                    setState(() {
-                                      _repairCenterMode = destination.mode;
-                                      _repairCenterInitialFleetId =
-                                          destination.fleetId;
-                                    });
-                                    _selectWorkspace(3);
-                                  },
-                                  onOpenConstruction: () => _selectWorkspace(4),
-                                  onOpenExpedition: () => _selectWorkspace(2),
-                                  onOpenQuest: (questId) {
-                                    setState(() {
-                                      _questCenterInitialQuestId = questId;
-                                    });
-                                    _selectWorkspace(5);
-                                  },
-                                  onOpenExpeditionCheck: (fleetId) {
-                                    setState(() {
-                                      _expeditionCheckFleetId = fleetId;
-                                      _expeditionCenterMode =
-                                          ExpeditionSummaryMode.check;
-                                    });
-                                    _selectWorkspace(2);
-                                  },
-                                );
-
-                                const dividerExtent = 1.0;
-                                final availableWidth =
-                                    constraints.maxWidth - dividerExtent;
-                                final gamePanelExtent = isLandscape
-                                    ? availableWidth * gameFlex / 1000
-                                    : (constraints.maxWidth * 720 / 1200 +
-                                              (persistentToolbar ? 42 : 0))
-                                          .clamp(
-                                            0.0,
-                                            constraints.maxHeight -
-                                                dividerExtent,
-                                          )
-                                          .toDouble();
-
-                                return Stack(
-                                  children: [
-                                    Positioned(
-                                      left: 0,
-                                      top: 0,
-                                      width: isLandscape
-                                          ? gamePanelExtent
-                                          : constraints.maxWidth,
-                                      height: isLandscape
-                                          ? constraints.maxHeight
-                                          : gamePanelExtent,
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xff0a1823),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black38,
-                                              offset: isLandscape
-                                                  ? const Offset(2, 0)
-                                                  : const Offset(0, 2),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
+                                  );
+                                  final gameAreaRatio =
+                                      widget.layoutSettingsController.autoZoom
+                                      ? 0.65
+                                      : widget
+                                            .layoutSettingsController
+                                            .gameAreaRatio
+                                            .clamp(0.5, 0.75);
+                                  final gameFlex = (gameAreaRatio * 1000)
+                                      .round();
+                                  final persistentToolbar =
+                                      shouldUsePersistentGameToolbar(
+                                        displayMode: widget
+                                            .toolbarDisplayController
+                                            ?.mode,
+                                        renderingMode: widget
+                                            .gameRenderingModeController
+                                            ?.mode,
+                                      );
+                                  final gameSurfaceWrapper = ColoredBox(
+                                    color: const Color(0xff0a1823),
+                                    child: Center(
+                                      child: AspectRatio(
+                                        aspectRatio: 1200 / 720,
+                                        child: GameSurfaceBoundary(
+                                          child: widget.gameSurface,
                                         ),
-                                        child: gameWidget,
                                       ),
                                     ),
-                                    Positioned(
-                                      left: isLandscape ? gamePanelExtent : 0,
-                                      top: isLandscape ? 0 : gamePanelExtent,
-                                      width: isLandscape
-                                          ? dividerExtent
-                                          : constraints.maxWidth,
-                                      height: isLandscape
-                                          ? constraints.maxHeight
-                                          : dividerExtent,
-                                      child: isLandscape
-                                          ? const VerticalDivider(
-                                              width: dividerExtent,
-                                              thickness: dividerExtent,
-                                              color: Color(0xff294052),
+                                  );
+                                  final gameWidget = GameBrowserOverlay(
+                                    controller: widget.toolbarController,
+                                    gameSurface: gameSurfaceWrapper,
+                                  );
+
+                                  final infoWidget = _InformationPanel(
+                                    layoutSettingsController:
+                                        widget.layoutSettingsController,
+                                    controller: widget.controller,
+                                    browserController: widget.browserController,
+                                    captureModeController:
+                                        widget.captureModeController,
+                                    gameCaptureController:
+                                        widget.gameCaptureController,
+                                    gameStateController:
+                                        widget.gameStateController,
+                                    battleController: widget.battleController,
+                                    onOpenFleet: (fleetId) {
+                                      setState(() {
+                                        _fleetCenterInitialFleetId = fleetId;
+                                      });
+                                      _selectWorkspace(1);
+                                    },
+                                    onOpenRepair: (destination) {
+                                      setState(() {
+                                        _repairCenterMode = destination.mode;
+                                        _repairCenterInitialFleetId =
+                                            destination.fleetId;
+                                      });
+                                      _selectWorkspace(3);
+                                    },
+                                    onOpenConstruction: () =>
+                                        _selectWorkspace(4),
+                                    onOpenExpedition: () => _selectWorkspace(2),
+                                    onOpenQuest: (questId) {
+                                      setState(() {
+                                        _questCenterInitialQuestId = questId;
+                                      });
+                                      _selectWorkspace(5);
+                                    },
+                                    onOpenExpeditionCheck: (fleetId) {
+                                      setState(() {
+                                        _expeditionCheckFleetId = fleetId;
+                                        _expeditionCenterMode =
+                                            ExpeditionSummaryMode.check;
+                                      });
+                                      _selectWorkspace(2);
+                                    },
+                                  );
+
+                                  const dividerExtent = 1.0;
+                                  final availableWidth =
+                                      constraints.maxWidth - dividerExtent;
+                                  final gamePanelExtent = isLandscape
+                                      ? availableWidth * gameFlex / 1000
+                                      : (constraints.maxWidth * 720 / 1200 +
+                                                (persistentToolbar ? 42 : 0))
+                                            .clamp(
+                                              0.0,
+                                              constraints.maxHeight -
+                                                  dividerExtent,
                                             )
-                                          : const Divider(
-                                              height: dividerExtent,
-                                              thickness: dividerExtent,
-                                              color: Color(0xff294052),
-                                            ),
-                                    ),
-                                    Positioned(
-                                      left: isLandscape
-                                          ? gamePanelExtent + dividerExtent
-                                          : 0,
-                                      top: isLandscape
-                                          ? 0
-                                          : gamePanelExtent + dividerExtent,
-                                      right: 0,
-                                      bottom: 0,
-                                      child: Padding(
-                                        padding: isLandscape
-                                            ? const EdgeInsets.only(left: 4)
-                                            : const EdgeInsets.only(top: 4),
-                                        child: infoWidget,
+                                            .toDouble();
+
+                                  return Stack(
+                                    children: [
+                                      Positioned(
+                                        left: 0,
+                                        top: 0,
+                                        width: isLandscape
+                                            ? gamePanelExtent
+                                            : constraints.maxWidth,
+                                        height: isLandscape
+                                            ? constraints.maxHeight
+                                            : gamePanelExtent,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xff0a1823),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black38,
+                                                offset: isLandscape
+                                                    ? const Offset(2, 0)
+                                                    : const Offset(0, 2),
+                                                blurRadius: 4,
+                                              ),
+                                            ],
+                                          ),
+                                          child: gameWidget,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                );
-                              },
+                                      Positioned(
+                                        left: isLandscape ? gamePanelExtent : 0,
+                                        top: isLandscape ? 0 : gamePanelExtent,
+                                        width: isLandscape
+                                            ? dividerExtent
+                                            : constraints.maxWidth,
+                                        height: isLandscape
+                                            ? constraints.maxHeight
+                                            : dividerExtent,
+                                        child: isLandscape
+                                            ? const VerticalDivider(
+                                                width: dividerExtent,
+                                                thickness: dividerExtent,
+                                                color: Color(0xff294052),
+                                              )
+                                            : const Divider(
+                                                height: dividerExtent,
+                                                thickness: dividerExtent,
+                                                color: Color(0xff294052),
+                                              ),
+                                      ),
+                                      Positioned(
+                                        left: isLandscape
+                                            ? gamePanelExtent + dividerExtent
+                                            : 0,
+                                        top: isLandscape
+                                            ? 0
+                                            : gamePanelExtent + dividerExtent,
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Padding(
+                                          padding: isLandscape
+                                              ? const EdgeInsets.only(left: 4)
+                                              : const EdgeInsets.only(top: 4),
+                                          child: infoWidget,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
                             ),
-                          ),
                           ),
                         ),
                         if (_workspaceIndex == 1)

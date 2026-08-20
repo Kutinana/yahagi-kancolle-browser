@@ -45,7 +45,9 @@ final class FcdMapUpdateSection extends StatelessWidget {
                         controller.lastCheckedAt == null
                             ? l10n.fcdMapNeverChecked
                             : l10n.fcdMapLastChecked(
-                                _formatTime(controller.lastCheckedAt!.toLocal()),
+                                _formatTime(
+                                  controller.lastCheckedAt!.toLocal(),
+                                ),
                               ),
                         style: metadataStyle,
                       ),

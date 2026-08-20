@@ -444,10 +444,7 @@ final class BattleController extends ChangeNotifier
     );
     _predictionEngine = appendResult.engine;
     final parsed = appendResult.prediction;
-    final parsedFriendMain = _mergeEscapedFlags(
-      parsed.friendMain,
-      friendMain,
-    );
+    final parsedFriendMain = _mergeEscapedFlags(parsed.friendMain, friendMain);
     final parsedFriendEscort = _mergeEscapedFlags(
       parsed.friendEscort,
       friendEscort,
@@ -455,10 +452,7 @@ final class BattleController extends ChangeNotifier
     if (!practice && (battleDamageVibrationEnabled?.call() ?? false)) {
       final severity = detectFriendlyDamageAlert(
         before: <BattleShipSnapshot>[...friendMain, ...friendEscort],
-        after: <BattleShipSnapshot>[
-          ...parsedFriendMain,
-          ...parsedFriendEscort,
-        ],
+        after: <BattleShipSnapshot>[...parsedFriendMain, ...parsedFriendEscort],
       );
       if (severity != null && damageAlertPort != null) {
         unawaited(
@@ -613,10 +607,10 @@ final class BattleController extends ChangeNotifier
           mapName: isPractice
               ? '演习'
               : (state.mapName(
-                    confirmed.context.mapAreaId,
-                    confirmed.context.mapInfoNo,
-                  ) ??
-                  ''),
+                      confirmed.context.mapAreaId,
+                      confirmed.context.mapInfoNo,
+                    ) ??
+                    ''),
           mapDifficulty: isPractice
               ? 0
               : state.mapDifficulty(
@@ -667,7 +661,8 @@ final class BattleController extends ChangeNotifier
     );
     if (_records.isNotEmpty) {
       final firstBattle = _records[0].battle;
-      final match = identical(firstBattle, current) ||
+      final match =
+          identical(firstBattle, current) ||
           (firstBattle.context.mapAreaId == current.context.mapAreaId &&
               firstBattle.context.mapInfoNo == current.context.mapInfoNo &&
               firstBattle.context.node == current.context.node);
@@ -773,9 +768,17 @@ final class BattleController extends ChangeNotifier
             side: BattleSide.friend,
             fleetRole: role,
             position: index,
-            initialHp: _atNonNegative(nowHp, index, ownedShips[index].currentHp),
+            initialHp: _atNonNegative(
+              nowHp,
+              index,
+              ownedShips[index].currentHp,
+            ),
             maxHp: _atPositive(maxHp, index, ownedShips[index].maxHp),
-            currentHp: _atNonNegative(nowHp, index, ownedShips[index].currentHp),
+            currentHp: _atNonNegative(
+              nowHp,
+              index,
+              ownedShips[index].currentHp,
+            ),
             damageDealt: index < (previous?.length ?? 0)
                 ? previous![index].damageDealt
                 : 0,

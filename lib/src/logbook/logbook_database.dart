@@ -437,8 +437,7 @@ class LogbookDatabase extends ChangeNotifier {
         mainMvp = nameAt(battle.friendMain, position);
       }
     }
-    final isPractice =
-        battle.context.practice || battle.context.mapAreaId == 0;
+    final isPractice = battle.context.practice || battle.context.mapAreaId == 0;
     await db.insert('battle_logs', {
       'timestamp': record.completedAt.millisecondsSinceEpoch,
       'map_area': isPractice ? 0 : battle.context.mapAreaId,

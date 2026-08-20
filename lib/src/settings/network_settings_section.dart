@@ -574,8 +574,8 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
               color: selected
                   ? const Color(0xffd4a85f)
                   : enabled
-                      ? const Color(0xff8197a5)
-                      : const Color(0xff526776),
+                  ? const Color(0xff8197a5)
+                  : const Color(0xff526776),
             ),
           ],
         ),

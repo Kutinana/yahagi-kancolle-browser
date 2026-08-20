@@ -45,10 +45,7 @@ void main() {
       '--:--:--',
     );
     expect(
-      formatNosakiSparkleElapsed(
-        startedAt,
-        DateTime.utc(2026, 8, 11, 1, 2, 2),
-      ),
+      formatNosakiSparkleElapsed(startedAt, DateTime.utc(2026, 8, 11, 1, 2, 2)),
       '00:00:00',
     );
   });
@@ -79,9 +76,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('header renders nosaki capsule with empty timer', (
-    tester,
-  ) async {
+  testWidgets('header renders nosaki capsule with empty timer', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -313,5 +308,72 @@ void main() {
     expect(find.byKey(const Key('header-ship-capacity')), findsNothing);
     expect(find.byKey(const Key('header-resource-material-1')), findsOneWidget);
     expect(find.byKey(const Key('header-resource-material-2')), findsOneWidget);
+  });
+
+  testWidgets('header shows --:--:-- when Akashi or Nozaki are damaged or unsupplied', (tester) async {
+    final startedAt = DateTime.utc(2026, 8, 20, 10);
+    // Damaged Akashi (hp 10/45 <= 50%) and damaged Nozaki (hp 30/48 < max)
+    const damagedState = GameState(
+      fleets: <Fleet>[
+        Fleet(id: 1, name: '第一舰队', shipIds: <int>[1, 2]),
+      ],
+      ships: <int, OwnedShip>{
+        1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 10, maxHp: 45), // Akashi heavy damage
+        2: OwnedShip(id: 2, masterId: 602, level: 80, currentHp: 30, maxHp: 48, currentFuel: 100, currentAmmo: 100), // Nozaki damaged
+      },
+      masterShips: <int, MasterShip>{
+        187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
+        602: MasterShip(id: 602, name: '野埼改', shipTypeId: 19, maxFuel: 100, maxAmmo: 100),
+      },
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: damagedState,
+            anchorageRepairStartedAt: startedAt,
+            nosakiSparkleStartedAt: startedAt,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('泊地：--:--:--'), findsOneWidget);
+    expect(find.text('野埼：--:--:--'), findsOneWidget);
+  });
+
+  testWidgets('header shows active elapsed time when Akashi and Nozaki are ready', (tester) async {
+    final startedAt = DateTime.now().toUtc().subtract(const Duration(minutes: 10));
+    const readyState = GameState(
+      fleets: <Fleet>[
+        Fleet(id: 1, name: '第一舰队', shipIds: <int>[1, 2]),
+      ],
+      ships: <int, OwnedShip>{
+        1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 45, maxHp: 45),
+        2: OwnedShip(id: 2, masterId: 602, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
+      },
+      masterShips: <int, MasterShip>{
+        187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
+        602: MasterShip(id: 602, name: '野埼改', shipTypeId: 19, maxFuel: 100, maxAmmo: 100),
+      },
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: readyState,
+            anchorageRepairStartedAt: startedAt,
+            nosakiSparkleStartedAt: startedAt,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('泊地：--:--:--'), findsNothing);
+    expect(find.text('野埼：--:--:--'), findsNothing);
+    expect(find.textContaining('泊地：00:10:'), findsOneWidget);
+    expect(find.textContaining('野埼：00:10:'), findsOneWidget);
   });
 }

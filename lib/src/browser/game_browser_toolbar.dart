@@ -55,10 +55,12 @@ class GameBrowserToolbar extends StatelessWidget {
         screenSize.width > screenSize.height &&
         screenSize.shortestSide < 600;
     final toolbarHeight = isLandscapePhone ? 36.0 : (persistent ? 42.0 : 34.0);
-    final persistentActionSize =
-        isLandscapePhone ? 34.0 : (persistent ? 40.0 : 28.0);
-    final navigationActionSize =
-        isLandscapePhone ? 34.0 : (persistent ? 36.0 : 28.0);
+    final persistentActionSize = isLandscapePhone
+        ? 34.0
+        : (persistent ? 40.0 : 28.0);
+    final navigationActionSize = isLandscapePhone
+        ? 34.0
+        : (persistent ? 36.0 : 28.0);
     final toolbar = Container(
       height: toolbarHeight,
       decoration: BoxDecoration(
@@ -161,8 +163,9 @@ class GameBrowserToolbar extends StatelessWidget {
               key: const Key('game-audio-toggle'),
               padding: EdgeInsets.zero,
               tooltip: isMuted ? l10n.enableGameAudio : l10n.disableGameAudio,
-              onPressed:
-                  interactionEnabled && audioEnabled ? onToggleMuted : null,
+              onPressed: interactionEnabled && audioEnabled
+                  ? onToggleMuted
+                  : null,
               icon: Icon(
                 isMuted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
                 size: persistent ? 19 : 16,

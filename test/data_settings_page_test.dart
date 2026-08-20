@@ -54,57 +54,62 @@ void main() {
     expect(find.text('安全边界'), findsOneWidget);
   });
 
-  testWidgets('checks alignment inside GameResourceCacheSection in DataSettingsPage', (
-    tester,
-  ) async {
-    final capture = await CaptureModeController.load(_MemoryCaptureModeStore());
-    final browser = GameBrowserController();
-    final gameCapture = GameCaptureController();
-    final prototype = PrototypeStatusController();
-    final gameState = GameStateController();
-    final cacheController = GameResourceCacheController(
-      store: _MemoryCacheStore(),
-      port: _FakePort(),
-    );
-    await cacheController.initialize();
-    addTearDown(capture.dispose);
-    addTearDown(browser.dispose);
-    addTearDown(gameCapture.dispose);
-    addTearDown(prototype.dispose);
-    addTearDown(gameState.dispose);
-    addTearDown(cacheController.dispose);
+  testWidgets(
+    'checks alignment inside GameResourceCacheSection in DataSettingsPage',
+    (tester) async {
+      final capture = await CaptureModeController.load(
+        _MemoryCaptureModeStore(),
+      );
+      final browser = GameBrowserController();
+      final gameCapture = GameCaptureController();
+      final prototype = PrototypeStatusController();
+      final gameState = GameStateController();
+      final cacheController = GameResourceCacheController(
+        store: _MemoryCacheStore(),
+        port: _FakePort(),
+      );
+      await cacheController.initialize();
+      addTearDown(capture.dispose);
+      addTearDown(browser.dispose);
+      addTearDown(gameCapture.dispose);
+      addTearDown(prototype.dispose);
+      addTearDown(gameState.dispose);
+      addTearDown(cacheController.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: DataSettingsPage(
-            captureModeController: capture,
-            browserController: browser,
-            gameCaptureController: gameCapture,
-            prototypeStatusController: prototype,
-            gameStateController: gameState,
-            gameResourceCacheController: cacheController,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DataSettingsPage(
+              captureModeController: capture,
+              browserController: browser,
+              gameCaptureController: gameCapture,
+              prototypeStatusController: prototype,
+              gameStateController: gameState,
+              gameResourceCacheController: cacheController,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    final titleDx = tester.getTopLeft(find.text('游戏资源本地缓存')).dx;
-    final noneDx = tester.getTopLeft(find.text('无本地缓存')).dx;
-    final fullDx = tester.getTopLeft(find.text('本地缓存')).dx;
-    final completenessDx = tester.getTopLeft(find.byKey(const Key('cache-completeness-line'))).dx;
-    final questDx = tester.getTopLeft(find.text('清理任务数据缓存')).dx;
-    final logbookDx = tester.getTopLeft(find.text('清理航海日志数据')).dx;
-    final webDx = tester.getTopLeft(find.text('清理浏览器网页缓存')).dx;
+      final titleDx = tester.getTopLeft(find.text('游戏资源本地缓存')).dx;
+      final noneDx = tester.getTopLeft(find.text('无本地缓存')).dx;
+      final fullDx = tester.getTopLeft(find.text('本地缓存')).dx;
+      final completenessDx = tester
+          .getTopLeft(find.byKey(const Key('cache-completeness-line')))
+          .dx;
+      final questDx = tester.getTopLeft(find.text('清理任务数据缓存')).dx;
+      final logbookDx = tester.getTopLeft(find.text('清理航海日志数据')).dx;
+      final webDx = tester.getTopLeft(find.text('清理浏览器网页缓存')).dx;
 
-    expect(titleDx, 20.0);
-    expect(noneDx, 32.0);
-    expect(fullDx, 32.0);
-    expect(completenessDx, 32.0);
-    expect(questDx, 32.0);
-    expect(logbookDx, 32.0);
-    expect(webDx, 32.0);
-  });
+      expect(titleDx, 20.0);
+      expect(noneDx, 32.0);
+      expect(fullDx, 32.0);
+      expect(completenessDx, 32.0);
+      expect(questDx, 32.0);
+      expect(logbookDx, 32.0);
+      expect(webDx, 32.0);
+    },
+  );
 }
 
 final class _MemoryCacheStore implements GameResourceCacheStore {

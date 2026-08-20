@@ -639,10 +639,26 @@ class _FleetRosterShipCapsule extends StatelessWidget {
                         }
                         return ColorFiltered(
                           colorFilter: const ColorFilter.matrix(<double>[
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0,      0,      0,      1, 0,
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            1,
+                            0,
                           ]),
                           child: portrait,
                         );
@@ -653,7 +669,9 @@ class _FleetRosterShipCapsule extends StatelessWidget {
                 ShipHpFrame(
                   key: Key('fleet-hp-outer-frame-${ship.id}'),
                   shipId: ship.id,
-                  ratio: repairStatus == ShipRepairStatus.retreat ? 0.0 : hpRatio,
+                  ratio: repairStatus == ShipRepairStatus.retreat
+                      ? 0.0
+                      : hpRatio,
                   color: repairStatus == ShipRepairStatus.retreat
                       ? yahagiStatusZeroHp
                       : shipHpBarColor(hpRatio, isZeroHp: ship.currentHp <= 0),
@@ -760,13 +778,29 @@ class _FleetFocusPanel extends StatelessWidget {
                                               ? ColorFiltered(
                                                   colorFilter:
                                                       const ColorFilter.matrix(
-                                                    <double>[
-                                                      0.2126, 0.7152, 0.0722, 0, 0,
-                                                      0.2126, 0.7152, 0.0722, 0, 0,
-                                                      0.2126, 0.7152, 0.0722, 0, 0,
-                                                      0,      0,      0,      1, 0,
-                                                    ],
-                                                  ),
+                                                        <double>[
+                                                          0.2126,
+                                                          0.7152,
+                                                          0.0722,
+                                                          0,
+                                                          0,
+                                                          0.2126,
+                                                          0.7152,
+                                                          0.0722,
+                                                          0,
+                                                          0,
+                                                          0.2126,
+                                                          0.7152,
+                                                          0.0722,
+                                                          0,
+                                                          0,
+                                                          0,
+                                                          0,
+                                                          0,
+                                                          1,
+                                                          0,
+                                                        ],
+                                                      ),
                                                   child: ShipPortrait(
                                                     ship: master,
                                                     serverOrigin:

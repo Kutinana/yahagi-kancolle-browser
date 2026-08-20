@@ -43,15 +43,15 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
 
-    expect(controller.workspaceMenuOrder.take(2), <String>['fleet', 'game']);
-    expect(tester.getTopLeft(fleet).dy, lessThan(tester.getTopLeft(game).dy));
-    expect(selectedPage, -1);
-    final restored = await LayoutSettingsController.load(
-      SharedPreferencesLayoutSettingsStore(),
-    );
-    expect(restored.workspaceMenuOrder.take(2), <String>['fleet', 'game']);
+      expect(controller.workspaceMenuOrder.take(2), <String>['fleet', 'game']);
+      expect(tester.getTopLeft(fleet).dy, lessThan(tester.getTopLeft(game).dy));
+      expect(selectedPage, -1);
+      final restored = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(restored.workspaceMenuOrder.take(2), <String>['fleet', 'game']);
 
-    await tester.tap(game);
+      await tester.tap(game);
       await tester.pump();
       expect(selectedPage, 0);
     },

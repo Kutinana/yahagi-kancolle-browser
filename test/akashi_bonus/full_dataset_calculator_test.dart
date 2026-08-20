@@ -8,16 +8,20 @@ import '../../tool/akashi_bonus/lib/name_resolver.dart';
 import '../../tool/akashi_bonus/lib/reference_calculator.dart';
 
 void main() {
-  final master =
-      MasterData.fromJsonFile('test/akashi_bonus/fixtures/master_266.json');
-  final (rules, _) =
-      DatasetReader.read('assets/data/equipment_fit_bonuses.json');
+  final master = MasterData.fromJsonFile(
+    'test/akashi_bonus/fixtures/master_266.json',
+  );
+  final (rules, _) = DatasetReader.read(
+    'assets/data/equipment_fit_bonuses.json',
+  );
   // Full master for shipType/class lookups.
   final fullMaster = MasterData.fromJsonFile(
-      'tool/wiki_bonus/cache/raw/start2.json');
+    'tool/wiki_bonus/cache/raw/start2.json',
+  );
   final calc = ReferenceCalculator(rules, master: fullMaster);
 
-  bool has41cmKA2(EquipmentPredicate p) => (p.itemIds ?? const []).contains(318);
+  bool has41cmKA2(EquipmentPredicate p) =>
+      (p.itemIds ?? const []).contains(318);
 
   CalcResult run(int shipId, int equipId, {int count = 1, int star = 0}) {
     return calc.compute(
@@ -152,7 +156,10 @@ void main() {
       expect(r.bonus.stats['evasion'], 6);
     });
     test('w369: Gotland andra x2 火力+13', () {
-      expect(run(shipIdOf('Gotland andra'), 369, count: 2).bonus.stats['firepower'], 13);
+      expect(
+        run(shipIdOf('Gotland andra'), 369, count: 2).bonus.stats['firepower'],
+        13,
+      );
     });
     test('w426 305mm/46 連装砲: Conte di Cavour x1 火力+3 回避+1', () {
       final r = run(shipIdOf('Conte di Cavour'), 426, count: 1);

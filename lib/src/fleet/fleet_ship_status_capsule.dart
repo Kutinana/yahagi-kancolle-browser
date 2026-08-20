@@ -212,18 +212,35 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                   Positioned.fill(
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(4),
-                                      child: widget.repairStatus ==
+                                      child:
+                                          widget.repairStatus ==
                                               ShipRepairStatus.retreat
                                           ? ColorFiltered(
                                               colorFilter:
                                                   const ColorFilter.matrix(
-                                                <double>[
-                                                  0.2126, 0.7152, 0.0722, 0, 0,
-                                                  0.2126, 0.7152, 0.0722, 0, 0,
-                                                  0.2126, 0.7152, 0.0722, 0, 0,
-                                                  0,      0,      0,      1, 0,
-                                                ],
-                                              ),
+                                                    <double>[
+                                                      0.2126,
+                                                      0.7152,
+                                                      0.0722,
+                                                      0,
+                                                      0,
+                                                      0.2126,
+                                                      0.7152,
+                                                      0.0722,
+                                                      0,
+                                                      0,
+                                                      0.2126,
+                                                      0.7152,
+                                                      0.0722,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      1,
+                                                      0,
+                                                    ],
+                                                  ),
                                               child: ShipPortrait(
                                                 ship: master,
                                                 serverOrigin:
@@ -245,11 +262,13 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                       'fleet-summary-hp-outer-frame-${ship.id}',
                                     ),
                                     shipId: ship.id,
-                                    ratio: widget.repairStatus ==
+                                    ratio:
+                                        widget.repairStatus ==
                                             ShipRepairStatus.retreat
                                         ? 0.0
                                         : hpRatio,
-                                    color: widget.repairStatus ==
+                                    color:
+                                        widget.repairStatus ==
                                             ShipRepairStatus.retreat
                                         ? yahagiStatusZeroHp
                                         : shipHpBarColor(

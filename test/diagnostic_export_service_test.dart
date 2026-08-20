@@ -36,7 +36,7 @@ void main() {
       storage: storage,
       exportDirectory: exports,
       platform: platform,
-      appVersion: '1.0.3+4',
+      appVersion: '1.0.4+5',
       now: () => DateTime.utc(2026, 8, 13, 11, 30, 15),
     );
 
@@ -67,7 +67,7 @@ void main() {
       storage: storage,
       exportDirectory: exports,
       platform: platform,
-      appVersion: '1.0.3+4',
+      appVersion: '1.0.4+5',
       now: () => DateTime.utc(2026, 8, 13, 11, 30, 15),
     );
 
@@ -94,7 +94,7 @@ void main() {
       storage: storage,
       exportDirectory: exports,
       platform: platform,
-      appVersion: '1.0.3+4',
+      appVersion: '1.0.4+5',
       now: () => DateTime.utc(2026, 8, 13, 9, 14, 45),
     );
 
@@ -115,7 +115,7 @@ void main() {
       storage: DiagnosticStorage(directory: segments),
       exportDirectory: exports,
       platform: platform,
-      appVersion: '1.0.3+4',
+      appVersion: '1.0.4+5',
     );
 
     expect(await service.save(), isNull);
@@ -137,7 +137,7 @@ void main() {
       storage: DiagnosticStorage(directory: segments),
       exportDirectory: exports,
       platform: platform,
-      appVersion: '1.0.3+4',
+      appVersion: '1.0.4+5',
     );
 
     await expectLater(

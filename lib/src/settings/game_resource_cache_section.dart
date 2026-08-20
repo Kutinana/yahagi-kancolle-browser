@@ -196,8 +196,9 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
               selected
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
-              color:
-                  selected ? const Color(0xff70c7bc) : const Color(0xff8197a5),
+              color: selected
+                  ? const Color(0xff70c7bc)
+                  : const Color(0xff8197a5),
             ),
           ],
         ),

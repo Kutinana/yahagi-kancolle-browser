@@ -109,11 +109,10 @@ class LayoutSettingsController extends ChangeNotifier {
           )) {
         final visible = controller._visibleHeaderResourceIds!;
         final anchorageIndex = visible.indexOf(headerAnchorageTimerId);
+        final senkaIndex = visible.indexOf(headerSenkaId);
         final insertIndex = anchorageIndex >= 0
             ? anchorageIndex + 1
-            : (visible.indexOf(headerSenkaId) >= 0
-                ? visible.indexOf(headerSenkaId) + 1
-                : 0);
+            : (senkaIndex >= 0 ? senkaIndex + 1 : 0);
         visible.insert(insertIndex, headerNosakiTimerId);
       }
       if (savedVisible != null) {

@@ -54,7 +54,7 @@ final class QuestCatalogUpdateService implements QuestCatalogUpdateClient {
   const QuestCatalogUpdateService({
     required this.client,
     required this.store,
-    this.appVersion = '1.0.3',
+    this.appVersion = '1.0.4',
     this.timeout = const Duration(seconds: 10),
     this.maximumDataBytes = 1024 * 1024,
     this.minimumQuestCount = 500,

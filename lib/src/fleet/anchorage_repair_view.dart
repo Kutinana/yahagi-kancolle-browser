@@ -286,7 +286,7 @@ class _AnchorageRepairViewState extends State<AnchorageRepairView> {
                 children: [
                   _SummaryGrid(
                     projection: projection,
-                    elapsedLabel: startedAt == null
+                    elapsedLabel: startedAt == null || !projection.isReady
                         ? '--:--:--'
                         : _formatDuration(elapsed),
                   ),

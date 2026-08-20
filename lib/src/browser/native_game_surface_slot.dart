@@ -152,9 +152,7 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _ignoreErrors(
-      _visibility.setAppVisible(_isAppVisibleForLifecycle(state)),
-    );
+    _ignoreErrors(_visibility.setAppVisible(_isAppVisibleForLifecycle(state)));
   }
 
   @override
@@ -377,3 +375,27 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     );
   }
 }
+
+/// A [RouteObserver] that only notifies [RouteAware.didPushNext] and [RouteAware.didPopNext]
+/// for actual full-screen [PageRoute] transitions, preventing [PopupRoute]s (such as dropdown
+/// menus, popup menus, dialogs, and bottom sheets) from accidentally hiding the native game surface.
+class YahagiGameRouteObserver extends RouteObserver<ModalRoute<dynamic>> {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute<dynamic>) {
+      super.didPush(route, null);
+      return;
+    }
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute<dynamic>) {
+      super.didPop(route, null);
+      return;
+    }
+    super.didPop(route, previousRoute);
+  }
+}
+

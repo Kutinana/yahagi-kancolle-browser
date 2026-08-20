@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
@@ -67,64 +65,62 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
       return Center(
         child: Text(
           l10n.noSortieWarnings,
-          style: const TextStyle(
-            color: Color(0xff8197a5),
-            fontSize: 13,
-          ),
+          style: const TextStyle(color: Color(0xff8197a5), fontSize: 13),
         ),
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: warnings.map((warning) => Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
-        child: Material(
-          key: Key(
-            'pre-sortie-warning-surface-${warning.fleetId}-${warning.kind.keyName}',
-          ),
-          color: warning.kind.foreground.withValues(alpha: 0.2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-            side: BorderSide(
-              color: warning.kind.foreground,
-              width: 1,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            key: Key(
-              'pre-sortie-warning-${warning.fleetId}-${warning.kind.keyName}',
-            ),
-            onTap: () => widget.onOpenFleet(warning.fleetId),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    warning.kind.icon,
-                    color: warning.kind.foreground,
-                    size: 16,
+      children: warnings
+          .map(
+            (warning) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Material(
+                key: Key(
+                  'pre-sortie-warning-surface-${warning.fleetId}-${warning.kind.keyName}',
+                ),
+                color: warning.kind.foreground.withValues(alpha: 0.2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  side: BorderSide(color: warning.kind.foreground, width: 1),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  key: Key(
+                    'pre-sortie-warning-${warning.fleetId}-${warning.kind.keyName}',
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      warning.message,
-                      style: TextStyle(
-                        color: warning.kind.foreground,
-                        fontSize: 13,
-                      ),
+                  onTap: () => widget.onOpenFleet(warning.fleetId),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          warning.kind.icon,
+                          color: warning.kind.foreground,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            warning.message,
+                            style: TextStyle(
+                              color: warning.kind.foreground,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
-      )).toList(),
+          )
+          .toList(),
     );
   }
 
@@ -151,10 +147,7 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
               const SizedBox(height: 4),
               Text(
                 l10n.noMapGaugeDataHint,
-                style: const TextStyle(
-                  color: Color(0xff4a5c68),
-                  fontSize: 11,
-                ),
+                style: const TextStyle(color: Color(0xff4a5c68), fontSize: 11),
               ),
             ],
           ),
@@ -207,10 +200,7 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
                     const SizedBox(width: 4),
                     Text(
                       l10n.showClearedMaps,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.white,
-                      ),
+                      style: const TextStyle(fontSize: 11, color: Colors.white),
                     ),
                   ],
                 ),
@@ -225,19 +215,18 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 l10n.allMapsCleared,
-                style: const TextStyle(
-                  color: Color(0xff8197a5),
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Color(0xff8197a5), fontSize: 12),
               ),
             ),
           )
         else
-          ...displayedGauges.map((gauge) => _MapGaugeRow(
-            key: Key('map-gauge-row-${gauge.mapAreaId}-${gauge.mapNo}'),
-            gauge: gauge,
-            state: state,
-          )),
+          ...displayedGauges.map(
+            (gauge) => _MapGaugeRow(
+              key: Key('map-gauge-row-${gauge.mapAreaId}-${gauge.mapNo}'),
+              gauge: gauge,
+              state: state,
+            ),
+          ),
       ],
     );
   }
@@ -459,7 +448,9 @@ class _ModeButton extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: selected ? const Color(0xfff7e7c4) : const Color(0xff8197a5),
+              color: selected
+                  ? const Color(0xfff7e7c4)
+                  : const Color(0xff8197a5),
             ),
           ),
         ),
@@ -469,11 +460,7 @@ class _ModeButton extends StatelessWidget {
 }
 
 class _MapGaugeRow extends StatelessWidget {
-  const _MapGaugeRow({
-    super.key,
-    required this.gauge,
-    required this.state,
-  });
+  const _MapGaugeRow({super.key, required this.gauge, required this.state});
 
   final MemberMapInfo gauge;
   final GameState state;
@@ -484,7 +471,8 @@ class _MapGaugeRow extends StatelessWidget {
         ? gauge.displayName
         : (state.mapName(gauge.mapAreaId, gauge.mapNo) ?? '');
     final rankText = gauge.rankName != null ? ' ${gauge.rankName}' : '';
-    final gaugeNumText = (gauge.gaugeNum != null &&
+    final gaugeNumText =
+        (gauge.gaugeNum != null &&
             gauge.gaugeMaxNum != null &&
             gauge.gaugeMaxNum! > 1)
         ? ' (${gauge.gaugeNum}/${gauge.gaugeMaxNum})'
@@ -519,7 +507,10 @@ class _MapGaugeRow extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1.5,
+                  ),
                   decoration: BoxDecoration(
                     color: tagBg,
                     borderRadius: BorderRadius.circular(3),
@@ -577,8 +568,14 @@ class _MapGaugeRow extends StatelessWidget {
                         gradient: LinearGradient(
                           colors: percentage > 0
                               ? (gauge.isEvent
-                                  ? const [Color(0xff7e57c2), Color(0xffab47bc)]
-                                  : const [Color(0xff26a69a), Color(0xff4db6ac)])
+                                    ? const [
+                                        Color(0xff7e57c2),
+                                        Color(0xffab47bc),
+                                      ]
+                                    : const [
+                                        Color(0xff26a69a),
+                                        Color(0xff4db6ac),
+                                      ])
                               : const [Color(0xff37474f), Color(0xff455a64)],
                         ),
                       ),
@@ -593,4 +590,3 @@ class _MapGaugeRow extends StatelessWidget {
     );
   }
 }
-

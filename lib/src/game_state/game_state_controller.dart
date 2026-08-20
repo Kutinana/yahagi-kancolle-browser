@@ -12,7 +12,9 @@ import 'game_state_store.dart';
 import '../logbook/logbook_database.dart';
 import '../logbook/logbook_event_recorder.dart';
 import '../fleet/anchorage_repair_timer.dart';
+import '../fleet/global_game_timer.dart';
 import '../fleet/nosaki_sparkle_timer.dart';
+import '../fleet/timer_mechanics_service.dart';
 
 final class GameStateController extends ChangeNotifier
     implements GameApiEventConsumer {
@@ -22,10 +24,12 @@ final class GameStateController extends ChangeNotifier
     this.gameStateStore,
     LogbookEventRecorder? logbookRecorder,
     FrameNotificationCoalescer? captureNotifications,
+    TimerMechanicsService? timerService,
   }) : _reducer = reducer ?? GameStateReducer(),
        _logbookRecorder = logbookRecorder ?? LogbookEventRecorder(),
        _captureNotifications =
-           captureNotifications ?? FrameNotificationCoalescer() {
+           captureNotifications ?? FrameNotificationCoalescer(),
+       _timerService = timerService ?? TimerMechanicsService() {
     _initQuests();
     _initGameState();
     _startExpirationTimer();
@@ -34,10 +38,7 @@ final class GameStateController extends ChangeNotifier
   final GameStateReducer _reducer;
   final LogbookEventRecorder _logbookRecorder;
   final FrameNotificationCoalescer _captureNotifications;
-  final AnchorageRepairTimerTracker _anchorageRepairTimer =
-      AnchorageRepairTimerTracker();
-  final NosakiSparkleTimerTracker _nosakiSparkleTimer =
-      NosakiSparkleTimerTracker();
+  final TimerMechanicsService _timerService;
   final QuestStore? questStore;
   final GameStateStore? gameStateStore;
   Timer? _expirationTimer;
@@ -134,8 +135,11 @@ final class GameStateController extends ChangeNotifier
   GameState get state => _state;
   String? get lastError => _lastError;
   String? get lastUpdatedPath => _lastUpdatedPath;
-  DateTime? get anchorageRepairStartedAt => _anchorageRepairTimer.startedAt;
-  DateTime? get nosakiSparkleStartedAt => _nosakiSparkleTimer.startedAt;
+  TimerMechanicsService get timerService => _timerService;
+  GlobalGameTimer get akashiTimer => _timerService.akashiTimer;
+  GlobalGameTimer get nozakiTimer => _timerService.nozakiTimer;
+  DateTime? get anchorageRepairStartedAt => _timerService.akashiTimer.anchorAt;
+  DateTime? get nosakiSparkleStartedAt => _timerService.nozakiTimer.anchorAt;
   @override
   Future<void> get idle => _queue;
 
@@ -161,12 +165,7 @@ final class GameStateController extends ChangeNotifier
         }
         final next = _reducer.reduce(previous, event);
         if (!identical(next, previous)) {
-          _anchorageRepairTimer.observe(
-            previousState: previous,
-            nextState: next,
-            event: event,
-          );
-          _nosakiSparkleTimer.observe(
+          _timerService.observe(
             previousState: previous,
             nextState: next,
             event: event,

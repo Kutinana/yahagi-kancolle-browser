@@ -149,20 +149,23 @@ void main() {
     );
   });
 
-  test('unlocking the last lock without active restores default level sort', () {
-    final state = const ShipInventorySortState.initial().longPress(
-      ShipInventorySortField.antiSub,
-    );
+  test(
+    'unlocking the last lock without active restores default level sort',
+    () {
+      final state = const ShipInventorySortState.initial().longPress(
+        ShipInventorySortField.antiSub,
+      );
 
-    final result = state.longPress(ShipInventorySortField.antiSub);
+      final result = state.longPress(ShipInventorySortField.antiSub);
 
-    expect(result.lockedCriteria, isEmpty);
-    expectCriterion(
-      result.activeCriterion!,
-      ShipInventorySortField.level,
-      true,
-    );
-  });
+      expect(result.lockedCriteria, isEmpty);
+      expectCriterion(
+        result.activeCriterion!,
+        ShipInventorySortField.level,
+        true,
+      );
+    },
+  );
 
   test(
     'tapping other unlocked fields only replaces the temporary final key',

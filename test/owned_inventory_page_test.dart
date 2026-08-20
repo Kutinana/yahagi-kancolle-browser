@@ -648,9 +648,7 @@ void main() {
       final firepowerHeader = find.byKey(
         const Key('owned-inventory-sort-firepower'),
       );
-      final armorHeader = find.byKey(
-        const Key('owned-inventory-sort-armor'),
-      );
+      final armorHeader = find.byKey(const Key('owned-inventory-sort-armor'));
 
       await tester.longPress(antiSubHeader);
       await tester.pump();
@@ -670,17 +668,11 @@ void main() {
       expect(find.text('火力 ▼①'), findsOneWidget);
       expect(find.text('装甲 ▼②'), findsOneWidget);
       expect(
-        find.descendant(
-          of: antiSubHeader,
-          matching: find.byIcon(Icons.lock),
-        ),
+        find.descendant(of: antiSubHeader, matching: find.byIcon(Icons.lock)),
         findsNothing,
       );
       expect(
-        find.descendant(
-          of: firepowerHeader,
-          matching: find.byIcon(Icons.lock),
-        ),
+        find.descendant(of: firepowerHeader, matching: find.byIcon(Icons.lock)),
         findsOneWidget,
       );
     },

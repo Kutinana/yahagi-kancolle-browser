@@ -101,9 +101,6 @@ void main() {
       urls,
       contains('/kcs2/resources/font/A-OTF-UDShinGoPro-Light.woff2'),
     );
-    expect(
-      urls,
-      isNot(contains('/kcs2/resources/font/ShipNameFont.woff2')),
-    );
+    expect(urls, isNot(contains('/kcs2/resources/font/ShipNameFont.woff2')));
   });
 }

@@ -72,7 +72,10 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
           ),
           child: switch (_mode) {
             RepairCenterMode.dock => _buildDockGrid(state, strings),
-            RepairCenterMode.anchorage => _buildAnchorageSummary(state, strings),
+            RepairCenterMode.anchorage => _buildAnchorageSummary(
+              state,
+              strings,
+            ),
             RepairCenterMode.nosaki => _buildNosakiSummary(state, strings),
           },
         );

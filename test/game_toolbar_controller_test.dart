@@ -86,31 +86,34 @@ void main() {
     });
   });
 
-  test('toggle switches between expanded and collapsed with auto-hide timer', () {
-    fakeAsync((async) {
-      final controller = GameToolbarController(
-        autoHideDuration: const Duration(seconds: 5),
-      );
-      controller.collapse();
-      expect(controller.isVisible, isFalse);
+  test(
+    'toggle switches between expanded and collapsed with auto-hide timer',
+    () {
+      fakeAsync((async) {
+        final controller = GameToolbarController(
+          autoHideDuration: const Duration(seconds: 5),
+        );
+        controller.collapse();
+        expect(controller.isVisible, isFalse);
 
-      controller.toggle();
-      expect(controller.isVisible, isTrue);
+        controller.toggle();
+        expect(controller.isVisible, isTrue);
 
-      async.elapse(const Duration(seconds: 3));
-      controller.resetAutoHide();
-      async.elapse(const Duration(seconds: 3));
-      expect(controller.isVisible, isTrue);
+        async.elapse(const Duration(seconds: 3));
+        controller.resetAutoHide();
+        async.elapse(const Duration(seconds: 3));
+        expect(controller.isVisible, isTrue);
 
-      async.elapse(const Duration(seconds: 2));
-      expect(controller.isVisible, isFalse);
+        async.elapse(const Duration(seconds: 2));
+        expect(controller.isVisible, isFalse);
 
-      controller.toggle();
-      expect(controller.isVisible, isTrue);
+        controller.toggle();
+        expect(controller.isVisible, isTrue);
 
-      controller.toggle();
-      expect(controller.isVisible, isFalse);
-      controller.dispose();
-    });
-  });
+        controller.toggle();
+        expect(controller.isVisible, isFalse);
+        controller.dispose();
+      });
+    },
+  );
 }

@@ -112,8 +112,12 @@ void main() {
     test('separators', () {
       expect(splitTargetTokens('陽炎型改二・雪風改二'), ['陽炎型改二', '雪風改二']);
       expect(splitTargetTokens('白露型・朝潮型'), ['白露型', '朝潮型']);
-      expect(splitTargetTokens('玉波改二・藤波改二\n浜波改二・早波改二'),
-          ['玉波改二', '藤波改二', '浜波改二', '早波改二']);
+      expect(splitTargetTokens('玉波改二・藤波改二\n浜波改二・早波改二'), [
+        '玉波改二',
+        '藤波改二',
+        '浜波改二',
+        '早波改二',
+      ]);
     });
   });
 }

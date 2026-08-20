@@ -193,59 +193,67 @@ void main() {
       },
     );
 
-    testWidgets('starts hidden for background lifecycle states and visible for inactive', (
-      tester,
-    ) async {
-      addTearDown(() {
-        tester.binding.resetInternalState();
-        tester.binding.handleAppLifecycleStateChanged(
-          AppLifecycleState.resumed,
-        );
-      });
-      for (final state in <AppLifecycleState>[
-        AppLifecycleState.hidden,
-        AppLifecycleState.paused,
-        AppLifecycleState.detached,
-      ]) {
-        final visibility = <bool>[];
-        tester.binding.handleAppLifecycleStateChanged(state);
+    testWidgets(
+      'starts hidden for background lifecycle states and visible for inactive',
+      (tester) async {
+        addTearDown(() {
+          tester.binding.resetInternalState();
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+        });
+        for (final state in <AppLifecycleState>[
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+          AppLifecycleState.detached,
+        ]) {
+          final visibility = <bool>[];
+          tester.binding.handleAppLifecycleStateChanged(state);
 
+          await tester.pumpWidget(
+            _slotApp(
+              onVisibilityChanged: (value) async => visibility.add(value),
+              useCurrentLifecycle: true,
+            ),
+          );
+          await tester.pump();
+          expect(
+            visibility,
+            isEmpty,
+            reason: 'initial $state must stay hidden',
+          );
+
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          await tester.pump();
+          expect(visibility, <bool>[true]);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          await tester.pump();
+        }
+
+        final inactiveVisibility = <bool>[];
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
         await tester.pumpWidget(
           _slotApp(
-            onVisibilityChanged: (value) async => visibility.add(value),
+            onVisibilityChanged: (value) async => inactiveVisibility.add(value),
             useCurrentLifecycle: true,
           ),
         );
         await tester.pump();
-        expect(visibility, isEmpty, reason: 'initial $state must stay hidden');
-
-        tester.binding.handleAppLifecycleStateChanged(
-          AppLifecycleState.resumed,
-        );
-        await tester.pump();
-        expect(visibility, <bool>[true]);
+        expect(inactiveVisibility, <bool>[
+          true,
+        ], reason: 'initial inactive state must start visible');
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
-        tester.binding.handleAppLifecycleStateChanged(
-          AppLifecycleState.resumed,
-        );
-        await tester.pump();
-      }
-
-      final inactiveVisibility = <bool>[];
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-      await tester.pumpWidget(
-        _slotApp(
-          onVisibilityChanged: (value) async => inactiveVisibility.add(value),
-          useCurrentLifecycle: true,
-        ),
-      );
-      await tester.pump();
-      expect(inactiveVisibility, <bool>[true],
-          reason: 'initial inactive state must start visible');
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    });
+      },
+    );
 
     testWidgets(
       'deduplicates equal bounds and reports changed size position and DPR',
@@ -745,7 +753,7 @@ void main() {
     testWidgets('hides when a Navigator route covers it and restores on pop', (
       tester,
     ) async {
-      final observer = RouteObserver<ModalRoute<dynamic>>();
+      final observer = YahagiGameRouteObserver();
       final navigatorKey = GlobalKey<NavigatorState>();
       final visibility = <bool>[];
 
@@ -767,6 +775,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(visibility, <bool>[true, false, true]);
+    });
+
+    testWidgets('stays visible when a PopupRoute like a menu or dialog opens', (
+      tester,
+    ) async {
+      final observer = YahagiGameRouteObserver();
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final visibility = <bool>[];
+
+      await tester.pumpWidget(
+        _slotApp(
+          navigatorKey: navigatorKey,
+          observer: observer,
+          onVisibilityChanged: (value) async => visibility.add(value),
+        ),
+      );
+      await tester.pump();
+      expect(visibility, <bool>[true]);
+
+      // Push a PopupRoute (like PopupMenuButton or showDialog)
+      unawaited(
+        navigatorKey.currentState!.push<void>(
+          RawDialogRoute<void>(
+            pageBuilder: (_, __, ___) => const Text('menu'),
+            barrierDismissible: true,
+            barrierLabel: 'barrier',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Must stay visible throughout popup route
+      expect(visibility, <bool>[true]);
+
+      navigatorKey.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(visibility, <bool>[true]);
     });
 
     testWidgets('calibrates route visibility when its observer changes', (
@@ -828,49 +872,44 @@ void main() {
     });
 
     testWidgets(
-        'maps background app lifecycle states to hidden and keeps inactive visible',
-        (tester) async {
-      addTearDown(() {
-        tester.binding.resetInternalState();
-        tester.binding.handleAppLifecycleStateChanged(
-          AppLifecycleState.resumed,
-        );
-      });
-      final visibility = <bool>[];
-      await tester.pumpWidget(
-        _slotApp(onVisibilityChanged: (value) async => visibility.add(value)),
-      );
-      await tester.pump();
-      expect(visibility, <bool>[true]);
-
-      // Inactive (e.g. system menu shade pulled down) keeps surface visible.
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-      await tester.pump();
-      expect(visibility, <bool>[true]);
-
-      for (final state in <AppLifecycleState>[
-        AppLifecycleState.hidden,
-        AppLifecycleState.paused,
-        AppLifecycleState.detached,
-      ]) {
-        tester.binding.handleAppLifecycleStateChanged(state);
-        await tester.pump();
-        tester.binding.handleAppLifecycleStateChanged(
-          AppLifecycleState.resumed,
+      'maps background app lifecycle states to hidden and keeps inactive visible',
+      (tester) async {
+        addTearDown(() {
+          tester.binding.resetInternalState();
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+        });
+        final visibility = <bool>[];
+        await tester.pumpWidget(
+          _slotApp(onVisibilityChanged: (value) async => visibility.add(value)),
         );
         await tester.pump();
-      }
+        expect(visibility, <bool>[true]);
 
-      expect(visibility, <bool>[
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        true,
-      ]);
-    });
+        // Inactive (e.g. system menu shade pulled down) keeps surface visible.
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        await tester.pump();
+        expect(visibility, <bool>[true]);
+
+        for (final state in <AppLifecycleState>[
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+          AppLifecycleState.detached,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(state);
+          await tester.pump();
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          await tester.pump();
+        }
+
+        expect(visibility, <bool>[true, false, true, false, true, false, true]);
+      },
+    );
 
     testWidgets('hides once when disposed and contains no platform view', (
       tester,

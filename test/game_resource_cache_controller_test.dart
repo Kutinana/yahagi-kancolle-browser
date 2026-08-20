@@ -7,10 +7,7 @@ import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_store.da
 
 void main() {
   test('formats completeness as one capacity line', () {
-    expect(
-      formatCacheCompleteness(6840000000, 8120000000),
-      '6.84 GB',
-    );
+    expect(formatCacheCompleteness(6840000000, 8120000000), '6.84 GB');
   });
 
   test(

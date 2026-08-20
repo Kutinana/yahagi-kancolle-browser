@@ -19,8 +19,7 @@ void main() {
     late List<BonusRule> rules;
 
     setUpAll(() {
-      final html =
-          File('$fixturesDir/detail_w266.html').readAsStringSync();
+      final html = File('$fixturesDir/detail_w266.html').readAsStringSync();
       final page = parseDetailDocument(html_parser.parse(html), 266);
       final built = RuleBuilder(master).buildForPage(
         page: page,
@@ -50,9 +49,13 @@ void main() {
     });
 
     test('matches the expected fixture exactly (modulo provenance)', () {
-      final expected = jsonDecode(
-          File('$fixturesDir/detail_w266_expected.json').readAsStringSync())
-          as Map<String, dynamic>;
+      final expected =
+          jsonDecode(
+                File(
+                  '$fixturesDir/detail_w266_expected.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, dynamic>;
       final expRules = (expected['rules'] as List).cast<Map<String, dynamic>>();
 
       Map<String, dynamic> normalize(Map<String, dynamic> r) {
@@ -86,10 +89,9 @@ void main() {
     });
 
     test('round-1 validator passes', () {
-      final result = DatasetValidator(master).validate(
-        rules: rules,
-        unresolvedEmpty: true,
-      );
+      final result = DatasetValidator(
+        master,
+      ).validate(rules: rules, unresolvedEmpty: true);
       expect(result.issues, isEmpty, reason: result.issues.join('\n'));
     });
   });

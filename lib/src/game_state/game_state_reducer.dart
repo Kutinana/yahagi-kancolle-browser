@@ -1264,19 +1264,19 @@ class GameStateReducer {
       final gaugeMaxNum = item['api_gauge_max_num'] != null
           ? _asInt(item['api_gauge_max_num'])
           : (eventMap != null && eventMap['api_gauge_max_num'] != null
-              ? _asInt(eventMap['api_gauge_max_num'])
-              : null);
+                ? _asInt(eventMap['api_gauge_max_num'])
+                : null);
 
       final currentHp = eventMap != null && eventMap['api_now_maphp'] != null
           ? _asInt(eventMap['api_now_maphp'])
           : (item['api_now_maphp'] != null
-              ? _asInt(item['api_now_maphp'])
-              : null);
+                ? _asInt(item['api_now_maphp'])
+                : null);
       final maxHp = eventMap != null && eventMap['api_max_maphp'] != null
           ? _asInt(eventMap['api_max_maphp'])
           : (item['api_max_maphp'] != null
-              ? _asInt(item['api_max_maphp'])
-              : master?.maxMapHp);
+                ? _asInt(item['api_max_maphp'])
+                : master?.maxMapHp);
 
       memberMapInfos[key] = MemberMapInfo(
         id: mapId,
@@ -1365,7 +1365,8 @@ class GameStateReducer {
       final gaugeNum = rawMapHp != null && rawMapHp['api_gauge_num'] != null
           ? _asInt(rawMapHp['api_gauge_num'])
           : existing?.gaugeNum;
-      final gaugeMaxNum = rawMapHp != null && rawMapHp['api_gauge_max_num'] != null
+      final gaugeMaxNum =
+          rawMapHp != null && rawMapHp['api_gauge_max_num'] != null
           ? _asInt(rawMapHp['api_gauge_max_num'])
           : existing?.gaugeMaxNum;
 
@@ -1672,8 +1673,9 @@ class GameStateReducer {
         mapNo: mapNo,
         name: name,
         operationText: _asString(item['api_opetext']),
-        requiredDefeatCount:
-            reqDefeat != null && reqDefeat > 0 ? reqDefeat : null,
+        requiredDefeatCount: reqDefeat != null && reqDefeat > 0
+            ? reqDefeat
+            : null,
         maxMapHp: maxMapHp != null && maxMapHp > 0 ? maxMapHp : null,
       );
     }
@@ -1955,7 +1957,7 @@ class GameStateReducer {
     final nextEscaped = isStart
         ? const <int>{}
         : (Set<int>.from(currentCombat.escapedShipIds)
-          ..addAll(currentCombat.pendingEscapeShipIds));
+            ..addAll(currentCombat.pendingEscapeShipIds));
 
     return state.copyWith(
       landBases: landBases,
@@ -2112,11 +2114,7 @@ class GameStateReducer {
 
     final rawMapHp =
         _optionalMap(data['api_maphp']) ?? _optionalMap(data['api_map_hp']);
-    if (rawMapHp != null &&
-        mapArea != null &&
-        mapArea > 0 &&
-        mapInfoNo != null &&
-        mapInfoNo > 0) {
+    if (rawMapHp != null && mapArea > 0 && mapInfoNo > 0) {
       final key = mapArea * 100 + mapInfoNo;
       final existing = state.memberMapInfos[key];
       if (existing != null) {
@@ -2149,14 +2147,9 @@ class GameStateReducer {
     }
 
     final rawLandingHp = _optionalMap(data['api_landing_hp']);
-    if (rawLandingHp != null &&
-        mapArea != null &&
-        mapArea > 0 &&
-        mapInfoNo != null &&
-        mapInfoNo > 0) {
+    if (rawLandingHp != null && mapArea > 0 && mapInfoNo > 0) {
       final key = mapArea * 100 + mapInfoNo;
-      final existing =
-          (updatedMemberMapInfos ?? state.memberMapInfos)[key];
+      final existing = (updatedMemberMapInfos ?? state.memberMapInfos)[key];
       if (existing != null) {
         final nowHp = rawLandingHp['api_now_hp'] != null
             ? _asInt(rawLandingHp['api_now_hp'])
@@ -2167,10 +2160,7 @@ class GameStateReducer {
         final newMapInfos = Map<int, MemberMapInfo>.from(
           updatedMemberMapInfos ?? state.memberMapInfos,
         );
-        newMapInfos[key] = existing.copyWith(
-          currentHp: nowHp,
-          maxHp: maxHp,
-        );
+        newMapInfos[key] = existing.copyWith(currentHp: nowHp, maxHp: maxHp);
         updatedMemberMapInfos = newMapInfos;
       }
     }
@@ -2182,13 +2172,9 @@ class GameStateReducer {
       final decodedEscape = _decodeNestedJson(data['api_escape']);
       final escapeObj =
           _optionalMap(decodedEscape) ?? _optionalMap(data['api_escape']);
-      final rawEscape =
-          escapeObj?['api_escape_idx'] ?? data['api_escape_idx'];
+      final rawEscape = escapeObj?['api_escape_idx'] ?? data['api_escape_idx'];
       final rawTow = escapeObj?['api_tow_idx'] ?? data['api_tow_idx'];
-      final indices = <int>[
-        ..._intList(rawEscape),
-        ..._intList(rawTow),
-      ];
+      final indices = <int>[..._intList(rawEscape), ..._intList(rawTow)];
       if (indices.isEmpty) {
         final singleEscape = _asInt(rawEscape);
         if (singleEscape > 0) indices.add(singleEscape);
@@ -2203,7 +2189,8 @@ class GameStateReducer {
           : (requestedDeckId > 0
                 ? requestedDeckId
                 : (battleDeckId > 0 ? battleDeckId : 1));
-      final isCombined = sortieFleetId == 1 &&
+      final isCombined =
+          sortieFleetId == 1 &&
           (state.combinedFleetType != CombinedFleetType.none ||
               event.path.contains('combined'));
       final mainFleet = state.fleets

@@ -5,7 +5,9 @@ import '../game_state/game_state.dart';
 import '../settings/header_resource_settings.dart';
 import '../settings/layout_settings_controller.dart';
 import '../performance/second_tick_scope.dart';
+import 'anchorage_repair_calculator.dart';
 import 'header_resource_catalog.dart';
+import 'nosaki_sparkle_calculator.dart';
 
 class ResourceGrid extends StatelessWidget {
   const ResourceGrid({super.key, required this.state});
@@ -127,11 +129,19 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
   bool _editing = false;
   DateTime _now = DateTime.now().toUtc();
 
-  String get _anchorageElapsed =>
-      formatAnchorageRepairElapsed(widget.anchorageRepairStartedAt, _now);
+  String get _anchorageElapsed {
+    if (!AnchorageRepairCalculator.hasReadyFleet(widget.state)) {
+      return '--:--:--';
+    }
+    return formatAnchorageRepairElapsed(widget.anchorageRepairStartedAt, _now);
+  }
 
-  String get _nosakiElapsed =>
-      formatNosakiSparkleElapsed(widget.nosakiSparkleStartedAt, _now);
+  String get _nosakiElapsed {
+    if (!NosakiSparkleCalculator.hasReadyFleet(widget.state)) {
+      return '--:--:--';
+    }
+    return formatNosakiSparkleElapsed(widget.nosakiSparkleStartedAt, _now);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -545,32 +555,35 @@ class _HeaderAnchorageTimerSummary extends StatelessWidget {
   final String elapsed;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const Key('header-anchorage-timer-summary'),
-    width: 128,
-    height: 30,
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    decoration: BoxDecoration(
-      color: const Color(0xff142735),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xff213b4b)),
-    ),
-    alignment: Alignment.centerLeft,
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
+  Widget build(BuildContext context) {
+    final isActive = elapsed != '--:--:--';
+    return Container(
+      key: const Key('header-anchorage-timer-summary'),
+      width: 128,
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xff142735),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xff213b4b)),
+      ),
       alignment: Alignment.centerLeft,
-      child: Text(
-        '泊地：$elapsed',
-        maxLines: 1,
-        style: const TextStyle(
-          color: Color(0xffdce6eb),
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          '泊地：$elapsed',
+          maxLines: 1,
+          style: TextStyle(
+            color: isActive ? const Color(0xffdce6eb) : const Color(0xff9fb3bf),
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _HeaderNosakiTimerSummary extends StatelessWidget {
@@ -579,32 +592,35 @@ class _HeaderNosakiTimerSummary extends StatelessWidget {
   final String elapsed;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const Key('header-nosaki-timer-summary'),
-    width: 128,
-    height: 30,
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    decoration: BoxDecoration(
-      color: const Color(0xff142735),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xff213b4b)),
-    ),
-    alignment: Alignment.centerLeft,
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
+  Widget build(BuildContext context) {
+    final isActive = elapsed != '--:--:--';
+    return Container(
+      key: const Key('header-nosaki-timer-summary'),
+      width: 128,
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xff142735),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xff213b4b)),
+      ),
       alignment: Alignment.centerLeft,
-      child: Text(
-        '野埼：$elapsed',
-        maxLines: 1,
-        style: const TextStyle(
-          color: Color(0xffdce6eb),
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          '野埼：$elapsed',
+          maxLines: 1,
+          style: TextStyle(
+            color: isActive ? const Color(0xffdce6eb) : const Color(0xff9fb3bf),
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _HeaderSenkaSummary extends StatelessWidget {

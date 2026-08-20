@@ -36,10 +36,7 @@ void main() {
       'android/app/src/main/kotlin/app/yahagi/kancollebrowser/MainActivity.kt',
     ).readAsStringSync();
 
-    expect(
-      activity,
-      contains('app.yahagi.kancollebrowser/game_environment'),
-    );
+    expect(activity, contains('app.yahagi.kancollebrowser/game_environment'));
     expect(activity, contains('"restartActivity"'));
     expect(activity, contains('recreate()'));
   });

@@ -18,11 +18,17 @@ void main() {
   const state = GameState(
     resources: <GameResourceType, int>{GameResourceType.fuel: 123456},
     fleets: <Fleet>[
-      Fleet(id: 1, name: '第1艦隊'),
+      Fleet(id: 1, name: '第1艦隊', shipIds: <int>[1]),
       Fleet(id: 2, name: '2'),
       Fleet(id: 3, name: 'A2'),
       Fleet(id: 4, name: '6'),
     ],
+    ships: <int, OwnedShip>{
+      1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 45, maxHp: 45),
+    },
+    masterShips: <int, MasterShip>{
+      187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
+    },
   );
 
   testWidgets('game workspace alone shows resources', (tester) async {

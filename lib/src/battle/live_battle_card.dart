@@ -521,8 +521,8 @@ class _CompactBarRow extends StatelessWidget {
     final hpText = isEscaped
         ? '${ship.currentHp} / ${ship.maxHp} (退避)'
         : (ship.damageReceived > 0
-            ? '${ship.currentHp} / ${ship.maxHp} (-${ship.damageReceived})'
-            : '${ship.currentHp} / ${ship.maxHp}');
+              ? '${ship.currentHp} / ${ship.maxHp} (-${ship.damageReceived})'
+              : '${ship.currentHp} / ${ship.maxHp}');
 
     Widget hpContent({double opacity = 1, bool pulsing = false}) {
       if (isEscaped) {

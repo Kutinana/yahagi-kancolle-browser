@@ -852,7 +852,9 @@ void main() {
         MemoryDisplayModeStore(),
       );
       final browserController = GameBrowserController(port: _NoopBrowserPort());
-      final audioController = await GameAudioController.load(_MemoryAudioStore());
+      final audioController = await GameAudioController.load(
+        _MemoryAudioStore(),
+      );
       final toolbarController = GameToolbarController();
       final toolbarDisplayController = await GameToolbarDisplayController.load(
         _MemoryToolbarDisplayStore(),

@@ -1,53 +1,27 @@
 import '../bridge/captured_api_event.dart';
 import '../game_state/game_state.dart';
-import 'anchorage_repair_calculator.dart';
+import 'global_game_timer.dart';
+import 'timer_mechanics_service.dart';
 
 class AnchorageRepairTimerTracker {
-  DateTime? _startedAt;
+  AnchorageRepairTimerTracker({TimerMechanicsService? service})
+      : _service = service ?? TimerMechanicsService();
 
-  DateTime? get startedAt => _startedAt;
+  final TimerMechanicsService _service;
+
+  GlobalGameTimer get timer => _service.akashiTimer;
+  DateTime? get startedAt => _service.akashiTimer.anchorAt;
 
   void observe({
     required GameState previousState,
     required GameState nextState,
     required CapturedApiEvent event,
   }) {
-    final active = AnchorageRepairCalculator.hasReadyFleet(nextState);
-    if (!active) {
-      _startedAt = null;
-      return;
-    }
-
-    final capturedAt = event.capturedAt.toUtc();
-    if (_startedAt == null) {
-      _startedAt = capturedAt;
-      return;
-    }
-
-    if (event.path == '/kcsapi/api_req_hensei/change' &&
-        !_isBatchUnequip(event)) {
-      _startedAt = capturedAt;
-      return;
-    }
-
-    if (event.path == '/kcsapi/api_req_mission/start') {
-      _startedAt = capturedAt;
-      return;
-    }
-
-    if (event.path == '/kcsapi/api_port/port' &&
-        capturedAt.difference(_startedAt!) >=
-            AnchorageRepairCalculator.minimumRepairTime) {
-      _startedAt = capturedAt;
-    }
+    _service.observe(
+      previousState: previousState,
+      nextState: nextState,
+      event: event,
+    );
   }
-
-  bool _isBatchUnequip(CapturedApiEvent event) {
-    final shipIdx = _asInt(event.requestParams['api_ship_idx']);
-    final shipId = _asInt(event.requestParams['api_ship_id']);
-    return shipIdx == -1 || shipId == -2;
-  }
-
-  int _asInt(Object? value) =>
-      value is int ? value : int.tryParse(value?.toString() ?? '') ?? 0;
 }
+

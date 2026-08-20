@@ -335,15 +335,15 @@ class ShipMoraleMark extends StatelessWidget {
                     color: repairLabel == '退避'
                         ? const Color(0xdd1e293b)
                         : (repairLabel == '刷闪'
-                            ? const Color(0xdd0b2a1a)
-                            : const Color(0xdd0b2738)),
+                              ? const Color(0xdd0b2a1a)
+                              : const Color(0xdd0b2738)),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: repairLabel == '退避'
                           ? const Color(0xff64748b)
                           : (repairLabel == '刷闪'
-                              ? const Color(0xc965d493)
-                              : const Color(0xc963c7ee)),
+                                ? const Color(0xc965d493)
+                                : const Color(0xc963c7ee)),
                     ),
                     boxShadow: const [
                       BoxShadow(color: Color(0x99000000), blurRadius: 4),
@@ -358,8 +358,8 @@ class ShipMoraleMark extends StatelessWidget {
                         color: repairLabel == '退避'
                             ? const Color(0xffcbd5e1)
                             : (repairLabel == '刷闪'
-                                ? const Color(0xff65d493)
-                                : const Color(0xff8edcff)),
+                                  ? const Color(0xff65d493)
+                                  : const Color(0xff8edcff)),
                         fontSize: badgeFont,
                         fontWeight: FontWeight.w900,
                       ),

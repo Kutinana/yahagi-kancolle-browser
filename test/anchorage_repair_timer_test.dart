@@ -135,42 +135,52 @@ void main() {
       expect(tracker.startedAt, startedAt);
     });
 
-    test('formation changes in another fleet reset the shared global timer', () {
-      final tracker = AnchorageRepairTimerTracker();
-      final startedAt = DateTime.utc(2026, 8, 6, 10);
-      final changedAt = startedAt.add(const Duration(minutes: 7));
-      final base = buildAnchorageTestState(facilities: 3);
-      final state = base.copyWith(
-        fleets: <Fleet>[
-          ...base.fleets,
-          const Fleet(id: 2, name: '第二舰队', shipIds: <int>[]),
-        ],
-      );
-      tracker.observe(
-        previousState: buildAnchorageTestState(
-          facilities: 3,
-          flagshipMasterId: 501,
-        ),
-        nextState: state,
-        event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
-      );
+    test(
+      'formation changes in another fleet reset the shared global timer',
+      () {
+        final tracker = AnchorageRepairTimerTracker();
+        final startedAt = DateTime.utc(2026, 8, 6, 10);
+        final changedAt = startedAt.add(const Duration(minutes: 7));
+        final base = buildAnchorageTestState(facilities: 3);
+        final state = base.copyWith(
+          fleets: <Fleet>[
+            ...base.fleets,
+            const Fleet(id: 2, name: '第二舰队', shipIds: <int>[]),
+          ],
+        );
+        tracker.observe(
+          previousState: buildAnchorageTestState(
+            facilities: 3,
+            flagshipMasterId: 501,
+          ),
+          nextState: state,
+          event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
+        );
 
-      tracker.observe(
-        previousState: state,
-        nextState: state,
-        event: _event(
-          '/kcsapi/api_req_hensei/change',
-          changedAt,
-          requestParams: const <String, Object?>{
-            'api_id': '2',
-            'api_ship_idx': '0',
-            'api_ship_id': '501',
-          },
-        ),
-      );
+        final stateFleet2Akashi = state.copyWith(
+          fleets: <Fleet>[
+            state.fleets[0],
+            const Fleet(id: 2, name: '第二舰队', shipIds: <int>[1]),
+          ],
+        );
 
-      expect(tracker.startedAt, changedAt);
-    });
+        tracker.observe(
+          previousState: state,
+          nextState: stateFleet2Akashi,
+          event: _event(
+            '/kcsapi/api_req_hensei/change',
+            changedAt,
+            requestParams: const <String, Object?>{
+              'api_id': '2',
+              'api_ship_idx': '0',
+              'api_ship_id': '1',
+            },
+          ),
+        );
+
+        expect(tracker.startedAt, changedAt);
+      },
+    );
 
     test('fleet batch unequip (随伴舰一括解除) does not reset the timer', () {
       final tracker = AnchorageRepairTimerTracker();
@@ -245,7 +255,7 @@ void main() {
       expect(tracker.startedAt, confirmedAt);
     });
 
-    test('clears when no eligible damaged repair fleet remains', () {
+    test('moving Akashi out of flagship does not reset or clear global timer timestamp', () {
       final tracker = AnchorageRepairTimerTracker();
       final startedAt = DateTime.utc(2026, 8, 6, 10);
       tracker.observe(
@@ -270,7 +280,7 @@ void main() {
         ),
       );
 
-      expect(tracker.startedAt, isNull);
+      expect(tracker.startedAt, startedAt);
     });
   });
 

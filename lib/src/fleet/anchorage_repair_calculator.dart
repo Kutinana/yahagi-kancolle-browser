@@ -300,6 +300,13 @@ abstract final class AnchorageRepairCalculator {
     }).length;
   }
 
+  static bool isRepairShip(MasterShip? master) =>
+      _isAkashi(master) || _isAsahiKai(master);
+
+  static bool isAkashi(MasterShip? master) => _isAkashi(master);
+
+  static bool isAsahiKai(MasterShip? master) => _isAsahiKai(master);
+
   static bool _isAkashi(MasterShip? master) =>
       master != null &&
       (master.id == 182 || master.id == 187 || master.name.startsWith('明石'));
@@ -316,4 +323,22 @@ abstract final class AnchorageRepairCalculator {
   static bool _isDocked(GameState state, int shipId) => state.repairDocks.any(
     (dock) => dock.isRepairing && dock.shipId == shipId,
   );
+
+  static bool hasBaseEligibleFleet(GameState state) => hasReadyFleet(state);
+
+  static bool hasEligibleRepairTarget(GameState state) {
+    for (final fleet in state.fleets) {
+      final projection = project(
+        state: state,
+        fleetId: fleet.id,
+        elapsed: Duration.zero,
+      );
+      if (projection.rows.any(
+        (row) => row.status == AnchorageRepairShipStatus.repairing,
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

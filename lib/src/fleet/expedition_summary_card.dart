@@ -47,7 +47,8 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
             .where((f) => f.mission.isActive)
             .toList();
 
-        final strings = AppLocalizations.of(context) ??
+        final strings =
+            AppLocalizations.of(context) ??
             lookupAppLocalizations(const Locale('zh'));
 
         return DashboardCard(
@@ -73,7 +74,11 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
     );
   }
 
-  Widget _buildSummaryContent(GameState state, List<Fleet> activeFleets, AppLocalizations strings) {
+  Widget _buildSummaryContent(
+    GameState state,
+    List<Fleet> activeFleets,
+    AppLocalizations strings,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -178,41 +183,47 @@ class ExpeditionModeSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: compact ? const Color(0xff10212e) : const Color(0xff0b202d),
         borderRadius: BorderRadius.circular(compact ? 7 : 20),
-        border: Border.all(color: compact ? const Color(0xff294052) : const Color(0xff315064)),
+        border: Border.all(
+          color: compact ? const Color(0xff294052) : const Color(0xff315064),
+        ),
       ),
       child: Row(
         mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
         children: [
-          compact ? _ModeButton(
-            key: const Key('expedition-mode-summary'),
-            label: summaryLabel,
-            compact: compact,
-            selected: mode == ExpeditionSummaryMode.summary,
-            onTap: () => onChanged(ExpeditionSummaryMode.summary),
-          ) : Expanded(
-            child: _ModeButton(
-              key: const Key('expedition-mode-summary'),
-              label: summaryLabel,
-              compact: compact,
-              selected: mode == ExpeditionSummaryMode.summary,
-              onTap: () => onChanged(ExpeditionSummaryMode.summary),
-            ),
-          ),
-          compact ? _ModeButton(
-            key: const Key('expedition-mode-check'),
-            label: checkLabel,
-            compact: compact,
-            selected: mode == ExpeditionSummaryMode.check,
-            onTap: () => onChanged(ExpeditionSummaryMode.check),
-          ) : Expanded(
-            child: _ModeButton(
-              key: const Key('expedition-mode-check'),
-              label: checkLabel,
-              compact: compact,
-              selected: mode == ExpeditionSummaryMode.check,
-              onTap: () => onChanged(ExpeditionSummaryMode.check),
-            ),
-          ),
+          compact
+              ? _ModeButton(
+                  key: const Key('expedition-mode-summary'),
+                  label: summaryLabel,
+                  compact: compact,
+                  selected: mode == ExpeditionSummaryMode.summary,
+                  onTap: () => onChanged(ExpeditionSummaryMode.summary),
+                )
+              : Expanded(
+                  child: _ModeButton(
+                    key: const Key('expedition-mode-summary'),
+                    label: summaryLabel,
+                    compact: compact,
+                    selected: mode == ExpeditionSummaryMode.summary,
+                    onTap: () => onChanged(ExpeditionSummaryMode.summary),
+                  ),
+                ),
+          compact
+              ? _ModeButton(
+                  key: const Key('expedition-mode-check'),
+                  label: checkLabel,
+                  compact: compact,
+                  selected: mode == ExpeditionSummaryMode.check,
+                  onTap: () => onChanged(ExpeditionSummaryMode.check),
+                )
+              : Expanded(
+                  child: _ModeButton(
+                    key: const Key('expedition-mode-check'),
+                    label: checkLabel,
+                    compact: compact,
+                    selected: mode == ExpeditionSummaryMode.check,
+                    onTap: () => onChanged(ExpeditionSummaryMode.check),
+                  ),
+                ),
         ],
       ),
     );
@@ -236,7 +247,9 @@ class _ModeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? (compact ? const Color(0xff5b4829) : const Color(0xff8a6628)) : Colors.transparent,
+      color: selected
+          ? (compact ? const Color(0xff5b4829) : const Color(0xff8a6628))
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(compact ? 5 : 16),
       child: InkWell(
         borderRadius: BorderRadius.circular(compact ? 5 : 16),
@@ -274,4 +287,3 @@ class _ModeButton extends StatelessWidget {
     );
   }
 }
-

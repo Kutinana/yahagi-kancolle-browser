@@ -21,7 +21,11 @@ MasterData testMaster() {
       {'api_id': 398, 'api_name': '秋月改二', 'api_ctype': 20, 'api_stype': 2},
     ],
     'api_mst_slotitem': [
-      {'api_id': 266, 'api_name': '12.7cm連装砲C型改二', 'api_type': [1, 1, 1, 1, 0]},
+      {
+        'api_id': 266,
+        'api_name': '12.7cm連装砲C型改二',
+        'api_type': [1, 1, 1, 1, 0],
+      },
     ],
     'api_mst_stype': [
       {'api_id': 2, 'api_name': '駆逐艦'},
@@ -29,7 +33,11 @@ MasterData testMaster() {
   });
 }
 
-Map<String, Object?> buildForFixture(MasterData master, String fixture, int id) {
+Map<String, Object?> buildForFixture(
+  MasterData master,
+  String fixture,
+  int id,
+) {
   final html = File('test/akashi_bonus/fixtures/$fixture').readAsStringSync();
   final doc = html_parser.parse(html);
   final page = parseDetailDocument(doc, id);
@@ -58,7 +66,10 @@ void main() {
       final r = rules.single as Map<String, dynamic>;
       expect(r['ruleId'], 'akashi-300-single-001');
       expect(r['category'], 'single');
-      expect(r['equipment'], {'ids': [300], 'typeIds': []});
+      expect(r['equipment'], {
+        'ids': [300],
+        'typeIds': [],
+      });
       expect((r['effect'] as Map)['mode'], 'perEquipment');
       expect(((r['effect'] as Map)['bonus'] as Map)['firepower'], 2);
       final sc = r['shipCondition'] as Map;
@@ -95,10 +106,12 @@ void main() {
       final rules = (out['rules'] as List).cast<Map<String, dynamic>>();
       expect(rules, hasLength(2));
       final fire = rules.firstWhere(
-          (r) => (r['source'] as Map)['rawEffect'] == '火力+1');
+        (r) => (r['source'] as Map)['rawEffect'] == '火力+1',
+      );
       expect(((fire['shipCondition'] as Map)['shipIds']), [566, 656]);
       final eva = rules.firstWhere(
-          (r) => (r['source'] as Map)['rawEffect'] == '回避+1(雪風改二のみ)');
+        (r) => (r['source'] as Map)['rawEffect'] == '回避+1(雪風改二のみ)',
+      );
       expect((eva['shipCondition'] as Map)['shipIds'], [656]);
       expect(eva['source']['rawCondition'], '(雪風改二のみ)');
       expect(((eva['effect'] as Map)['bonus'] as Map)['evasion'], 1);
@@ -115,7 +128,8 @@ void main() {
         expect(ec['minImprovement'], 4);
       }
       final fire = rules.firstWhere(
-          (r) => ((r['effect'] as Map)['bonus'] as Map)['firepower'] == 5);
+        (r) => ((r['effect'] as Map)['bonus'] as Map)['firepower'] == 5,
+      );
       expect((fire['shipCondition'] as Map)['shipIds'], [398]);
     });
 
@@ -124,7 +138,9 @@ void main() {
       expect(out['unresolved'], isEmpty);
       final rules = (out['rules'] as List).cast<Map<String, dynamic>>();
       expect(rules, hasLength(2));
-      final syn = rules.firstWhere((r) => r['ruleId'] == 'akashi-304-synergy-001');
+      final syn = rules.firstWhere(
+        (r) => r['ruleId'] == 'akashi-304-synergy-001',
+      );
       expect((syn['effect'] as Map)['mode'], 'once');
       final req = (syn['requires'] as List).single as Map;
       expect(req['sourceLabel'], '水上電探');
@@ -143,7 +159,8 @@ void main() {
     test('unknown_ship_group: unresolved target, no rules', () {
       final out = buildForFixture(master, 'unknown_ship_group.html', 307);
       expect(out['rules'], isEmpty);
-      final unresolved = (out['unresolved'] as List).cast<Map<String, dynamic>>();
+      final unresolved = (out['unresolved'] as List)
+          .cast<Map<String, dynamic>>();
       expect(unresolved, hasLength(1));
       expect(unresolved.single['kind'], 'target');
       expect(unresolved.single['detail'], contains('謎の艦群'));

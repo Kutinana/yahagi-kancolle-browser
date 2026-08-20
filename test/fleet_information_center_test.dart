@@ -2134,34 +2134,35 @@ void main() {
     expect(tester.takeException(), isNull);
   }, skip: true);
 
-  testWidgets('fleet detail portraits show repair and fatigue badges together', (
-    tester,
-  ) async {
-    final controller = GameStateController();
-    addTearDown(controller.dispose);
-    controller
-      ..accept(start2Event)
-      ..accept(portEvent)
-      ..accept(slotItemEvent);
-    await controller.idle;
+  testWidgets(
+    'fleet detail portraits show repair and fatigue badges together',
+    (tester) async {
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(start2Event)
+        ..accept(portEvent)
+        ..accept(slotItemEvent);
+      await controller.idle;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            width: 1180,
-            height: 720,
-            child: FleetInformationCenter(controller: controller),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 1180,
+              height: 720,
+              child: FleetInformationCenter(controller: controller),
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    expect(find.byKey(const Key('fleet-repair-badge-9001')), findsOneWidget);
-    expect(find.byKey(const Key('fleet-repair-badge-9002')), findsOneWidget);
-    expect(find.text('入渠'), findsNWidgets(2));
-    expect(find.byKey(const Key('fleet-fatigue-badge-9001')), findsOneWidget);
-    expect(find.byKey(const Key('fleet-fatigue-badge-9002')), findsOneWidget);
-  });
+      expect(find.byKey(const Key('fleet-repair-badge-9001')), findsOneWidget);
+      expect(find.byKey(const Key('fleet-repair-badge-9002')), findsOneWidget);
+      expect(find.text('入渠'), findsNWidgets(2));
+      expect(find.byKey(const Key('fleet-fatigue-badge-9001')), findsOneWidget);
+      expect(find.byKey(const Key('fleet-fatigue-badge-9002')), findsOneWidget);
+    },
+  );
 }
