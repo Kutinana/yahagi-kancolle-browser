@@ -39,6 +39,18 @@ class SenkaReducer {
 
     final data = GameApiDecoder.decodeEventData(event);
     if (data is! Map) {
+      if (_sortieResultPaths.contains(event.path)) {
+        final active = current.activeSortie;
+        if (active != null &&
+            active.bossArrived &&
+            !event.capturedAt.isBefore(active.lastEventAt)) {
+          return current.copyWith(
+            clearActiveSortie: true,
+            updatedAt: event.capturedAt,
+          );
+        }
+        return current;
+      }
       if (_clearsActiveSortie(event.path) || event.path == _sortieStartPath) {
         return current.copyWith(
           clearActiveSortie: true,
@@ -58,7 +70,7 @@ class SenkaReducer {
     } else if (event.path == _rankingPath) {
       current = _ranking(current, map, event.capturedAt);
     }
-    current = _sortie(current, event.path, map);
+    current = _sortie(current, event.path, map, event.capturedAt);
     return current.copyWith(updatedAt: event.capturedAt);
   }
 
@@ -86,19 +98,28 @@ class SenkaReducer {
     SenkaState state,
     String path,
     Map<Object?, Object?> data,
+    DateTime capturedAt,
   ) {
     if (_clearsActiveSortie(path)) {
       return state.copyWith(clearActiveSortie: true);
     }
-    if (path == _sortieStartPath) return _startSortie(state, data);
-    if (path == '/kcsapi/api_req_map/next') return _nextNode(state, data);
+    if (path == _sortieStartPath) {
+      return _startSortie(state, data, capturedAt);
+    }
+    if (path == '/kcsapi/api_req_map/next') {
+      return _nextNode(state, data, capturedAt);
+    }
     if (_sortieResultPaths.contains(path)) {
-      return _sortieResult(state, data);
+      return _sortieResult(state, data, capturedAt);
     }
     return state;
   }
 
-  SenkaState _startSortie(SenkaState state, Map<Object?, Object?> data) {
+  SenkaState _startSortie(
+    SenkaState state,
+    Map<Object?, Object?> data,
+    DateTime capturedAt,
+  ) {
     final areaId = _positiveInt(data['api_maparea_id']);
     final mapNo = _positiveInt(data['api_mapinfo_no']);
     if (areaId == null || mapNo == null) {
@@ -112,6 +133,8 @@ class SenkaReducer {
       mapNo: mapNo,
       bossCellNo: bossCellNo,
       bossArrived: arrived,
+      startedAt: capturedAt,
+      lastEventAt: capturedAt,
     );
     final stats = _updatedSortieStats(
       state,
@@ -122,19 +145,24 @@ class SenkaReducer {
     return state.copyWith(sortieStats: stats, activeSortie: active);
   }
 
-  SenkaState _nextNode(SenkaState state, Map<Object?, Object?> data) {
+  SenkaState _nextNode(
+    SenkaState state,
+    Map<Object?, Object?> data,
+    DateTime capturedAt,
+  ) {
     final active = state.activeSortie;
-    if (active == null) return state;
+    if (active == null || capturedAt.isBefore(active.lastEventAt)) return state;
     final nodeNo = _positiveInt(data['api_no']);
     final responseBossCellNo = _positiveInt(data['api_bosscell_no']);
     final arrived =
         nodeNo != null &&
         (nodeNo == active.bossCellNo || nodeNo == responseBossCellNo);
-    final nextActive = active.copyWith(bossCellNo: responseBossCellNo);
+    final nextActive = active.copyWith(
+      bossCellNo: responseBossCellNo,
+      lastEventAt: capturedAt,
+    );
     if (!arrived || active.bossArrived) {
-      return responseBossCellNo == null
-          ? state
-          : state.copyWith(activeSortie: nextActive);
+      return state.copyWith(activeSortie: nextActive);
     }
     return state.copyWith(
       sortieStats: _updatedSortieStats(state, active, bossArrivals: 1),
@@ -142,9 +170,18 @@ class SenkaReducer {
     );
   }
 
-  SenkaState _sortieResult(SenkaState state, Map<Object?, Object?> data) {
+  SenkaState _sortieResult(
+    SenkaState state,
+    Map<Object?, Object?> data,
+    DateTime capturedAt,
+  ) {
     final active = state.activeSortie;
-    if (active == null || !active.bossArrived) return state;
+    if (active == null || capturedAt.isBefore(active.lastEventAt)) return state;
+    if (!active.bossArrived) {
+      return state.copyWith(
+        activeSortie: active.copyWith(lastEventAt: capturedAt),
+      );
+    }
     final rank = '${data['api_win_rank'] ?? ''}'.toUpperCase();
     final stats = switch (rank) {
       'S' || 'SS' => _updatedSortieStats(state, active, sWins: 1),

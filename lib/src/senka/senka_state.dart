@@ -82,33 +82,45 @@ class SenkaSortieStats {
 }
 
 class SenkaActiveSortie {
-  const SenkaActiveSortie({
+  SenkaActiveSortie({
     required this.areaId,
     required this.mapNo,
+    required DateTime startedAt,
+    required DateTime lastEventAt,
     this.bossCellNo,
     this.bossArrived = false,
-  });
+  }) : startedAt = startedAt.toUtc(),
+       lastEventAt = lastEventAt.toUtc();
 
   final int areaId;
   final int mapNo;
   final int? bossCellNo;
   final bool bossArrived;
+  final DateTime startedAt;
+  final DateTime lastEventAt;
 
   String get mapKey => senkaMapKey(areaId, mapNo);
 
-  SenkaActiveSortie copyWith({int? bossCellNo, bool? bossArrived}) =>
-      SenkaActiveSortie(
-        areaId: areaId,
-        mapNo: mapNo,
-        bossCellNo: bossCellNo ?? this.bossCellNo,
-        bossArrived: bossArrived ?? this.bossArrived,
-      );
+  SenkaActiveSortie copyWith({
+    int? bossCellNo,
+    bool? bossArrived,
+    DateTime? lastEventAt,
+  }) => SenkaActiveSortie(
+    areaId: areaId,
+    mapNo: mapNo,
+    bossCellNo: bossCellNo ?? this.bossCellNo,
+    bossArrived: bossArrived ?? this.bossArrived,
+    startedAt: startedAt,
+    lastEventAt: lastEventAt ?? this.lastEventAt,
+  );
 
   Map<String, Object?> toJson() => {
     'areaId': areaId,
     'mapNo': mapNo,
     'bossCellNo': bossCellNo,
     'bossArrived': bossArrived,
+    'startedAt': startedAt.toIso8601String(),
+    'lastEventAt': lastEventAt.toIso8601String(),
   };
 
   factory SenkaActiveSortie.fromJson(Object? value) {
@@ -118,6 +130,8 @@ class SenkaActiveSortie {
       mapNo: _int(map['mapNo']),
       bossCellNo: map['bossCellNo'] == null ? null : _int(map['bossCellNo']),
       bossArrived: map['bossArrived'] == true,
+      startedAt: _storedDateTime(map['startedAt']),
+      lastEventAt: _storedDateTime(map['lastEventAt']),
     );
   }
 }
@@ -435,6 +449,7 @@ class SenkaState {
     final rawDays = value['days'];
     final rawRanking = value['rankingHistory'];
     final rawSortieStats = value['sortieStats'];
+    final sortieStats = _sortieStatsMap(rawSortieStats);
     final hasEoStatuses = value.containsKey('eoStatuses');
     final hasQuestStatuses = value.containsKey('questStatuses');
     final eoStatuses = _statusMap(value['eoStatuses']);
@@ -467,8 +482,8 @@ class SenkaState {
       questStatuses: questStatuses,
       targetSenka: _double(value['targetSenka']),
       calculatorCurrentSenka: _double(value['calculatorCurrentSenka']),
-      sortieStats: _sortieStatsMap(rawSortieStats),
-      activeSortie: _activeSortie(value['activeSortie']),
+      sortieStats: sortieStats,
+      activeSortie: _activeSortie(value['activeSortie'], sortieStats),
       favoriteSortieMapKeys: _mapKeySet(value['favoriteSortieMapKeys']),
       hiddenSortieMapKeys: _mapKeySet(value['hiddenSortieMapKeys']),
       rankingHistory: rawRanking is Map
@@ -490,11 +505,25 @@ class SenkaState {
   }
 }
 
-SenkaActiveSortie? _activeSortie(Object? value) {
+SenkaActiveSortie? _activeSortie(
+  Object? value,
+  Map<String, SenkaSortieStats> sortieStats,
+) {
   if (value is! Map) return null;
+  final startedAt = DateTime.tryParse('${value['startedAt'] ?? ''}');
+  final lastEventAt = DateTime.tryParse('${value['lastEventAt'] ?? ''}');
+  if (startedAt == null ||
+      lastEventAt == null ||
+      lastEventAt.isBefore(startedAt)) {
+    return null;
+  }
   final sortie = SenkaActiveSortie.fromJson(value);
   if (sortie.areaId <= 0 || sortie.mapNo <= 0) return null;
   if (sortie.bossCellNo != null && sortie.bossCellNo! <= 0) return null;
+  if (sortie.bossArrived && sortie.bossCellNo == null) return null;
+  final stats = sortieStats[sortie.mapKey];
+  if (stats == null || stats.sorties <= 0) return null;
+  if (sortie.bossArrived && stats.bossArrivals <= 0) return null;
   return sortie;
 }
 
@@ -516,6 +545,10 @@ int _int(Object? value) =>
 
 double _double(Object? value) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
+DateTime _storedDateTime(Object? value) =>
+    DateTime.tryParse('${value ?? ''}')?.toUtc() ??
+    DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 
 Set<int> _intSet(Object? value) =>
     value is List ? value.map(_int).where((item) => item > 0).toSet() : <int>{};

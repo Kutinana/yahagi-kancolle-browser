@@ -399,9 +399,21 @@ void main() {
     });
 
     test('月度 JSON 往返保留未完成出击且不泄露可变引用', () {
-      final original = reducer.reduce(
+      var original = reducer.reduce(
         SenkaState.forMonth('2026-08'),
-        sortieStart(areaId: 5, mapNo: 5, nodeNo: 2, bossCellNo: 7),
+        sortieStart(
+          areaId: 5,
+          mapNo: 5,
+          nodeNo: 2,
+          bossCellNo: 7,
+          atJst: DateTime(2026, 8, 10, 10),
+        ),
+      );
+      original = reducer.reduce(
+        original,
+        apiEvent('/kcsapi/api_req_map/next', {
+          'api_no': 3,
+        }, atJst: DateTime(2026, 8, 10, 10, 2)),
       );
       final json = original.toJson();
       final restored = SenkaState.fromJson(json);
@@ -414,15 +426,159 @@ void main() {
         'mapNo': 5,
         'bossCellNo': 7,
         'bossArrived': false,
+        'startedAt': '2026-08-10T01:00:00.000Z',
+        'lastEventAt': '2026-08-10T01:02:00.000Z',
       });
       expect(restored.sortieStats['5-5']?.sorties, 1);
+    });
+
+    test('旧 next 与旧 S 不污染新 start，相同时间戳仍接受', () {
+      var state = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(
+          areaId: 2,
+          mapNo: 1,
+          nodeNo: 1,
+          bossCellNo: 4,
+          atJst: DateTime(2026, 8, 10, 10),
+        ),
+      );
+      state = reducer.reduce(
+        state,
+        sortieStart(
+          areaId: 2,
+          mapNo: 2,
+          nodeNo: 1,
+          bossCellNo: 5,
+          atJst: DateTime(2026, 8, 10, 11),
+        ),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_map/next', {
+          'api_no': 5,
+        }, atJst: DateTime(2026, 8, 10, 10, 30)),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_map/next', {
+          'api_no': 5,
+        }, atJst: DateTime(2026, 8, 10, 11)),
+      );
+      expect(state.sortieStats['2-2']?.bossArrivals, 1);
+
+      state = reducer.reduce(
+        state,
+        sortieStart(
+          areaId: 2,
+          mapNo: 3,
+          nodeNo: 5,
+          bossCellNo: 5,
+          atJst: DateTime(2026, 8, 10, 12),
+        ),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_sortie/battleresult', {
+          'api_win_rank': 'S',
+        }, atJst: DateTime(2026, 8, 10, 11, 30)),
+      );
+
+      expect(state.sortieStats['2-3']?.sWins, 0);
+      expect(state.toJson()['activeSortie'], isNotNull);
+
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_sortie/battleresult', {
+          'api_win_rank': 'S',
+        }, atJst: DateTime(2026, 8, 10, 12)),
+      );
+
+      expect(state.sortieStats['2-3']?.sWins, 1);
+      expect(state.toJson()['activeSortie'], isNull);
+    });
+
+    test('月度 JSON 丢弃不满足统计不变式的出击上下文', () {
+      final validActive = <String, Object?>{
+        'areaId': 2,
+        'mapNo': 3,
+        'bossCellNo': 5,
+        'bossArrived': true,
+        'startedAt': '2026-08-10T01:00:00.000Z',
+        'lastEventAt': '2026-08-10T01:02:00.000Z',
+      };
+      final validStats = <String, Object?>{
+        'areaId': 2,
+        'mapNo': 3,
+        'sorties': 1,
+        'bossArrivals': 1,
+      };
+      final malformed = <Map<String, Object?>>[
+        {
+          'sortieStats': {'2-3': validStats},
+          'activeSortie': {...validActive, 'bossCellNo': null},
+        },
+        {'sortieStats': const {}, 'activeSortie': validActive},
+        {
+          'sortieStats': {
+            '2-3': {...validStats, 'sorties': 0},
+          },
+          'activeSortie': validActive,
+        },
+        {
+          'sortieStats': {
+            '2-3': {...validStats, 'bossArrivals': 0},
+          },
+          'activeSortie': validActive,
+        },
+      ];
+
+      for (final json in malformed) {
+        expect(
+          SenkaState.fromJson({'monthKey': '2026-08', ...json}).activeSortie,
+          isNull,
+          reason: '$json',
+        );
+      }
+    });
+
+    test('无效 Boss 结果清理已到达上下文，但保留非 Boss 上下文', () {
+      var bossState = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(areaId: 6, mapNo: 4, nodeNo: 5, bossCellNo: 5),
+      );
+      bossState = reducer.reduce(
+        bossState,
+        apiEvent(
+          '/kcsapi/api_req_sortie/battleresult',
+          null,
+          atJst: DateTime(2026, 8, 10, 10, 1),
+        ),
+      );
+
+      var nonBossState = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(areaId: 6, mapNo: 5, nodeNo: 1, bossCellNo: 5),
+      );
+      nonBossState = reducer.reduce(
+        nonBossState,
+        apiEvent(
+          '/kcsapi/api_req_combined_battle/battleresult',
+          null,
+          atJst: DateTime(2026, 8, 10, 10, 1),
+        ),
+      );
+
+      expect(bossState.activeSortie, isNull);
+      expect(bossState.sortieStats['6-4']?.sWins, 0);
+      expect(nonBossState.activeSortie, isNotNull);
     });
   });
 }
 
 CapturedApiEvent apiEvent(
   String path,
-  Object data, {
+  Object? data, {
   Map<String, Object?> params = const {},
   required DateTime atJst,
 }) {
@@ -456,12 +612,13 @@ CapturedApiEvent sortieStart({
   required int mapNo,
   required int nodeNo,
   required int bossCellNo,
+  DateTime? atJst,
 }) => apiEvent('/kcsapi/api_req_map/start', {
   'api_maparea_id': areaId,
   'api_mapinfo_no': mapNo,
   'api_no': nodeNo,
   'api_bosscell_no': bossCellNo,
-}, atJst: DateTime(2026, 8, 10, 10));
+}, atJst: atJst ?? DateTime(2026, 8, 10, 10));
 
 Map<String, Object?> rankingRow({
   required int rank,
