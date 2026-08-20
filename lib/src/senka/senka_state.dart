@@ -235,6 +235,9 @@ class SenkaState {
     this.calculatorCurrentSenka = 0,
     Map<String, SenkaSortieStats> sortieStats = const {},
     this.activeSortie,
+    DateTime? latestSortieEventAt,
+    DateTime? lastSortieStartAt,
+    this.lastSortieStartMapKey,
     Set<String> favoriteSortieMapKeys = const {},
     Set<String> hiddenSortieMapKeys = const {},
     Map<String, List<SenkaRankingSnapshot>> rankingHistory = const {},
@@ -246,6 +249,8 @@ class SenkaState {
        sortieStats = Map.unmodifiable(
          _normalizedSortieStats(sortieStats.values),
        ),
+       latestSortieEventAt = latestSortieEventAt?.toUtc(),
+       lastSortieStartAt = lastSortieStartAt?.toUtc(),
        favoriteSortieMapKeys = Set.unmodifiable(
          _normalizedMapKeys(favoriteSortieMapKeys),
        ),
@@ -272,6 +277,9 @@ class SenkaState {
   final double calculatorCurrentSenka;
   final Map<String, SenkaSortieStats> sortieStats;
   final SenkaActiveSortie? activeSortie;
+  final DateTime? latestSortieEventAt;
+  final DateTime? lastSortieStartAt;
+  final String? lastSortieStartMapKey;
   final Set<String> favoriteSortieMapKeys;
   final Set<String> hiddenSortieMapKeys;
   final Map<String, List<SenkaRankingSnapshot>> rankingHistory;
@@ -372,6 +380,9 @@ class SenkaState {
     Map<String, SenkaSortieStats>? sortieStats,
     SenkaActiveSortie? activeSortie,
     bool clearActiveSortie = false,
+    DateTime? latestSortieEventAt,
+    DateTime? lastSortieStartAt,
+    String? lastSortieStartMapKey,
     Set<String>? favoriteSortieMapKeys,
     Set<String>? hiddenSortieMapKeys,
     Map<String, List<SenkaRankingSnapshot>>? rankingHistory,
@@ -406,6 +417,10 @@ class SenkaState {
       activeSortie: clearActiveSortie
           ? null
           : activeSortie ?? this.activeSortie,
+      latestSortieEventAt: latestSortieEventAt ?? this.latestSortieEventAt,
+      lastSortieStartAt: lastSortieStartAt ?? this.lastSortieStartAt,
+      lastSortieStartMapKey:
+          lastSortieStartMapKey ?? this.lastSortieStartMapKey,
       favoriteSortieMapKeys:
           favoriteSortieMapKeys ?? this.favoriteSortieMapKeys,
       hiddenSortieMapKeys: hiddenSortieMapKeys ?? this.hiddenSortieMapKeys,
@@ -434,6 +449,9 @@ class SenkaState {
       (key, value) => MapEntry(key, value.toJson()),
     ),
     'activeSortie': activeSortie?.toJson(),
+    'latestSortieEventAt': latestSortieEventAt?.toIso8601String(),
+    'lastSortieStartAt': lastSortieStartAt?.toIso8601String(),
+    'lastSortieStartMapKey': lastSortieStartMapKey,
     'favoriteSortieMapKeys': favoriteSortieMapKeys.toList(),
     'hiddenSortieMapKeys': hiddenSortieMapKeys.toList(),
     'rankingHistory': rankingHistory.map(
@@ -450,6 +468,18 @@ class SenkaState {
     final rawRanking = value['rankingHistory'];
     final rawSortieStats = value['sortieStats'];
     final sortieStats = _sortieStatsMap(rawSortieStats);
+    final latestSortieEventAt = _parsedUtcDateTime(
+      value['latestSortieEventAt'],
+    );
+    final rawLastSortieStartAt = _parsedUtcDateTime(value['lastSortieStartAt']);
+    final rawLastSortieStartMapKey = _validMapKey(
+      value['lastSortieStartMapKey'],
+    );
+    final hasValidStartIdentity =
+        rawLastSortieStartAt != null &&
+        rawLastSortieStartMapKey != null &&
+        latestSortieEventAt != null &&
+        !rawLastSortieStartAt.isAfter(latestSortieEventAt);
     final hasEoStatuses = value.containsKey('eoStatuses');
     final hasQuestStatuses = value.containsKey('questStatuses');
     final eoStatuses = _statusMap(value['eoStatuses']);
@@ -483,7 +513,16 @@ class SenkaState {
       targetSenka: _double(value['targetSenka']),
       calculatorCurrentSenka: _double(value['calculatorCurrentSenka']),
       sortieStats: sortieStats,
-      activeSortie: _activeSortie(value['activeSortie'], sortieStats),
+      activeSortie: _activeSortie(
+        value['activeSortie'],
+        sortieStats,
+        latestSortieEventAt,
+      ),
+      latestSortieEventAt: latestSortieEventAt,
+      lastSortieStartAt: hasValidStartIdentity ? rawLastSortieStartAt : null,
+      lastSortieStartMapKey: hasValidStartIdentity
+          ? rawLastSortieStartMapKey
+          : null,
       favoriteSortieMapKeys: _mapKeySet(value['favoriteSortieMapKeys']),
       hiddenSortieMapKeys: _mapKeySet(value['hiddenSortieMapKeys']),
       rankingHistory: rawRanking is Map
@@ -508,6 +547,7 @@ class SenkaState {
 SenkaActiveSortie? _activeSortie(
   Object? value,
   Map<String, SenkaSortieStats> sortieStats,
+  DateTime? latestSortieEventAt,
 ) {
   if (value is! Map) return null;
   final startedAt = DateTime.tryParse('${value['startedAt'] ?? ''}');
@@ -515,6 +555,9 @@ SenkaActiveSortie? _activeSortie(
   if (startedAt == null ||
       lastEventAt == null ||
       lastEventAt.isBefore(startedAt)) {
+    return null;
+  }
+  if (latestSortieEventAt == null || lastEventAt.isAfter(latestSortieEventAt)) {
     return null;
   }
   final sortie = SenkaActiveSortie.fromJson(value);
@@ -576,7 +619,35 @@ Map<int, SenkaRewardStatus> _replaceCompleted(
 
 Map<String, SenkaSortieStats> _sortieStatsMap(Object? value) {
   if (value is! Map) return <String, SenkaSortieStats>{};
-  return _normalizedSortieStats(value.values.map(SenkaSortieStats.fromJson));
+  return _normalizedSortieStats(value.values.map(_validSortieStats).nonNulls);
+}
+
+SenkaSortieStats? _validSortieStats(Object? value) {
+  if (value is! Map) return null;
+  final areaId = _strictInt(value['areaId'], minimum: 1);
+  final mapNo = _strictInt(value['mapNo'], minimum: 1);
+  final sorties = _strictCount(value['sorties']);
+  final bossArrivals = _strictCount(value['bossArrivals']);
+  final sWins = _strictCount(value['sWins']);
+  final aWins = _strictCount(value['aWins']);
+  if (areaId == null ||
+      mapNo == null ||
+      sorties == null ||
+      bossArrivals == null ||
+      sWins == null ||
+      aWins == null ||
+      bossArrivals > sorties ||
+      sWins + aWins > bossArrivals) {
+    return null;
+  }
+  return SenkaSortieStats(
+    areaId: areaId,
+    mapNo: mapNo,
+    sorties: sorties,
+    bossArrivals: bossArrivals,
+    sWins: sWins,
+    aWins: aWins,
+  );
 }
 
 Map<String, SenkaSortieStats> _normalizedSortieStats(
@@ -609,4 +680,27 @@ Set<String> _normalizedMapKeys(Iterable<Object?> values) {
     result.add(senkaMapKey(areaId, mapNo));
   }
   return result;
+}
+
+int? _strictInt(Object? value, {required int minimum}) {
+  if (value is! num || !value.isFinite) return null;
+  final result = value.toInt();
+  return value == result && result >= minimum ? result : null;
+}
+
+int? _strictCount(Object? value) =>
+    value == null ? 0 : _strictInt(value, minimum: 0);
+
+DateTime? _parsedUtcDateTime(Object? value) =>
+    DateTime.tryParse('${value ?? ''}')?.toUtc();
+
+String? _validMapKey(Object? value) {
+  final match = RegExp(r'^(\d+)-(\d+)$').firstMatch('$value');
+  if (match == null) return null;
+  final areaId = int.tryParse(match.group(1)!);
+  final mapNo = int.tryParse(match.group(2)!);
+  if (areaId == null || mapNo == null || areaId <= 0 || mapNo <= 0) {
+    return null;
+  }
+  return senkaMapKey(areaId, mapNo);
 }

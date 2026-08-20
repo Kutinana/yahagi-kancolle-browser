@@ -28,6 +28,7 @@ class SenkaReducer {
 
   SenkaState reduce(SenkaState state, CapturedApiEvent event) {
     final monthKey = currentSenkaMonthKey(event.capturedAt);
+    if (monthKey.compareTo(state.monthKey) < 0) return state;
     var current = state.monthKey == monthKey
         ? state
         : SenkaState.forMonth(monthKey).copyWith(
@@ -35,25 +36,33 @@ class SenkaReducer {
             nickname: state.nickname,
             magic: state.magic,
           );
+    if (_isSortieLifecyclePath(event.path) &&
+        current.latestSortieEventAt != null &&
+        event.capturedAt.isBefore(current.latestSortieEventAt!)) {
+      return current;
+    }
     if (!supportsPath(event.path)) return current;
 
     final data = GameApiDecoder.decodeEventData(event);
     if (data is! Map) {
       if (_sortieResultPaths.contains(event.path)) {
         final active = current.activeSortie;
-        if (active != null &&
-            active.bossArrived &&
-            !event.capturedAt.isBefore(active.lastEventAt)) {
-          return current.copyWith(
-            clearActiveSortie: true,
-            updatedAt: event.capturedAt,
-          );
-        }
-        return current;
+        return current.copyWith(
+          clearActiveSortie: active?.bossArrived == true,
+          latestSortieEventAt: event.capturedAt,
+          updatedAt: event.capturedAt,
+        );
       }
       if (_clearsActiveSortie(event.path) || event.path == _sortieStartPath) {
         return current.copyWith(
           clearActiveSortie: true,
+          latestSortieEventAt: event.capturedAt,
+          updatedAt: event.capturedAt,
+        );
+      }
+      if (event.path == '/kcsapi/api_req_map/next') {
+        return current.copyWith(
+          latestSortieEventAt: event.capturedAt,
           updatedAt: event.capturedAt,
         );
       }
@@ -101,7 +110,10 @@ class SenkaReducer {
     DateTime capturedAt,
   ) {
     if (_clearsActiveSortie(path)) {
-      return state.copyWith(clearActiveSortie: true);
+      return state.copyWith(
+        clearActiveSortie: true,
+        latestSortieEventAt: capturedAt,
+      );
     }
     if (path == _sortieStartPath) {
       return _startSortie(state, data, capturedAt);
@@ -123,11 +135,19 @@ class SenkaReducer {
     final areaId = _positiveInt(data['api_maparea_id']);
     final mapNo = _positiveInt(data['api_mapinfo_no']);
     if (areaId == null || mapNo == null) {
-      return state.copyWith(clearActiveSortie: true);
+      return state.copyWith(
+        clearActiveSortie: true,
+        latestSortieEventAt: capturedAt,
+      );
     }
     final nodeNo = _positiveInt(data['api_no']);
     final bossCellNo = _positiveInt(data['api_bosscell_no']);
     final arrived = nodeNo != null && nodeNo == bossCellNo;
+    final mapKey = senkaMapKey(areaId, mapNo);
+    if (state.lastSortieStartAt == capturedAt.toUtc() &&
+        state.lastSortieStartMapKey == mapKey) {
+      return state.copyWith(latestSortieEventAt: capturedAt);
+    }
     final active = SenkaActiveSortie(
       areaId: areaId,
       mapNo: mapNo,
@@ -142,7 +162,13 @@ class SenkaReducer {
       sorties: 1,
       bossArrivals: arrived ? 1 : 0,
     );
-    return state.copyWith(sortieStats: stats, activeSortie: active);
+    return state.copyWith(
+      sortieStats: stats,
+      activeSortie: active,
+      latestSortieEventAt: capturedAt,
+      lastSortieStartAt: capturedAt,
+      lastSortieStartMapKey: mapKey,
+    );
   }
 
   SenkaState _nextNode(
@@ -151,7 +177,9 @@ class SenkaReducer {
     DateTime capturedAt,
   ) {
     final active = state.activeSortie;
-    if (active == null || capturedAt.isBefore(active.lastEventAt)) return state;
+    if (active == null) {
+      return state.copyWith(latestSortieEventAt: capturedAt);
+    }
     final nodeNo = _positiveInt(data['api_no']);
     final responseBossCellNo = _positiveInt(data['api_bosscell_no']);
     final arrived =
@@ -162,11 +190,15 @@ class SenkaReducer {
       lastEventAt: capturedAt,
     );
     if (!arrived || active.bossArrived) {
-      return state.copyWith(activeSortie: nextActive);
+      return state.copyWith(
+        activeSortie: nextActive,
+        latestSortieEventAt: capturedAt,
+      );
     }
     return state.copyWith(
       sortieStats: _updatedSortieStats(state, active, bossArrivals: 1),
       activeSortie: nextActive.copyWith(bossArrived: true),
+      latestSortieEventAt: capturedAt,
     );
   }
 
@@ -176,10 +208,13 @@ class SenkaReducer {
     DateTime capturedAt,
   ) {
     final active = state.activeSortie;
-    if (active == null || capturedAt.isBefore(active.lastEventAt)) return state;
+    if (active == null) {
+      return state.copyWith(latestSortieEventAt: capturedAt);
+    }
     if (!active.bossArrived) {
       return state.copyWith(
         activeSortie: active.copyWith(lastEventAt: capturedAt),
+        latestSortieEventAt: capturedAt,
       );
     }
     final rank = '${data['api_win_rank'] ?? ''}'.toUpperCase();
@@ -188,7 +223,11 @@ class SenkaReducer {
       'A' => _updatedSortieStats(state, active, aWins: 1),
       _ => state.sortieStats,
     };
-    return state.copyWith(sortieStats: stats, clearActiveSortie: true);
+    return state.copyWith(
+      sortieStats: stats,
+      clearActiveSortie: true,
+      latestSortieEventAt: capturedAt,
+    );
   }
 
   Map<String, SenkaSortieStats> _updatedSortieStats(
@@ -376,6 +415,12 @@ bool _clearsActiveSortie(String path) =>
     path == '/kcsapi/api_port/port' ||
     path == '/kcsapi/api_req_sortie/goback_port' ||
     path == '/kcsapi/api_req_combined_battle/goback_port';
+
+bool _isSortieLifecyclePath(String path) =>
+    path == _sortieStartPath ||
+    path == '/kcsapi/api_req_map/next' ||
+    _sortieResultPaths.contains(path) ||
+    _clearsActiveSortie(path);
 
 Map<Object?, Object?>? _map(Object? value) =>
     value is Map ? value.cast<Object?, Object?>() : null;
