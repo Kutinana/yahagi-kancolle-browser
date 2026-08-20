@@ -48,10 +48,12 @@ app.*.map.json
 # Local development scratch files
 .scratch-resource-trend/
 .superpowers/
+/check_url.dart
+/test_cipher.dart
+/test_dmg_urls.dart
+/retreat_demo.html
 docs/superpowers/
 docs/internal/*
-!docs/internal/expedition-poi-parity-audit.md
-!docs/internal/expedition-poi-parity-audit.csv
 docs/plans/
 docs/specs/
 docs/previews/*
