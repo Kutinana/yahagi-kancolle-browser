@@ -110,6 +110,8 @@ abstract final class GameCapturePathCatalog {
 
   static const Set<String> senka = <String>{
     ...senkaExperience,
+    ...battleMap,
+    ...battleRetreat,
     '/kcsapi/api_get_member/mapinfo',
     senkaRanking,
   };

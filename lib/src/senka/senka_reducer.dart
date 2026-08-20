@@ -28,17 +28,49 @@ class SenkaReducer {
 
   SenkaState reduce(SenkaState state, CapturedApiEvent event) {
     final monthKey = currentSenkaMonthKey(event.capturedAt);
-    var current = state.monthKey == monthKey
-        ? state
-        : SenkaState.forMonth(monthKey).copyWith(
-            memberId: state.memberId,
-            nickname: state.nickname,
-            magic: state.magic,
-          );
+    final stateMonth = parseSenkaMonthKey(state.monthKey);
+    final eventMonth = parseSenkaMonthKey(monthKey)!;
+    if (stateMonth != null &&
+        (eventMonth.year * 12 + eventMonth.month) <
+            (stateMonth.year * 12 + stateMonth.month)) {
+      return state;
+    }
+    var current = migrateSenkaStateToMonth(state, monthKey);
+    if (_isSortieLifecyclePath(event.path) &&
+        current.latestSortieEventAt != null &&
+        event.capturedAt.isBefore(current.latestSortieEventAt!)) {
+      return current;
+    }
     if (!supportsPath(event.path)) return current;
+    if (event.sourceOrigin.isNotEmpty) {
+      current = current.copyWith(serverOrigin: event.sourceOrigin);
+    }
 
     final data = GameApiDecoder.decodeEventData(event);
-    if (data is! Map) return current;
+    if (data is! Map) {
+      if (_sortieResultPaths.contains(event.path)) {
+        final active = current.activeSortie;
+        return current.copyWith(
+          clearActiveSortie: active?.bossArrived == true,
+          latestSortieEventAt: event.capturedAt,
+          updatedAt: event.capturedAt,
+        );
+      }
+      if (_clearsActiveSortie(event.path) || event.path == _sortieStartPath) {
+        return current.copyWith(
+          clearActiveSortie: true,
+          latestSortieEventAt: event.capturedAt,
+          updatedAt: event.capturedAt,
+        );
+      }
+      if (event.path == '/kcsapi/api_req_map/next') {
+        return current.copyWith(
+          latestSortieEventAt: event.capturedAt,
+          updatedAt: event.capturedAt,
+        );
+      }
+      return current;
+    }
     final map = data.cast<Object?, Object?>();
 
     current = _identity(current, event.path, map);
@@ -50,6 +82,7 @@ class SenkaReducer {
     } else if (event.path == _rankingPath) {
       current = _ranking(current, map, event.capturedAt);
     }
+    current = _sortie(current, event.path, map, event.capturedAt);
     return current.copyWith(updatedAt: event.capturedAt);
   }
 
@@ -71,6 +104,154 @@ class SenkaReducer {
       memberId: _int(basic['api_member_id'], state.memberId),
       nickname: '${basic['api_nickname'] ?? state.nickname}',
     );
+  }
+
+  SenkaState _sortie(
+    SenkaState state,
+    String path,
+    Map<Object?, Object?> data,
+    DateTime capturedAt,
+  ) {
+    if (_clearsActiveSortie(path)) {
+      return state.copyWith(
+        clearActiveSortie: true,
+        latestSortieEventAt: capturedAt,
+      );
+    }
+    if (path == _sortieStartPath) {
+      return _startSortie(state, data, capturedAt);
+    }
+    if (path == '/kcsapi/api_req_map/next') {
+      return _nextNode(state, data, capturedAt);
+    }
+    if (_sortieResultPaths.contains(path)) {
+      return _sortieResult(state, data, capturedAt);
+    }
+    return state;
+  }
+
+  SenkaState _startSortie(
+    SenkaState state,
+    Map<Object?, Object?> data,
+    DateTime capturedAt,
+  ) {
+    final areaId = _positiveInt(data['api_maparea_id']);
+    final mapNo = _positiveInt(data['api_mapinfo_no']);
+    if (areaId == null || mapNo == null) {
+      return state.copyWith(
+        clearActiveSortie: true,
+        latestSortieEventAt: capturedAt,
+      );
+    }
+    final nodeNo = _positiveInt(data['api_no']);
+    final bossCellNo = _positiveInt(data['api_bosscell_no']);
+    final arrived = nodeNo != null && nodeNo == bossCellNo;
+    final mapKey = senkaMapKey(areaId, mapNo);
+    if (state.lastSortieStartAt == capturedAt.toUtc() &&
+        state.lastSortieStartMapKey == mapKey) {
+      return state.copyWith(latestSortieEventAt: capturedAt);
+    }
+    final active = SenkaActiveSortie(
+      areaId: areaId,
+      mapNo: mapNo,
+      bossCellNo: bossCellNo,
+      bossArrived: arrived,
+      startedAt: capturedAt,
+      lastEventAt: capturedAt,
+    );
+    final stats = _updatedSortieStats(
+      state,
+      active,
+      sorties: 1,
+      bossArrivals: arrived ? 1 : 0,
+    );
+    return state.copyWith(
+      sortieStats: stats,
+      activeSortie: active,
+      latestSortieEventAt: capturedAt,
+      lastSortieStartAt: capturedAt,
+      lastSortieStartMapKey: mapKey,
+    );
+  }
+
+  SenkaState _nextNode(
+    SenkaState state,
+    Map<Object?, Object?> data,
+    DateTime capturedAt,
+  ) {
+    final active = state.activeSortie;
+    if (active == null) {
+      return state.copyWith(latestSortieEventAt: capturedAt);
+    }
+    final nodeNo = _positiveInt(data['api_no']);
+    final responseBossCellNo = _positiveInt(data['api_bosscell_no']);
+    final arrived =
+        nodeNo != null &&
+        (nodeNo == active.bossCellNo || nodeNo == responseBossCellNo);
+    final nextActive = active.copyWith(
+      bossCellNo: responseBossCellNo,
+      lastEventAt: capturedAt,
+    );
+    if (!arrived || active.bossArrived) {
+      return state.copyWith(
+        activeSortie: nextActive,
+        latestSortieEventAt: capturedAt,
+      );
+    }
+    return state.copyWith(
+      sortieStats: _updatedSortieStats(state, active, bossArrivals: 1),
+      activeSortie: nextActive.copyWith(bossArrived: true),
+      latestSortieEventAt: capturedAt,
+    );
+  }
+
+  SenkaState _sortieResult(
+    SenkaState state,
+    Map<Object?, Object?> data,
+    DateTime capturedAt,
+  ) {
+    final active = state.activeSortie;
+    if (active == null) {
+      return state.copyWith(latestSortieEventAt: capturedAt);
+    }
+    if (!active.bossArrived) {
+      return state.copyWith(
+        activeSortie: active.copyWith(lastEventAt: capturedAt),
+        latestSortieEventAt: capturedAt,
+      );
+    }
+    final rank = '${data['api_win_rank'] ?? ''}'.toUpperCase();
+    final stats = switch (rank) {
+      'S' || 'SS' => _updatedSortieStats(state, active, sWins: 1),
+      'A' => _updatedSortieStats(state, active, aWins: 1),
+      _ => state.sortieStats,
+    };
+    return state.copyWith(
+      sortieStats: stats,
+      clearActiveSortie: true,
+      latestSortieEventAt: capturedAt,
+    );
+  }
+
+  Map<String, SenkaSortieStats> _updatedSortieStats(
+    SenkaState state,
+    SenkaActiveSortie active, {
+    int sorties = 0,
+    int bossArrivals = 0,
+    int sWins = 0,
+    int aWins = 0,
+  }) {
+    final result = Map<String, SenkaSortieStats>.of(state.sortieStats);
+    final current =
+        result[active.mapKey] ??
+        SenkaSortieStats(areaId: active.areaId, mapNo: active.mapNo);
+    result[active.mapKey] = current.copyWith(
+      sorties: current.sorties + sorties,
+      bossArrivals: current.bossArrivals + bossArrivals,
+      sWins: current.sWins + sWins,
+      aWins: current.aWins + aWins,
+    );
+    return result;
   }
 
   SenkaState _experience(
@@ -150,6 +331,7 @@ class SenkaReducer {
         entry.key: List<SenkaRankingSnapshot>.of(entry.value),
     };
     final page = _int(data['api_disp_page']);
+    double? playerSenka;
     for (final raw in rows) {
       final rank = _int(raw['api_mxltvkpyuklh']);
       final encrypted = _int(raw['api_wuhnhojjxmke']);
@@ -162,6 +344,7 @@ class SenkaReducer {
       }
       if ('${raw['api_mtjmdcwtvhdr'] ?? ''}' == state.nickname) {
         key = 'player';
+        playerSenka = senka;
       }
       if (key == null) continue;
       final snapshots = history.putIfAbsent(key, () => []);
@@ -175,7 +358,10 @@ class SenkaReducer {
       );
       if (snapshots.length > 2) snapshots.removeAt(0);
     }
-    return decryptState.copyWith(rankingHistory: history);
+    return decryptState.copyWith(
+      rankingHistory: history,
+      calculatorCurrentSenka: playerSenka,
+    );
   }
 
   double _decrypt(SenkaState state, int rank, int encrypted) {
@@ -227,6 +413,23 @@ class SenkaReducer {
   }
 }
 
+const _sortieStartPath = '/kcsapi/api_req_map/start';
+const _sortieResultPaths = <String>{
+  '/kcsapi/api_req_sortie/battleresult',
+  '/kcsapi/api_req_combined_battle/battleresult',
+};
+
+bool _clearsActiveSortie(String path) =>
+    path == '/kcsapi/api_port/port' ||
+    path == '/kcsapi/api_req_sortie/goback_port' ||
+    path == '/kcsapi/api_req_combined_battle/goback_port';
+
+bool _isSortieLifecyclePath(String path) =>
+    path == _sortieStartPath ||
+    path == '/kcsapi/api_req_map/next' ||
+    _sortieResultPaths.contains(path) ||
+    _clearsActiveSortie(path);
+
 Map<Object?, Object?>? _map(Object? value) =>
     value is Map ? value.cast<Object?, Object?>() : null;
 
@@ -235,5 +438,11 @@ int _int(Object? value, [int fallback = 0]) =>
 
 int _firstInt(Object? value) =>
     value is List && value.isNotEmpty ? _int(value.first) : _int(value);
+
+int? _positiveInt(Object? value) {
+  if (value is! num || !value.isFinite) return null;
+  final result = value.toInt();
+  return result > 0 && value == result ? result : null;
+}
 
 int _gcd(int left, int right) => right == 0 ? left : _gcd(right, left % right);
