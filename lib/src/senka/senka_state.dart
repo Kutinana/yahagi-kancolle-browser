@@ -475,11 +475,24 @@ class SenkaState {
     final rawLastSortieStartMapKey = _validMapKey(
       value['lastSortieStartMapKey'],
     );
+    final hasStoredStartIdentity =
+        value['lastSortieStartAt'] != null ||
+        value['lastSortieStartMapKey'] != null;
+    final lastStartStats = rawLastSortieStartMapKey == null
+        ? null
+        : sortieStats[rawLastSortieStartMapKey];
     final hasValidStartIdentity =
         rawLastSortieStartAt != null &&
         rawLastSortieStartMapKey != null &&
         latestSortieEventAt != null &&
-        !rawLastSortieStartAt.isAfter(latestSortieEventAt);
+        !rawLastSortieStartAt.isAfter(latestSortieEventAt) &&
+        lastStartStats != null &&
+        lastStartStats.sorties > 0;
+    final hasValidLifecycleMetadata =
+        !hasStoredStartIdentity || hasValidStartIdentity;
+    final validLatestSortieEventAt = hasValidLifecycleMetadata
+        ? latestSortieEventAt
+        : null;
     final hasEoStatuses = value.containsKey('eoStatuses');
     final hasQuestStatuses = value.containsKey('questStatuses');
     final eoStatuses = _statusMap(value['eoStatuses']);
@@ -516,9 +529,11 @@ class SenkaState {
       activeSortie: _activeSortie(
         value['activeSortie'],
         sortieStats,
-        latestSortieEventAt,
+        validLatestSortieEventAt,
+        hasValidStartIdentity ? rawLastSortieStartAt : null,
+        hasValidStartIdentity ? rawLastSortieStartMapKey : null,
       ),
-      latestSortieEventAt: latestSortieEventAt,
+      latestSortieEventAt: validLatestSortieEventAt,
       lastSortieStartAt: hasValidStartIdentity ? rawLastSortieStartAt : null,
       lastSortieStartMapKey: hasValidStartIdentity
           ? rawLastSortieStartMapKey
@@ -548,8 +563,11 @@ SenkaActiveSortie? _activeSortie(
   Object? value,
   Map<String, SenkaSortieStats> sortieStats,
   DateTime? latestSortieEventAt,
+  DateTime? lastSortieStartAt,
+  String? lastSortieStartMapKey,
 ) {
   if (value is! Map) return null;
+  if (lastSortieStartAt == null || lastSortieStartMapKey == null) return null;
   final startedAt = DateTime.tryParse('${value['startedAt'] ?? ''}');
   final lastEventAt = DateTime.tryParse('${value['lastEventAt'] ?? ''}');
   if (startedAt == null ||
@@ -562,6 +580,10 @@ SenkaActiveSortie? _activeSortie(
   }
   final sortie = SenkaActiveSortie.fromJson(value);
   if (sortie.areaId <= 0 || sortie.mapNo <= 0) return null;
+  if (sortie.mapKey != lastSortieStartMapKey ||
+      sortie.startedAt != lastSortieStartAt) {
+    return null;
+  }
   if (sortie.bossCellNo != null && sortie.bossCellNo! <= 0) return null;
   if (sortie.bossArrived && sortie.bossCellNo == null) return null;
   final stats = sortieStats[sortie.mapKey];

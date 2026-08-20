@@ -753,6 +753,152 @@ void main() {
       expect(state.toJson()['lastSortieStartAt'], isNull);
       expect(state.toJson()['lastSortieStartMapKey'], isNull);
     });
+
+    test('JSON last start 无对应有效统计时清空生命周期元数据且不误判重复', () {
+      for (final stats in [
+        <String, Object?>{},
+        <String, Object?>{
+          '7-5': {
+            'areaId': 7,
+            'mapNo': 5,
+            'sorties': 0,
+            'bossArrivals': 0,
+            'sWins': 0,
+            'aWins': 0,
+          },
+        },
+      ]) {
+        var state = SenkaState.fromJson({
+          'monthKey': '2026-08',
+          'sortieStats': stats,
+          'latestSortieEventAt': '2026-08-10T01:00:00.000Z',
+          'lastSortieStartAt': '2026-08-10T01:00:00.000Z',
+          'lastSortieStartMapKey': '7-5',
+          'activeSortie': {
+            'areaId': 7,
+            'mapNo': 5,
+            'bossCellNo': 9,
+            'bossArrived': false,
+            'startedAt': '2026-08-10T01:00:00.000Z',
+            'lastEventAt': '2026-08-10T01:00:00.000Z',
+          },
+        });
+
+        expect(state.latestSortieEventAt, isNull, reason: '$stats');
+        expect(state.lastSortieStartAt, isNull, reason: '$stats');
+        expect(state.lastSortieStartMapKey, isNull, reason: '$stats');
+        expect(state.activeSortie, isNull, reason: '$stats');
+
+        state = reducer.reduce(
+          state,
+          sortieStart(
+            areaId: 7,
+            mapNo: 5,
+            nodeNo: 1,
+            bossCellNo: 9,
+            atJst: DateTime(2026, 8, 10, 10),
+          ),
+        );
+        expect(state.sortieStats['7-5']?.sorties, 1, reason: '$stats');
+        expect(state.activeSortie, isNotNull, reason: '$stats');
+      }
+    });
+
+    test('JSON active 必须与最后 start 的 map 和 startedAt 一致', () {
+      final base = <String, Object?>{
+        'monthKey': '2026-08',
+        'sortieStats': {
+          '2-3': {
+            'areaId': 2,
+            'mapNo': 3,
+            'sorties': 1,
+            'bossArrivals': 0,
+            'sWins': 0,
+            'aWins': 0,
+          },
+          '2-4': {
+            'areaId': 2,
+            'mapNo': 4,
+            'sorties': 1,
+            'bossArrivals': 0,
+            'sWins': 0,
+            'aWins': 0,
+          },
+        },
+        'latestSortieEventAt': '2026-08-10T01:05:00.000Z',
+        'lastSortieStartAt': '2026-08-10T01:00:00.000Z',
+        'lastSortieStartMapKey': '2-3',
+      };
+      final contradictoryActive = [
+        {
+          'areaId': 2,
+          'mapNo': 4,
+          'bossCellNo': 5,
+          'bossArrived': false,
+          'startedAt': '2026-08-10T01:00:00.000Z',
+          'lastEventAt': '2026-08-10T01:05:00.000Z',
+        },
+        {
+          'areaId': 2,
+          'mapNo': 3,
+          'bossCellNo': 5,
+          'bossArrived': false,
+          'startedAt': '2026-08-10T01:01:00.000Z',
+          'lastEventAt': '2026-08-10T01:05:00.000Z',
+        },
+        {
+          'areaId': 2,
+          'mapNo': 3,
+          'bossCellNo': 5,
+          'bossArrived': false,
+          'startedAt': '2026-08-10T01:00:00.000Z',
+          'lastEventAt': '2026-08-10T01:06:00.000Z',
+        },
+      ];
+
+      for (final active in contradictoryActive) {
+        final state = SenkaState.fromJson({...base, 'activeSortie': active});
+        expect(state.activeSortie, isNull, reason: '$active');
+        expect(state.lastSortieStartMapKey, '2-3', reason: '$active');
+      }
+    });
+
+    test('每个 result、goback 与 port path 都拒绝 watermark 之前的事件', () {
+      final stalePaths = <String, Object?>{
+        '/kcsapi/api_req_sortie/battleresult': {'api_win_rank': 'S'},
+        '/kcsapi/api_req_combined_battle/battleresult': {'api_win_rank': 'A'},
+        '/kcsapi/api_req_sortie/goback_port': const {},
+        '/kcsapi/api_req_combined_battle/goback_port': const {},
+        '/kcsapi/api_port/port': const {
+          'api_basic': {
+            'api_member_id': 999,
+            'api_nickname': '旧事件',
+            'api_experience': 999999,
+          },
+        },
+      };
+
+      for (final entry in stalePaths.entries) {
+        final state = reducer.reduce(
+          SenkaState.forMonth(
+            '2026-08',
+          ).copyWith(memberId: 123, nickname: '矢矧'),
+          sortieStart(
+            areaId: 5,
+            mapNo: 5,
+            nodeNo: 7,
+            bossCellNo: 7,
+            atJst: DateTime(2026, 8, 10, 12),
+          ),
+        );
+        final next = reducer.reduce(
+          state,
+          apiEvent(entry.key, entry.value, atJst: DateTime(2026, 8, 10, 11)),
+        );
+
+        expect(identical(next, state), isTrue, reason: entry.key);
+      }
+    });
   });
 }
 
