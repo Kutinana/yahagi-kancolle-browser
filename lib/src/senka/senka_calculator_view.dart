@@ -59,7 +59,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
     builder: (context, constraints) {
       final horizontal = constraints.maxWidth > constraints.maxHeight * 1.15;
       final overview = _overview();
-      final tasks = _tasks();
+      final tasks = _tasks(scrollContent: horizontal);
       final gap = widget.compact ? 4.0 : 10.0;
       if (horizontal) {
         return Row(
@@ -95,7 +95,11 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
             SizedBox(height: gap),
             SizedBox(
               key: const Key('senka-calculator-right'),
-              height: widget.compact ? 850 : 720,
+              height: _taskPanelHeight(
+                context,
+                constraints.maxWidth,
+                widget.compact,
+              ),
               child: tasks,
             ),
           ],
@@ -301,7 +305,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
     ),
   );
 
-  Widget _tasks() {
+  Widget _tasks({required bool scrollContent}) {
     final result = SenkaCalculationResult.fromState(
       widget.state,
       now: widget.now,
@@ -311,25 +315,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
       compact: widget.compact,
       child: Column(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(widget.compact ? 5 : 9),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _group('EO 战果奖励', senkaEoCatalog, quest: false),
-                  _group('季度战果任务', senkaQuarterlyQuestCatalog, quest: true),
-                  _group('年度战果任务', senkaAnnualQuestCatalog, quest: true),
-                  _group(
-                    '单次战果任务',
-                    senkaOneTimeQuestCatalog,
-                    quest: true,
-                    last: true,
-                  ),
-                ],
-              ),
-            ),
-          ),
+          Expanded(child: _taskGroups(scrollContent)),
           Container(
             key: const Key('senka-calculator-footer'),
             height: widget.compact ? 28 : 38,
@@ -370,6 +356,22 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
     );
   }
 
+  Widget _taskGroups(bool scrollContent) {
+    final groups = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _group('EO 战果奖励', senkaEoCatalog, quest: false),
+        _group('季度战果任务', senkaQuarterlyQuestCatalog, quest: true),
+        _group('年度战果任务', senkaAnnualQuestCatalog, quest: true),
+        _group('单次战果任务', senkaOneTimeQuestCatalog, quest: true, last: true),
+      ],
+    );
+    final padding = EdgeInsets.all(widget.compact ? 5 : 9);
+    return scrollContent
+        ? SingleChildScrollView(padding: padding, child: groups)
+        : Padding(padding: padding, child: groups);
+  }
+
   TextStyle _footerStyle() => TextStyle(
     color: senkaText,
     fontSize: widget.compact ? 8 : 11,
@@ -397,9 +399,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
         SizedBox(height: widget.compact ? 3 : 6),
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = widget.compact
-                ? (constraints.maxWidth >= 500 ? 7 : 3)
-                : (constraints.maxWidth >= 700 ? 7 : 4);
+            final columns = _taskColumns(constraints.maxWidth, widget.compact);
             final width =
                 (constraints.maxWidth -
                     (columns - 1) * (widget.compact ? 3 : 6)) /
@@ -528,4 +528,37 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
       ),
     );
   }
+}
+
+int _taskColumns(double width, bool compact) =>
+    compact ? (width >= 500 ? 7 : 3) : (width >= 700 ? 7 : 4);
+
+double _taskPanelHeight(BuildContext context, double width, bool compact) {
+  final padding = compact ? 5.0 : 9.0;
+  final contentWidth = width - padding * 2 - 2;
+  final columns = _taskColumns(contentWidth, compact);
+  final spacing = compact ? 3.0 : 6.0;
+  final groupGap = compact ? 6.0 : 10.0;
+  final titleFontSize = compact ? 10.0 : 13.0;
+  final titleHeight =
+      MediaQuery.textScalerOf(context).scale(titleFontSize) * 1.3;
+  final titleGap = compact ? 3.0 : 6.0;
+  const chipHeight = 40.0;
+  final groupCounts = [
+    senkaEoCatalog.length,
+    senkaQuarterlyQuestCatalog.length,
+    senkaAnnualQuestCatalog.length,
+    senkaOneTimeQuestCatalog.length,
+  ];
+  var groupsHeight = 0.0;
+  for (var index = 0; index < groupCounts.length; index++) {
+    final rows = (groupCounts[index] / columns).ceil();
+    groupsHeight +=
+        titleHeight + titleGap + rows * chipHeight + (rows - 1) * spacing;
+    if (index < groupCounts.length - 1) groupsHeight += groupGap;
+  }
+  final panelHeader = compact ? 28.0 : 36.0;
+  final footer = compact ? 28.0 : 38.0;
+  // Leave a small allowance for the font's platform-specific line metrics.
+  return panelHeader + footer + padding * 2 + groupsHeight + 12;
 }

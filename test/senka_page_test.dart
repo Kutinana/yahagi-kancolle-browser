@@ -249,6 +249,43 @@ void main() {
     expect(find.text('2-1'), findsOneWidget);
   });
 
+  testWidgets('显示隐藏开关具有 44px 单一命中区和 toggled 语义', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpSenka(tester, controller, const Size(1280, 680));
+    final toggle = find.byKey(const Key('senka-show-hidden'));
+    final rect = tester.getRect(toggle);
+    expect(rect.width, greaterThanOrEqualTo(44));
+    expect(rect.height, greaterThanOrEqualTo(44));
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('显示隐藏海域'))
+          .flagsCollection
+          .isToggled,
+      Tristate.isFalse,
+    );
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('显示隐藏海域'))
+          .flagsCollection
+          .isButton,
+      isTrue,
+    );
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(find.text('2-1'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('显示隐藏海域'))
+          .flagsCollection
+          .isToggled,
+      Tristate.isTrue,
+    );
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(find.text('2-1'), findsNothing);
+    semantics.dispose();
+  });
+
   testWidgets('排名保留固定线和当前行变化行为', (tester) async {
     await pumpSenka(tester, controller, const Size(1280, 680));
     for (final rank in [5, 20, 100, 501]) {
@@ -537,9 +574,79 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('竖屏信息页从统计行起拖仅滚动外层并可到末行', (tester) async {
+    final manyStats = <String, SenkaSortieStats>{
+      for (var map = 1; map <= 12; map++)
+        '1-$map': SenkaSortieStats(
+          areaId: 1,
+          mapNo: map,
+          sorties: map,
+          bossArrivals: map,
+          sWins: map,
+          aWins: 0,
+        ),
+    };
+    final longController = SenkaController(
+      store: MemorySenkaStore(sampleState().copyWith(sortieStats: manyStats)),
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+    addTearDown(longController.dispose);
+    await longController.initialize();
+    await pumpSenka(tester, longController, const Size(390, 844));
+    final vertical = find.byKey(const Key('senka-info-vertical'));
+    expect(
+      find.descendant(
+        of: vertical,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        ),
+      ),
+      findsOneWidget,
+    );
+    final firstRow = find.byKey(const Key('senka-sortie-row-1-1'));
+    await tester.ensureVisible(firstRow);
+    await dragFromUntilVisible(
+      tester,
+      firstRow,
+      find.byKey(const Key('senka-sortie-row-1-12')),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('竖屏计算页从任务胶囊起拖仅滚动外层并可到 footer', (tester) async {
+    await pumpSenka(tester, controller, const Size(390, 844), textScale: 1.3);
+    await tester.tap(find.byKey(const Key('senka-tab-calculator')));
+    await tester.pump();
+    final vertical = find.byKey(const Key('senka-calculator-vertical'));
+    expect(
+      find.descendant(
+        of: vertical,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        ),
+      ),
+      findsOneWidget,
+    );
+    final chip = find.byKey(const Key('senka-toggle-eo-15'));
+    await tester.ensureVisible(chip);
+    await dragFromUntilVisible(
+      tester,
+      chip,
+      find.byKey(const Key('senka-calculator-footer')),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('390×844 在 1.3 倍文字下三页无溢出且关键内容可滚动', (tester) async {
     await pumpSenka(tester, controller, const Size(390, 844), textScale: 1.3);
-    await dragUntilVisible(tester, find.text('出击海域统计'));
+    await dragUntilVisible(
+      tester,
+      find.byKey(const Key('senka-sortie-row-3-2')),
+    );
     expect(tester.takeException(), isNull);
     await tester.tap(find.byKey(const Key('senka-tab-calendar')));
     await tester.pump();
@@ -641,6 +748,22 @@ Future<void> dragUntilVisible(WidgetTester tester, Finder target) async {
       find.byType(SingleChildScrollView).first,
       const Offset(0, -350),
     );
+    await tester.pump();
+  }
+  expect(target.hitTestable(), findsOneWidget);
+}
+
+Future<void> dragFromUntilVisible(
+  WidgetTester tester,
+  Finder dragStart,
+  Finder target,
+) async {
+  for (
+    var attempt = 0;
+    attempt < 8 && target.hitTestable().evaluate().isEmpty;
+    attempt++
+  ) {
+    await tester.drag(dragStart, const Offset(0, -250));
     await tester.pump();
   }
   expect(target.hitTestable(), findsOneWidget);

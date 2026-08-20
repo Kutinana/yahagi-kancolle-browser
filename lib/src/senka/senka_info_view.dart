@@ -39,6 +39,7 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
         compact: widget.compact,
         showHidden: showHidden,
         onShowHidden: (value) => setState(() => showHidden = value),
+        scrollRows: horizontal,
       );
       final gap = widget.compact ? 4.0 : 10.0;
       if (horizontal) {
@@ -90,7 +91,11 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
             SizedBox(height: gap),
             SizedBox(
               key: const Key('senka-info-sorties'),
-              height: 300,
+              height: _sortiePanelHeight(
+                widget.state,
+                showHidden,
+                widget.compact,
+              ),
               child: sorties,
             ),
           ],
@@ -98,6 +103,19 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
       );
     },
   );
+}
+
+double _sortiePanelHeight(SenkaState state, bool showHidden, bool compact) {
+  final rowCount = state.sortieStats.values
+      .where(
+        (item) =>
+            showHidden || !state.hiddenSortieMapKeys.contains(item.mapKey),
+      )
+      .length;
+  const panelHeaderHeight = 44.0;
+  final tableHeaderHeight = compact ? 28.0 : 36.0;
+  const dataRowHeight = 40.0;
+  return panelHeaderHeight + tableHeaderHeight + rowCount * dataRowHeight + 2;
 }
 
 class _ServerOverview extends StatelessWidget {
@@ -298,12 +316,14 @@ class _SortiePanel extends StatelessWidget {
     required this.compact,
     required this.showHidden,
     required this.onShowHidden,
+    required this.scrollRows,
   });
   final SenkaState state;
   final SenkaController controller;
   final bool compact;
   final bool showHidden;
   final ValueChanged<bool> onShowHidden;
+  final bool scrollRows;
   @override
   Widget build(BuildContext context) {
     final rows =
@@ -331,15 +351,32 @@ class _SortiePanel extends StatelessWidget {
             style: TextStyle(color: senkaMuted, fontSize: compact ? 9 : 12),
           ),
           SizedBox(width: compact ? 2 : 4),
-          SizedBox(
-            width: compact ? 30 : 38,
-            height: compact ? 24 : 30,
-            child: FittedBox(
-              child: Switch(
-                key: const Key('senka-show-hidden'),
-                value: showHidden,
-                activeThumbColor: senkaGold,
-                onChanged: onShowHidden,
+          Semantics(
+            label: '显示隐藏海域',
+            button: true,
+            toggled: showHidden,
+            excludeSemantics: true,
+            child: SizedBox(
+              key: const Key('senka-show-hidden'),
+              width: 44,
+              height: 44,
+              child: InkWell(
+                onTap: () => onShowHidden(!showHidden),
+                child: Center(
+                  child: SizedBox(
+                    width: compact ? 30 : 38,
+                    height: compact ? 24 : 30,
+                    child: FittedBox(
+                      child: IgnorePointer(
+                        child: Switch(
+                          value: showHidden,
+                          activeThumbColor: senkaGold,
+                          onChanged: (_) {},
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -355,12 +392,15 @@ class _SortiePanel extends StatelessWidget {
               header: true,
             ),
           ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: rows.length,
-              itemBuilder: (context, index) => _sortieData(rows[index]),
-            ),
-          ),
+          if (scrollRows)
+            Expanded(
+              child: ListView.builder(
+                itemCount: rows.length,
+                itemBuilder: (context, index) => _sortieData(rows[index]),
+              ),
+            )
+          else
+            for (final row in rows) _sortieData(row),
         ],
       ),
     );

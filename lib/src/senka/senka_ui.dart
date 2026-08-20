@@ -40,7 +40,7 @@ class SenkaPanel extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: compact ? 28 : 36,
+            height: trailing == null ? (compact ? 28 : 36) : 44,
             color: senkaPanelAlt,
             padding: EdgeInsets.symmetric(horizontal: compact ? 7 : 11),
             child: Row(
