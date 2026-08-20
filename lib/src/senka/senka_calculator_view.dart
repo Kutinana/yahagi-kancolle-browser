@@ -225,7 +225,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
       ),
       Expanded(
         child: SizedBox(
-          height: widget.compact ? 30 : 38,
+          height: 44,
           child: TextField(
             key: key,
             controller: controller,
@@ -511,14 +511,14 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                   ),
                 ),
                 if (status == SenkaRewardStatus.completed)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 19.5,
-                    child: Container(
-                      key: Key('senka-strike-$keyPrefix-${item.id}'),
-                      height: 1,
-                      color: color,
+                  Positioned.fill(
+                    child: Center(
+                      child: SizedBox(
+                        key: Key('senka-strike-$keyPrefix-${item.id}'),
+                        width: double.infinity,
+                        height: 1,
+                        child: ColoredBox(color: color),
+                      ),
                     ),
                   ),
               ],

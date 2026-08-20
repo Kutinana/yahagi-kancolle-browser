@@ -550,6 +550,7 @@ void main() {
     );
     expect((chipRect.left - strikeRect.left).abs(), lessThanOrEqualTo(1));
     expect((chipRect.right - strikeRect.right).abs(), lessThanOrEqualTo(1));
+    expect(strikeRect.center.dy, closeTo(chipRect.center.dy, .01));
     expect(find.descendant(of: toggle, matching: find.text('✓')), findsNothing);
     semantics.dispose();
   });
@@ -710,6 +711,12 @@ void main() {
       expect(calendarCell.height, greaterThanOrEqualTo(44));
       await tester.tap(find.byKey(const Key('senka-tab-calculator')));
       await tester.pump();
+      for (final input in const ['senka-current-input', 'senka-target-input']) {
+        expect(
+          tester.getRect(find.byKey(Key(input))).height,
+          greaterThanOrEqualTo(44),
+        );
+      }
       final reward = tester.getRect(
         find.byKey(const Key('senka-toggle-eo-15')),
       );
