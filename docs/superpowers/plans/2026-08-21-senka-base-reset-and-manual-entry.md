@@ -17,7 +17,7 @@
 - 修改 `lib/src/senka/senka_controller.dart`：初始化时保存迁移结果，提供读取、归零、手动设置 API。
 - 修改 `lib/src/settings/data_settings_page.dart`：增加两个设置入口、确认框和数字输入框。
 - 修改 `lib/src/settings/settings_page.dart`、`lib/main.dart`：把现有 `SenkaController` 注入数据设置页。
-- 修改 `lib/l10n/app_*.arb` 及运行 `flutter gen-l10n`：添加四语言设置文案。
+- 修改 `lib/l10n/app_*.arb` 及运行 `flutter gen-l10n`：添加现有三语言设置文案。
 - 修改 `test/senka_reducer_test.dart`、`test/senka_controller_test.dart`、`test/data_settings_page_test.dart`：覆盖数据、持久化和交互。
 
 ### 任务 1：旧缓存迁移与经验单调性
@@ -173,10 +173,9 @@ git commit -m "feat(战果): 支持本月素战果校正"
 - 修改：`lib/src/settings/data_settings_page.dart`
 - 修改：`lib/src/settings/settings_page.dart`
 - 修改：`lib/main.dart`
-- 修改：`lib/l10n/app_en.arb`
 - 修改：`lib/l10n/app_ja.arb`
 - 修改：`lib/l10n/app_zh.arb`
-- 修改：`lib/l10n/app_zh_TW.arb`
+- 修改：`lib/l10n/app_zh_Hant.arb`
 - 测试：`test/data_settings_page_test.dart`
 
 - [ ] **步骤 1：编写失败的 Widget 测试**
@@ -216,7 +215,7 @@ final input = TextEditingController(
 
 归零使用现有确认框风格。成功提示显示 `0.00` 或新的两位小数；失败提示不得声称保存成功。
 
-- [ ] **步骤 5：增加四语言 ARB 并生成本地化代码**
+- [ ] **步骤 5：增加三语言 ARB 并生成本地化代码**
 
 新增标题、说明、确认标题/正文、输入标签、校验错误、成功/失败提示，运行：
 
@@ -272,3 +271,36 @@ flutter analyze lib/src/senka lib/src/settings/data_settings_page.dart lib/src/s
 - [ ] **步骤 4：在当前 Debug 运行环境验收**
 
 热重载或重新运行 Debug 应用，确认数据设置页两个入口可见；旧异常缓存升级后素战果为 `0.00`；手动设置后战果计算页立即刷新；不构建 release APK。
+
+### 任务 5：合并本月累计素战果设置入口
+
+**文件：**
+- 修改：`lib/src/settings/data_settings_page.dart`
+- 修改：`lib/l10n/app_zh.arb`
+- 修改：`lib/l10n/app_zh_Hant.arb`
+- 修改：`lib/l10n/app_ja.arb`
+- 测试：`test/senka_data_settings_test.dart`
+
+- [ ] **步骤 1：编写失败的布局测试**
+
+断言只存在一条 `settings-base-senka-summary` 信息项，手写按钮 `settings-set-base-senka` 与还原按钮 `settings-reset-base-senka` 位于同一水平行，命中区域不少于 44 dp，并可分别打开原有对话框。
+
+- [ ] **步骤 2：运行测试验证红灯**
+
+运行：`flutter test test/senka_data_settings_test.dart`
+
+预期：FAIL，因为当前两个入口位于上下两条信息项，且不存在合并后的 summary key。
+
+- [ ] **步骤 3：实现最小合并布局**
+
+用一个 `AnimatedBuilder` 构建标题、副标题和右侧两个 `IconButton`；整行不设置 `onTap`，按钮保留原控制器调用与对话框。
+
+- [ ] **步骤 4：生成本地化并验证绿灯**
+
+运行：`flutter gen-l10n`，再运行：`flutter test test/senka_data_settings_test.dart test/localization_contract_test.dart`。
+
+预期：全部通过。
+
+- [ ] **步骤 5：完成相关回归**
+
+运行战果与设置专项测试、精确静态分析及 `git diff --check`，随后重新安装 Debug 版本验收，不构建 release APK。
