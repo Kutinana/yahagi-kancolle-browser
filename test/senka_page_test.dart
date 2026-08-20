@@ -475,8 +475,55 @@ void main() {
       expect(annual.top, closeTo(oneTime.top, 1));
       expect(annual.right, lessThan(oneTime.left));
 
-      expect(find.byKey(const Key('senka-projected-card')), findsOneWidget);
-      expect(find.byKey(const Key('senka-metrics-grid')), findsOneWidget);
+      final currentInput = tester.getRect(
+        find.byKey(const Key('senka-current-input')),
+      );
+      final targetInput = tester.getRect(
+        find.byKey(const Key('senka-target-input')),
+      );
+      expect(currentInput.top, closeTo(targetInput.top, 1));
+
+      final projectedFinder = find.byKey(const Key('senka-projected-card'));
+      final projected = tester.widget<Container>(projectedFinder);
+      final projectedDecoration = projected.decoration! as BoxDecoration;
+      expect(projectedDecoration.border, isNotNull);
+      expect(projectedDecoration.color, senkaGold.withValues(alpha: .08));
+      expect(
+        find.descendant(
+          of: projectedFinder,
+          matching: find.byType(LinearProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+
+      final metrics = find.byKey(const Key('senka-metrics-grid'));
+      final metricsDecoration =
+          tester.widget<Container>(metrics).decoration! as BoxDecoration;
+      expect(metricsDecoration.border, isNotNull);
+      final plannedEo = tester.getRect(
+        find.byKey(const Key('senka-metric-planned-eo')),
+      );
+      final plannedQuest = tester.getRect(
+        find.byKey(const Key('senka-metric-planned-quest')),
+      );
+      final remainingDays = tester.getRect(
+        find.byKey(const Key('senka-metric-remaining-days')),
+      );
+      final baseSenka = tester.getRect(
+        find.byKey(const Key('senka-metric-base-senka')),
+      );
+      final dailyRequired = tester.getRect(
+        find.byKey(const Key('senka-metric-daily-required')),
+      );
+      final todayRemaining = tester.getRect(
+        find.byKey(const Key('senka-metric-today-remaining')),
+      );
+      expect(plannedEo.right, closeTo(plannedQuest.left, 1));
+      expect(remainingDays.right, closeTo(baseSenka.left, 1));
+      expect(dailyRequired.right, closeTo(todayRemaining.left, 1));
+      expect(plannedEo.bottom, closeTo(remainingDays.top, 1));
+      expect(remainingDays.bottom, closeTo(dailyRequired.top, 1));
+
       final hitTarget = tester.getRect(
         find.byKey(const Key('senka-toggle-eo-15')),
       );
@@ -486,6 +533,24 @@ void main() {
       expect(hitTarget.height, greaterThanOrEqualTo(44));
       expect(surface.height, lessThan(hitTarget.height));
       expect(surface.center.dy, closeTo(hitTarget.center.dy, 1));
+
+      final right = find.byKey(const Key('senka-calculator-right'));
+      final footer = find.byKey(const Key('senka-calculator-footer'));
+      final rightRect = tester.getRect(right);
+      final footerBeforeScroll = tester.getRect(footer);
+      expect(footerBeforeScroll.bottom, closeTo(rightRect.bottom, 1));
+      expect(footer.hitTestable(), findsOneWidget);
+      await tester.drag(
+        find.descendant(
+          of: right,
+          matching: find.byType(SingleChildScrollView),
+        ),
+        const Offset(0, -180),
+      );
+      await tester.pump();
+      final footerAfterScroll = tester.getRect(footer);
+      expect(footerAfterScroll.top, closeTo(footerBeforeScroll.top, .01));
+      expect(footerAfterScroll.bottom, closeTo(rightRect.bottom, 1));
       expect(tester.takeException(), isNull);
     }
   });
