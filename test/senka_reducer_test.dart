@@ -235,43 +235,48 @@ void main() {
     expect(next.calculatorCurrentSenka, 0);
   });
 
-  test('季度边界重置季度状态但年度和单次保留，跨年再重置年度', () {
-    final september = SenkaState.forMonth('2026-09').copyWith(
+  test('舰 C 季度任务按 3/6/9/12 月重置且年度任务按 6 月重置', () {
+    SenkaState stateAt(String month) => SenkaState.forMonth(month).copyWith(
       questStatuses: const {
         854: SenkaRewardStatus.completed,
         947: SenkaRewardStatus.planned,
         949: SenkaRewardStatus.completed,
       },
     );
-    final october = reducer.reduce(
-      september,
+
+    SenkaState migrate(String from, int year, int month) => reducer.reduce(
+      stateAt(from),
       apiEvent(
         '/kcsapi/api_get_member/basic',
         const {},
-        atJst: DateTime(2026, 10, 1, 3),
-      ),
-    );
-    final january = reducer.reduce(
-      october.copyWith(
-        monthKey: '2026-12',
-        questStatuses: const {
-          854: SenkaRewardStatus.planned,
-          947: SenkaRewardStatus.completed,
-          949: SenkaRewardStatus.completed,
-        },
-      ),
-      apiEvent(
-        '/kcsapi/api_get_member/basic',
-        const {},
-        atJst: DateTime(2027, 1, 1, 3),
+        atJst: DateTime(year, month, 1, 3),
       ),
     );
 
-    expect(october.questStatuses, {
-      947: SenkaRewardStatus.planned,
-      949: SenkaRewardStatus.completed,
-    });
-    expect(january.questStatuses, {949: SenkaRewardStatus.completed});
+    expect(migrate('2026-02', 2026, 3).questStatuses.keys, {947, 949});
+    expect(migrate('2026-03', 2026, 4).questStatuses.keys, {854, 947, 949});
+    expect(migrate('2026-05', 2026, 6).questStatuses.keys, {949});
+    expect(migrate('2026-12', 2027, 1).questStatuses.keys, {854, 947, 949});
+
+    final annualMay = migrate('2026-05', 2026, 6);
+    expect(annualMay.questStatuses.containsKey(947), isFalse);
+    final annualDecember = migrate('2026-12', 2027, 1);
+    expect(annualDecember.questStatuses[947], SenkaRewardStatus.planned);
+  });
+
+  test('非法旧 monthKey 不会按字典序永久拒绝有效新事件', () {
+    for (final invalid in ['2026-8', 'garbage', '9999-99']) {
+      final next = reducer.reduce(
+        SenkaState.forMonth(invalid).copyWith(memberId: 123, nickname: '矢矧'),
+        apiEvent('/kcsapi/api_get_member/basic', const {
+          'api_experience': 100000,
+        }, atJst: DateTime(2026, 8, 10, 3)),
+      );
+
+      expect(next.monthKey, '2026-08', reason: invalid);
+      expect(next.memberId, 123, reason: invalid);
+      expect(next.nickname, '矢矧', reason: invalid);
+    }
   });
 
   test('支持事件保存非空服务器来源且空来源不覆盖', () {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -74,6 +75,11 @@ void main() {
       expect(senkaServerName('https://w20i.kancolle-server.com'), '柱島泊地（柱岛）');
       expect(senkaServerName('https://w21.invalid'), '未知服务器');
       expect(senkaServerName('ftp://w01.kancolle-server.com'), '未知服务器');
+      expect(senkaServerName('https://w01.evil.example'), '未知服务器');
+      expect(
+        senkaServerName('https://w01y.kancolle-server.com.evil.example'),
+        '未知服务器',
+      );
       expect(senkaServerName('not-an-origin'), '未知服务器');
       expect(senkaServerName(''), '未知服务器');
     });
@@ -318,6 +324,18 @@ void main() {
       expect(migrated.eoStatuses[15], SenkaRewardStatus.completed);
       expect(migrated.questStatuses[854], SenkaRewardStatus.completed);
     });
+
+    test('非法或非规范 monthKey 不进入状态并回退当前战果月', () {
+      final current = currentSenkaMonthKey();
+      for (final invalid in ['2026-8', 'garbage', '9999-99']) {
+        expect(
+          SenkaState.fromJson({'monthKey': invalid}).monthKey,
+          current,
+          reason: invalid,
+        );
+      }
+      expect(SenkaState.fromJson({'monthKey': '2026-08'}).monthKey, '2026-08');
+    });
   });
 
   test('连续捕获只在下一帧通知一次', () async {
@@ -453,7 +471,7 @@ void main() {
     await controller.idle;
     expect(controller.state.eoStatuses[15], SenkaRewardStatus.deferred);
     expect(controller.state.questStatuses[854], SenkaRewardStatus.deferred);
-    expect(store.saveCount, greaterThan(0));
+    expect(store.saveCount, 3);
     expect(store.saved?.toJson(), controller.state.toJson());
   });
 
@@ -503,7 +521,7 @@ void main() {
     expect(controller.state.favoriteSortieMapKeys, {'1-5'});
     expect(controller.state.hiddenSortieMapKeys, {'1-5'});
     expect(controller.state.sortieStats['1-5']?.sorties, 1);
-    expect(store.saveCount, greaterThan(baseline));
+    expect(store.saveCount, baseline + 1);
     expect(store.saved?.toJson(), controller.state.toJson());
   });
 
@@ -570,6 +588,7 @@ void main() {
     expect(controller.state.nickname, '矢矧');
     expect(controller.state.targetSenka, 100);
     expect(store.saved?.toJson(), controller.state.toJson());
+    expect(store.saveCount, 1);
   });
 
   test('accept 后同步循环奖励不会由旧快照覆盖身份', () async {
@@ -592,6 +611,7 @@ void main() {
     expect(controller.state.nickname, '矢矧');
     expect(controller.state.questStatuses[854], SenkaRewardStatus.planned);
     expect(store.saved?.toJson(), controller.state.toJson());
+    expect(store.saveCount, 1);
   });
 
   test('连续同步设置后 accept 基于最新状态并持久化最终快照', () async {
@@ -615,6 +635,117 @@ void main() {
 
     expect(controller.state.nickname, '矢矧');
     expect(controller.state.targetSenka, 200);
+    expect(store.saved?.toJson(), controller.state.toJson());
+    expect(store.saveCount, 2);
+  });
+
+  test('一次保存失败后队列恢复且后续 accept 正常归档', () async {
+    final store = RecoveringSenkaStore(failSaveCount: 1);
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    controller.setTargetSenka(100);
+    await controller.idle;
+    controller.accept(
+      event('/kcsapi/api_get_member/basic', {
+        'api_member_id': 123,
+        'api_nickname': '矢矧',
+        'api_experience': 100000,
+      }),
+    );
+    await controller.idle;
+
+    expect(store.saveAttempts, 2);
+    expect(store.saveCount, 1);
+    expect(store.saved?.toJson(), controller.state.toJson());
+  });
+
+  test('延迟保存交错仍由最终 revision 覆盖且次数确定', () async {
+    final store = DelayedSenkaStore();
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    controller.setTargetSenka(100);
+    await store.firstSaveStarted.future;
+    controller.accept(
+      event('/kcsapi/api_get_member/basic', {
+        'api_member_id': 123,
+        'api_nickname': '矧',
+        'api_experience': 100000,
+      }),
+    );
+    controller.setTargetSenka(200);
+    store.releaseFirstSave.complete();
+    await controller.idle;
+
+    expect(store.saveCount, 2);
+    expect(store.saved?.toJson(), controller.state.toJson());
+  });
+
+  test('延迟加载期间同步更新不会被 initialize 旧档覆盖', () async {
+    final store = DelayedLoadSenkaStore(
+      SenkaState.forMonth('2026-08').copyWith(nickname: '旧档'),
+    );
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    final initializing = controller.initialize();
+    await store.loadStarted.future;
+    controller.setTargetSenka(100);
+    store.releaseLoad.complete();
+    await initializing;
+    await controller.idle;
+
+    expect(controller.state.nickname, isEmpty);
+    expect(controller.state.targetSenka, 100);
+    expect(store.saveCount, 1);
+    expect(store.saved?.toJson(), controller.state.toJson());
+  });
+
+  test('初始化加载失败保持空状态且后续操作可恢复', () async {
+    final store = RecoveringSenkaStore(failLoadCount: 1);
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    await controller.initialize();
+    controller.setTargetSenka(100);
+    await controller.idle;
+
+    expect(controller.state.targetSenka, 100);
+    expect(store.saveCount, 1);
+    expect(store.saved?.toJson(), controller.state.toJson());
+  });
+
+  test('dispose 后等待已开始保存但不处理排队 accept', () async {
+    final store = DelayedSenkaStore();
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    controller.setTargetSenka(100);
+    await store.firstSaveStarted.future;
+    controller.accept(
+      event('/kcsapi/api_get_member/basic', {
+        'api_member_id': 123,
+        'api_nickname': '不应处理',
+        'api_experience': 100000,
+      }),
+    );
+    controller.dispose();
+    store.releaseFirstSave.complete();
+    await controller.idle;
+
+    expect(controller.state.nickname, isEmpty);
+    expect(store.saveCount, 1);
     expect(store.saved?.toJson(), controller.state.toJson());
   });
 
@@ -654,6 +785,63 @@ class MemorySenkaStore implements SenkaStore {
   Future<void> save(SenkaState state) async {
     saved = state;
     saveCount++;
+  }
+}
+
+class RecoveringSenkaStore extends MemorySenkaStore {
+  RecoveringSenkaStore({this.failLoadCount = 0, this.failSaveCount = 0});
+
+  int failLoadCount;
+  int failSaveCount;
+  int saveAttempts = 0;
+
+  @override
+  Future<SenkaState?> load() async {
+    if (failLoadCount > 0) {
+      failLoadCount--;
+      throw StateError('load failed');
+    }
+    return super.load();
+  }
+
+  @override
+  Future<void> save(SenkaState state) async {
+    saveAttempts++;
+    if (failSaveCount > 0) {
+      failSaveCount--;
+      throw StateError('save failed');
+    }
+    await super.save(state);
+  }
+}
+
+class DelayedSenkaStore extends MemorySenkaStore {
+  final firstSaveStarted = Completer<void>();
+  final releaseFirstSave = Completer<void>();
+  bool _delayed = false;
+
+  @override
+  Future<void> save(SenkaState state) async {
+    if (!_delayed) {
+      _delayed = true;
+      firstSaveStarted.complete();
+      await releaseFirstSave.future;
+    }
+    await super.save(state);
+  }
+}
+
+class DelayedLoadSenkaStore extends MemorySenkaStore {
+  DelayedLoadSenkaStore(super.saved);
+
+  final loadStarted = Completer<void>();
+  final releaseLoad = Completer<void>();
+
+  @override
+  Future<SenkaState?> load() async {
+    loadStarted.complete();
+    await releaseLoad.future;
+    return super.load();
   }
 }
 

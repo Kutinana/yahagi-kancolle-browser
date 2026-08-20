@@ -469,6 +469,10 @@ class SenkaState {
 
   factory SenkaState.fromJson(Object? value) {
     if (value is! Map) return SenkaState.forMonth(currentSenkaMonthKey());
+    final storedMonthKey = '${value['monthKey'] ?? ''}';
+    final monthKey = parseSenkaMonthKey(storedMonthKey) == null
+        ? currentSenkaMonthKey()
+        : storedMonthKey;
     final rawDays = value['days'];
     final rawRanking = value['rankingHistory'];
     final rawSortieStats = value['sortieStats'];
@@ -513,7 +517,7 @@ class SenkaState {
       }
     }
     return SenkaState(
-      monthKey: '${value['monthKey'] ?? currentSenkaMonthKey()}',
+      monthKey: monthKey,
       serverOrigin: '${value['serverOrigin'] ?? ''}',
       memberId: _int(value['memberId']),
       nickname: '${value['nickname'] ?? ''}',
@@ -566,11 +570,17 @@ class SenkaState {
 }
 
 SenkaState migrateSenkaStateToMonth(SenkaState state, String monthKey) {
-  if (monthKey.compareTo(state.monthKey) <= 0) return state;
-  final previous = _monthParts(state.monthKey);
-  final next = _monthParts(monthKey);
-  final sameYear = previous != null && next != null && previous.$1 == next.$1;
-  final sameQuarter = sameYear && (previous.$2 - 1) ~/ 3 == (next.$2 - 1) ~/ 3;
+  final next = parseSenkaMonthKey(monthKey);
+  if (next == null) return state;
+  final previous = parseSenkaMonthKey(state.monthKey);
+  if (previous != null && _compareSenkaMonths(next, previous) <= 0) {
+    return state;
+  }
+  final sameQuarter =
+      senkaQuarterlyCycleKey(state.monthKey) ==
+      senkaQuarterlyCycleKey(monthKey);
+  final sameAnnual =
+      senkaAnnualCycleKey(state.monthKey) == senkaAnnualCycleKey(monthKey);
   final questStatuses = <int, SenkaRewardStatus>{};
   for (final entry in state.questStatuses.entries) {
     final item = senkaQuestById(entry.key);
@@ -578,7 +588,7 @@ SenkaState migrateSenkaStateToMonth(SenkaState state, String monthKey) {
     final keep = switch (item.category) {
       SenkaRewardCategory.eo => false,
       SenkaRewardCategory.quarterly => sameQuarter,
-      SenkaRewardCategory.annual => sameYear,
+      SenkaRewardCategory.annual => sameAnnual,
       SenkaRewardCategory.oneTime => true,
     };
     if (keep) questStatuses[entry.key] = entry.value;
@@ -594,13 +604,38 @@ SenkaState migrateSenkaStateToMonth(SenkaState state, String monthKey) {
   );
 }
 
-(int, int)? _monthParts(String value) {
+({int year, int month})? parseSenkaMonthKey(String value) {
   final match = RegExp(r'^(\d{4})-(\d{2})$').firstMatch(value);
   if (match == null) return null;
   final year = int.parse(match.group(1)!);
   final month = int.parse(match.group(2)!);
-  return month >= 1 && month <= 12 ? (year, month) : null;
+  return month >= 1 && month <= 12 ? (year: year, month: month) : null;
 }
+
+String? senkaQuarterlyCycleKey(String monthKey) {
+  final month = parseSenkaMonthKey(monthKey);
+  if (month == null) return null;
+  final (year, startMonth) = switch (month.month) {
+    1 || 2 => (month.year - 1, 12),
+    >= 3 && <= 5 => (month.year, 3),
+    >= 6 && <= 8 => (month.year, 6),
+    >= 9 && <= 11 => (month.year, 9),
+    _ => (month.year, 12),
+  };
+  return '${year.toString().padLeft(4, '0')}-${startMonth.toString().padLeft(2, '0')}';
+}
+
+String? senkaAnnualCycleKey(String monthKey) {
+  final month = parseSenkaMonthKey(monthKey);
+  if (month == null) return null;
+  final startYear = month.month >= 6 ? month.year : month.year - 1;
+  return '${startYear.toString().padLeft(4, '0')}-06';
+}
+
+int _compareSenkaMonths(
+  ({int year, int month}) left,
+  ({int year, int month}) right,
+) => (left.year * 12 + left.month).compareTo(right.year * 12 + right.month);
 
 SenkaActiveSortie? _activeSortie(
   Object? value,

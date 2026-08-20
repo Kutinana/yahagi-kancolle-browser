@@ -41,7 +41,12 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
 
   Future<void> initialize() async {
     final revisionAtStart = _revision;
-    final loaded = await store.load();
+    final SenkaState? loaded;
+    try {
+      loaded = await store.load();
+    } catch (_) {
+      return;
+    }
     if (_disposed || loaded == null || _revision != revisionAtStart) return;
     final month = currentSenkaMonthKey(_now());
     final migrated = migrateSenkaStateToMonth(loaded, month);
@@ -49,7 +54,7 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     final revision = ++_revision;
     notifyListeners();
     if (!identical(migrated, loaded)) {
-      _queue = _queue.then((_) => _saveIfCurrent(migrated, revision));
+      _enqueue(() => _saveIfCurrent(migrated, revision));
       await _queue;
     }
   }
@@ -57,7 +62,7 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
   @override
   void accept(CapturedApiEvent event) {
     if (_disposed) return;
-    _queue = _queue.then((_) async {
+    _enqueue(() async {
       if (_disposed) return;
       final next = _reducer.reduce(_state, event);
       if (identical(next, _state)) return;
@@ -123,7 +128,15 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     _state = next;
     final revision = ++_revision;
     notifyListeners();
-    _queue = _queue.then((_) => _saveIfCurrent(next, revision));
+    _enqueue(() => _saveIfCurrent(next, revision));
+  }
+
+  void _enqueue(Future<void> Function() operation) {
+    final scheduled = _queue.then<void>(
+      (_) => operation(),
+      onError: (Object _, StackTrace _) => operation(),
+    );
+    _queue = scheduled.then<void>((_) {}, onError: (Object _, StackTrace _) {});
   }
 
   Future<void> _saveIfCurrent(SenkaState snapshot, int revision) async {

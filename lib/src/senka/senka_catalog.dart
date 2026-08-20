@@ -221,7 +221,12 @@ String senkaServerName(String origin) {
       uri.host.isEmpty) {
     return '未知服务器';
   }
-  final match = RegExp(r'^w(\d{2})[a-z]?(?:\.|$)').firstMatch(uri.host);
+  final host = uri.host;
+  final validHost =
+      RegExp(r'^w\d{2}[a-z]?$').hasMatch(host) ||
+      RegExp(r'^w\d{2}[a-z]?\.kancolle-server\.com$').hasMatch(host);
+  if (!validHost) return '未知服务器';
+  final match = RegExp(r'^w(\d{2})').firstMatch(host);
   if (match == null) return '未知服务器';
   return _senkaServerNames['w${match.group(1)}'] ?? '未知服务器';
 }

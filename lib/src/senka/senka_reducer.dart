@@ -28,7 +28,13 @@ class SenkaReducer {
 
   SenkaState reduce(SenkaState state, CapturedApiEvent event) {
     final monthKey = currentSenkaMonthKey(event.capturedAt);
-    if (monthKey.compareTo(state.monthKey) < 0) return state;
+    final stateMonth = parseSenkaMonthKey(state.monthKey);
+    final eventMonth = parseSenkaMonthKey(monthKey)!;
+    if (stateMonth != null &&
+        (eventMonth.year * 12 + eventMonth.month) <
+            (stateMonth.year * 12 + stateMonth.month)) {
+      return state;
+    }
     var current = migrateSenkaStateToMonth(state, monthKey);
     if (_isSortieLifecyclePath(event.path) &&
         current.latestSortieEventAt != null &&
