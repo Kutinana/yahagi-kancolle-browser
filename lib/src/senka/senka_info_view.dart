@@ -24,7 +24,7 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final horizontal = constraints.maxWidth > constraints.maxHeight;
+      final horizontal = constraints.maxWidth > constraints.maxHeight * 1.15;
       final server = _ServerOverview(
         state: widget.state,
         compact: widget.compact,
@@ -48,9 +48,21 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
               key: const Key('senka-info-left'),
               child: Column(
                 children: [
-                  Expanded(flex: 3, child: server),
+                  Expanded(
+                    flex: 3,
+                    child: SizedBox(
+                      key: const Key('senka-info-server'),
+                      child: server,
+                    ),
+                  ),
                   SizedBox(height: gap),
-                  Expanded(flex: 7, child: ranking),
+                  Expanded(
+                    flex: 7,
+                    child: SizedBox(
+                      key: const Key('senka-info-ranking'),
+                      child: ranking,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -63,15 +75,19 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
         child: Column(
           children: [
             SizedBox(
-              key: const Key('senka-info-left'),
+              key: const Key('senka-info-server'),
               height: 150,
               child: server,
             ),
             SizedBox(height: gap),
-            SizedBox(height: 330, child: ranking),
+            SizedBox(
+              key: const Key('senka-info-ranking'),
+              height: 330,
+              child: ranking,
+            ),
             SizedBox(height: gap),
             SizedBox(
-              key: const Key('senka-info-right'),
+              key: const Key('senka-info-sorties'),
               height: 300,
               child: sorties,
             ),
@@ -349,6 +365,7 @@ class _SortiePanel extends StatelessWidget {
   }
 
   Widget _sortieData(SenkaSortieStats stats) => SizedBox(
+    key: Key('senka-sortie-row-${stats.mapKey}'),
     height: compact ? 30 : 38,
     child: DecoratedBox(
       decoration: BoxDecoration(

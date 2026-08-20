@@ -40,7 +40,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final horizontal = constraints.maxWidth > constraints.maxHeight;
+      final horizontal = constraints.maxWidth > constraints.maxHeight * 1.15;
       final overview = _overview();
       final tasks = _tasks();
       final gap = widget.compact ? 4.0 : 10.0;
@@ -90,18 +90,6 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
       widget.state,
       now: widget.now,
     );
-    final plannedEoCount = senkaEoCatalog
-        .where(
-          (item) =>
-              widget.state.eoStatuses[item.id] == SenkaRewardStatus.planned,
-        )
-        .length;
-    final plannedQuestCount = senkaQuestCatalog
-        .where(
-          (item) =>
-              widget.state.questStatuses[item.id] == SenkaRewardStatus.planned,
-        )
-        .length;
     final gapText = result.gap > 0
         ? '距离目标还差 ${senkaNumber(result.gap)} 战果'
         : '已超出 ${senkaNumber(result.over)} 战果';
@@ -154,8 +142,16 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                   Expanded(
                     child: Row(
                       children: [
-                        _metric('已勾选 EO', '$plannedEoCount'),
-                        _metric('已勾选战果任务', '$plannedQuestCount'),
+                        _metric(
+                          '已勾选 EO',
+                          '+${senkaNumber(result.plannedEo)}',
+                          key: const Key('senka-metric-planned-eo'),
+                        ),
+                        _metric(
+                          '已勾选战果任务',
+                          '+${senkaNumber(result.plannedQuest)}',
+                          key: const Key('senka-metric-planned-quest'),
+                        ),
                       ],
                     ),
                   ),
@@ -247,8 +243,9 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
     ],
   );
 
-  Widget _metric(String label, String value) => Expanded(
+  Widget _metric(String label, String value, {Key? key}) => Expanded(
     child: Container(
+      key: key,
       margin: const EdgeInsets.symmetric(horizontal: 2),
       padding: EdgeInsets.all(widget.compact ? 5 : 8),
       decoration: BoxDecoration(
@@ -339,7 +336,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                 ),
                 Expanded(
                   child: Text(
-                    '合计：${senkaNumber(result.projected)} 战果',
+                    '合计：${senkaNumber(result.plannedEo + result.plannedQuest)} 战果',
                     maxLines: 1,
                     textAlign: TextAlign.right,
                     style: _footerStyle().copyWith(color: senkaGold),
@@ -492,11 +489,14 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                 ),
                 if (status == SenkaRewardStatus.completed)
                   Positioned(
-                    key: Key('senka-strike-$keyPrefix-${item.id}'),
                     left: 0,
                     right: 0,
                     top: (widget.compact ? 27 : 34) / 2 - .5,
-                    child: Container(height: 1, color: color),
+                    child: Container(
+                      key: Key('senka-strike-$keyPrefix-${item.id}'),
+                      height: 1,
+                      color: color,
+                    ),
                   ),
               ],
             ),

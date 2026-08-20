@@ -4,6 +4,7 @@ import 'package:yahagi_kancolle_browser/src/senka/senka_controller.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_store.dart';
+import 'package:yahagi_kancolle_browser/src/senka/senka_ui.dart';
 
 void main() {
   late SenkaController controller;
@@ -61,6 +62,14 @@ void main() {
     expect(rects.every((rect) => rect.height >= 36), isTrue);
     expect(tabColor(tester, 'info'), const Color(0xffd7a957));
     expect(tabColor(tester, 'calendar'), isNot(const Color(0xffd7a957)));
+    await tester.tap(find.byKey(const Key('senka-tab-calendar')));
+    await tester.pump();
+    expect(tabColor(tester, 'calendar'), senkaGold);
+    expect(tabColor(tester, 'info'), isNot(senkaGold));
+    await tester.tap(find.byKey(const Key('senka-tab-calculator')));
+    await tester.pump();
+    expect(tabColor(tester, 'calculator'), senkaGold);
+    expect(tabColor(tester, 'calendar'), isNot(senkaGold));
   });
 
   testWidgets('信息页横屏左右等宽，方形与竖屏顺序滚动', (tester) async {
@@ -69,11 +78,30 @@ void main() {
     final right = tester.getRect(find.byKey(const Key('senka-info-right')));
     expect(left.width, closeTo(right.width, 1));
     expect(left.left, lessThan(right.left));
+    final server = tester.getRect(find.byKey(const Key('senka-info-server')));
+    final ranking = tester.getRect(find.byKey(const Key('senka-info-ranking')));
+    expect(server.height / (server.height + ranking.height), closeTo(.30, .02));
 
     await pumpSenka(tester, controller, const Size(720, 720));
-    final serverY = tester.getTopLeft(find.text('服务器概况')).dy;
-    final rankingY = tester.getTopLeft(find.text('战果排名')).dy;
-    expect(serverY, lessThan(rankingY));
+    final verticalColumn = tester.widget<Column>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Column &&
+            widget.children.any(
+              (child) => child.key == const Key('senka-info-server'),
+            ),
+      ),
+    );
+    expect(
+      verticalColumn.children
+          .map((child) => child.key)
+          .whereType<ValueKey<String>>(),
+      const [
+        Key('senka-info-server'),
+        Key('senka-info-ranking'),
+        Key('senka-info-sorties'),
+      ],
+    );
     await tester.ensureVisible(find.text('出击海域统计'));
     expect(find.text('出击海域统计'), findsOneWidget);
     expect(find.byType(Scrollable), findsWidgets);
@@ -93,18 +121,56 @@ void main() {
     expect(find.textContaining('撤退'), findsNothing);
   });
 
-  testWidgets('统计默认隐藏隐藏项，显示后可取消并支持收藏置顶', (tester) async {
+  testWidgets('统计数据行同字号同中线且操作按钮完整位于行内', (tester) async {
+    await pumpSenka(tester, controller, const Size(1280, 680));
+    final row = find.byKey(const Key('senka-sortie-row-1-1'));
+    final texts = tester
+        .widgetList<Text>(find.descendant(of: row, matching: find.byType(Text)))
+        .toList();
+    expect(texts.map((text) => text.style?.fontSize).toSet(), hasLength(1));
+    final centers = [
+      for (final text in texts) tester.getCenter(find.byWidget(text)).dy,
+    ];
+    expect(
+      centers.every((center) => (center - centers.first).abs() <= 1),
+      isTrue,
+    );
+    expect(texts[3].maxLines, 1);
+    expect(texts[4].maxLines, 1);
+    final rowRect = tester.getRect(row);
+    for (final key in const ['senka-favorite-1-1', 'senka-hide-1-1']) {
+      final rect = tester.getRect(find.byKey(Key(key)));
+      expect(rowRect.contains(rect.topLeft), isTrue);
+      expect(rowRect.contains(rect.bottomRight), isTrue);
+    }
+  });
+
+  testWidgets('统计默认隐藏隐藏项，收藏实际置顶且关闭开关恢复已取消隐藏项', (tester) async {
     await pumpSenka(tester, controller, const Size(1280, 680));
     expect(find.text('2-1'), findsNothing);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('senka-sortie-row-1-1'))).dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('senka-sortie-row-3-2'))).dy,
+      ),
+    );
+    await tester.tap(find.byKey(const Key('senka-favorite-3-2')));
+    await tester.pump();
+    expect(
+      tester.getTopLeft(find.byKey(const Key('senka-sortie-row-3-2'))).dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('senka-sortie-row-1-1'))).dy,
+      ),
+    );
     await tester.tap(find.byKey(const Key('senka-show-hidden')));
     await tester.pump();
     expect(find.text('2-1'), findsOneWidget);
     await tester.tap(find.byKey(const Key('senka-hide-2-1')));
     await tester.pump();
     expect(controller.state.hiddenSortieMapKeys, isNot(contains('2-1')));
-    await tester.tap(find.byKey(const Key('senka-favorite-1-1')));
+    await tester.tap(find.byKey(const Key('senka-show-hidden')));
     await tester.pump();
-    expect(controller.state.favoriteSortieMapKeys, contains('1-1'));
+    expect(find.text('2-1'), findsOneWidget);
   });
 
   testWidgets('排名保留固定线和当前行变化行为', (tester) async {
@@ -203,6 +269,7 @@ void main() {
   });
 
   testWidgets('四组任务完整、胶囊三态和整宽中线可辨识', (tester) async {
+    final semantics = tester.ensureSemantics();
     await pumpCalculator(tester, controller, const Size(1280, 680));
     for (final title in ['EO 战果奖励', '季度战果任务', '年度战果任务', '单次战果任务']) {
       expect(find.text(title), findsOneWidget);
@@ -211,6 +278,9 @@ void main() {
     expect(find.text('機動部隊決戦'), findsOneWidget);
     expect(find.text('火球炮'), findsOneWidget);
     final toggle = find.byKey(const Key('senka-toggle-quest-854'));
+    expect(rewardColor(tester, toggle), senkaYellow.withValues(alpha: .13));
+    expect(rewardTooltip(tester, toggle), contains('计划放置'));
+    expect(find.bySemanticsLabel(RegExp('前段作战，计划放置')), findsOneWidget);
     expect(
       find.descendant(of: toggle, matching: find.text('✕')),
       findsOneWidget,
@@ -218,6 +288,9 @@ void main() {
     await tester.tap(toggle);
     await tester.pump();
     expect(controller.state.questStatuses[854], SenkaRewardStatus.planned);
+    expect(rewardColor(tester, toggle), senkaGreen.withValues(alpha: .13));
+    expect(rewardTooltip(tester, toggle), contains('计划完成（计预计）'));
+    expect(find.bySemanticsLabel(RegExp('前段作战，计划完成（计预计）')), findsOneWidget);
     expect(
       find.descendant(of: toggle, matching: find.text('✓')),
       findsOneWidget,
@@ -225,20 +298,78 @@ void main() {
     await tester.tap(toggle);
     await tester.pump();
     expect(controller.state.questStatuses[854], SenkaRewardStatus.completed);
+    expect(rewardColor(tester, toggle), senkaMuted.withValues(alpha: .13));
+    expect(rewardTooltip(tester, toggle), contains('已完成'));
+    expect(find.bySemanticsLabel(RegExp('前段作战，已完成')), findsOneWidget);
     expect(find.byKey(const Key('senka-strike-quest-854')), findsOneWidget);
+    final chipRect = tester.getRect(toggle);
+    final strikeRect = tester.getRect(
+      find.byKey(const Key('senka-strike-quest-854')),
+    );
+    expect((chipRect.left - strikeRect.left).abs(), lessThanOrEqualTo(1));
+    expect((chipRect.right - strikeRect.right).abs(), lessThanOrEqualTo(1));
     expect(find.descendant(of: toggle, matching: find.text('✓')), findsNothing);
+    semantics.dispose();
   });
 
-  testWidgets('计算页 footer 分列计划奖励并给出合计', (tester) async {
+  testWidgets('当前战果不计入无计划奖励时的 footer 合计', (tester) async {
     await pumpCalculator(tester, controller, const Size(1280, 680));
-    expect(find.textContaining('计划 EO 战果奖励 +'), findsOneWidget);
-    expect(find.textContaining('计划任务战果奖励 +'), findsOneWidget);
-    expect(find.textContaining('合计：'), findsOneWidget);
+    expect(find.text('计划 EO 战果奖励 +0.00'), findsOneWidget);
+    expect(find.text('计划任务战果奖励 +0.00'), findsOneWidget);
+    expect(find.text('合计：0.00 战果'), findsOneWidget);
+  });
+
+  testWidgets('概况与 footer 只汇总 planned 奖励金额并使用两位小数', (tester) async {
+    final mixedController = SenkaController(
+      store: MemorySenkaStore(
+        sampleState().copyWith(
+          eoStatuses: const {
+            15: SenkaRewardStatus.planned,
+            25: SenkaRewardStatus.completed,
+            35: SenkaRewardStatus.deferred,
+          },
+          questStatuses: const {
+            854: SenkaRewardStatus.planned,
+            888: SenkaRewardStatus.completed,
+            893: SenkaRewardStatus.deferred,
+          },
+        ),
+      ),
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+    addTearDown(mixedController.dispose);
+    await mixedController.initialize();
+    await pumpCalculator(tester, mixedController, const Size(1280, 680));
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('senka-metric-planned-eo')),
+        matching: find.text('+75.00'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('senka-metric-planned-quest')),
+        matching: find.text('+350.00'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('计划 EO 战果奖励 +75.00'), findsOneWidget);
+    expect(find.text('计划任务战果奖励 +350.00'), findsOneWidget);
+    expect(find.text('合计：425.00 战果'), findsOneWidget);
   });
 }
 
 Color? tabColor(WidgetTester tester, String name) =>
     tester.widget<Material>(find.byKey(Key('senka-tab-$name'))).color;
+
+Color? rewardColor(WidgetTester tester, Finder toggle) =>
+    tester.widget<Material>(toggle).color;
+
+String rewardTooltip(WidgetTester tester, Finder toggle) => tester
+    .widget<Tooltip>(find.ancestor(of: toggle, matching: find.byType(Tooltip)))
+    .message!;
 
 Future<void> pumpCalculator(
   WidgetTester tester,
@@ -291,6 +422,14 @@ SenkaState sampleState() => SenkaState.forMonth('2026-08').copyWith(
       sorties: 5,
       bossArrivals: 4,
       sWins: 3,
+      aWins: 1,
+    ),
+    '3-2': SenkaSortieStats(
+      areaId: 3,
+      mapNo: 2,
+      sorties: 8,
+      bossArrivals: 7,
+      sWins: 6,
       aWins: 1,
     ),
   },
