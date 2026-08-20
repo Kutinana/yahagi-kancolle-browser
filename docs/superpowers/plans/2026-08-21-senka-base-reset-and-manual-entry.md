@@ -304,3 +304,27 @@ flutter analyze lib/src/senka lib/src/settings/data_settings_page.dart lib/src/s
 - [ ] **步骤 5：完成相关回归**
 
 运行战果与设置专项测试、精确静态分析及 `git diff --check`，随后重新安装 Debug 版本验收，不构建 release APK。
+
+### 任务 6：校准当前玩家排名变化基准
+
+**文件：**
+- 修改：`lib/src/senka/senka_controller.dart`
+- 测试：`test/senka_controller_test.dart`
+
+- [ ] **步骤 1：用旧的 51624.2186 本地快照复现负变化**
+
+在归零与手动填写测试中加入两条玩家排名快照和固定排名快照；归零前最新本地基准为 `51624.2186`，断言归零后变化为 `0.00`。
+
+- [ ] **步骤 2：运行聚焦测试验证红灯**
+
+运行：`flutter test test/senka_controller_test.dart --plain-name "归零和手动填写只替换本月素战果并继续自动累计"`。
+
+预期：FAIL，实际变化仍是巨额负数。
+
+- [ ] **步骤 3：实现最新玩家快照基准替换**
+
+在 `setBaseSenka` 生成新日记录后，仅复制并替换 `rankingHistory['player']` 最后一条快照的 `localSenkaAtCapture`，值取校正后的 `monthRecorded`；保留快照其余字段和其他历史。
+
+- [ ] **步骤 4：验证校准后继续自动累计**
+
+断言归零和手动填写后变化均为 `0.00`，后续增加 `0.70` 素战果后变化为 `+0.70`；同时断言固定排名和更早玩家快照未变化。
