@@ -470,7 +470,8 @@ class SenkaState {
   factory SenkaState.fromJson(Object? value) {
     if (value is! Map) return SenkaState.forMonth(currentSenkaMonthKey());
     final storedMonthKey = '${value['monthKey'] ?? ''}';
-    final monthKey = parseSenkaMonthKey(storedMonthKey) == null
+    final storedMonth = parseSenkaMonthKey(storedMonthKey);
+    final monthKey = storedMonth == null
         ? currentSenkaMonthKey()
         : storedMonthKey;
     final rawDays = value['days'];
@@ -516,7 +517,7 @@ class SenkaState {
         questStatuses[id] = SenkaRewardStatus.completed;
       }
     }
-    return SenkaState(
+    final restored = SenkaState(
       monthKey: monthKey,
       serverOrigin: '${value['serverOrigin'] ?? ''}',
       memberId: _int(value['memberId']),
@@ -565,6 +566,21 @@ class SenkaState {
         '${value['rankingUpdatedAt'] ?? ''}',
       )?.toUtc(),
       updatedAt: DateTime.tryParse('${value['updatedAt'] ?? ''}')?.toUtc(),
+    );
+    if (storedMonth != null) return restored;
+    return SenkaState.forMonth(monthKey).copyWith(
+      serverOrigin: restored.serverOrigin,
+      memberId: restored.memberId,
+      nickname: restored.nickname,
+      magic: restored.magic,
+      questStatuses: {
+        for (final entry in restored.questStatuses.entries)
+          if (senkaQuestById(entry.key)?.category ==
+              SenkaRewardCategory.oneTime)
+            entry.key: entry.value,
+      },
+      favoriteSortieMapKeys: restored.favoriteSortieMapKeys,
+      hiddenSortieMapKeys: restored.hiddenSortieMapKeys,
     );
   }
 }

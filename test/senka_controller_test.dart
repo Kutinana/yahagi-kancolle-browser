@@ -336,6 +336,80 @@ void main() {
       }
       expect(SenkaState.fromJson({'monthKey': '2026-08'}).monthKey, '2026-08');
     });
+
+    test('非法 monthKey 回退当前月时只保留跨月安全字段', () {
+      for (final invalid in ['garbage', '2026-8', '9999-99']) {
+        final state = SenkaState.fromJson({
+          'monthKey': invalid,
+          'serverOrigin': 'https://w14p.kancolle-server.com',
+          'memberId': 123,
+          'nickname': '矢矧',
+          'magic': 61,
+          'latestExperience': 100000,
+          'days': {
+            '2026-08-10': {'experience': 3.85, 'eo': 75, 'quest': 80},
+          },
+          'eoStatuses': {'15': 'completed'},
+          'questStatuses': {
+            '854': 'completed',
+            '947': 'planned',
+            '949': 'completed',
+          },
+          'targetSenka': 3000,
+          'calculatorCurrentSenka': 1200,
+          'sortieStats': {
+            '1-5': {'areaId': 1, 'mapNo': 5, 'sorties': 1},
+          },
+          'latestSortieEventAt': '2026-08-10T01:00:00.000Z',
+          'lastSortieStartAt': '2026-08-10T01:00:00.000Z',
+          'lastSortieStartMapKey': '1-5',
+          'activeSortie': {
+            'areaId': 1,
+            'mapNo': 5,
+            'bossCellNo': 4,
+            'bossArrived': false,
+            'startedAt': '2026-08-10T01:00:00.000Z',
+            'lastEventAt': '2026-08-10T01:00:00.000Z',
+          },
+          'favoriteSortieMapKeys': ['1-5'],
+          'hiddenSortieMapKeys': ['7-1'],
+          'rankingHistory': {
+            '5': [
+              {
+                'rank': 5,
+                'senka': 1000,
+                'capturedAt': '2026-08-10T00:00:00Z',
+                'localSenkaAtCapture': 0,
+              },
+            ],
+          },
+          'rankingUpdatedAt': '2026-08-10T00:00:00Z',
+          'updatedAt': '2026-08-10T01:00:00Z',
+        });
+
+        expect(state.monthKey, currentSenkaMonthKey(), reason: invalid);
+        expect(state.serverOrigin, 'https://w14p.kancolle-server.com');
+        expect(state.memberId, 123);
+        expect(state.nickname, '矢矧');
+        expect(state.magic, 61);
+        expect(state.questStatuses, {949: SenkaRewardStatus.completed});
+        expect(state.favoriteSortieMapKeys, {'1-5'});
+        expect(state.hiddenSortieMapKeys, {'7-1'});
+        expect(state.latestExperience, isNull);
+        expect(state.days, isEmpty);
+        expect(state.eoStatuses, isEmpty);
+        expect(state.targetSenka, 0);
+        expect(state.calculatorCurrentSenka, 0);
+        expect(state.sortieStats, isEmpty);
+        expect(state.activeSortie, isNull);
+        expect(state.latestSortieEventAt, isNull);
+        expect(state.lastSortieStartAt, isNull);
+        expect(state.lastSortieStartMapKey, isNull);
+        expect(state.rankingHistory, isEmpty);
+        expect(state.rankingUpdatedAt, isNull);
+        expect(state.updatedAt, isNull);
+      }
+    });
   });
 
   test('连续捕获只在下一帧通知一次', () async {
