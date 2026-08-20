@@ -309,10 +309,13 @@ void main() {
     expect(textSize(tester, find.text('经验')), 10);
   });
 
-  testWidgets('矩阵任务胶囊只切换完成状态且不提供详情跳转', (tester) async {
+  testWidgets('矩阵任务胶囊按三态循环且不提供详情跳转', (tester) async {
     await pumpSenka(tester, controller, const Size(1024, 600));
 
     expect(controller.state.completedQuestIds, isNot(contains(854)));
+    await tester.tap(find.byKey(const Key('senka-toggle-quest-854')));
+    await tester.pump();
+    expect(controller.state.questStatuses[854], SenkaRewardStatus.planned);
     await tester.tap(find.byKey(const Key('senka-toggle-quest-854')));
     await tester.pump();
     expect(controller.state.completedQuestIds, contains(854));

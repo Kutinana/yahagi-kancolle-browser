@@ -114,6 +114,27 @@ void main() {
     expect(player.rankDelta, 42);
     expect(player.rankDirection, SenkaRankDirection.up);
     expect(player.senka, 112);
+    expect(state.calculatorCurrentSenka, 112);
+  });
+
+  test('新的真实玩家排名覆盖手动当前战果且保留解密小数', () {
+    final encrypted = 1267 * 4568 * 97 + 1;
+    final state = reducer.reduce(
+      SenkaState.forMonth(
+        '2026-08',
+      ).copyWith(memberId: 123, nickname: '矢矧', calculatorCurrentSenka: 9999),
+      rankingEvent(
+        page: 40,
+        rows: [
+          rankingEncryptedRow(rank: 397, encrypted: encrypted, nickname: '矢矧'),
+        ],
+        atJst: DateTime(2026, 8, 10, 15),
+      ),
+    );
+
+    final expected = encrypted / 4568 / 97 - 73 - 18;
+    expect(state.calculatorCurrentSenka, expected);
+    expect(state.calculatorCurrentSenka, isNot(1176));
   });
 
   test('排名页自动推导变化后的解密系数，不需要手动校准', () {
@@ -176,12 +197,21 @@ void main() {
     expect(state.playerRankingRow.senkaDelta, closeTo(78.85, 0.0001));
   });
 
-  test('新月份事件清空月度完成状态但保留账号身份', () {
+  test('同季度新月份保留季度、年度、单次状态并重置月度状态', () {
     final old = SenkaState.forMonth('2026-07').copyWith(
       memberId: 123,
       nickname: '矢矧',
-      completedEoIds: {15},
-      completedQuestIds: {854},
+      serverOrigin: 'https://w01y.kancolle-server.com',
+      eoStatuses: const {15: SenkaRewardStatus.completed},
+      questStatuses: const {
+        854: SenkaRewardStatus.planned,
+        947: SenkaRewardStatus.completed,
+        949: SenkaRewardStatus.planned,
+      },
+      favoriteSortieMapKeys: const {'1-5'},
+      hiddenSortieMapKeys: const {'7-1'},
+      targetSenka: 3000,
+      calculatorCurrentSenka: 1000,
     );
     final next = reducer.reduce(
       old,
@@ -196,8 +226,74 @@ void main() {
 
     expect(next.monthKey, '2026-08');
     expect(next.completedEoIds, isEmpty);
-    expect(next.completedQuestIds, isEmpty);
+    expect(next.questStatuses, old.questStatuses);
     expect(next.memberId, 123);
+    expect(next.serverOrigin, old.serverOrigin);
+    expect(next.favoriteSortieMapKeys, {'1-5'});
+    expect(next.hiddenSortieMapKeys, {'7-1'});
+    expect(next.targetSenka, 0);
+    expect(next.calculatorCurrentSenka, 0);
+  });
+
+  test('季度边界重置季度状态但年度和单次保留，跨年再重置年度', () {
+    final september = SenkaState.forMonth('2026-09').copyWith(
+      questStatuses: const {
+        854: SenkaRewardStatus.completed,
+        947: SenkaRewardStatus.planned,
+        949: SenkaRewardStatus.completed,
+      },
+    );
+    final october = reducer.reduce(
+      september,
+      apiEvent(
+        '/kcsapi/api_get_member/basic',
+        const {},
+        atJst: DateTime(2026, 10, 1, 3),
+      ),
+    );
+    final january = reducer.reduce(
+      october.copyWith(
+        monthKey: '2026-12',
+        questStatuses: const {
+          854: SenkaRewardStatus.planned,
+          947: SenkaRewardStatus.completed,
+          949: SenkaRewardStatus.completed,
+        },
+      ),
+      apiEvent(
+        '/kcsapi/api_get_member/basic',
+        const {},
+        atJst: DateTime(2027, 1, 1, 3),
+      ),
+    );
+
+    expect(october.questStatuses, {
+      947: SenkaRewardStatus.planned,
+      949: SenkaRewardStatus.completed,
+    });
+    expect(january.questStatuses, {949: SenkaRewardStatus.completed});
+  });
+
+  test('支持事件保存非空服务器来源且空来源不覆盖', () {
+    var state = reducer.reduce(
+      SenkaState.forMonth('2026-08'),
+      apiEvent(
+        '/kcsapi/api_get_member/basic',
+        const {},
+        sourceOrigin: 'https://w14p.kancolle-server.com',
+        atJst: DateTime(2026, 8, 10, 3),
+      ),
+    );
+    state = reducer.reduce(
+      state,
+      apiEvent(
+        '/kcsapi/api_get_member/mapinfo',
+        const {},
+        atJst: DateTime(2026, 8, 10, 4),
+      ),
+    );
+
+    expect(state.serverOrigin, 'https://w14p.kancolle-server.com');
   });
 
   test('最后排名刷新时间取所有排名快照中的最新时间', () {
@@ -906,6 +1002,7 @@ CapturedApiEvent apiEvent(
   String path,
   Object? data, {
   Map<String, Object?> params = const {},
+  String sourceOrigin = '',
   required DateTime atJst,
 }) {
   return CapturedApiEvent(
@@ -913,6 +1010,7 @@ CapturedApiEvent apiEvent(
     requestParams: params,
     responseBody: jsonEncode({'api_result': 1, 'api_data': data}),
     source: CaptureSource.manual,
+    sourceOrigin: sourceOrigin,
     capturedAt: DateTime.utc(
       atJst.year,
       atJst.month,
@@ -976,6 +1074,16 @@ Map<String, Object?> rankingRow({
     'api_wuhnhojjxmke': (senka + 73 + 18) * magicRight[rank % 13] * actualMagic,
   };
 }
+
+Map<String, Object?> rankingEncryptedRow({
+  required int rank,
+  required int encrypted,
+  required String nickname,
+}) => {
+  'api_mxltvkpyuklh': rank,
+  'api_mtjmdcwtvhdr': nickname,
+  'api_wuhnhojjxmke': encrypted,
+};
 
 SenkaRankingSnapshot snapshotAt(DateTime capturedAt) => SenkaRankingSnapshot(
   rank: 1,

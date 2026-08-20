@@ -63,11 +63,26 @@ void main() {
         SenkaRewardCategory.oneTime,
       );
     });
+
+    test('服务器来源解析 w01 到 w20 且非法来源安全降级', () {
+      expect(
+        senkaServerName('https://w01y.kancolle-server.com'),
+        '横須賀鎮守府（横须贺）',
+      );
+      expect(senkaServerName('https://w01.kancolle-server.com'), '横須賀鎮守府（横须贺）');
+      expect(senkaServerName('https://w14p.kancolle-server.com'), '単冠湾泊地（单冠湾）');
+      expect(senkaServerName('https://w20i.kancolle-server.com'), '柱島泊地（柱岛）');
+      expect(senkaServerName('https://w21.invalid'), '未知服务器');
+      expect(senkaServerName('ftp://w01.kancolle-server.com'), '未知服务器');
+      expect(senkaServerName('not-an-origin'), '未知服务器');
+      expect(senkaServerName(''), '未知服务器');
+    });
   });
 
   group('战果状态持久化', () {
     test('新状态字段与出击统计完整往返', () {
       final original = SenkaState.forMonth('2026-08').copyWith(
+        serverOrigin: 'https://w14p.kancolle-server.com',
         eoStatuses: const {
           15: SenkaRewardStatus.planned,
           16: SenkaRewardStatus.completed,
@@ -94,6 +109,7 @@ void main() {
       );
 
       expect(restored.eoStatuses, original.eoStatuses);
+      expect(restored.serverOrigin, original.serverOrigin);
       expect(restored.questStatuses, original.questStatuses);
       expect(restored.targetSenka, 3500);
       expect(restored.calculatorCurrentSenka, 1234.5);
@@ -369,9 +385,21 @@ void main() {
 
   test('加载旧月份只保留账号身份并创建当月档案', () async {
     final store = MemorySenkaStore(
-      SenkaState.forMonth(
-        '2026-07',
-      ).copyWith(memberId: 123, nickname: '矢矧', completedEoIds: {15}),
+      SenkaState.forMonth('2026-07').copyWith(
+        memberId: 123,
+        nickname: '矢矧',
+        serverOrigin: 'https://w14p.kancolle-server.com',
+        completedEoIds: {15},
+        questStatuses: const {
+          854: SenkaRewardStatus.planned,
+          947: SenkaRewardStatus.completed,
+          949: SenkaRewardStatus.planned,
+        },
+        favoriteSortieMapKeys: const {'1-5'},
+        hiddenSortieMapKeys: const {'7-1'},
+        targetSenka: 3000,
+        calculatorCurrentSenka: 1200,
+      ),
     );
     final controller = SenkaController(
       store: store,
@@ -382,10 +410,22 @@ void main() {
 
     expect(controller.state.monthKey, '2026-08');
     expect(controller.state.memberId, 123);
+    expect(controller.state.serverOrigin, 'https://w14p.kancolle-server.com');
     expect(controller.state.completedEoIds, isEmpty);
+    expect(controller.state.questStatuses, {
+      854: SenkaRewardStatus.planned,
+      947: SenkaRewardStatus.completed,
+      949: SenkaRewardStatus.planned,
+    });
+    expect(controller.state.favoriteSortieMapKeys, {'1-5'});
+    expect(controller.state.hiddenSortieMapKeys, {'7-1'});
+    expect(controller.state.targetSenka, 0);
+    expect(controller.state.calculatorCurrentSenka, 0);
+    expect(store.saveCount, 1);
+    expect(store.saved, same(controller.state));
   });
 
-  test('手动切换 EO 和任务只改变完成状态不伪造日历记录', () async {
+  test('奖励按 deferred、planned、completed 循环且旧入口保持相同语义', () async {
     final store = MemorySenkaStore();
     final controller = SenkaController(
       store: store,
@@ -393,20 +433,88 @@ void main() {
     );
     await controller.initialize();
 
-    controller.toggleEo(15);
-    controller.toggleQuest(854);
+    controller.cycleEoReward(15);
+    controller.cycleQuestReward(854);
     await controller.idle;
 
-    expect(controller.state.completedEoIds, {15});
-    expect(controller.state.completedQuestIds, {854});
-    expect(controller.state.completedSenka, 425);
+    expect(controller.state.eoStatuses[15], SenkaRewardStatus.planned);
+    expect(controller.state.questStatuses[854], SenkaRewardStatus.planned);
+    expect(controller.state.completedSenka, 0);
     expect(controller.state.monthRecorded, 0);
 
     controller.toggleEo(15);
     controller.toggleQuest(854);
     await controller.idle;
-    expect(controller.state.completedEoIds, isEmpty);
-    expect(controller.state.completedQuestIds, isEmpty);
+    expect(controller.state.completedEoIds, {15});
+    expect(controller.state.completedQuestIds, {854});
+
+    controller.cycleEoReward(15);
+    controller.cycleQuestReward(854);
+    await controller.idle;
+    expect(controller.state.eoStatuses[15], SenkaRewardStatus.deferred);
+    expect(controller.state.questStatuses[854], SenkaRewardStatus.deferred);
+    expect(store.saveCount, 6);
+  });
+
+  test('实时战果输入过滤非有限值、负数归零且重复值不保存', () async {
+    final store = MemorySenkaStore();
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    controller.setCurrentSenka(1234.567);
+    controller.setTargetSenka(-50);
+    controller.setCurrentSenka(double.nan);
+    controller.setTargetSenka(double.infinity);
+    controller.setCurrentSenka(1234.567);
+    controller.setTargetSenka(0);
+    await controller.idle;
+
+    expect(controller.state.calculatorCurrentSenka, 1234.567);
+    expect(controller.state.targetSenka, 0);
+    expect(store.saveCount, 1);
+  });
+
+  test('海域收藏和隐藏仅操作已有统计的规范 key 且互不排斥', () async {
+    final store = MemorySenkaStore();
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+    controller.accept(
+      event('/kcsapi/api_req_map/start', {
+        'api_maparea_id': 1,
+        'api_mapinfo_no': 5,
+        'api_no': 1,
+        'api_bosscell_no': 4,
+      }),
+    );
+    await controller.idle;
+    final baseline = store.saveCount;
+
+    controller.toggleSortieFavorite('1-5');
+    controller.toggleSortieHidden('1-5');
+    controller.toggleSortieFavorite('01-05');
+    controller.toggleSortieHidden('7-1');
+    await controller.idle;
+
+    expect(controller.state.favoriteSortieMapKeys, {'1-5'});
+    expect(controller.state.hiddenSortieMapKeys, {'1-5'});
+    expect(controller.state.sortieStats['1-5']?.sorties, 1);
+    expect(store.saveCount, baseline + 2);
+  });
+
+  test('同月初始化不产生多余保存', () async {
+    final store = MemorySenkaStore(SenkaState.forMonth('2026-08'));
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    await controller.initialize();
+
+    expect(store.saveCount, 0);
   });
 
   test('同一时间捕获的多条数据依次入档不丢失', () async {
@@ -440,7 +548,7 @@ void main() {
     expect(store.saveCount, 2);
   });
 
-  test('EO 自动同步后仍可由玩家手动取消', () async {
+  test('EO 自动同步后旧入口继续循环到 deferred', () async {
     final controller = SenkaController(
       store: MemorySenkaStore(),
       now: () => DateTime.utc(2026, 8, 10),
@@ -458,7 +566,7 @@ void main() {
 
     controller.toggleEo(15);
     await controller.idle;
-    expect(controller.state.completedEoIds, isEmpty);
+    expect(controller.state.eoStatuses[15], SenkaRewardStatus.deferred);
     controller.dispose();
   });
 }

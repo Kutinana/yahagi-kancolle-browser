@@ -42,14 +42,10 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     final loaded = await store.load();
     if (_disposed || loaded == null) return;
     final month = currentSenkaMonthKey(_now());
-    _state = loaded.monthKey == month
-        ? loaded
-        : SenkaState.forMonth(month).copyWith(
-            memberId: loaded.memberId,
-            nickname: loaded.nickname,
-            magic: loaded.magic,
-          );
+    final migrated = migrateSenkaStateToMonth(loaded, month);
+    _state = migrated;
     notifyListeners();
+    if (!identical(migrated, loaded)) await store.save(migrated);
   }
 
   @override
@@ -65,19 +61,56 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     });
   }
 
-  void toggleEo(int id) {
+  void cycleEoReward(int id) {
     if (senkaEoById(id) == null || _disposed) return;
-    final values = Set<int>.of(_state.completedEoIds);
-    values.contains(id) ? values.remove(id) : values.add(id);
-    _replace(_state.copyWith(completedEoIds: values));
+    final values = Map<int, SenkaRewardStatus>.of(_state.eoStatuses);
+    values[id] = (values[id] ?? SenkaRewardStatus.deferred).next;
+    _replace(_state.copyWith(eoStatuses: values));
   }
 
-  void toggleQuest(int id) {
+  void cycleQuestReward(int id) {
     if (senkaQuestById(id) == null || _disposed) return;
-    final values = Set<int>.of(_state.completedQuestIds);
-    values.contains(id) ? values.remove(id) : values.add(id);
-    _replace(_state.copyWith(completedQuestIds: values));
+    final values = Map<int, SenkaRewardStatus>.of(_state.questStatuses);
+    values[id] = (values[id] ?? SenkaRewardStatus.deferred).next;
+    _replace(_state.copyWith(questStatuses: values));
   }
+
+  void toggleEo(int id) => cycleEoReward(id);
+
+  void toggleQuest(int id) => cycleQuestReward(id);
+
+  void setCurrentSenka(double value) {
+    if (!value.isFinite || _disposed) return;
+    final normalized = value < 0 ? 0.0 : value;
+    if (_state.calculatorCurrentSenka == normalized) return;
+    _replace(_state.copyWith(calculatorCurrentSenka: normalized));
+  }
+
+  void setTargetSenka(double value) {
+    if (!value.isFinite || _disposed) return;
+    final normalized = value < 0 ? 0.0 : value;
+    if (_state.targetSenka == normalized) return;
+    _replace(_state.copyWith(targetSenka: normalized));
+  }
+
+  void toggleSortieFavorite(String mapKey) {
+    if (!_canToggleSortieMap(mapKey)) return;
+    final values = Set<String>.of(_state.favoriteSortieMapKeys);
+    values.contains(mapKey) ? values.remove(mapKey) : values.add(mapKey);
+    _replace(_state.copyWith(favoriteSortieMapKeys: values));
+  }
+
+  void toggleSortieHidden(String mapKey) {
+    if (!_canToggleSortieMap(mapKey)) return;
+    final values = Set<String>.of(_state.hiddenSortieMapKeys);
+    values.contains(mapKey) ? values.remove(mapKey) : values.add(mapKey);
+    _replace(_state.copyWith(hiddenSortieMapKeys: values));
+  }
+
+  bool _canToggleSortieMap(String mapKey) =>
+      !_disposed &&
+      RegExp(r'^[1-9]\d*-[1-9]\d*$').hasMatch(mapKey) &&
+      _state.sortieStats.containsKey(mapKey);
 
   void _replace(SenkaState next) {
     _state = next;

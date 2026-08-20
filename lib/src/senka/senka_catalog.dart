@@ -190,3 +190,38 @@ SenkaCatalogItem? _catalogById(List<SenkaCatalogItem> catalog, int id) {
   }
   return null;
 }
+
+const _senkaServerNames = <String, String>{
+  'w01': '横須賀鎮守府（横须贺）',
+  'w02': '呉鎮守府（吴）',
+  'w03': '佐世保鎮守府（佐世保）',
+  'w04': '舞鶴鎮守府（舞鹤）',
+  'w05': '大湊警備府（大凑）',
+  'w06': 'トラック泊地（特鲁克）',
+  'w07': 'リンガ泊地（林加）',
+  'w08': 'ラバウル基地（拉包尔）',
+  'w09': 'ショートランド泊地（肖特兰）',
+  'w10': 'ブイン基地（布因）',
+  'w11': 'タウイタウイ泊地（塔威塔威）',
+  'w12': 'パラオ泊地（帕劳）',
+  'w13': 'ブルネイ泊地（文莱）',
+  'w14': '単冠湾泊地（单冠湾）',
+  'w15': '幌筵泊地（幌筵）',
+  'w16': '宿毛湾泊地（宿毛湾）',
+  'w17': '鹿屋基地（鹿屋）',
+  'w18': '岩川基地（岩川）',
+  'w19': '佐伯湾泊地（佐伯湾）',
+  'w20': '柱島泊地（柱岛）',
+};
+
+String senkaServerName(String origin) {
+  final uri = Uri.tryParse(origin);
+  if (uri == null ||
+      !const {'http', 'https'}.contains(uri.scheme) ||
+      uri.host.isEmpty) {
+    return '未知服务器';
+  }
+  final match = RegExp(r'^w(\d{2})[a-z]?(?:\.|$)').firstMatch(uri.host);
+  if (match == null) return '未知服务器';
+  return _senkaServerNames['w${match.group(1)}'] ?? '未知服务器';
+}

@@ -29,19 +29,16 @@ class SenkaReducer {
   SenkaState reduce(SenkaState state, CapturedApiEvent event) {
     final monthKey = currentSenkaMonthKey(event.capturedAt);
     if (monthKey.compareTo(state.monthKey) < 0) return state;
-    var current = state.monthKey == monthKey
-        ? state
-        : SenkaState.forMonth(monthKey).copyWith(
-            memberId: state.memberId,
-            nickname: state.nickname,
-            magic: state.magic,
-          );
+    var current = migrateSenkaStateToMonth(state, monthKey);
     if (_isSortieLifecyclePath(event.path) &&
         current.latestSortieEventAt != null &&
         event.capturedAt.isBefore(current.latestSortieEventAt!)) {
       return current;
     }
     if (!supportsPath(event.path)) return current;
+    if (event.sourceOrigin.isNotEmpty) {
+      current = current.copyWith(serverOrigin: event.sourceOrigin);
+    }
 
     final data = GameApiDecoder.decodeEventData(event);
     if (data is! Map) {
@@ -328,6 +325,7 @@ class SenkaReducer {
         entry.key: List<SenkaRankingSnapshot>.of(entry.value),
     };
     final page = _int(data['api_disp_page']);
+    double? playerSenka;
     for (final raw in rows) {
       final rank = _int(raw['api_mxltvkpyuklh']);
       final encrypted = _int(raw['api_wuhnhojjxmke']);
@@ -340,6 +338,7 @@ class SenkaReducer {
       }
       if ('${raw['api_mtjmdcwtvhdr'] ?? ''}' == state.nickname) {
         key = 'player';
+        playerSenka = senka;
       }
       if (key == null) continue;
       final snapshots = history.putIfAbsent(key, () => []);
@@ -353,7 +352,10 @@ class SenkaReducer {
       );
       if (snapshots.length > 2) snapshots.removeAt(0);
     }
-    return decryptState.copyWith(rankingHistory: history);
+    return decryptState.copyWith(
+      rankingHistory: history,
+      calculatorCurrentSenka: playerSenka,
+    );
   }
 
   double _decrypt(SenkaState state, int rank, int encrypted) {

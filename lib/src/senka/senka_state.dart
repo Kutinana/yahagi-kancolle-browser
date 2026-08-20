@@ -224,6 +224,7 @@ class SenkaRankingRow {
 class SenkaState {
   SenkaState({
     required this.monthKey,
+    this.serverOrigin = '',
     this.memberId = 0,
     this.nickname = '',
     this.magic = 0,
@@ -266,6 +267,7 @@ class SenkaState {
       SenkaState(monthKey: monthKey);
 
   final String monthKey;
+  final String serverOrigin;
   final int memberId;
   final String nickname;
   final int magic;
@@ -365,6 +367,7 @@ class SenkaState {
 
   SenkaState copyWith({
     String? monthKey,
+    String? serverOrigin,
     int? memberId,
     String? nickname,
     int? magic,
@@ -401,6 +404,7 @@ class SenkaState {
             : _replaceCompleted(this.questStatuses, completedQuestIds));
     return SenkaState(
       monthKey: monthKey ?? this.monthKey,
+      serverOrigin: serverOrigin ?? this.serverOrigin,
       memberId: memberId ?? this.memberId,
       nickname: nickname ?? this.nickname,
       magic: magic ?? this.magic,
@@ -432,6 +436,7 @@ class SenkaState {
 
   Map<String, Object?> toJson() => {
     'monthKey': monthKey,
+    'serverOrigin': serverOrigin,
     'memberId': memberId,
     'nickname': nickname,
     'magic': magic,
@@ -509,6 +514,7 @@ class SenkaState {
     }
     return SenkaState(
       monthKey: '${value['monthKey'] ?? currentSenkaMonthKey()}',
+      serverOrigin: '${value['serverOrigin'] ?? ''}',
       memberId: _int(value['memberId']),
       nickname: '${value['nickname'] ?? ''}',
       magic: _int(value['magic']),
@@ -557,6 +563,43 @@ class SenkaState {
       updatedAt: DateTime.tryParse('${value['updatedAt'] ?? ''}')?.toUtc(),
     );
   }
+}
+
+SenkaState migrateSenkaStateToMonth(SenkaState state, String monthKey) {
+  if (monthKey.compareTo(state.monthKey) <= 0) return state;
+  final previous = _monthParts(state.monthKey);
+  final next = _monthParts(monthKey);
+  final sameYear = previous != null && next != null && previous.$1 == next.$1;
+  final sameQuarter = sameYear && (previous.$2 - 1) ~/ 3 == (next.$2 - 1) ~/ 3;
+  final questStatuses = <int, SenkaRewardStatus>{};
+  for (final entry in state.questStatuses.entries) {
+    final item = senkaQuestById(entry.key);
+    if (item == null) continue;
+    final keep = switch (item.category) {
+      SenkaRewardCategory.eo => false,
+      SenkaRewardCategory.quarterly => sameQuarter,
+      SenkaRewardCategory.annual => sameYear,
+      SenkaRewardCategory.oneTime => true,
+    };
+    if (keep) questStatuses[entry.key] = entry.value;
+  }
+  return SenkaState.forMonth(monthKey).copyWith(
+    serverOrigin: state.serverOrigin,
+    memberId: state.memberId,
+    nickname: state.nickname,
+    magic: state.magic,
+    questStatuses: questStatuses,
+    favoriteSortieMapKeys: state.favoriteSortieMapKeys,
+    hiddenSortieMapKeys: state.hiddenSortieMapKeys,
+  );
+}
+
+(int, int)? _monthParts(String value) {
+  final match = RegExp(r'^(\d{4})-(\d{2})$').firstMatch(value);
+  if (match == null) return null;
+  final year = int.parse(match.group(1)!);
+  final month = int.parse(match.group(2)!);
+  return month >= 1 && month <= 12 ? (year, month) : null;
 }
 
 SenkaActiveSortie? _activeSortie(
