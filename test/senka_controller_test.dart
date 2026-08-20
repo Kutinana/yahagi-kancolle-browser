@@ -453,7 +453,8 @@ void main() {
     await controller.idle;
     expect(controller.state.eoStatuses[15], SenkaRewardStatus.deferred);
     expect(controller.state.questStatuses[854], SenkaRewardStatus.deferred);
-    expect(store.saveCount, 6);
+    expect(store.saveCount, greaterThan(0));
+    expect(store.saved?.toJson(), controller.state.toJson());
   });
 
   test('实时战果输入过滤非有限值、负数归零且重复值不保存', () async {
@@ -502,7 +503,8 @@ void main() {
     expect(controller.state.favoriteSortieMapKeys, {'1-5'});
     expect(controller.state.hiddenSortieMapKeys, {'1-5'});
     expect(controller.state.sortieStats['1-5']?.sorties, 1);
-    expect(store.saveCount, baseline + 2);
+    expect(store.saveCount, greaterThan(baseline));
+    expect(store.saved?.toJson(), controller.state.toJson());
   });
 
   test('同月初始化不产生多余保存', () async {
@@ -546,6 +548,74 @@ void main() {
     expect(controller.state.nickname, '矢矧');
     expect(controller.state.completedEoIds, {15});
     expect(store.saveCount, 2);
+  });
+
+  test('accept 后同步设置目标不会由旧快照覆盖身份', () async {
+    final store = MemorySenkaStore();
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    controller.accept(
+      event('/kcsapi/api_get_member/basic', {
+        'api_member_id': 123,
+        'api_nickname': '矢矧',
+        'api_experience': 100000,
+      }),
+    );
+    controller.setTargetSenka(100);
+    await controller.idle;
+
+    expect(controller.state.nickname, '矢矧');
+    expect(controller.state.targetSenka, 100);
+    expect(store.saved?.toJson(), controller.state.toJson());
+  });
+
+  test('accept 后同步循环奖励不会由旧快照覆盖身份', () async {
+    final store = MemorySenkaStore();
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    controller.accept(
+      event('/kcsapi/api_get_member/basic', {
+        'api_member_id': 123,
+        'api_nickname': '矢矧',
+        'api_experience': 100000,
+      }),
+    );
+    controller.cycleQuestReward(854);
+    await controller.idle;
+
+    expect(controller.state.nickname, '矢矧');
+    expect(controller.state.questStatuses[854], SenkaRewardStatus.planned);
+    expect(store.saved?.toJson(), controller.state.toJson());
+  });
+
+  test('连续同步设置后 accept 基于最新状态并持久化最终快照', () async {
+    final store = MemorySenkaStore();
+    final controller = SenkaController(
+      store: store,
+      now: () => DateTime.utc(2026, 8, 10),
+    );
+
+    controller
+      ..setTargetSenka(100)
+      ..setTargetSenka(200)
+      ..accept(
+        event('/kcsapi/api_get_member/basic', {
+          'api_member_id': 123,
+          'api_nickname': '矢矧',
+          'api_experience': 100000,
+        }),
+      );
+    await controller.idle;
+
+    expect(controller.state.nickname, '矢矧');
+    expect(controller.state.targetSenka, 200);
+    expect(store.saved?.toJson(), controller.state.toJson());
   });
 
   test('EO 自动同步后旧入口继续循环到 deferred', () async {
