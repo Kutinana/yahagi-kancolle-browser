@@ -25,14 +25,11 @@ class SenkaCalculationResult {
     final difference = state.targetSenka - projected;
     final gap = math.max(difference, 0).toDouble();
     final over = math.max(-difference, 0).toDouble();
-    final lastDay = DateTime(currentDate.year, currentDate.month + 1, 0);
-    final remainingDays =
-        lastDay
-            .difference(
-              DateTime(currentDate.year, currentDate.month, currentDate.day),
-            )
-            .inDays +
-        1;
+    final remainingDays = senkaRemainingDaysInMonth(
+      currentDate.year,
+      currentDate.month,
+      currentDate.day,
+    );
     final safeRemainingDays = math.max(remainingDays, 1);
     final dailyRequired = gap / safeRemainingDays;
     final today = state.day(currentDate);
@@ -67,6 +64,9 @@ class SenkaCalculationResult {
   final double dailyRequired;
   final double todayRemaining;
 }
+
+int senkaRemainingDaysInMonth(int year, int month, int day) =>
+    DateTime.utc(year, month + 1, 0).day - day + 1;
 
 double _plannedSenka(
   Map<int, SenkaRewardStatus> statuses,

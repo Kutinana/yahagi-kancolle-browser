@@ -3,6 +3,12 @@ import 'package:yahagi_kancolle_browser/src/senka/senka_calculation.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
 
 void main() {
+  test('剩余天数只按年月日计算而不依赖本地时区时长', () {
+    expect(senkaRemainingDaysInMonth(2026, 3, 8), 24);
+    expect(senkaRemainingDaysInMonth(2026, 11, 1), 30);
+    expect(senkaRemainingDaysInMonth(2028, 2, 28), 2);
+  });
+
   test('按计划奖励与当月进度计算目标差额和含当天日均', () {
     final state = SenkaState.forMonth('2026-08').copyWith(
       targetSenka: 3000,

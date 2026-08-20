@@ -2,6 +2,8 @@ import 'senka_catalog.dart';
 
 enum SenkaRankDirection { up, down, same, unknown }
 
+String senkaMapKey(int areaId, int mapNo) => '$areaId-$mapNo';
+
 enum SenkaRewardStatus {
   deferred,
   planned,
@@ -38,6 +40,8 @@ class SenkaSortieStats {
   final int bossArrivals;
   final int sWins;
   final int aWins;
+
+  String get mapKey => senkaMapKey(areaId, mapNo);
 
   SenkaSortieStats copyWith({
     int? areaId,
@@ -163,24 +167,38 @@ class SenkaRankingRow {
 }
 
 class SenkaState {
-  const SenkaState({
+  SenkaState({
     required this.monthKey,
     this.memberId = 0,
     this.nickname = '',
     this.magic = 0,
     this.latestExperience,
     this.days = const {},
-    this.eoStatuses = const {},
-    this.questStatuses = const {},
+    Map<int, SenkaRewardStatus> eoStatuses = const {},
+    Map<int, SenkaRewardStatus> questStatuses = const {},
     this.targetSenka = 0,
     this.calculatorCurrentSenka = 0,
-    this.sortieStats = const {},
-    this.favoriteSortieMapKeys = const {},
-    this.hiddenSortieMapKeys = const {},
-    this.rankingHistory = const {},
+    Map<String, SenkaSortieStats> sortieStats = const {},
+    Set<String> favoriteSortieMapKeys = const {},
+    Set<String> hiddenSortieMapKeys = const {},
+    Map<String, List<SenkaRankingSnapshot>> rankingHistory = const {},
     this.rankingUpdatedAt,
     this.updatedAt,
-  });
+  }) : eoStatuses = Map.unmodifiable(Map.of(eoStatuses)),
+       questStatuses = Map.unmodifiable(Map.of(questStatuses)),
+       sortieStats = Map.unmodifiable(
+         _normalizedSortieStats(sortieStats.values),
+       ),
+       favoriteSortieMapKeys = Set.unmodifiable(
+         _normalizedMapKeys(favoriteSortieMapKeys),
+       ),
+       hiddenSortieMapKeys = Set.unmodifiable(
+         _normalizedMapKeys(hiddenSortieMapKeys),
+       ),
+       rankingHistory = Map<String, List<SenkaRankingSnapshot>>.unmodifiable({
+         for (final entry in rankingHistory.entries)
+           entry.key: List<SenkaRankingSnapshot>.unmodifiable(entry.value),
+       });
 
   factory SenkaState.forMonth(String monthKey) =>
       SenkaState(monthKey: monthKey);
@@ -367,13 +385,19 @@ class SenkaState {
     final rawDays = value['days'];
     final rawRanking = value['rankingHistory'];
     final rawSortieStats = value['sortieStats'];
+    final hasEoStatuses = value.containsKey('eoStatuses');
+    final hasQuestStatuses = value.containsKey('questStatuses');
     final eoStatuses = _statusMap(value['eoStatuses']);
     final questStatuses = _statusMap(value['questStatuses']);
-    for (final id in _intSet(value['completedEoIds'])) {
-      eoStatuses[id] = SenkaRewardStatus.completed;
+    if (!hasEoStatuses) {
+      for (final id in _intSet(value['completedEoIds'])) {
+        eoStatuses[id] = SenkaRewardStatus.completed;
+      }
     }
-    for (final id in _intSet(value['completedQuestIds'])) {
-      questStatuses[id] = SenkaRewardStatus.completed;
+    if (!hasQuestStatuses) {
+      for (final id in _intSet(value['completedQuestIds'])) {
+        questStatuses[id] = SenkaRewardStatus.completed;
+      }
     }
     return SenkaState(
       monthKey: '${value['monthKey'] ?? currentSenkaMonthKey()}',
@@ -393,14 +417,9 @@ class SenkaState {
       questStatuses: questStatuses,
       targetSenka: _double(value['targetSenka']),
       calculatorCurrentSenka: _double(value['calculatorCurrentSenka']),
-      sortieStats: rawSortieStats is Map
-          ? {
-              for (final entry in rawSortieStats.entries)
-                '${entry.key}': SenkaSortieStats.fromJson(entry.value),
-            }
-          : const {},
-      favoriteSortieMapKeys: _stringSet(value['favoriteSortieMapKeys']),
-      hiddenSortieMapKeys: _stringSet(value['hiddenSortieMapKeys']),
+      sortieStats: _sortieStatsMap(rawSortieStats),
+      favoriteSortieMapKeys: _mapKeySet(value['favoriteSortieMapKeys']),
+      hiddenSortieMapKeys: _mapKeySet(value['hiddenSortieMapKeys']),
       rankingHistory: rawRanking is Map
           ? {
               for (final entry in rawRanking.entries)
@@ -463,6 +482,39 @@ Map<int, SenkaRewardStatus> _replaceCompleted(
   return result;
 }
 
-Set<String> _stringSet(Object? value) => value is List
-    ? value.map((item) => '$item').where((item) => item.isNotEmpty).toSet()
-    : <String>{};
+Map<String, SenkaSortieStats> _sortieStatsMap(Object? value) {
+  if (value is! Map) return <String, SenkaSortieStats>{};
+  return _normalizedSortieStats(value.values.map(SenkaSortieStats.fromJson));
+}
+
+Map<String, SenkaSortieStats> _normalizedSortieStats(
+  Iterable<SenkaSortieStats> values,
+) {
+  final result = <String, SenkaSortieStats>{};
+  for (final stats in values) {
+    if (stats.areaId > 0 && stats.mapNo > 0) {
+      result[stats.mapKey] = stats;
+    }
+  }
+  return result;
+}
+
+Set<String> _mapKeySet(Object? value) {
+  if (value is! List) return <String>{};
+  return _normalizedMapKeys(value);
+}
+
+Set<String> _normalizedMapKeys(Iterable<Object?> values) {
+  final result = <String>{};
+  for (final raw in values) {
+    final match = RegExp(r'^(\d+)-(\d+)$').firstMatch('$raw');
+    if (match == null) continue;
+    final areaId = int.tryParse(match.group(1)!);
+    final mapNo = int.tryParse(match.group(2)!);
+    if (areaId == null || mapNo == null || areaId <= 0 || mapNo <= 0) {
+      continue;
+    }
+    result.add(senkaMapKey(areaId, mapNo));
+  }
+  return result;
+}

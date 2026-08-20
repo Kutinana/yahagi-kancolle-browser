@@ -27,12 +27,28 @@ void main() {
 
     test('目录区分 EO、季度、年度与单次奖励', () {
       expect(senkaEoCatalog, isNotEmpty);
+      expect(
+        senkaEoCatalog.every((item) => item.category == SenkaRewardCategory.eo),
+        isTrue,
+      );
       expect(senkaQuarterlyQuestCatalog, hasLength(7));
+      expect(
+        senkaQuarterlyQuestCatalog.every(
+          (item) => item.category == SenkaRewardCategory.quarterly,
+        ),
+        isTrue,
+      );
       expect(
         senkaAnnualQuestCatalog.map(
           (item) => (item.id, item.label, item.senka),
         ),
         containsAll([(947, 'AL作戦', 480), (948, '機動部隊決戦', 600)]),
+      );
+      expect(
+        senkaAnnualQuestCatalog.every(
+          (item) => item.category == SenkaRewardCategory.annual,
+        ),
+        isTrue,
       );
       expect(senkaOneTimeQuestCatalog, hasLength(1));
       expect(senkaOneTimeQuestCatalog.single.id, 949);
@@ -42,6 +58,10 @@ void main() {
       );
       expect(senkaOneTimeQuestCatalog.single.shortName, '火球炮');
       expect(senkaOneTimeQuestCatalog.single.senka, 800);
+      expect(
+        senkaOneTimeQuestCatalog.single.category,
+        SenkaRewardCategory.oneTime,
+      );
     });
   });
 
@@ -69,7 +89,9 @@ void main() {
         hiddenSortieMapKeys: const {'7-1'},
       );
 
-      final restored = SenkaState.fromJson(original.toJson());
+      final restored = SenkaState.fromJson(
+        jsonDecode(jsonEncode(original.toJson())),
+      );
 
       expect(restored.eoStatuses, original.eoStatuses);
       expect(restored.questStatuses, original.questStatuses);
@@ -83,7 +105,131 @@ void main() {
       expect(restored.hiddenSortieMapKeys, {'7-1'});
     });
 
-    test('旧完成集合迁移为 completed 且未知单项状态降级 deferred', () {
+    test('状态对传入和暴露的集合执行防御性不可变复制', () {
+      final eoStatuses = <int, SenkaRewardStatus>{
+        15: SenkaRewardStatus.planned,
+      };
+      final questStatuses = <int, SenkaRewardStatus>{
+        854: SenkaRewardStatus.completed,
+      };
+      final sortieStats = <String, SenkaSortieStats>{
+        'wrong': const SenkaSortieStats(areaId: 1, mapNo: 5, sorties: 1),
+      };
+      final favorites = <String>{'1-5', 'bad', '0-1'};
+      final hidden = <String>{'7-1', '1-0'};
+      final ranking = <String, List<SenkaRankingSnapshot>>{
+        '5': [
+          SenkaRankingSnapshot(
+            rank: 5,
+            senka: 1000,
+            capturedAt: DateTime.utc(2026, 8, 10),
+            localSenkaAtCapture: 100,
+          ),
+        ],
+      };
+      final state = SenkaState(
+        monthKey: '2026-08',
+        eoStatuses: eoStatuses,
+        questStatuses: questStatuses,
+        sortieStats: sortieStats,
+        favoriteSortieMapKeys: favorites,
+        hiddenSortieMapKeys: hidden,
+        rankingHistory: ranking,
+      );
+
+      eoStatuses[16] = SenkaRewardStatus.completed;
+      questStatuses.clear();
+      sortieStats.clear();
+      favorites.clear();
+      hidden.clear();
+      ranking['5']!.clear();
+
+      expect(state.eoStatuses.keys, {15});
+      expect(state.questStatuses.keys, {854});
+      expect(state.sortieStats.keys, {'1-5'});
+      expect(state.favoriteSortieMapKeys, {'1-5'});
+      expect(state.hiddenSortieMapKeys, {'7-1'});
+      expect(state.rankingHistory['5'], hasLength(1));
+      expect(
+        () => state.eoStatuses[16] = SenkaRewardStatus.completed,
+        throwsUnsupportedError,
+      );
+      expect(() => state.questStatuses.clear(), throwsUnsupportedError);
+      expect(() => state.sortieStats.clear(), throwsUnsupportedError);
+      expect(() => state.favoriteSortieMapKeys.clear(), throwsUnsupportedError);
+      expect(() => state.hiddenSortieMapKeys.clear(), throwsUnsupportedError);
+      expect(() => state.rankingHistory['5']!.clear(), throwsUnsupportedError);
+    });
+
+    test('新状态字段存在时优先于旧完成集合', () {
+      final state = SenkaState.fromJson(
+        jsonDecode(
+          jsonEncode({
+            'monthKey': '2026-08',
+            'eoStatuses': {'15': 'planned'},
+            'questStatuses': {'854': 'deferred'},
+            'completedEoIds': [15],
+            'completedQuestIds': [854],
+          }),
+        ),
+      );
+
+      expect(state.eoStatuses[15], SenkaRewardStatus.planned);
+      expect(state.questStatuses[854], SenkaRewardStatus.deferred);
+      expect(state.completedEoIds, isEmpty);
+      expect(state.completedQuestIds, isEmpty);
+    });
+
+    test('兼容 copyWith 完成集合只替换 completed 并保留其他状态', () {
+      final state = SenkaState.forMonth('2026-08').copyWith(
+        eoStatuses: const {
+          15: SenkaRewardStatus.planned,
+          16: SenkaRewardStatus.completed,
+        },
+        questStatuses: const {
+          854: SenkaRewardStatus.deferred,
+          947: SenkaRewardStatus.completed,
+        },
+      );
+
+      final copied = state.copyWith(
+        completedEoIds: {25},
+        completedQuestIds: {948},
+      );
+
+      expect(copied.eoStatuses[15], SenkaRewardStatus.planned);
+      expect(copied.eoStatuses.containsKey(16), isFalse);
+      expect(copied.eoStatuses[25], SenkaRewardStatus.completed);
+      expect(copied.questStatuses[854], SenkaRewardStatus.deferred);
+      expect(copied.questStatuses.containsKey(947), isFalse);
+      expect(copied.questStatuses[948], SenkaRewardStatus.completed);
+    });
+
+    test('地图 key 统一生成且反序列化规范化并过滤非法收藏隐藏项', () {
+      expect(senkaMapKey(1, 5), '1-5');
+      expect(const SenkaSortieStats(areaId: 7, mapNo: 1).mapKey, '7-1');
+
+      final state = SenkaState.fromJson(
+        jsonDecode(
+          jsonEncode({
+            'monthKey': '2026-08',
+            'sortieStats': {
+              'wrong': {'areaId': 1, 'mapNo': 5, 'sorties': 3},
+              'invalid': {'areaId': 0, 'mapNo': 2, 'sorties': 9},
+            },
+            'favoriteSortieMapKeys': ['1-5', '01-05', '0-1', 'bad'],
+            'hiddenSortieMapKeys': ['7-1', '1-0', '-1-2'],
+          }),
+        ),
+      );
+
+      expect(state.sortieStats.keys, {'1-5'});
+      expect(state.sortieStats['1-5']?.sorties, 3);
+      expect(state.favoriteSortieMapKeys, {'1-5'});
+      expect(state.hiddenSortieMapKeys, {'7-1'});
+    });
+
+    test('旧字段缺失时迁移完成集合且未知单项状态降级 deferred', () {
       final state = SenkaState.fromJson({
         'monthKey': '2026-08',
         'memberId': 123,
@@ -108,17 +254,27 @@ void main() {
         },
       });
 
-      expect(state.eoStatuses[15], SenkaRewardStatus.completed);
       expect(state.eoStatuses[16], SenkaRewardStatus.deferred);
-      expect(state.questStatuses[854], SenkaRewardStatus.completed);
       expect(state.questStatuses[947], SenkaRewardStatus.planned);
-      expect(state.completedEoIds, {15});
-      expect(state.completedQuestIds, {854});
+      expect(state.completedEoIds, isEmpty);
+      expect(state.completedQuestIds, isEmpty);
       expect(state.memberId, 123);
       expect(state.nickname, '矢矧');
       expect(state.magic, 36);
       expect(state.day(DateTime(2026, 8, 10)).experience, 3.85);
       expect(state.rankingHistory['5'], hasLength(1));
+
+      final migrated = SenkaState.fromJson(
+        jsonDecode(
+          jsonEncode({
+            'monthKey': '2026-08',
+            'completedEoIds': [15],
+            'completedQuestIds': [854],
+          }),
+        ),
+      );
+      expect(migrated.eoStatuses[15], SenkaRewardStatus.completed);
+      expect(migrated.questStatuses[854], SenkaRewardStatus.completed);
     });
   });
 
