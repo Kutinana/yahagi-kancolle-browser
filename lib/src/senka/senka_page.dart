@@ -34,7 +34,7 @@ class _SenkaPageState extends State<SenkaPage> {
             child: Column(
               children: [
                 SizedBox(
-                  height: compact ? 28 : 36,
+                  height: compact ? 40 : 44,
                   child: Row(
                     children: [
                       _tab('info', '战果信息', _SenkaSection.info, compact),
@@ -82,23 +82,29 @@ class _SenkaPageState extends State<SenkaPage> {
   Widget _tab(String keyName, String label, _SenkaSection value, bool compact) {
     final selected = section == value;
     return Expanded(
-      child: Material(
-        key: Key('senka-tab-$keyName'),
-        color: selected ? senkaGold : senkaPanelAlt,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: selected ? senkaGold : senkaLine),
-          borderRadius: BorderRadius.circular(compact ? 6 : 9),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => setState(() => section = value),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected ? senkaBackground : senkaText,
-                fontSize: compact ? 11 : 14,
-                fontWeight: FontWeight.w800,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        excludeSemantics: true,
+        child: Material(
+          key: Key('senka-tab-$keyName'),
+          color: selected ? senkaGold : senkaPanelAlt,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: selected ? senkaGold : senkaLine),
+            borderRadius: BorderRadius.circular(compact ? 6 : 9),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => setState(() => section = value),
+            child: Center(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected ? senkaBackground : senkaText,
+                  fontSize: compact ? 11 : 14,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),

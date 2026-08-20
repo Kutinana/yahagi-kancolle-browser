@@ -10,6 +10,7 @@ const senkaGold = Color(0xffd7a957);
 const senkaGreen = Color(0xff5dc9a5);
 const senkaYellow = Color(0xffe4b34e);
 const senkaRed = Color(0xffec7777);
+const senkaWeekdayBackground = Color(0xff071923);
 
 String senkaNumber(num? value) =>
     value == null ? '--' : value.toStringAsFixed(2);

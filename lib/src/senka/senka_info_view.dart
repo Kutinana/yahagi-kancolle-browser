@@ -43,6 +43,7 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
       final gap = widget.compact ? 4.0 : 10.0;
       if (horizontal) {
         return Row(
+          key: const Key('senka-info-horizontal'),
           children: [
             Expanded(
               key: const Key('senka-info-left'),
@@ -72,6 +73,7 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
         );
       }
       return SingleChildScrollView(
+        key: const Key('senka-info-vertical'),
         child: Column(
           children: [
             SizedBox(
@@ -366,7 +368,7 @@ class _SortiePanel extends StatelessWidget {
 
   Widget _sortieData(SenkaSortieStats stats) => SizedBox(
     key: Key('senka-sortie-row-${stats.mapKey}'),
-    height: compact ? 30 : 38,
+    height: 40,
     child: DecoratedBox(
       decoration: BoxDecoration(
         color: state.favoriteSortieMapKeys.contains(stats.mapKey)
@@ -405,33 +407,64 @@ class _SortiePanel extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                InkWell(
-                  key: Key('senka-favorite-${stats.mapKey}'),
-                  onTap: () => controller.toggleSortieFavorite(stats.mapKey),
-                  child: Padding(
-                    padding: const EdgeInsets.all(5),
-                    child: Text(
-                      '★',
-                      style: _sortieStyle(compact).copyWith(
-                        color:
-                            state.favoriteSortieMapKeys.contains(stats.mapKey)
-                            ? senkaGold
-                            : senkaMuted,
+                Tooltip(
+                  message: '收藏海域 ${stats.mapKey}',
+                  child: Semantics(
+                    button: true,
+                    toggled: state.favoriteSortieMapKeys.contains(stats.mapKey),
+                    label: '收藏海域 ${stats.mapKey}',
+                    excludeSemantics: true,
+                    child: SizedBox(
+                      key: Key('senka-favorite-${stats.mapKey}'),
+                      width: 40,
+                      height: 40,
+                      child: InkWell(
+                        onTap: () =>
+                            controller.toggleSortieFavorite(stats.mapKey),
+                        child: Center(
+                          child: Text(
+                            '★',
+                            style: _sortieStyle(compact).copyWith(
+                              color:
+                                  state.favoriteSortieMapKeys.contains(
+                                    stats.mapKey,
+                                  )
+                                  ? senkaGold
+                                  : senkaMuted,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-                InkWell(
-                  key: Key('senka-hide-${stats.mapKey}'),
-                  onTap: () => controller.toggleSortieHidden(stats.mapKey),
-                  child: Padding(
-                    padding: const EdgeInsets.all(5),
-                    child: Text(
-                      '⊘',
-                      style: _sortieStyle(compact).copyWith(
-                        color: state.hiddenSortieMapKeys.contains(stats.mapKey)
-                            ? senkaRed
-                            : senkaMuted,
+                Tooltip(
+                  message: '隐藏海域 ${stats.mapKey}',
+                  child: Semantics(
+                    button: true,
+                    toggled: state.hiddenSortieMapKeys.contains(stats.mapKey),
+                    label: '隐藏海域 ${stats.mapKey}',
+                    excludeSemantics: true,
+                    child: SizedBox(
+                      key: Key('senka-hide-${stats.mapKey}'),
+                      width: 40,
+                      height: 40,
+                      child: InkWell(
+                        onTap: () =>
+                            controller.toggleSortieHidden(stats.mapKey),
+                        child: Center(
+                          child: Text(
+                            '⊘',
+                            style: _sortieStyle(compact).copyWith(
+                              color:
+                                  state.hiddenSortieMapKeys.contains(
+                                    stats.mapKey,
+                                  )
+                                  ? senkaRed
+                                  : senkaMuted,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

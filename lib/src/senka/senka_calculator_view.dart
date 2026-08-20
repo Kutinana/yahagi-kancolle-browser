@@ -30,6 +30,23 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
   late final TextEditingController targetController = TextEditingController(
     text: senkaNumber(widget.state.targetSenka),
   );
+
+  @override
+  void didUpdateWidget(covariant SenkaCalculatorView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncInput(currentController, widget.state.calculatorCurrentSenka);
+    _syncInput(targetController, widget.state.targetSenka);
+  }
+
+  void _syncInput(TextEditingController controller, double model) {
+    if (double.tryParse(controller.text) == model) return;
+    final text = senkaNumber(model);
+    controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
   @override
   void dispose() {
     currentController.dispose();
@@ -46,6 +63,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
       final gap = widget.compact ? 4.0 : 10.0;
       if (horizontal) {
         return Row(
+          key: const Key('senka-calculator-horizontal'),
           children: [
             Expanded(
               flex: 3,
@@ -66,6 +84,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
         );
       }
       return SingleChildScrollView(
+        key: const Key('senka-calculator-vertical'),
         child: Column(
           children: [
             SizedBox(
@@ -312,6 +331,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
             ),
           ),
           Container(
+            key: const Key('senka-calculator-footer'),
             height: widget.compact ? 28 : 38,
             decoration: const BoxDecoration(
               color: senkaPanelAlt,
@@ -391,7 +411,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                 for (final item in items)
                   SizedBox(
                     width: width,
-                    height: widget.compact ? 27 : 34,
+                    height: 40,
                     child: _reward(item, quest),
                   ),
               ],
@@ -422,6 +442,9 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
     return Semantics(
       label: '${item.label}，$statusLabel，${senkaNumber(item.senka)} 战果',
       button: true,
+      selected: status == SenkaRewardStatus.planned,
+      toggled: status == SenkaRewardStatus.planned,
+      excludeSemantics: true,
       child: Tooltip(
         message: '${item.label} · $statusLabel · +${senkaNumber(item.senka)}',
         child: Material(
@@ -491,7 +514,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    top: (widget.compact ? 27 : 34) / 2 - .5,
+                    top: 19.5,
                     child: Container(
                       key: Key('senka-strike-$keyPrefix-${item.id}'),
                       height: 1,

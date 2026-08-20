@@ -1,5 +1,8 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/senka/senka_calendar_view.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_controller.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
@@ -36,17 +39,34 @@ void main() {
       expect(find.text('2026年8月战果日历'), findsNothing);
       expect(find.text('目标战果'), findsNothing);
       expect(tester.takeException(), isNull);
+      final horizontal =
+          size == const Size(1280, 680) || size == const Size(844, 390);
+      expect(
+        find.byKey(Key('senka-info-${horizontal ? 'horizontal' : 'vertical'}')),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.byKey(const Key('senka-sortie-row-3-2')));
 
       await tester.tap(find.byKey(const Key('senka-tab-calendar')));
       await tester.pump();
       expect(find.text('2026年8月战果日历'), findsOneWidget);
       expect(find.text('服务器概况'), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('senka-day-detail')));
       expect(tester.takeException(), isNull);
 
       await tester.tap(find.byKey(const Key('senka-tab-calculator')));
       await tester.pump();
       expect(find.text('目标战果'), findsOneWidget);
       expect(find.text('2026年8月战果日历'), findsNothing);
+      expect(
+        find.byKey(
+          Key('senka-calculator-${horizontal ? 'horizontal' : 'vertical'}'),
+        ),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('senka-calculator-footer')),
+      );
       expect(tester.takeException(), isNull);
     });
   }
@@ -59,7 +79,7 @@ void main() {
     ];
     expect(rects[0].width, closeTo(rects[1].width, .01));
     expect(rects[1].width, closeTo(rects[2].width, .01));
-    expect(rects.every((rect) => rect.height >= 36), isTrue);
+    expect(rects.every((rect) => rect.height >= 40), isTrue);
     expect(tabColor(tester, 'info'), const Color(0xffd7a957));
     expect(tabColor(tester, 'calendar'), isNot(const Color(0xffd7a957)));
     await tester.tap(find.byKey(const Key('senka-tab-calendar')));
@@ -70,6 +90,31 @@ void main() {
     await tester.pump();
     expect(tabColor(tester, 'calculator'), senkaGold);
     expect(tabColor(tester, 'calendar'), isNot(senkaGold));
+  });
+
+  testWidgets('tabs 提供 button、selected 与可读标签语义', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpSenka(tester, controller, const Size(844, 390));
+    final info = tester.getSemantics(find.bySemanticsLabel('战果信息'));
+    expect(info.flagsCollection.isButton, isTrue);
+    expect(info.flagsCollection.isSelected, Tristate.isTrue);
+    await tester.tap(find.byKey(const Key('senka-tab-calendar')));
+    await tester.pump();
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('战果信息'))
+          .flagsCollection
+          .isSelected,
+      Tristate.isFalse,
+    );
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('战果日历'))
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+    semantics.dispose();
   });
 
   testWidgets('信息页横屏左右等宽，方形与竖屏顺序滚动', (tester) async {
@@ -140,9 +185,40 @@ void main() {
     final rowRect = tester.getRect(row);
     for (final key in const ['senka-favorite-1-1', 'senka-hide-1-1']) {
       final rect = tester.getRect(find.byKey(Key(key)));
-      expect(rowRect.contains(rect.topLeft), isTrue);
-      expect(rowRect.contains(rect.bottomRight), isTrue);
+      expect(rect.width, greaterThanOrEqualTo(36));
+      expect(rect.height, greaterThanOrEqualTo(36));
+      expect(rect.left, greaterThanOrEqualTo(rowRect.left));
+      expect(rect.top, greaterThanOrEqualTo(rowRect.top));
+      expect(rect.right, lessThanOrEqualTo(rowRect.right));
+      expect(rect.bottom, lessThanOrEqualTo(rowRect.bottom));
     }
+  });
+
+  testWidgets('统计操作提供 Tooltip、button 与 toggled 语义', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpSenka(tester, controller, const Size(1280, 680));
+    final favorite = find.bySemanticsLabel('收藏海域 1-1');
+    final hidden = find.bySemanticsLabel('隐藏海域 1-1');
+    expect(tester.getSemantics(favorite).flagsCollection.isButton, isTrue);
+    expect(
+      tester.getSemantics(favorite).flagsCollection.isToggled,
+      Tristate.isFalse,
+    );
+    expect(tester.getSemantics(hidden).flagsCollection.isButton, isTrue);
+    expect(
+      find.ancestor(
+        of: find.byKey(const Key('senka-favorite-1-1')),
+        matching: find.byType(Tooltip),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('senka-favorite-1-1')));
+    await tester.pump();
+    expect(
+      tester.getSemantics(favorite).flagsCollection.isToggled,
+      Tristate.isTrue,
+    );
+    semantics.dispose();
   });
 
   testWidgets('统计默认隐藏隐藏项，收藏实际置顶且关闭开关恢复已取消隐藏项', (tester) async {
@@ -184,6 +260,7 @@ void main() {
   });
 
   testWidgets('日历保留六乘七、周一开始、日期选择和两位小数详情', (tester) async {
+    final semantics = tester.ensureSemantics();
     await pumpSenka(tester, controller, const Size(1280, 680));
     await tester.tap(find.byKey(const Key('senka-tab-calendar')));
     await tester.pump();
@@ -206,6 +283,62 @@ void main() {
     expect(find.text('EO'), findsOneWidget);
     expect(find.text('任务'), findsOneWidget);
     expect(find.textContaining('本月已记录 3.80'), findsOneWidget);
+    final selectedDay = tester.getSemantics(
+      find.bySemanticsLabel('2026年8月10日，战果3.80'),
+    );
+    expect(selectedDay.flagsCollection.isButton, isTrue);
+    expect(selectedDay.flagsCollection.isSelected, Tristate.isTrue);
+    semantics.dispose();
+  });
+
+  testWidgets('日历跨月时按 now 或新月首日重置选择与详情', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCalendar(
+      tester,
+      sampleState(),
+      DateTime(2026, 8, 10),
+      const Size(800, 700),
+    );
+    await tester.tap(find.byKey(const Key('calendar-cell-15')));
+    await tester.pump();
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('2026年8月15日，战果0.00'))
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+    final september = SenkaState.forMonth(
+      '2026-09',
+    ).copyWith(days: {'2026-09-08': const SenkaDayRecord(experience: 5.5)});
+    await pumpCalendar(
+      tester,
+      september,
+      DateTime(2026, 9, 8),
+      const Size(800, 700),
+    );
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('2026年9月8日，战果5.50'))
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+    expect(find.text('+5.50'), findsOneWidget);
+    await pumpCalendar(
+      tester,
+      SenkaState.forMonth('2026-10'),
+      DateTime(2026, 9, 30),
+      const Size(800, 700),
+    );
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('2026年10月1日，战果0.00'))
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+    semantics.dispose();
   });
 
   testWidgets('计算页横屏始终三七双栏，方形为概况后任务矩阵', (tester) async {
@@ -244,6 +377,19 @@ void main() {
     await tester.enterText(find.byKey(const Key('senka-target-input')), '-20');
     await tester.pump();
     expect(controller.state.targetSenka, 0);
+    expect(textFieldValue(tester, const Key('senka-target-input')), '0.00');
+  });
+
+  testWidgets('计算输入同步外部状态且不打断等值尾随小数点', (tester) async {
+    await pumpCalculator(tester, controller, const Size(1280, 680));
+    await tester.enterText(find.byKey(const Key('senka-current-input')), '1.');
+    await tester.pump();
+    expect(textFieldValue(tester, const Key('senka-current-input')), '1.');
+    controller.setCurrentSenka(222.2);
+    controller.setTargetSenka(4567.8);
+    await tester.pump();
+    expect(textFieldValue(tester, const Key('senka-current-input')), '222.20');
+    expect(textFieldValue(tester, const Key('senka-target-input')), '4567.80');
   });
 
   testWidgets('计算概况指标固定三乘二且文案两位小数', (tester) async {
@@ -278,9 +424,17 @@ void main() {
     expect(find.text('機動部隊決戦'), findsOneWidget);
     expect(find.text('火球炮'), findsOneWidget);
     final toggle = find.byKey(const Key('senka-toggle-quest-854'));
+    expect(tester.getRect(toggle).height, greaterThanOrEqualTo(36));
     expect(rewardColor(tester, toggle), senkaYellow.withValues(alpha: .13));
     expect(rewardTooltip(tester, toggle), contains('计划放置'));
     expect(find.bySemanticsLabel(RegExp('前段作战，计划放置')), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel(RegExp('前段作战，计划放置')))
+          .flagsCollection
+          .isToggled,
+      Tristate.isFalse,
+    );
     expect(
       find.descendant(of: toggle, matching: find.text('✕')),
       findsOneWidget,
@@ -291,6 +445,13 @@ void main() {
     expect(rewardColor(tester, toggle), senkaGreen.withValues(alpha: .13));
     expect(rewardTooltip(tester, toggle), contains('计划完成（计预计）'));
     expect(find.bySemanticsLabel(RegExp('前段作战，计划完成（计预计）')), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel(RegExp('前段作战，计划完成（计预计）')))
+          .flagsCollection
+          .isToggled,
+      Tristate.isTrue,
+    );
     expect(
       find.descendant(of: toggle, matching: find.text('✓')),
       findsOneWidget,
@@ -359,6 +520,38 @@ void main() {
     expect(find.text('计划任务战果奖励 +350.00'), findsOneWidget);
     expect(find.text('合计：425.00 战果'), findsOneWidget);
   });
+
+  testWidgets('390×844 可连续拖动到信息末行与计算单次任务和 footer', (tester) async {
+    await pumpSenka(tester, controller, const Size(390, 844));
+    await dragUntilVisible(
+      tester,
+      find.byKey(const Key('senka-sortie-row-3-2')),
+    );
+    await tester.tap(find.byKey(const Key('senka-tab-calculator')));
+    await tester.pump();
+    await dragUntilVisible(tester, find.text('单次战果任务'));
+    await dragUntilVisible(
+      tester,
+      find.byKey(const Key('senka-calculator-footer')),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('390×844 在 1.3 倍文字下三页无溢出且关键内容可滚动', (tester) async {
+    await pumpSenka(tester, controller, const Size(390, 844), textScale: 1.3);
+    await dragUntilVisible(tester, find.text('出击海域统计'));
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const Key('senka-tab-calendar')));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const Key('senka-tab-calculator')));
+    await tester.pump();
+    await dragUntilVisible(
+      tester,
+      find.byKey(const Key('senka-calculator-footer')),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Color? tabColor(WidgetTester tester, String name) =>
@@ -384,6 +577,42 @@ Future<void> pumpCalculator(
 Future<void> pumpSenka(
   WidgetTester tester,
   SenkaController controller,
+  Size size, {
+  double textScale = 1,
+}) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: ThemeData.dark(useMaterial3: true),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
+      home: Row(
+        children: [
+          const SizedBox(width: 58),
+          Expanded(
+            child: SenkaPage(
+              controller: controller,
+              now: DateTime(2026, 8, 10),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
+Future<void> pumpCalendar(
+  WidgetTester tester,
+  SenkaState state,
+  DateTime now,
   Size size,
 ) async {
   tester.view.devicePixelRatio = 1;
@@ -393,10 +622,28 @@ Future<void> pumpSenka(
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark(useMaterial3: true),
-      home: SenkaPage(controller: controller, now: DateTime(2026, 8, 10)),
+      home: SenkaCalendarView(state: state, now: now, compact: false),
     ),
   );
   await tester.pump();
+}
+
+String textFieldValue(WidgetTester tester, Key key) =>
+    tester.widget<TextField>(find.byKey(key)).controller!.text;
+
+Future<void> dragUntilVisible(WidgetTester tester, Finder target) async {
+  for (
+    var attempt = 0;
+    attempt < 6 && target.hitTestable().evaluate().isEmpty;
+    attempt++
+  ) {
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -350),
+    );
+    await tester.pump();
+  }
+  expect(target.hitTestable(), findsOneWidget);
 }
 
 SenkaState sampleState() => SenkaState.forMonth('2026-08').copyWith(

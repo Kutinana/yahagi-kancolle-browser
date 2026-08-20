@@ -18,11 +18,20 @@ class SenkaCalendarView extends StatefulWidget {
 }
 
 class _SenkaCalendarViewState extends State<SenkaCalendarView> {
-  late DateTime selected = DateTime(
-    widget.now.year,
-    widget.now.month,
-    widget.now.day,
-  );
+  late DateTime selected = _initialSelection(widget.state, widget.now);
+
+  @override
+  void didUpdateWidget(covariant SenkaCalendarView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldMonth = parseSenkaMonthKey(oldWidget.state.monthKey);
+    final newMonth = parseSenkaMonthKey(widget.state.monthKey);
+    if (oldMonth != newMonth ||
+        oldWidget.now.year != widget.now.year ||
+        oldWidget.now.month != widget.now.month) {
+      selected = _initialSelection(widget.state, widget.now);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final parsed = parseSenkaMonthKey(widget.state.monthKey);
@@ -51,7 +60,7 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
           Container(
             key: const Key('calendar-weekday-background'),
             height: widget.compact ? 24 : 32,
-            color: const Color(0xff071923),
+            color: senkaWeekdayBackground,
             child: Row(
               key: const Key('calendar-weekday-row'),
               children: [
@@ -126,7 +135,7 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
         date.year == selected.year &&
         date.month == selected.month &&
         date.day == selected.day;
-    return Material(
+    final cell = Material(
       key: Key(inMonth ? 'calendar-cell-$day' : 'calendar-cell-out-$slot'),
       color: chosen ? senkaGold.withValues(alpha: .12) : senkaPanel,
       child: InkWell(
@@ -171,6 +180,14 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
         ),
       ),
     );
+    if (date == null) return ExcludeSemantics(child: cell);
+    return Semantics(
+      button: true,
+      selected: chosen,
+      label: '$year年$month月$day日，战果${senkaNumber(record.total)}',
+      excludeSemantics: true,
+      child: cell,
+    );
   }
 
   Widget _detail(String label, double value) => Expanded(
@@ -197,4 +214,12 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
       ],
     ),
   );
+}
+
+DateTime _initialSelection(SenkaState state, DateTime now) {
+  final month = parseSenkaMonthKey(state.monthKey);
+  if (month == null) return DateTime(now.year, now.month, now.day);
+  return now.year == month.year && now.month == month.month
+      ? DateTime(month.year, month.month, now.day)
+      : DateTime(month.year, month.month, 1);
 }
