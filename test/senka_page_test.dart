@@ -448,15 +448,9 @@ void main() {
     for (final size in const [Size(1280, 680), Size(844, 390)]) {
       await pumpCalculator(tester, controller, size);
 
-      final eo15 = tester.getRect(
-        find.byKey(const Key('senka-toggle-eo-15')),
-      );
-      final eo16 = tester.getRect(
-        find.byKey(const Key('senka-toggle-eo-16')),
-      );
-      final eo25 = tester.getRect(
-        find.byKey(const Key('senka-toggle-eo-25')),
-      );
+      final eo15 = tester.getRect(find.byKey(const Key('senka-toggle-eo-15')));
+      final eo16 = tester.getRect(find.byKey(const Key('senka-toggle-eo-16')));
+      final eo25 = tester.getRect(find.byKey(const Key('senka-toggle-eo-25')));
       expect(eo15.top, closeTo(eo16.top, 1));
       expect(eo25.top, greaterThan(eo15.top));
 
@@ -801,8 +795,11 @@ void main() {
 Color? tabColor(WidgetTester tester, String name) =>
     tester.widget<Material>(find.byKey(Key('senka-tab-$name'))).color;
 
-Color? rewardColor(WidgetTester tester, Finder toggle) =>
-    tester.widget<Material>(toggle).color;
+Color? rewardColor(WidgetTester tester, Finder toggle) => tester
+    .widget<Material>(
+      find.descendant(of: toggle, matching: find.byType(Material)),
+    )
+    .color;
 
 String rewardTooltip(WidgetTester tester, Finder toggle) => tester
     .widget<Tooltip>(find.ancestor(of: toggle, matching: find.byType(Tooltip)))
