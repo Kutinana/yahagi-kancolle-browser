@@ -12,6 +12,14 @@ import 'package:yahagi_kancolle_browser/src/senka/senka_store.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_ui.dart';
 
 void main() {
+  test('战果刷新时间固定显示为 UTC+9', () {
+    expect(
+      senkaJstTimestamp(DateTime.utc(2026, 8, 20, 16, 47, 4)),
+      '2026-08-21 01:47:04',
+    );
+    expect(senkaJstTimestamp(null), '--');
+  });
+
   late SenkaController controller;
 
   setUp(() async {
@@ -338,6 +346,7 @@ void main() {
 
   testWidgets('排名保留固定线和当前行变化行为', (tester) async {
     await pumpSenka(tester, controller, const Size(1280, 680));
+    expect(find.text('更新：2026-08-10 15:00:00'), findsOneWidget);
     for (final rank in [5, 20, 100, 501]) {
       expect(find.byKey(Key('ranking-row-$rank')), findsOneWidget);
     }

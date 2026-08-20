@@ -23,6 +23,18 @@ String senkaNumber(num? value) =>
     value == null ? '--' : value.toStringAsFixed(2);
 String senkaInteger(int? value) => value?.toString() ?? '--';
 
+String senkaJstTimestamp(DateTime? time) {
+  if (time == null) return '--';
+  final jst = time.toUtc().add(const Duration(hours: 9));
+  final year = jst.year.toString().padLeft(4, '0');
+  final month = jst.month.toString().padLeft(2, '0');
+  final day = jst.day.toString().padLeft(2, '0');
+  final hour = jst.hour.toString().padLeft(2, '0');
+  final minute = jst.minute.toString().padLeft(2, '0');
+  final second = jst.second.toString().padLeft(2, '0');
+  return '$year-$month-$day $hour:$minute:$second';
+}
+
 class SenkaPanel extends StatelessWidget {
   const SenkaPanel({
     super.key,

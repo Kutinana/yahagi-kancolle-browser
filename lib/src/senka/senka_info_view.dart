@@ -273,7 +273,7 @@ class _RankingPanel extends StatelessWidget {
   final bool compact;
   @override
   Widget build(BuildContext context) {
-    final timeStr = _formatRankingTime(state.latestRankingUpdatedAt);
+    final timeStr = senkaJstTimestamp(state.latestRankingUpdatedAt);
     return SenkaPanel(
       title: '战果排名',
       compact: compact,
@@ -864,15 +864,3 @@ TextStyle _sortieStyle(bool compact, {bool header = false}) => TextStyle(
   fontWeight: header ? FontWeight.w800 : FontWeight.w700,
   fontFeatures: const [FontFeature.tabularFigures()],
 );
-
-String _formatRankingTime(DateTime? time) {
-  if (time == null) return '--';
-  final t = time.toLocal();
-  final year = t.year.toString().padLeft(4, '0');
-  final month = t.month.toString().padLeft(2, '0');
-  final day = t.day.toString().padLeft(2, '0');
-  final hour = t.hour.toString().padLeft(2, '0');
-  final minute = t.minute.toString().padLeft(2, '0');
-  final second = t.second.toString().padLeft(2, '0');
-  return '$year-$month-$day $hour:$minute:$second';
-}
