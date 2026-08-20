@@ -3,11 +3,125 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/performance/frame_notification_coalescer.dart';
+import 'package:yahagi_kancolle_browser/src/senka/senka_catalog.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_controller.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_store.dart';
 
 void main() {
+  group('战果奖励状态与目录', () {
+    test('奖励状态按未计划、计划、完成循环且未知存储值安全降级', () {
+      expect(SenkaRewardStatus.deferred.next, SenkaRewardStatus.planned);
+      expect(SenkaRewardStatus.planned.next, SenkaRewardStatus.completed);
+      expect(SenkaRewardStatus.completed.next, SenkaRewardStatus.deferred);
+      expect(
+        SenkaRewardStatus.fromStorage('planned'),
+        SenkaRewardStatus.planned,
+      );
+      expect(
+        SenkaRewardStatus.fromStorage('future-value'),
+        SenkaRewardStatus.deferred,
+      );
+      expect(SenkaRewardStatus.fromStorage(null), SenkaRewardStatus.deferred);
+    });
+
+    test('目录区分 EO、季度、年度与单次奖励', () {
+      expect(senkaEoCatalog, isNotEmpty);
+      expect(senkaQuarterlyQuestCatalog, hasLength(7));
+      expect(
+        senkaAnnualQuestCatalog.map(
+          (item) => (item.id, item.label, item.senka),
+        ),
+        containsAll([(947, 'AL作戦', 480), (948, '機動部隊決戦', 600)]),
+      );
+      expect(senkaOneTimeQuestCatalog, hasLength(1));
+      expect(senkaOneTimeQuestCatalog.single.id, 949);
+      expect(
+        senkaOneTimeQuestCatalog.single.label,
+        '改装特務空母「Gambier Bay Mk.II」抜錨！',
+      );
+      expect(senkaOneTimeQuestCatalog.single.shortName, '火球炮');
+      expect(senkaOneTimeQuestCatalog.single.senka, 800);
+    });
+  });
+
+  group('战果状态持久化', () {
+    test('新状态字段与出击统计完整往返', () {
+      final original = SenkaState.forMonth('2026-08').copyWith(
+        eoStatuses: const {
+          15: SenkaRewardStatus.planned,
+          16: SenkaRewardStatus.completed,
+        },
+        questStatuses: const {947: SenkaRewardStatus.planned},
+        targetSenka: 3500,
+        calculatorCurrentSenka: 1234.5,
+        sortieStats: const {
+          '1-5': SenkaSortieStats(
+            areaId: 1,
+            mapNo: 5,
+            sorties: 12,
+            bossArrivals: 10,
+            sWins: 8,
+            aWins: 1,
+          ),
+        },
+        favoriteSortieMapKeys: const {'1-5'},
+        hiddenSortieMapKeys: const {'7-1'},
+      );
+
+      final restored = SenkaState.fromJson(original.toJson());
+
+      expect(restored.eoStatuses, original.eoStatuses);
+      expect(restored.questStatuses, original.questStatuses);
+      expect(restored.targetSenka, 3500);
+      expect(restored.calculatorCurrentSenka, 1234.5);
+      expect(restored.sortieStats['1-5']?.sorties, 12);
+      expect(restored.sortieStats['1-5']?.bossArrivals, 10);
+      expect(restored.sortieStats['1-5']?.sWins, 8);
+      expect(restored.sortieStats['1-5']?.aWins, 1);
+      expect(restored.favoriteSortieMapKeys, {'1-5'});
+      expect(restored.hiddenSortieMapKeys, {'7-1'});
+    });
+
+    test('旧完成集合迁移为 completed 且未知单项状态降级 deferred', () {
+      final state = SenkaState.fromJson({
+        'monthKey': '2026-08',
+        'memberId': 123,
+        'nickname': '矢矧',
+        'magic': 36,
+        'completedEoIds': [15],
+        'completedQuestIds': [854],
+        'eoStatuses': {'16': 'future-value'},
+        'questStatuses': {'947': 'planned'},
+        'days': {
+          '2026-08-10': {'experience': 3.85},
+        },
+        'rankingHistory': {
+          '5': [
+            {
+              'rank': 5,
+              'senka': 1000,
+              'capturedAt': '2026-08-10T00:00:00Z',
+              'localSenkaAtCapture': 3.85,
+            },
+          ],
+        },
+      });
+
+      expect(state.eoStatuses[15], SenkaRewardStatus.completed);
+      expect(state.eoStatuses[16], SenkaRewardStatus.deferred);
+      expect(state.questStatuses[854], SenkaRewardStatus.completed);
+      expect(state.questStatuses[947], SenkaRewardStatus.planned);
+      expect(state.completedEoIds, {15});
+      expect(state.completedQuestIds, {854});
+      expect(state.memberId, 123);
+      expect(state.nickname, '矢矧');
+      expect(state.magic, 36);
+      expect(state.day(DateTime(2026, 8, 10)).experience, 3.85);
+      expect(state.rankingHistory['5'], hasLength(1));
+    });
+  });
+
   test('连续捕获只在下一帧通知一次', () async {
     final scheduled = <void Function()>[];
     final controller = SenkaController(
