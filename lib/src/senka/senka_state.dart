@@ -173,7 +173,7 @@ class SenkaState {
     this.nickname = '',
     this.magic = 0,
     this.latestExperience,
-    this.days = const {},
+    Map<String, SenkaDayRecord> days = const {},
     Map<int, SenkaRewardStatus> eoStatuses = const {},
     Map<int, SenkaRewardStatus> questStatuses = const {},
     this.targetSenka = 0,
@@ -184,7 +184,8 @@ class SenkaState {
     Map<String, List<SenkaRankingSnapshot>> rankingHistory = const {},
     this.rankingUpdatedAt,
     this.updatedAt,
-  }) : eoStatuses = Map.unmodifiable(Map.of(eoStatuses)),
+  }) : days = Map.unmodifiable(Map.of(days)),
+       eoStatuses = Map.unmodifiable(Map.of(eoStatuses)),
        questStatuses = Map.unmodifiable(Map.of(questStatuses)),
        sortieStats = Map.unmodifiable(
          _normalizedSortieStats(sortieStats.values),

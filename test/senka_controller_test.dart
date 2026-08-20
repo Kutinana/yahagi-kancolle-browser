@@ -161,6 +161,18 @@ void main() {
       expect(() => state.rankingHistory['5']!.clear(), throwsUnsupportedError);
     });
 
+    test('日期记录对输入执行防御性复制且不可从 state 原地修改', () {
+      final inputDays = <String, SenkaDayRecord>{
+        '2026-08-10': const SenkaDayRecord(experience: 3.85),
+      };
+      final state = SenkaState(monthKey: '2026-08', days: inputDays);
+
+      inputDays.clear();
+
+      expect(state.days.keys, {'2026-08-10'});
+      expect(() => state.days.clear(), throwsUnsupportedError);
+    });
+
     test('新状态字段存在时优先于旧完成集合', () {
       final state = SenkaState.fromJson(
         jsonDecode(
@@ -203,6 +215,20 @@ void main() {
       expect(copied.questStatuses[854], SenkaRewardStatus.deferred);
       expect(copied.questStatuses.containsKey(947), isFalse);
       expect(copied.questStatuses[948], SenkaRewardStatus.completed);
+    });
+
+    test('copyWith 同时传新状态与旧完成集合时新状态优先', () {
+      final copied = SenkaState.forMonth('2026-08').copyWith(
+        eoStatuses: const {15: SenkaRewardStatus.planned},
+        questStatuses: const {854: SenkaRewardStatus.deferred},
+        completedEoIds: {25},
+        completedQuestIds: {947},
+      );
+
+      expect(copied.eoStatuses, {15: SenkaRewardStatus.planned});
+      expect(copied.questStatuses, {854: SenkaRewardStatus.deferred});
+      expect(copied.completedEoIds, isEmpty);
+      expect(copied.completedQuestIds, isEmpty);
     });
 
     test('地图 key 统一生成且反序列化规范化并过滤非法收藏隐藏项', () {
