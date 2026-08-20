@@ -226,6 +226,198 @@ void main() {
 
     expect(state.latestRankingUpdatedAt, DateTime.utc(2026, 8, 10, 7, 41, 47));
   });
+
+  group('真实出击统计', () {
+    test('start 记录出击且 S/SS Boss 结果分别计入 S 胜', () {
+      for (final rank in ['S', 'SS']) {
+        var state = SenkaState.forMonth('2026-08');
+        state = reducer.reduce(
+          state,
+          sortieStart(areaId: 2, mapNo: 3, nodeNo: 1, bossCellNo: 5),
+        );
+        state = reducer.reduce(
+          state,
+          apiEvent('/kcsapi/api_req_map/next', {
+            'api_no': 5,
+            'api_bosscell_no': 5,
+          }, atJst: DateTime(2026, 8, 10, 10, 1)),
+        );
+        state = reducer.reduce(
+          state,
+          apiEvent('/kcsapi/api_req_sortie/battleresult', {
+            'api_win_rank': rank,
+          }, atJst: DateTime(2026, 8, 10, 10, 2)),
+        );
+
+        expect(state.sortieStats['2-3']?.sorties, 1);
+        expect(state.sortieStats['2-3']?.bossArrivals, 1);
+        expect(state.sortieStats['2-3']?.sWins, 1);
+        expect(state.toJson()['activeSortie'], isNull);
+      }
+    });
+
+    test('start 直接到 Boss 且 A 胜时各计一次', () {
+      var state = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(areaId: 7, mapNo: 5, nodeNo: 9, bossCellNo: 9),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent(
+          '/kcsapi/api_req_combined_battle/battleresult',
+          {'api_win_rank': 'A'},
+          atJst: DateTime(2026, 8, 10, 10, 2),
+        ),
+      );
+
+      expect(state.sortieStats['7-5']?.sorties, 1);
+      expect(state.sortieStats['7-5']?.bossArrivals, 1);
+      expect(state.sortieStats['7-5']?.aWins, 1);
+    });
+
+    test('非 Boss 结果不计胜场且不清除出击上下文', () {
+      var state = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(areaId: 3, mapNo: 2, nodeNo: 1, bossCellNo: 4),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_sortie/battleresult', {
+          'api_win_rank': 'S',
+        }, atJst: DateTime(2026, 8, 10, 10, 1)),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_map/next', {
+          'api_no': 4,
+        }, atJst: DateTime(2026, 8, 10, 10, 2)),
+      );
+
+      expect(state.sortieStats['3-2']?.sWins, 0);
+      expect(state.sortieStats['3-2']?.bossArrivals, 1);
+      expect(state.toJson()['activeSortie'], isNotNull);
+    });
+
+    test('重复 Boss 到达响应只计一次', () {
+      var state = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(areaId: 4, mapNo: 5, nodeNo: 1, bossCellNo: 6),
+      );
+      for (var index = 0; index < 2; index++) {
+        state = reducer.reduce(
+          state,
+          apiEvent('/kcsapi/api_req_map/next', {
+            'api_no': 6,
+            'api_bosscell_no': 6,
+          }, atJst: DateTime(2026, 8, 10, 10, index + 1)),
+        );
+      }
+
+      expect(state.sortieStats['4-5']?.bossArrivals, 1);
+    });
+
+    test('goback_port、combined goback_port 与 port 清除上下文', () {
+      for (final path in [
+        '/kcsapi/api_req_sortie/goback_port',
+        '/kcsapi/api_req_combined_battle/goback_port',
+        '/kcsapi/api_port/port',
+      ]) {
+        var state = reducer.reduce(
+          SenkaState.forMonth('2026-08'),
+          sortieStart(areaId: 1, mapNo: 1, nodeNo: 1, bossCellNo: 3),
+        );
+        state = reducer.reduce(
+          state,
+          apiEvent(path, const {}, atJst: DateTime(2026, 8, 10, 10, 1)),
+        );
+        state = reducer.reduce(
+          state,
+          apiEvent('/kcsapi/api_req_map/next', {
+            'api_no': 3,
+          }, atJst: DateTime(2026, 8, 10, 10, 2)),
+        );
+
+        expect(state.sortieStats['1-1']?.bossArrivals, 0, reason: path);
+        expect(state.toJson()['activeSortie'], isNull, reason: path);
+      }
+    });
+
+    test('无效与乱序响应不伪造统计，新 start 替换旧出击', () {
+      var state = SenkaState.forMonth('2026-08');
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_map/next', {
+          'api_no': 5,
+          'api_bosscell_no': 5,
+        }, atJst: DateTime(2026, 8, 10, 9)),
+      );
+      state = reducer.reduce(
+        state,
+        sortieStart(areaId: 0, mapNo: 3, nodeNo: 5, bossCellNo: 5),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_map/start', {
+          'api_maparea_id': 2.5,
+          'api_mapinfo_no': 3,
+          'api_no': 5,
+          'api_bosscell_no': 5,
+        }, atJst: DateTime(2026, 8, 10, 9, 1)),
+      );
+      state = reducer.reduce(
+        state,
+        sortieStart(areaId: 2, mapNo: 1, nodeNo: 1, bossCellNo: 4),
+      );
+      state = reducer.reduce(
+        state,
+        sortieStart(areaId: 2, mapNo: 2, nodeNo: 1, bossCellNo: 5),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_map/next', {
+          'api_no': 4,
+        }, atJst: DateTime(2026, 8, 10, 10, 1)),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_map/next', {
+          'api_no': 5,
+        }, atJst: DateTime(2026, 8, 10, 10, 2)),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_practice/battle_result', {
+          'api_win_rank': 'S',
+        }, atJst: DateTime(2026, 8, 10, 10, 3)),
+      );
+
+      expect(state.sortieStats.keys, unorderedEquals(['2-1', '2-2']));
+      expect(state.sortieStats['2-1']?.bossArrivals, 0);
+      expect(state.sortieStats['2-2']?.bossArrivals, 1);
+      expect(state.sortieStats['2-2']?.sWins, 0);
+      expect(state.toJson()['activeSortie'], isNotNull);
+    });
+
+    test('月度 JSON 往返保留未完成出击且不泄露可变引用', () {
+      final original = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(areaId: 5, mapNo: 5, nodeNo: 2, bossCellNo: 7),
+      );
+      final json = original.toJson();
+      final restored = SenkaState.fromJson(json);
+      final active = json['activeSortie'];
+      expect(active, isA<Map>());
+      (active as Map)['areaId'] = 99;
+
+      expect(restored.toJson()['activeSortie'], {
+        'areaId': 5,
+        'mapNo': 5,
+        'bossCellNo': 7,
+        'bossArrived': false,
+      });
+      expect(restored.sortieStats['5-5']?.sorties, 1);
+    });
+  });
 }
 
 CapturedApiEvent apiEvent(
@@ -258,6 +450,18 @@ CapturedApiEvent rankingEvent({
   'api_disp_page': page,
   'api_list': rows,
 }, atJst: atJst);
+
+CapturedApiEvent sortieStart({
+  required int areaId,
+  required int mapNo,
+  required int nodeNo,
+  required int bossCellNo,
+}) => apiEvent('/kcsapi/api_req_map/start', {
+  'api_maparea_id': areaId,
+  'api_mapinfo_no': mapNo,
+  'api_no': nodeNo,
+  'api_bosscell_no': bossCellNo,
+}, atJst: DateTime(2026, 8, 10, 10));
 
 Map<String, Object?> rankingRow({
   required int rank,

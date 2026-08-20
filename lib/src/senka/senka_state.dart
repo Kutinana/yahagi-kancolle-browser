@@ -81,6 +81,47 @@ class SenkaSortieStats {
   }
 }
 
+class SenkaActiveSortie {
+  const SenkaActiveSortie({
+    required this.areaId,
+    required this.mapNo,
+    this.bossCellNo,
+    this.bossArrived = false,
+  });
+
+  final int areaId;
+  final int mapNo;
+  final int? bossCellNo;
+  final bool bossArrived;
+
+  String get mapKey => senkaMapKey(areaId, mapNo);
+
+  SenkaActiveSortie copyWith({int? bossCellNo, bool? bossArrived}) =>
+      SenkaActiveSortie(
+        areaId: areaId,
+        mapNo: mapNo,
+        bossCellNo: bossCellNo ?? this.bossCellNo,
+        bossArrived: bossArrived ?? this.bossArrived,
+      );
+
+  Map<String, Object?> toJson() => {
+    'areaId': areaId,
+    'mapNo': mapNo,
+    'bossCellNo': bossCellNo,
+    'bossArrived': bossArrived,
+  };
+
+  factory SenkaActiveSortie.fromJson(Object? value) {
+    final map = value is Map ? value : const {};
+    return SenkaActiveSortie(
+      areaId: _int(map['areaId']),
+      mapNo: _int(map['mapNo']),
+      bossCellNo: map['bossCellNo'] == null ? null : _int(map['bossCellNo']),
+      bossArrived: map['bossArrived'] == true,
+    );
+  }
+}
+
 class SenkaDayRecord {
   const SenkaDayRecord({this.experience = 0, this.eo = 0, this.quest = 0});
 
@@ -179,6 +220,7 @@ class SenkaState {
     this.targetSenka = 0,
     this.calculatorCurrentSenka = 0,
     Map<String, SenkaSortieStats> sortieStats = const {},
+    this.activeSortie,
     Set<String> favoriteSortieMapKeys = const {},
     Set<String> hiddenSortieMapKeys = const {},
     Map<String, List<SenkaRankingSnapshot>> rankingHistory = const {},
@@ -215,6 +257,7 @@ class SenkaState {
   final double targetSenka;
   final double calculatorCurrentSenka;
   final Map<String, SenkaSortieStats> sortieStats;
+  final SenkaActiveSortie? activeSortie;
   final Set<String> favoriteSortieMapKeys;
   final Set<String> hiddenSortieMapKeys;
   final Map<String, List<SenkaRankingSnapshot>> rankingHistory;
@@ -313,6 +356,8 @@ class SenkaState {
     double? targetSenka,
     double? calculatorCurrentSenka,
     Map<String, SenkaSortieStats>? sortieStats,
+    SenkaActiveSortie? activeSortie,
+    bool clearActiveSortie = false,
     Set<String>? favoriteSortieMapKeys,
     Set<String>? hiddenSortieMapKeys,
     Map<String, List<SenkaRankingSnapshot>>? rankingHistory,
@@ -344,6 +389,9 @@ class SenkaState {
       calculatorCurrentSenka:
           calculatorCurrentSenka ?? this.calculatorCurrentSenka,
       sortieStats: sortieStats ?? this.sortieStats,
+      activeSortie: clearActiveSortie
+          ? null
+          : activeSortie ?? this.activeSortie,
       favoriteSortieMapKeys:
           favoriteSortieMapKeys ?? this.favoriteSortieMapKeys,
       hiddenSortieMapKeys: hiddenSortieMapKeys ?? this.hiddenSortieMapKeys,
@@ -371,6 +419,7 @@ class SenkaState {
     'sortieStats': sortieStats.map(
       (key, value) => MapEntry(key, value.toJson()),
     ),
+    'activeSortie': activeSortie?.toJson(),
     'favoriteSortieMapKeys': favoriteSortieMapKeys.toList(),
     'hiddenSortieMapKeys': hiddenSortieMapKeys.toList(),
     'rankingHistory': rankingHistory.map(
@@ -419,6 +468,7 @@ class SenkaState {
       targetSenka: _double(value['targetSenka']),
       calculatorCurrentSenka: _double(value['calculatorCurrentSenka']),
       sortieStats: _sortieStatsMap(rawSortieStats),
+      activeSortie: _activeSortie(value['activeSortie']),
       favoriteSortieMapKeys: _mapKeySet(value['favoriteSortieMapKeys']),
       hiddenSortieMapKeys: _mapKeySet(value['hiddenSortieMapKeys']),
       rankingHistory: rawRanking is Map
@@ -438,6 +488,14 @@ class SenkaState {
       updatedAt: DateTime.tryParse('${value['updatedAt'] ?? ''}')?.toUtc(),
     );
   }
+}
+
+SenkaActiveSortie? _activeSortie(Object? value) {
+  if (value is! Map) return null;
+  final sortie = SenkaActiveSortie.fromJson(value);
+  if (sortie.areaId <= 0 || sortie.mapNo <= 0) return null;
+  if (sortie.bossCellNo != null && sortie.bossCellNo! <= 0) return null;
+  return sortie;
 }
 
 DateTime toJst(DateTime value) => value.toUtc().add(const Duration(hours: 9));
