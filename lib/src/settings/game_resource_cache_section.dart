@@ -4,6 +4,7 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import '../browser/game_resource_cache_channel.dart';
 import '../browser/game_resource_cache_controller.dart';
 import '../browser/game_resource_cache_store.dart';
+import '../widgets/top_notice.dart';
 
 class GameResourceCacheSection extends StatefulWidget {
   const GameResourceCacheSection({super.key, required this.controller});
@@ -286,8 +287,10 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
       final l10n =
           AppLocalizations.of(context) ??
           lookupAppLocalizations(const Locale('zh'));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.gameResourceCacheActionFailed)),
+      TopNotice.show(
+        context,
+        message: l10n.gameResourceCacheActionFailed,
+        tone: TopNoticeTone.error,
       );
     }
   }

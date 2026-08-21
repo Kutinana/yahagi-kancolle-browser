@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../widgets/top_notice.dart';
 import 'game_rendering_mode.dart';
 import 'game_rendering_mode_controller.dart';
 
@@ -176,14 +177,12 @@ class GameRenderingModeSection extends StatelessWidget {
     final applied =
         result.status == GameRenderingModeChangeStatus.applied ||
         result.status == GameRenderingModeChangeStatus.unchanged;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          applied
-              ? l10n.gameRenderingModeApplied
-              : l10n.gameRenderingModeFailed,
-        ),
-      ),
+    TopNotice.show(
+      context,
+      message: applied
+          ? l10n.gameRenderingModeApplied
+          : l10n.gameRenderingModeFailed,
+      tone: applied ? TopNoticeTone.success : TopNoticeTone.error,
     );
   }
 }

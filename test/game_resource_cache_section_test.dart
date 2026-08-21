@@ -4,8 +4,15 @@ import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_channel.
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_controller.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_resource_cache_section.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
+  Widget app(GameResourceCacheController controller) => MaterialApp(
+    home: TopNoticeHost(
+      child: Scaffold(body: GameResourceCacheSection(controller: controller)),
+    ),
+  );
+
   testWidgets('shows two modes and the single GB completeness line', (
     tester,
   ) async {
@@ -17,11 +24,7 @@ void main() {
     await controller.initialize();
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(body: GameResourceCacheSection(controller: controller)),
-      ),
-    );
+    await tester.pumpWidget(app(controller));
 
     expect(find.byKey(const Key('cache-mode-none')), findsOneWidget);
     expect(find.byKey(const Key('cache-mode-light')), findsNothing);
@@ -61,11 +64,7 @@ void main() {
     await controller.initialize();
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(body: GameResourceCacheSection(controller: controller)),
-      ),
-    );
+    await tester.pumpWidget(app(controller));
     await tester.tap(find.byKey(const Key('cache-check-integrity')));
     await tester.pump();
 
@@ -86,11 +85,7 @@ void main() {
     await controller.initialize();
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(body: GameResourceCacheSection(controller: controller)),
-      ),
-    );
+    await tester.pumpWidget(app(controller));
     await tester.tap(find.byKey(const Key('cache-mode-full')));
     await tester.pumpAndSettle();
 
@@ -109,11 +104,7 @@ void main() {
     await controller.initialize();
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(body: GameResourceCacheSection(controller: controller)),
-      ),
-    );
+    await tester.pumpWidget(app(controller));
     await tester.tap(find.byKey(const Key('cache-download-toggle')));
     await tester.pumpAndSettle();
 
@@ -121,6 +112,36 @@ void main() {
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();
     expect(port.allowedMetered, isTrue);
+  });
+
+  testWidgets('failed cache action shows an error notice', (tester) async {
+    final port = _FakePort()..failStartDownload = true;
+    final controller = GameResourceCacheController(
+      store: _MemoryStore(GameResourceCacheMode.full),
+      port: port,
+    );
+    await controller.initialize();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(app(controller));
+
+    await tester.tap(find.byKey(const Key('cache-download-toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确定'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final notice = find.byKey(topNoticeKey);
+    expect(
+      find.descendant(of: notice, matching: find.text('缓存操作未完成，请稍后重试。')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: notice,
+        matching: find.byIcon(Icons.error_outline_rounded),
+      ),
+      findsOneWidget,
+    );
   });
 }
 
@@ -141,6 +162,7 @@ final class _FakePort implements GameResourceCachePort {
   GameResourceCacheMode mode = GameResourceCacheMode.light;
   bool metered = false;
   bool allowedMetered = false;
+  bool failStartDownload = false;
 
   GameResourceCacheStatus get value => GameResourceCacheStatus(
     mode: mode,
@@ -176,7 +198,7 @@ final class _FakePort implements GameResourceCachePort {
   @override
   Future<bool> startDownload({bool allowMetered = false}) async {
     allowedMetered = allowMetered;
-    return true;
+    return !failStartDownload;
   }
 
   @override

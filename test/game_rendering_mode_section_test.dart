@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_rendering_mode_section.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
   Future<({GameRenderingModeController controller, _RestartPort port})>
@@ -23,14 +24,19 @@ void main() {
     bool isBattleActive = false,
   }) {
     return MaterialApp(
-      home: Scaffold(
-        body: GameRenderingModeSection(
-          controller: controller,
-          isBattleActive: isBattleActive,
+      home: TopNoticeHost(
+        child: Scaffold(
+          body: GameRenderingModeSection(
+            controller: controller,
+            isBattleActive: isBattleActive,
+          ),
         ),
       ),
     );
   }
+
+  Finder noticeMatching(Finder matching) =>
+      find.descendant(of: find.byKey(topNoticeKey), matching: matching);
 
   testWidgets('shows all four rendering modes with native activity first', (
     tester,
@@ -156,10 +162,35 @@ void main() {
     await tester.tap(find.byKey(const Key('rendering-mode-standard')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('rendering-mode-confirm')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
 
     expect(state.controller.mode, GameRenderingMode.standard);
     expect(state.port.modes, [GameRenderingMode.standard]);
+    expect(noticeMatching(find.text('渲染模式已切换。')), findsOneWidget);
+    expect(
+      noticeMatching(find.byIcon(Icons.check_circle_outline_rounded)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('failed mode change shows an error notice', (tester) async {
+    final state = await createController();
+    addTearDown(state.controller.dispose);
+    state.port.failRestarts = true;
+    await tester.pumpWidget(app(state.controller));
+
+    await tester.tap(find.byKey(const Key('rendering-mode-standard')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('rendering-mode-confirm')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(noticeMatching(find.text('切换失败，已保留或回退到安全模式。')), findsOneWidget);
+    expect(
+      noticeMatching(find.byIcon(Icons.error_outline_rounded)),
+      findsOneWidget,
+    );
   });
 
   testWidgets('battle state adds a stronger warning', (tester) async {
@@ -201,11 +232,13 @@ void main() {
 final class _RestartPort implements GameEnvironmentRestartPort {
   final modes = <GameRenderingMode>[];
   bool blockNextRestart = false;
+  bool failRestarts = false;
   Completer<void>? _restartCompleter;
 
   @override
   Future<void> restart(GameRenderingMode mode) async {
     modes.add(mode);
+    if (failRestarts) throw StateError('restart failed');
     if (!blockNextRestart) return;
     blockNextRestart = false;
     _restartCompleter = Completer<void>();

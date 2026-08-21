@@ -4,6 +4,7 @@ import 'network_settings_controller.dart';
 import 'network_settings_store.dart';
 import 'network_settings_validator.dart';
 import '../browser/network_proxy_channel.dart';
+import '../widgets/top_notice.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 class NetworkSettingsSection extends StatefulWidget {
@@ -66,12 +67,12 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
     if (_selectedMode != NetworkMode.system) {
       final hostError = NetworkSettingsValidator.validateHost(host);
       if (hostError != null) {
-        _showErrorSnackBar(_validationMessage(hostError));
+        _showErrorNotice(_validationMessage(hostError));
         return;
       }
       final portError = NetworkSettingsValidator.validatePort(portStr);
       if (portError != null) {
-        _showErrorSnackBar(_validationMessage(portError));
+        _showErrorNotice(_validationMessage(portError));
         return;
       }
     }
@@ -94,12 +95,12 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
     if (_selectedMode != NetworkMode.system) {
       final hostError = NetworkSettingsValidator.validateHost(host);
       if (hostError != null) {
-        _showErrorSnackBar(_validationMessage(hostError));
+        _showErrorNotice(_validationMessage(hostError));
         return;
       }
       final portError = NetworkSettingsValidator.validatePort(portStr);
       if (portError != null) {
-        _showErrorSnackBar(_validationMessage(portError));
+        _showErrorNotice(_validationMessage(portError));
         return;
       }
     }
@@ -111,11 +112,10 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.applyingNetworkSettings),
-        duration: const Duration(seconds: 1),
-      ),
+    TopNotice.show(
+      context,
+      message: l10n.applyingNetworkSettings,
+      duration: const Duration(seconds: 1),
     );
 
     final result = await widget.controller.applySettings(
@@ -127,12 +127,14 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
     if (!mounted) return;
 
     if (result.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.networkSettingsApplied(result.message))),
+      TopNotice.show(
+        context,
+        message: l10n.networkSettingsApplied(result.message),
+        tone: TopNoticeTone.success,
       );
       widget.onApplySuccess();
     } else {
-      _showErrorSnackBar(
+      _showErrorNotice(
         l10n.networkApplyFailed(
           result.code,
           _localizedProxyResultMessage(l10n, result),
@@ -151,11 +153,10 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.clearingProxy),
-        duration: const Duration(seconds: 1),
-      ),
+    TopNotice.show(
+      context,
+      message: l10n.clearingProxy,
+      duration: const Duration(seconds: 1),
     );
 
     final result = await widget.controller.applySettings(
@@ -167,22 +168,20 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
     if (!mounted) return;
 
     if (result.success) {
-      ScaffoldMessenger.of(
+      TopNotice.show(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10n.systemNetworkRestored)));
+        message: l10n.systemNetworkRestored,
+        tone: TopNoticeTone.success,
+      );
       widget.onApplySuccess();
     } else {
-      _showErrorSnackBar(
-        l10n.networkRestoreFailed(result.code, result.message),
-      );
+      _showErrorNotice(l10n.networkRestoreFailed(result.code, result.message));
     }
   }
 
-  void _showErrorSnackBar(String message) {
+  void _showErrorNotice(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red.shade800),
-    );
+    TopNotice.show(context, message: message, tone: TopNoticeTone.error);
   }
 
   String _validationMessage(NetworkValidationError error) {
