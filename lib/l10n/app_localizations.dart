@@ -2831,7 +2831,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationSectionOngoing.
   ///
   /// In zh, this message translates to:
-  /// **'后台常驻进行中进度 (Ongoing)'**
+  /// **'后台常驻进行中进度'**
   String get notificationSectionOngoing;
 
   /// No description provided for @notificationOngoingLive.
@@ -2861,73 +2861,73 @@ abstract class AppLocalizations {
   /// No description provided for @notificationSectionTypes.
   ///
   /// In zh, this message translates to:
-  /// **'业务通知分类与提醒时机 (Type)'**
+  /// **'业务通知分类与提醒时机'**
   String get notificationSectionTypes;
 
   /// No description provided for @notificationExpedition.
   ///
   /// In zh, this message translates to:
-  /// **'远征归还 (Expedition)'**
+  /// **'远征归还'**
   String get notificationExpedition;
 
   /// No description provided for @notificationRepair.
   ///
   /// In zh, this message translates to:
-  /// **'入渠修复 (Repair)'**
+  /// **'入渠修复'**
   String get notificationRepair;
 
   /// No description provided for @notificationAnchorage.
   ///
   /// In zh, this message translates to:
-  /// **'泊地修理 (Anchorage Repair)'**
+  /// **'泊地修理'**
   String get notificationAnchorage;
 
   /// No description provided for @notificationConstruction.
   ///
   /// In zh, this message translates to:
-  /// **'工厂建造 (Construction)'**
+  /// **'工厂建造'**
   String get notificationConstruction;
 
   /// No description provided for @notificationMorale.
   ///
   /// In zh, this message translates to:
-  /// **'士气 / 疲劳与刷闪 (Morale)'**
+  /// **'士气 / 疲劳与刷闪'**
   String get notificationMorale;
 
   /// No description provided for @notificationPunctual.
   ///
   /// In zh, this message translates to:
-  /// **'0s (准点)'**
+  /// **'准点'**
   String get notificationPunctual;
 
   /// No description provided for @notificationPreempt30s.
   ///
   /// In zh, this message translates to:
-  /// **'提前 30s'**
+  /// **'提前 30 秒'**
   String get notificationPreempt30s;
 
   /// No description provided for @notificationPreempt60s.
   ///
   /// In zh, this message translates to:
-  /// **'提前 60s'**
+  /// **'提前 60 秒'**
   String get notificationPreempt60s;
 
   /// No description provided for @notificationPreempt120s.
   ///
   /// In zh, this message translates to:
-  /// **'提前 2m'**
+  /// **'提前 2 分钟'**
   String get notificationPreempt120s;
 
   /// No description provided for @notificationRepairPunctual.
   ///
   /// In zh, this message translates to:
-  /// **'准点 (0s)'**
+  /// **'准点'**
   String get notificationRepairPunctual;
 
   /// No description provided for @notificationAnchorage20m.
   ///
   /// In zh, this message translates to:
-  /// **'满20min首轮'**
+  /// **'满 20 分钟首轮'**
   String get notificationAnchorage20m;
 
   /// No description provided for @notificationAnchorageFull.

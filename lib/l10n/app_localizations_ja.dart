@@ -1463,7 +1463,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationVibration => '振動通知';
 
   @override
-  String get notificationSectionOngoing => 'バックグラウンド進行中常駐 (Ongoing)';
+  String get notificationSectionOngoing => 'バックグラウンド進行中常駐';
 
   @override
   String get notificationOngoingLive => '常駐リアルタイム進行状況カード';
@@ -1478,25 +1478,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationCountdown => 'カウントダウン';
 
   @override
-  String get notificationSectionTypes => '通知種別とタイミング (Type)';
+  String get notificationSectionTypes => '通知種別とタイミング';
 
   @override
-  String get notificationExpedition => '遠征帰還 (Expedition)';
+  String get notificationExpedition => '遠征帰還';
 
   @override
-  String get notificationRepair => '入渠修復 (Repair)';
+  String get notificationRepair => '入渠修復';
 
   @override
-  String get notificationAnchorage => '泊地修理 (Anchorage Repair)';
+  String get notificationAnchorage => '泊地修理';
 
   @override
-  String get notificationConstruction => '工廠建造 (Construction)';
+  String get notificationConstruction => '工廠建造';
 
   @override
-  String get notificationMorale => '士気 / 疲労とキラ付け (Morale)';
+  String get notificationMorale => '士気 / 疲労とキラ付け';
 
   @override
-  String get notificationPunctual => '0s (定刻)';
+  String get notificationPunctual => '定刻';
 
   @override
   String get notificationPreempt30s => '30秒前';
@@ -1508,7 +1508,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationPreempt120s => '2分前';
 
   @override
-  String get notificationRepairPunctual => '定刻 (0s)';
+  String get notificationRepairPunctual => '定刻';
 
   @override
   String get notificationAnchorage20m => '20分初回';

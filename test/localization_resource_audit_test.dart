@@ -144,7 +144,6 @@ void main() {
       'notificationPercent',
       'notificationPreempt30s',
       'notificationPreempt60s',
-      'notificationPreempt120s',
       'notificationAnchorage',
     };
     const reviewedJa = <String>{
