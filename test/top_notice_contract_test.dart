@@ -24,7 +24,85 @@ import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller
 import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
+Map<String, String> collectBusinessDartSources(Directory projectRoot) {
+  final rootPath = projectRoot.absolute.path;
+  final files = <File>[
+    File(
+      '$rootPath${Platform.pathSeparator}lib${Platform.pathSeparator}main.dart',
+    ),
+    ...Directory(
+          '$rootPath${Platform.pathSeparator}lib${Platform.pathSeparator}src',
+        )
+        .listSync(recursive: true, followLinks: false)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart')),
+  ]..sort((a, b) => a.path.compareTo(b.path));
+
+  return <String, String>{
+    for (final file in files)
+      file.absolute.path.substring(rootPath.length + 1).replaceAll(r'\', '/'):
+          file.readAsStringSync(),
+  };
+}
+
+List<String> findForbiddenBottomNoticeUsages(Map<String, String> sources) {
+  final violations = <String>[];
+  final entries = sources.entries.toList()
+    ..sort(
+      (a, b) =>
+          a.key.replaceAll(r'\', '/').compareTo(b.key.replaceAll(r'\', '/')),
+    );
+  final forbiddenIdentifier = RegExp(r'\b(?:SnackBar|ScaffoldMessenger)\b');
+
+  for (final entry in entries) {
+    final path = entry.key.replaceAll(r'\', '/');
+    final lines = entry.value.split('\n');
+    for (var index = 0; index < lines.length; index++) {
+      final source = lines[index].replaceFirst(RegExp(r'\r$'), '');
+      if (forbiddenIdentifier.hasMatch(source)) {
+        violations.add('$path:${index + 1}:$source');
+      }
+    }
+  }
+
+  return violations;
+}
+
 void main() {
+  test('business Dart sources use TopNotice instead of bottom notices', () {
+    final violations = findForbiddenBottomNoticeUsages(
+      collectBusinessDartSources(Directory.current),
+    );
+
+    expect(
+      violations,
+      isEmpty,
+      reason:
+          'Business source must use TopNotice.show instead of SnackBar or '
+          'ScaffoldMessenger.\n${violations.join('\n')}',
+    );
+  });
+
+  test(
+    'bottom notice detector reports normalized locations in stable order',
+    () {
+      final violations = findForbiddenBottomNoticeUsages(<String, String>{
+        r'lib\src\z.dart': 'void z() { ScaffoldMessenger.of(context); }',
+        'lib/src/a.dart': '''
+void a() {
+  const notice = SnackBar(content: Text('message'));
+  TopNotice.show('allowed');
+}
+''',
+      });
+
+      expect(violations, <String>[
+        "lib/src/a.dart:2:  const notice = SnackBar(content: Text('message'));",
+        'lib/src/z.dart:1:void z() { ScaffoldMessenger.of(context); }',
+      ]);
+    },
+  );
+
   test('app mounts exactly one TopNoticeHost at MaterialApp home', () {
     final source = File('lib/main.dart').readAsStringSync();
 
