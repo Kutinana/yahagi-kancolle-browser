@@ -1012,6 +1012,10 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         orchestrator.runCaptureStartup(
           waitForSurface: () async {
             await WidgetsBinding.instance.endOfFrame;
+            // The compatibility PlatformView does not exist while initState is
+            // configuring its controller. Bind the native all-frame bridge only
+            // after the first rendered frame and before the first DMM navigation.
+            await _browserPort.configureFrameReload();
           },
           isActive: () => _isCurrentStartup(startupEpoch, orchestrator),
           navigate: () async {
@@ -1417,6 +1421,8 @@ final class WebViewGameBrowserPort implements GameBrowserPort {
   final Future<void> compatibilityReady;
   final Future<void> Function()? prepareForRealNavigation;
   final Future<void> Function() synchronizeGamePresentation;
+
+  Future<void> configureFrameReload() => gameFrameReloadPort.configure();
 
   @override
   Future<bool> canGoBack() => controller.canGoBack();

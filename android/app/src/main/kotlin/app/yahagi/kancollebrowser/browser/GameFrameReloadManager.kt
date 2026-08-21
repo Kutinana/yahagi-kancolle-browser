@@ -6,10 +6,12 @@ import io.flutter.plugin.common.MethodChannel
 internal class GameFrameReloadManager(
     private val bridge: GameFrameReloadBridgePort,
 ) : MethodChannel.MethodCallHandler {
+    fun configure() = bridge.configure()
+
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "configure" -> {
-                bridge.configure()
+                configure()
                 result.success(null)
             }
             "reload" -> {

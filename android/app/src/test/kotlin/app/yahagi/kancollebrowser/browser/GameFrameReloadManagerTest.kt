@@ -10,6 +10,16 @@ import org.junit.Test
 
 class GameFrameReloadManagerTest {
     @Test
+    fun nativeWebViewLifecycleCanConfigureBridgeDirectly() {
+        val bridge = FakeGameFrameReloadBridge(supported = true)
+        val manager = GameFrameReloadManager(bridge)
+
+        manager.configure()
+
+        assertEquals(1, bridge.configureCalls)
+    }
+
+    @Test
     fun configureAttachesBridgeBeforeNavigation() {
         val bridge = FakeGameFrameReloadBridge(supported = true)
         val manager = GameFrameReloadManager(bridge)

@@ -224,6 +224,9 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                     // The native host is now discoverable under decorView. Reapply
                     // the existing request client stack to this single WebView.
                     ensureGadgetBypassWrap()
+                    // Install the frame bridge while this WebView is still blank so
+                    // document-start injection is active for the first DMM load.
+                    gameFrameReloadManager?.configure()
                 }
 
                 override fun onPageStarted() {
