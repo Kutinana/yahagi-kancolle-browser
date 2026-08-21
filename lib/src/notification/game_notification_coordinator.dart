@@ -388,30 +388,23 @@ class GameNotificationCoordinator {
     if (settings.expedition) {
       for (final fleet in state.fleets) {
         final mission = fleet.mission;
-        if (mission.isActive &&
-            mission.completionTime != null &&
-            mission.completionTime!.isAfter(now)) {
+        if (mission.isActive && mission.completionTime != null) {
           final masterMission = state.masterMissions[mission.missionId];
           final totalSec =
               masterMission != null && masterMission.duration.inSeconds > 0
               ? masterMission.duration.inSeconds
               : 1800;
-          final remainingSec = mission.completionTime!
-              .difference(now)
-              .inSeconds;
-          final progress = (1.0 - (remainingSec / totalSec)).clamp(0.0, 1.0);
           final formattedMission = masterMission?.name.isNotEmpty == true
               ? '远征 ${mission.missionId} · ${masterMission!.name}'
               : (mission.missionId > 0 ? '远征 ${mission.missionId}' : '远征');
           items.add(
-            OngoingTaskItem(
+            _deadlineItem(
               id: 'expedition:${fleet.id}',
               type: GameNotificationType.expedition,
               title: '⚓ 第${fleet.id}舰队 · $formattedMission',
-              progress: progress,
-              remainingSeconds: remainingSec,
-              targetEpochMs: mission.completionTime!.millisecondsSinceEpoch,
-              totalDurationSec: totalSec,
+              deadline: mission.completionTime!,
+              totalSeconds: totalSec,
+              now: now,
             ),
           );
         }
@@ -421,17 +414,14 @@ class GameNotificationCoordinator {
     // 2. Repair Docks
     if (settings.repair) {
       for (final dock in state.repairDocks) {
-        if (dock.isRepairing &&
-            dock.completionTime != null &&
-            dock.completionTime!.isAfter(now)) {
-          final remainingSec = dock.completionTime!.difference(now).inSeconds;
+        if (dock.isRepairing && dock.completionTime != null) {
           final ship = state.ships[dock.shipId];
           final totalSec = ship != null && ship.repairDurationMilliseconds > 0
               ? (ship.repairDurationMilliseconds / 1000).round()
-              : (remainingSec > 0 ? remainingSec : 1);
-          final progress = totalSec > 0
-              ? (1.0 - (remainingSec / totalSec)).clamp(0.0, 1.0)
-              : 1.0;
+              : dock.completionTime!
+                    .difference(now)
+                    .inSeconds
+                    .clamp(1, 1 << 31);
           final masterShip = ship != null
               ? state.masterShips[ship.masterId]
               : null;
@@ -439,14 +429,13 @@ class GameNotificationCoordinator {
               ? masterShip!.name
               : '舰船';
           items.add(
-            OngoingTaskItem(
+            _deadlineItem(
               id: 'repair:${dock.id}',
               type: GameNotificationType.repair,
               title: '🔧 船坞 #${dock.id} · $shipName',
-              progress: progress,
-              remainingSeconds: remainingSec,
-              targetEpochMs: dock.completionTime!.millisecondsSinceEpoch,
-              totalDurationSec: totalSec,
+              deadline: dock.completionTime!,
+              totalSeconds: totalSec,
+              now: now,
             ),
           );
         }
@@ -509,11 +498,7 @@ class GameNotificationCoordinator {
     // 4. Construction Docks
     if (settings.construction) {
       for (final dock in state.constructionDocks) {
-        if (dock.isBuilding &&
-            !dock.isCompletedAt(now) &&
-            dock.completionTime != null &&
-            dock.completionTime!.isAfter(now)) {
-          final remainingSec = dock.completionTime!.difference(now).inSeconds;
+        if (dock.isBuilding && dock.state != 3 && dock.completionTime != null) {
           String shipName = '舰娘';
           final masterId = dock.createdShipMasterId;
           final master = masterId > 0 ? state.masterShips[masterId] : null;
@@ -529,18 +514,14 @@ class GameNotificationCoordinator {
           } else if (master != null && master.buildTimeMinutes > 0) {
             totalSec = master.buildTimeMinutes * 60;
           }
-          final progress = totalSec > 0
-              ? (1.0 - (remainingSec / totalSec)).clamp(0.0, 1.0)
-              : 1.0;
           items.add(
-            OngoingTaskItem(
+            _deadlineItem(
               id: 'construction:${dock.id}',
               type: GameNotificationType.construction,
               title: '🔨 船坞 #${dock.id} · $shipName 建造中',
-              progress: progress,
-              remainingSeconds: remainingSec,
-              targetEpochMs: dock.completionTime!.millisecondsSinceEpoch,
-              totalDurationSec: totalSec,
+              deadline: dock.completionTime!,
+              totalSeconds: totalSec,
+              now: now,
             ),
           );
         }
@@ -607,18 +588,14 @@ class GameNotificationCoordinator {
             final target = (state.updatedAt ?? now).add(
               Duration(seconds: totalDurationSec),
             );
-            final remainingSec = target.difference(now).inSeconds;
-            if (remainingSec <= 0) continue;
-            final progress = (minCond / 49.0).clamp(0.0, 1.0);
             items.add(
-              OngoingTaskItem(
+              _deadlineItem(
                 id: 'morale:${fleet.id}',
                 type: GameNotificationType.morale,
                 title: '✨ 第${fleet.id}舰队 · 疲劳恢复 (Cond $minCond/49)',
-                progress: progress,
-                remainingSeconds: remainingSec,
-                targetEpochMs: target.millisecondsSinceEpoch,
-                totalDurationSec: totalDurationSec,
+                deadline: target,
+                totalSeconds: totalDurationSec,
+                now: now,
               ),
             );
           }
@@ -627,6 +604,31 @@ class GameNotificationCoordinator {
     }
 
     return items;
+  }
+
+  OngoingTaskItem _deadlineItem({
+    required String id,
+    required GameNotificationType type,
+    required String title,
+    required DateTime deadline,
+    required int totalSeconds,
+    required DateTime now,
+  }) {
+    final completed = !deadline.isAfter(now);
+    final safeTotalSeconds = totalSeconds > 0 ? totalSeconds : 1;
+    final remainingSeconds = completed ? 0 : deadline.difference(now).inSeconds;
+    return OngoingTaskItem(
+      id: id,
+      type: type,
+      title: title,
+      state: completed ? OngoingTaskState.completed : OngoingTaskState.running,
+      progress: completed
+          ? 1
+          : (1 - remainingSeconds / safeTotalSeconds).clamp(0.0, 1.0),
+      remainingSeconds: remainingSeconds,
+      targetEpochMs: deadline.millisecondsSinceEpoch,
+      totalDurationSec: safeTotalSeconds,
+    );
   }
 
   DateTime? _anchorageStartFor(GameState state) {

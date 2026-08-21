@@ -261,6 +261,102 @@ void main() {
       coordinator.dispose();
     });
 
+    test('keeps overdue authoritative tasks as completed ongoing items', () {
+      final overdue = testNow.subtract(const Duration(minutes: 1));
+      testState = GameState.empty.copyWith(
+        updatedAt: testNow.subtract(const Duration(minutes: 30)),
+        masterMissions: const {
+          37: MasterMission(
+            id: 37,
+            name: '东京急行',
+            duration: Duration(minutes: 30),
+          ),
+        },
+        masterShips: const {
+          1: MasterShip(id: 1, name: '吹雪', shipTypeId: 2),
+          153: MasterShip(id: 153, name: '大凤', shipTypeId: 11),
+        },
+        ships: const {
+          1: OwnedShip(
+            id: 1,
+            masterId: 1,
+            level: 1,
+            currentHp: 10,
+            maxHp: 10,
+            condition: 40,
+            currentFuel: 10,
+            currentAmmo: 10,
+            slotIds: [],
+          ),
+          10: OwnedShip(
+            id: 10,
+            masterId: 1,
+            level: 1,
+            currentHp: 5,
+            maxHp: 10,
+            condition: 49,
+            currentFuel: 10,
+            currentAmmo: 10,
+            slotIds: [],
+            repairDurationMilliseconds: 600000,
+          ),
+        },
+        fleets: [
+          const Fleet(id: 1, name: '第1舰队', shipIds: [1]),
+          Fleet(
+            id: 2,
+            name: '第2舰队',
+            shipIds: const [10],
+            mission: FleetMission(
+              state: 1,
+              missionId: 37,
+              completionTime: overdue,
+            ),
+          ),
+        ],
+        repairDocks: [
+          RepairDock(id: 1, state: 1, shipId: 10, completionTime: overdue),
+        ],
+        constructionDocks: [
+          ConstructionDock(
+            id: 1,
+            state: 1,
+            createdShipMasterId: 153,
+            completionTime: overdue,
+          ),
+        ],
+      );
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+      coordinator.start();
+
+      final completedById = {
+        for (final item in fakePort.latestSnapshot!.ongoingItems) item.id: item,
+      };
+      for (final id in const [
+        'expedition:2',
+        'repair:1',
+        'construction:1',
+        'morale:1',
+      ]) {
+        expect(
+          completedById[id]?.state,
+          OngoingTaskState.completed,
+          reason: id,
+        );
+        expect(completedById[id]?.progress, 1, reason: id);
+        expect(completedById[id]?.remainingSeconds, 0, reason: id);
+      }
+      expect(fakePort.latestSnapshot!.alarms, isEmpty);
+
+      coordinator.dispose();
+    });
+
     test('schedules anchorage repair 20m alarm when timer is active', () {
       final ancStarted = testNow.subtract(const Duration(minutes: 5));
       testState = _anchorageState();
