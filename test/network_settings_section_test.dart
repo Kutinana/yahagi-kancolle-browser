@@ -140,6 +140,87 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('restore clears the proxy then shows a success notice', (
+    tester,
+  ) async {
+    final calls = <String>[];
+    final result = Completer<dynamic>();
+    final controller = await createController(
+      settings: const NetworkSettings(
+        mode: NetworkMode.httpProxy,
+        host: '127.0.0.1',
+        port: 8080,
+      ),
+      handler: (call) {
+        calls.add(call.method);
+        return result.future;
+      },
+    );
+    var successCalls = 0;
+    await tester.pumpWidget(app(controller, onSuccess: () => successCalls++));
+
+    await tester.tap(find.text('恢复系统网络'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(calls, ['clearProxyOverride']);
+    expect(noticeMatching(find.text('正在清除应用内代理…')), findsOneWidget);
+    expect(
+      noticeMatching(find.byIcon(Icons.info_outline_rounded)),
+      findsOneWidget,
+    );
+
+    result.complete(<String, dynamic>{
+      'success': true,
+      'code': 'ok',
+      'message': 'cleared',
+      'elapsedMs': 8,
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(noticeMatching(find.text('正在清除应用内代理…')), findsNothing);
+    expect(noticeMatching(find.text('已恢复系统网络。')), findsOneWidget);
+    expect(
+      noticeMatching(find.byIcon(Icons.check_circle_outline_rounded)),
+      findsOneWidget,
+    );
+    expect(successCalls, 1);
+  });
+
+  testWidgets('restore failure shows an error notice', (tester) async {
+    final calls = <String>[];
+    final controller = await createController(
+      settings: const NetworkSettings(
+        mode: NetworkMode.socks5Proxy,
+        host: '127.0.0.1',
+        port: 1080,
+      ),
+      handler: (call) async {
+        calls.add(call.method);
+        return <String, dynamic>{
+          'success': false,
+          'code': 'denied',
+          'message': 'blocked',
+          'elapsedMs': 5,
+        };
+      },
+    );
+    await tester.pumpWidget(app(controller));
+
+    await tester.tap(find.text('恢复系统网络'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(calls, ['clearProxyOverride']);
+    expect(noticeMatching(find.text('正在清除应用内代理…')), findsNothing);
+    expect(noticeMatching(find.text('恢复失败 [denied]：blocked')), findsOneWidget);
+    expect(
+      noticeMatching(find.byIcon(Icons.error_outline_rounded)),
+      findsOneWidget,
+    );
+  });
 }
 
 final class _MemoryStore implements NetworkSettingsStore {
