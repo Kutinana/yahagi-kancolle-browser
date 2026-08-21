@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../widgets/top_notice.dart';
 import 'game_browser_controller.dart';
 
 Future<void> showGameRefreshDialog({
@@ -51,9 +52,11 @@ Future<void> showGameRefreshDialog({
                 l10n.gameFrameReloadUnsupported,
               GameFrameReloadResult.reloaded => '',
             };
-            ScaffoldMessenger.of(
+            TopNotice.show(
               context,
-            ).showSnackBar(SnackBar(content: Text(message)));
+              message: message,
+              tone: TopNoticeTone.error,
+            );
           },
           child: Text(l10n.reloadGame),
         ),

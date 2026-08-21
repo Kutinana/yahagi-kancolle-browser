@@ -924,12 +924,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
             : () async {
                 widget.toolbarController.resetAutoHide();
                 final l10n = AppLocalizations.of(context)!;
-                final messenger = ScaffoldMessenger.of(context);
-                messenger
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(content: Text(l10n.screenshotSaving)),
-                  );
+                TopNotice.show(context, message: l10n.screenshotSaving);
                 await WidgetsBinding.instance.endOfFrame;
                 if (!context.mounted) return;
                 final result = await widget.gameScreenshotController!.capture();
@@ -939,9 +934,13 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                     : result.errorMessage == null
                     ? l10n.screenshotFailed
                     : '${l10n.screenshotFailed}\n${result.errorMessage}';
-                messenger
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(content: Text(message)));
+                TopNotice.show(
+                  context,
+                  message: message,
+                  tone: result.path != null
+                      ? TopNoticeTone.success
+                      : TopNoticeTone.error,
+                );
               },
         persistent: false,
       ),

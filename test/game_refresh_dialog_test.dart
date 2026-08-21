@@ -2,8 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_refresh_dialog.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
+  Widget buildApp({
+    required Future<GameFrameReloadResult> Function() onReloadGame,
+    Future<void> Function()? onRefreshPage,
+  }) {
+    return MaterialApp(
+      home: TopNoticeHost(
+        child: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () => showGameRefreshDialog(
+                context: context,
+                onRefreshPage: onRefreshPage ?? () async {},
+                onReloadGame: onReloadGame,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   testWidgets('offers POI-aligned full page and game-only reload actions', (
     tester,
   ) async {
@@ -11,22 +34,12 @@ void main() {
     var gameReloads = 0;
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: FilledButton(
-              onPressed: () => showGameRefreshDialog(
-                context: context,
-                onRefreshPage: () async => pageRefreshes++,
-                onReloadGame: () async {
-                  gameReloads++;
-                  return GameFrameReloadResult.reloaded;
-                },
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
+      buildApp(
+        onRefreshPage: () async => pageRefreshes++,
+        onReloadGame: () async {
+          gameReloads++;
+          return GameFrameReloadResult.reloaded;
+        },
       ),
     );
 
@@ -51,20 +64,8 @@ void main() {
 
   testWidgets('reports when the POI game frame is unavailable', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: FilledButton(
-              onPressed: () => showGameRefreshDialog(
-                context: context,
-                onRefreshPage: () async {},
-                onReloadGame: () async =>
-                    GameFrameReloadResult.gameFrameNotFound,
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
+      buildApp(
+        onReloadGame: () async => GameFrameReloadResult.gameFrameNotFound,
       ),
     );
 
@@ -74,27 +75,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('尚未找到游戏框架，请进入游戏后重试。'), findsOneWidget);
+    expect(find.byKey(topNoticeKey), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
   });
 
   testWidgets('reports a blocked reload when the native command fails', (
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: FilledButton(
-              onPressed: () => showGameRefreshDialog(
-                context: context,
-                onRefreshPage: () async {},
-                onReloadGame: () => Future<GameFrameReloadResult>.error(
-                  StateError('native failure'),
-                ),
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
+      buildApp(
+        onReloadGame: () =>
+            Future<GameFrameReloadResult>.error(StateError('native failure')),
       ),
     );
 
@@ -111,20 +102,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: FilledButton(
-              onPressed: () => showGameRefreshDialog(
-                context: context,
-                onRefreshPage: () async {},
-                onReloadGame: () async => GameFrameReloadResult.unsupported,
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      ),
+      buildApp(onReloadGame: () async => GameFrameReloadResult.unsupported),
     );
 
     await tester.tap(find.text('open'));
@@ -133,5 +111,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('当前设备的 Android WebView 太旧，不支持对子框架注入。'), findsOneWidget);
+    expect(find.byKey(topNoticeKey), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+    expect(
+      tester.getRect(find.byKey(topNoticeKey)).top,
+      lessThan(tester.view.physicalSize.height / 2),
+    );
   });
 }

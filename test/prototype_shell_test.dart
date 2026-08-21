@@ -41,6 +41,7 @@ import 'package:yahagi_kancolle_browser/src/fleet/fleet_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/repair_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/logbook/logbook_page.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
   test('app resume does not schedule a platform-view recovery frame', () {
@@ -277,9 +278,9 @@ void main() {
     await tester.tap(find.byKey(const Key('browser-screenshot')));
     await tester.pumpAndSettle();
     expect(find.textContaining('yahagi-test.png'), findsOneWidget);
-    ScaffoldMessenger.of(
-      tester.element(find.byType(Scaffold).first),
-    ).hideCurrentSnackBar();
+    expect(find.byKey(topNoticeKey), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
+    TopNotice.hide(tester.element(find.byType(Scaffold).first));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('yahagi-brand-button')));
     await tester.pumpAndSettle();

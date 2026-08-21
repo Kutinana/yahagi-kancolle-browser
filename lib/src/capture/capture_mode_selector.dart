@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/top_notice.dart';
 import 'capture_mode.dart';
 import 'capture_mode_controller.dart';
 
@@ -39,9 +40,7 @@ class CaptureModeSelector extends StatelessWidget {
                   CaptureMode.game => '游戏模式将在重新载入页面后启用只读捕获。',
                   CaptureMode.browserOnly => '纯浏览模式将在重新载入页面后停止数据捕获。',
                 };
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(content: Text(message)));
+                TopNotice.show(context, message: message);
               },
             ),
             const SizedBox(height: 8),
