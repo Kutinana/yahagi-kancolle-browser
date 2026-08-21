@@ -214,12 +214,56 @@ void main() {
     final semantics = tester.ensureSemantics();
     const message = '完整的无障碍提示文案';
     await showNotice(tester, message: message);
+    await tester.pump(const Duration(milliseconds: 180));
 
-    final widget = tester.widget<Semantics>(find.byKey(topNoticeKey));
-    expect(widget.properties.label, message);
-    expect(widget.properties.liveRegion, isTrue);
+    final node = tester.getSemantics(find.bySemanticsLabel(message));
+    expect(node.label, message);
+    expect(node.flagsCollection.isLiveRegion, isTrue);
     semantics.dispose();
   });
+
+  testWidgets(
+    'hide removes the notice and its old timer cannot affect a new one',
+    (tester) async {
+      late BuildContext noticeContext;
+      await tester.pumpWidget(
+        buildApp(
+          child: Builder(
+            builder: (context) {
+              noticeContext = context;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      );
+      TopNotice.show(
+        noticeContext,
+        message: 'hidden early',
+        duration: const Duration(milliseconds: 300),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      TopNotice.hide(noticeContext);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 141));
+      expect(find.text('hidden early'), findsNothing);
+
+      TopNotice.show(
+        noticeContext,
+        message: 'new notice',
+        duration: const Duration(milliseconds: 500),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 59));
+      expect(find.text('new notice'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 440));
+      expect(find.text('new notice'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump(const Duration(milliseconds: 141));
+      expect(find.text('new notice'), findsNothing);
+    },
+  );
 
   testWidgets('does not intercept taps intended for content underneath', (
     tester,
@@ -258,7 +302,7 @@ void main() {
     await showNotice(tester, duration: const Duration(minutes: 1));
 
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
+    await tester.pump(const Duration(minutes: 2));
 
     expect(tester.takeException(), isNull);
   });
