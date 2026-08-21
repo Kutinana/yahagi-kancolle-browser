@@ -73,27 +73,6 @@ class OngoingTaskItem {
   };
 }
 
-class OngoingProgressSummary {
-  const OngoingProgressSummary({
-    required this.items,
-    this.showProgress = true,
-    this.showPercent = true,
-    this.showCountdown = true,
-  });
-
-  final List<OngoingTaskItem> items;
-  final bool showProgress;
-  final bool showPercent;
-  final bool showCountdown;
-
-  Map<String, Object?> toMap() => {
-    'items': items.map((e) => e.toMap()).toList(),
-    'showProgress': showProgress,
-    'showPercent': showPercent,
-    'showCountdown': showCountdown,
-  };
-}
-
 class NotificationPresentation {
   const NotificationPresentation({
     required this.enabled,

@@ -1430,6 +1430,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsTabAboutSupport => '情報';
 
   @override
+  String get notificationSectionSystem => 'システム通知の状態';
+
+  @override
+  String get notificationPermissionGranted => '通知権限は許可されています';
+
+  @override
+  String get notificationPermissionDenied => '通知権限が許可されていません';
+
+  @override
+  String get notificationExactAlarmGranted => '正確なアラームは許可されています';
+
+  @override
+  String get notificationExactAlarmDenied => '正確なアラームは未許可です。省電力互換モードを使用します';
+
+  @override
+  String get notificationChannelsEnabled => '通知チャンネルは利用可能です';
+
+  @override
+  String get notificationChannelsDisabled => '通知チャンネルがシステムで無効です';
+
+  @override
   String get notificationSectionGeneral => '全体通知サービス';
 
   @override

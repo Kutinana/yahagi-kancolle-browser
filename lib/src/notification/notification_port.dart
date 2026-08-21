@@ -6,12 +6,4 @@ abstract interface class NotificationPort {
   Future<bool> requestNotificationPermission();
   Future<void> requestExactAlarmPermission();
   Future<void> openSystemNotificationSettings();
-
-  // Legacy operations retained until the coordinator migration is complete.
-  Future<void> scheduleAlarm(ScheduledNotificationItem item);
-  Future<void> cancelAlarm(String key);
-  Future<void> cancelAllAlarms();
-  Future<void> updateOngoingProgress(OngoingProgressSummary summary);
-  Future<void> cancelOngoingProgress();
-  Future<bool> requestPermission();
 }

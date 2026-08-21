@@ -1421,6 +1421,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTabAboutSupport => '关于';
 
   @override
+  String get notificationSectionSystem => '系统通知状态';
+
+  @override
+  String get notificationPermissionGranted => '通知权限已授予';
+
+  @override
+  String get notificationPermissionDenied => '通知权限未授予';
+
+  @override
+  String get notificationExactAlarmGranted => '精确提醒已授权';
+
+  @override
+  String get notificationExactAlarmDenied => '精确提醒未授权，将使用省电兼容模式';
+
+  @override
+  String get notificationChannelsEnabled => '通知渠道可用';
+
+  @override
+  String get notificationChannelsDisabled => '通知渠道已被系统关闭';
+
+  @override
   String get notificationSectionGeneral => '全局通知服务';
 
   @override
@@ -3319,6 +3340,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsTabAboutSupport => '關於';
+
+  @override
+  String get notificationSectionSystem => '系統通知狀態';
+
+  @override
+  String get notificationPermissionGranted => '通知權限已授予';
+
+  @override
+  String get notificationPermissionDenied => '通知權限未授予';
+
+  @override
+  String get notificationExactAlarmGranted => '精確提醒已授權';
+
+  @override
+  String get notificationExactAlarmDenied => '精確提醒未授權，將使用省電相容模式';
+
+  @override
+  String get notificationChannelsEnabled => '通知頻道可用';
+
+  @override
+  String get notificationChannelsDisabled => '通知頻道已被系統關閉';
 
   @override
   String get notificationSectionGeneral => '全域通知服務';

@@ -1,13 +1,52 @@
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
+import '../notification/method_channel_notification_port.dart';
+import '../notification/notification_models.dart';
+import '../notification/notification_port.dart';
 import 'notification_settings_controller.dart';
 import 'notification_settings_store.dart';
 import 'settings_ui_helpers.dart';
 
-class NotificationSettingsPage extends StatelessWidget with SettingsUIHelpers {
-  const NotificationSettingsPage({super.key, required this.controller});
+class NotificationSettingsPage extends StatefulWidget {
+  const NotificationSettingsPage({
+    super.key,
+    required this.controller,
+    this.notificationPort = const MethodChannelNotificationPort(),
+  });
 
   final NotificationSettingsController controller;
+  final NotificationPort notificationPort;
+
+  @override
+  State<NotificationSettingsPage> createState() =>
+      _NotificationSettingsPageState();
+}
+
+class _NotificationSettingsPageState extends State<NotificationSettingsPage>
+    with SettingsUIHelpers {
+  late Future<NotificationPlatformCapabilities> _capabilities;
+
+  NotificationSettingsController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshCapabilities();
+  }
+
+  void _refreshCapabilities() {
+    _capabilities = widget.notificationPort.getCapabilities();
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    await widget.notificationPort.requestNotificationPermission();
+    setState(_refreshCapabilities);
+  }
+
+  Future<void> _requestExactAlarmPermission() async {
+    await widget.notificationPort.requestExactAlarmPermission();
+    setState(_refreshCapabilities);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +65,70 @@ class NotificationSettingsPage extends StatelessWidget with SettingsUIHelpers {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                buildSectionTitle(l10n.notificationSectionSystem),
+                FutureBuilder<NotificationPlatformCapabilities>(
+                  future: _capabilities,
+                  builder: (context, snapshot) {
+                    final capabilities = snapshot.data;
+                    return buildCard(
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: Icon(
+                              capabilities?.notificationsGranted == true
+                                  ? Icons.check_circle_outline
+                                  : Icons.notifications_off_outlined,
+                            ),
+                            title: Text(
+                              capabilities?.notificationsGranted == true
+                                  ? l10n.notificationPermissionGranted
+                                  : l10n.notificationPermissionDenied,
+                            ),
+                            onTap: capabilities?.notificationsGranted == true
+                                ? widget
+                                      .notificationPort
+                                      .openSystemNotificationSettings
+                                : _requestNotificationPermission,
+                          ),
+                          const Divider(color: Color(0xff294052), height: 1),
+                          ListTile(
+                            leading: Icon(
+                              capabilities?.exactAlarmsGranted == true
+                                  ? Icons.alarm_on_outlined
+                                  : Icons.alarm_off_outlined,
+                            ),
+                            title: Text(
+                              capabilities?.exactAlarmsGranted == true
+                                  ? l10n.notificationExactAlarmGranted
+                                  : l10n.notificationExactAlarmDenied,
+                            ),
+                            onTap: capabilities?.exactAlarmsGranted == true
+                                ? null
+                                : _requestExactAlarmPermission,
+                          ),
+                          const Divider(color: Color(0xff294052), height: 1),
+                          ListTile(
+                            leading: Icon(
+                              capabilities?.channelsEnabled == true
+                                  ? Icons.tune_outlined
+                                  : Icons.block_outlined,
+                            ),
+                            title: Text(
+                              capabilities?.channelsEnabled == true
+                                  ? l10n.notificationChannelsEnabled
+                                  : l10n.notificationChannelsDisabled,
+                            ),
+                            onTap: widget
+                                .notificationPort
+                                .openSystemNotificationSettings,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+
                 // 1. 全局通知服务
                 buildSectionTitle(l10n.notificationSectionGeneral),
                 buildCard(
@@ -150,9 +253,9 @@ class NotificationSettingsPage extends StatelessWidget with SettingsUIHelpers {
                             selected: {settings.expeditionPreemptSeconds},
                             onSelectionChanged:
                                 settings.master && settings.expedition
-                                    ? (set) => controller
-                                        .setExpeditionPreemptSeconds(set.first)
-                                    : null,
+                                ? (set) => controller
+                                      .setExpeditionPreemptSeconds(set.first)
+                                : null,
                             style: _segmentedButtonStyle,
                           ),
                         ),
@@ -189,9 +292,10 @@ class NotificationSettingsPage extends StatelessWidget with SettingsUIHelpers {
                             selected: {settings.repairPreemptSeconds},
                             onSelectionChanged:
                                 settings.master && settings.repair
-                                    ? (set) => controller
-                                        .setRepairPreemptSeconds(set.first)
-                                    : null,
+                                ? (set) => controller.setRepairPreemptSeconds(
+                                    set.first,
+                                  )
+                                : null,
                             style: _segmentedButtonStyle,
                           ),
                         ),
@@ -263,8 +367,7 @@ class NotificationSettingsPage extends StatelessWidget with SettingsUIHelpers {
                           child: SegmentedButton<AnchorageNotificationMode>(
                             segments: [
                               ButtonSegment<AnchorageNotificationMode>(
-                                value:
-                                    AnchorageNotificationMode.twentyMinutes,
+                                value: AnchorageNotificationMode.twentyMinutes,
                                 label: Text(l10n.notificationAnchorage20m),
                               ),
                               ButtonSegment<AnchorageNotificationMode>(
@@ -279,10 +382,9 @@ class NotificationSettingsPage extends StatelessWidget with SettingsUIHelpers {
                             selected: {settings.anchorageMode},
                             onSelectionChanged:
                                 settings.master && settings.anchorage
-                                    ? (set) => controller.setAnchorageMode(
-                                        set.first,
-                                      )
-                                    : null,
+                                ? (set) =>
+                                      controller.setAnchorageMode(set.first)
+                                : null,
                             style: _segmentedButtonStyle,
                           ),
                         ),
@@ -339,7 +441,9 @@ class NotificationSettingsPage extends StatelessWidget with SettingsUIHelpers {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: enabled ? const Color(0xff8197a5) : const Color(0xff526776),
+              color: enabled
+                  ? const Color(0xff8197a5)
+                  : const Color(0xff526776),
             ),
           ),
         ],

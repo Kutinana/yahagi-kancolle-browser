@@ -2762,6 +2762,48 @@ abstract class AppLocalizations {
   /// **'关于'**
   String get settingsTabAboutSupport;
 
+  /// No description provided for @notificationSectionSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统通知状态'**
+  String get notificationSectionSystem;
+
+  /// No description provided for @notificationPermissionGranted.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知权限已授予'**
+  String get notificationPermissionGranted;
+
+  /// No description provided for @notificationPermissionDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知权限未授予'**
+  String get notificationPermissionDenied;
+
+  /// No description provided for @notificationExactAlarmGranted.
+  ///
+  /// In zh, this message translates to:
+  /// **'精确提醒已授权'**
+  String get notificationExactAlarmGranted;
+
+  /// No description provided for @notificationExactAlarmDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'精确提醒未授权，将使用省电兼容模式'**
+  String get notificationExactAlarmDenied;
+
+  /// No description provided for @notificationChannelsEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知渠道可用'**
+  String get notificationChannelsEnabled;
+
+  /// No description provided for @notificationChannelsDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知渠道已被系统关闭'**
+  String get notificationChannelsDisabled;
+
   /// No description provided for @notificationSectionGeneral.
   ///
   /// In zh, this message translates to:

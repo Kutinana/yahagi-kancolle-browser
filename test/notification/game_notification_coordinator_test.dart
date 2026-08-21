@@ -10,10 +10,6 @@ import 'package:yahagi_kancolle_browser/src/settings/notification_settings_store
 
 class FakeNotificationPort implements NotificationPort {
   final Map<String, ScheduledNotificationItem> scheduledAlarms = {};
-  final List<String> canceledAlarms = [];
-  bool allAlarmsCanceled = false;
-  OngoingProgressSummary? currentOngoingSummary;
-  bool ongoingCanceled = false;
   NotificationSnapshot? latestSnapshot;
 
   @override
@@ -24,14 +20,6 @@ class FakeNotificationPort implements NotificationPort {
     scheduledAlarms
       ..clear()
       ..addEntries(snapshot.alarms.map((alarm) => MapEntry(alarm.key, alarm)));
-    currentOngoingSummary = snapshot.ongoingItems.isEmpty
-        ? null
-        : OngoingProgressSummary(
-            items: snapshot.ongoingItems,
-            showProgress: snapshot.presentation.showProgress,
-            showPercent: snapshot.presentation.showPercent,
-            showCountdown: snapshot.presentation.showCountdown,
-          );
     return const NotificationApplyResult(
       scheduledExact: 0,
       scheduledInexact: 0,
@@ -57,38 +45,6 @@ class FakeNotificationPort implements NotificationPort {
 
   @override
   Future<bool> requestNotificationPermission() async => true;
-
-  @override
-  Future<void> scheduleAlarm(ScheduledNotificationItem item) async {
-    scheduledAlarms[item.key] = item;
-  }
-
-  @override
-  Future<void> cancelAlarm(String key) async {
-    scheduledAlarms.remove(key);
-    canceledAlarms.add(key);
-  }
-
-  @override
-  Future<void> cancelAllAlarms() async {
-    scheduledAlarms.clear();
-    allAlarmsCanceled = true;
-  }
-
-  @override
-  Future<void> updateOngoingProgress(OngoingProgressSummary summary) async {
-    currentOngoingSummary = summary;
-    ongoingCanceled = false;
-  }
-
-  @override
-  Future<void> cancelOngoingProgress() async {
-    currentOngoingSummary = null;
-    ongoingCanceled = true;
-  }
-
-  @override
-  Future<bool> requestPermission() async => true;
 }
 
 GameState _anchorageState({bool akashiFlagship = true}) {
@@ -417,7 +373,7 @@ void main() {
           fakePort.scheduledAlarms.containsKey('construction_1_complete'),
           isTrue,
         );
-        expect(fakePort.currentOngoingSummary?.items.length, 1);
+        expect(fakePort.latestSnapshot?.ongoingItems.length, 1);
 
         // Fast build (speedchange) sets state to 3 and completionTime to now
         testState = testState.copyWith(
@@ -436,7 +392,7 @@ void main() {
           fakePort.scheduledAlarms.containsKey('construction_1_complete'),
           isFalse,
         );
-        expect(fakePort.currentOngoingSummary, isNull);
+        expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
         expect(fakePort.latestSnapshot?.alarms, isEmpty);
         expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
 

@@ -263,8 +263,8 @@ class GameNotificationCoordinator {
               stage: NotificationAlarmStage.complete,
               removeTaskOnFire: true,
               triggerTime: now.add(remaining),
-              title: '泊地修理预计完成 · 第1舰队',
-              body: '第1舰队可修理舰船预计已全部恢复。',
+              title: 'Anchorage repair complete · Fleet 1',
+              body: 'All eligible ships in Fleet 1 should now be repaired.',
             );
           }
         }
