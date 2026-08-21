@@ -193,6 +193,24 @@ class NotificationSnapshotTest {
         )
     }
 
+    @Test
+    fun `completion notification id is stable and separate from ongoing summary`() {
+        val first = NotificationDelivery.notificationId("expedition_2_complete")
+        val second = NotificationDelivery.notificationId("expedition_2_complete")
+
+        assertEquals(first, second)
+        assertTrue(first != AppNotificationManager.ONGOING_NOTIFICATION_ID)
+        assertTrue(first in 1_000..1_899)
+    }
+
+    @Test
+    fun `legacy alarm keys recover their stage when intent extra is missing`() {
+        assertEquals("preempt", NotificationDelivery.stageFor("repair_1_preempt", null))
+        assertEquals("milestone", NotificationDelivery.stageFor("anchorage_1_20m", null))
+        assertEquals("complete", NotificationDelivery.stageFor("construction_1_complete", null))
+        assertEquals("milestone", NotificationDelivery.stageFor("anything", "milestone"))
+    }
+
     private fun snapshot(
         alarm: NotificationAlarm,
         sound: Boolean,

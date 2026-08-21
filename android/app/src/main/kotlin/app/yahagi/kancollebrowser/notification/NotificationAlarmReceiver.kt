@@ -14,13 +14,14 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val key = intent.getStringExtra("key") ?: return
         val taskId = intent.getStringExtra("taskId") ?: return
-        val removeTaskOnFire = intent.getBooleanExtra("removeTaskOnFire", false)
+        val stage = NotificationDelivery.stageFor(key, intent.getStringExtra("stage"))
         val channelId = intent.getStringExtra("channelId") ?: "channel_expedition"
         val title = intent.getStringExtra("title") ?: "矢矧通知"
         val body = intent.getStringExtra("body") ?: ""
         val sound = intent.getBooleanExtra("sound", true)
         val vibration = intent.getBooleanExtra("vibration", true)
 
+        AppNotificationManager.initChannels(context)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
 
         val launchIntent = Intent(context, MainActivity::class.java).apply {
@@ -41,6 +42,8 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             builder.setVibrate(if (vibration) AppNotificationManager.VIBRATION_PATTERN else null)
@@ -52,8 +55,8 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
         }
         val notification = builder.build()
 
-        val notificationId = (key.hashCode() and 0x7FFFFFFF) % 900 + 1000
+        val notificationId = NotificationDelivery.notificationId(key)
         notificationManager.notify(notificationId, notification)
-        AppNotificationManager.onAlarmFired(context, key, taskId, removeTaskOnFire)
+        AppNotificationManager.onAlarmFired(context, key, taskId, stage)
     }
 }

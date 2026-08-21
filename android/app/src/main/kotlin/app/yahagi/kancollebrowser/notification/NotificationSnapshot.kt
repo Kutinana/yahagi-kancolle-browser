@@ -141,6 +141,16 @@ object NotificationChronometer {
     ): Long = elapsedRealtimeMs - (nowEpochMs - anchorEpochMs).coerceAtLeast(0L)
 }
 
+object NotificationDelivery {
+    fun notificationId(key: String): Int = (key.hashCode() and 0x7FFFFFFF) % 900 + 1_000
+
+    fun stageFor(key: String, explicitStage: String?): String = explicitStage ?: when {
+        key.endsWith("_preempt") -> "preempt"
+        key.endsWith("_20m") -> "milestone"
+        else -> "complete"
+    }
+}
+
 object NotificationSnapshotCodec {
     fun fromMap(raw: Map<*, *>): NativeNotificationSnapshot {
         val alarms = raw.list("alarms").map { alarmRaw ->

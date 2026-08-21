@@ -133,16 +133,14 @@ object AppNotificationManager {
         context: Context,
         key: String,
         taskId: String,
-        removeTaskOnFire: Boolean,
+        stage: String,
     ) {
         val previous = loadSnapshot(context)
-        val next = previous.copy(
-            alarms = previous.alarms.filterNot { it.key == key },
-            ongoingItems = if (removeTaskOnFire) {
-                previous.ongoingItems.filterNot { it.id == taskId }
-            } else {
-                previous.ongoingItems
-            },
+        val next = NotificationSnapshotTransitions.onAlarmFired(
+            previous = previous,
+            key = key,
+            taskId = taskId,
+            stage = stage,
         )
         saveSnapshot(context, next)
         updateOngoingProgress(context, next)
@@ -158,7 +156,21 @@ object AppNotificationManager {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
-        return manager.getNotificationChannel(ONGOING_CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE
+        val snapshot = loadSnapshot(context)
+        val activeTypes = (snapshot.alarms.map { it.type } + snapshot.ongoingItems.map { it.type })
+            .filter { it in channelNames }
+            .toSet()
+            .ifEmpty { channelNames.keys }
+        val alertChannelsEnabled = activeTypes.all { type ->
+            manager.getNotificationChannel(
+                channelId(type, snapshot.presentation.sound, snapshot.presentation.vibration),
+            )?.importance?.let { it != NotificationManager.IMPORTANCE_NONE } == true
+        }
+        val ongoingEnabled = snapshot.ongoingItems.isEmpty() ||
+            manager.getNotificationChannel(ONGOING_CHANNEL_ID)
+                ?.importance
+                ?.let { it != NotificationManager.IMPORTANCE_NONE } == true
+        return alertChannelsEnabled && ongoingEnabled
     }
 
     private fun scheduleAlarm(
@@ -171,6 +183,7 @@ object AppNotificationManager {
         val intent = Intent(context, NotificationAlarmReceiver::class.java).apply {
             putExtra("key", alarm.key)
             putExtra("taskId", alarm.taskId)
+            putExtra("stage", alarm.stage)
             putExtra("removeTaskOnFire", alarm.removeTaskOnFire)
             putExtra("channelId", channelId(alarm.type, presentation.sound, presentation.vibration))
             putExtra("sound", presentation.sound)
