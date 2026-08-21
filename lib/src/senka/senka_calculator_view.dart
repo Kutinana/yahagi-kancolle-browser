@@ -6,6 +6,7 @@ import 'senka_catalog.dart';
 import 'senka_controller.dart';
 import 'senka_state.dart';
 import 'senka_ui.dart';
+import '../widgets/standalone_text_input_dialog.dart';
 
 class SenkaCalculatorView extends StatefulWidget {
   const SenkaCalculatorView({
@@ -24,36 +25,6 @@ class SenkaCalculatorView extends StatefulWidget {
 }
 
 class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
-  late final TextEditingController currentController = TextEditingController(
-    text: senkaNumber(widget.state.calculatorCurrentSenka),
-  );
-  late final TextEditingController targetController = TextEditingController(
-    text: senkaNumber(widget.state.targetSenka),
-  );
-
-  @override
-  void didUpdateWidget(covariant SenkaCalculatorView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncInput(currentController, widget.state.calculatorCurrentSenka);
-    _syncInput(targetController, widget.state.targetSenka);
-  }
-
-  void _syncInput(TextEditingController controller, double model) {
-    if (double.tryParse(controller.text) == model) return;
-    final text = senkaNumber(model);
-    controller.value = TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-
-  @override
-  void dispose() {
-    currentController.dispose();
-    targetController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
@@ -129,7 +100,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                   child: _inputColumn(
                     '当前战果',
                     const Key('senka-current-input'),
-                    currentController,
+                    widget.state.calculatorCurrentSenka,
                     widget.controller.setCurrentSenka,
                   ),
                 ),
@@ -138,7 +109,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
                   child: _inputColumn(
                     '目标战果',
                     const Key('senka-target-input'),
-                    targetController,
+                    widget.state.targetSenka,
                     widget.controller.setTargetSenka,
                   ),
                 ),
@@ -203,7 +174,7 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
   Widget _inputColumn(
     String label,
     Key key,
-    TextEditingController controller,
+    double value,
     ValueChanged<double> setter,
   ) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,44 +190,74 @@ class _SenkaCalculatorViewState extends State<SenkaCalculatorView> {
       SizedBox(height: widget.compact ? 2 : 4),
       SizedBox(
         height: 44,
-        child: TextField(
+        child: Material(
           key: key,
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(
-            decimal: true,
-            signed: true,
+          color: senkaPanelAlt,
+          shape: const RoundedRectangleBorder(
+            side: BorderSide(color: senkaLine),
+            borderRadius: BorderRadius.all(Radius.circular(4)),
           ),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[-0-9.]')),
-          ],
-          onChanged: (value) {
-            final parsed = double.tryParse(value);
-            if (parsed != null && parsed.isFinite) setter(parsed);
-          },
-          style: TextStyle(
-            color: senkaText,
-            fontSize: widget.compact ? 12 : 16,
-            fontWeight: FontWeight.w800,
-          ),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: senkaPanelAlt,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 9,
-              vertical: widget.compact ? 7 : 10,
-            ),
-            enabledBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: senkaLine),
-            ),
-            focusedBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: senkaGold),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(4),
+            onTap: () => _editValue(label, value, setter),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 9),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      senkaNumber(value),
+                      style: TextStyle(
+                        color: senkaText,
+                        fontSize: widget.compact ? 12 : 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.edit_outlined, size: 16, color: senkaMuted),
+                ],
+              ),
             ),
           ),
         ),
       ),
     ],
   );
+
+  Future<void> _editValue(
+    String label,
+    double currentValue,
+    ValueChanged<double> setter,
+  ) async {
+    final value = await showDialog<String>(
+      context: context,
+      builder: (_) => StandaloneTextInputDialog(
+        key: const Key('senka-value-input-dialog'),
+        title: '填写$label',
+        label: label,
+        initialValue: senkaNumber(currentValue),
+        fieldKey: const Key('senka-value-input-dialog-field'),
+        cancelKey: const Key('senka-value-input-dialog-cancel'),
+        confirmKey: const Key('senka-value-input-dialog-confirm'),
+        cancelLabel: '取消',
+        confirmLabel: '确定',
+        keyboardType: const TextInputType.numberWithOptions(
+          decimal: true,
+          signed: true,
+        ),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[-0-9.]')),
+        ],
+        validate: (raw) {
+          final parsed = double.tryParse(raw);
+          return parsed == null || !parsed.isFinite ? '请输入有效数字' : null;
+        },
+      ),
+    );
+    if (!mounted || value == null) return;
+    final parsed = double.tryParse(value);
+    if (parsed != null && parsed.isFinite) setter(parsed);
+  }
 
   Widget _projectedCard(SenkaCalculationResult result, String gapText) =>
       Container(

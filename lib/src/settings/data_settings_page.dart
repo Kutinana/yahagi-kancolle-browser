@@ -17,6 +17,7 @@ import '../prototype_status_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../senka/senka_controller.dart';
 import '../widgets/top_notice.dart';
+import '../widgets/adaptive_input_dialog.dart';
 import 'diagnostic_user_section.dart';
 import 'diagnostics_section.dart';
 import 'fcd_map_update_section.dart';
@@ -440,8 +441,8 @@ class _BaseSenkaInputDialogState extends State<_BaseSenkaInputDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    key: const Key('settings-base-senka-dialog'),
+  Widget build(BuildContext context) => AdaptiveInputDialog(
+    dialogKey: const Key('settings-base-senka-dialog'),
     title: Text(widget.l10n.baseSenkaManualDialogTitle),
     content: TextField(
       key: const Key('settings-base-senka-input'),

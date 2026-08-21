@@ -794,7 +794,7 @@ class YahagiShell extends StatefulWidget {
 class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   final WindowMetricsRecoveryScheduler _windowMetricsRecoveryScheduler =
       WindowMetricsRecoveryScheduler();
-  WindowMetricsSnapshot? _windowMetricsSnapshot;
+  WindowMetricsChangeTracker? _windowMetricsChangeTracker;
   int _workspaceIndex = 0;
   int? _expeditionCheckFleetId;
   int? _fleetCenterInitialFleetId;
@@ -834,7 +834,9 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _windowMetricsSnapshot ??= WindowMetricsSnapshot.fromView(View.of(context));
+    _windowMetricsChangeTracker ??= WindowMetricsChangeTracker(
+      WindowMetricsSnapshot.fromView(View.of(context)),
+    );
   }
 
   void _onLayoutSettingsChanged() {
@@ -845,10 +847,9 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   void didChangeMetrics() {
     if (!mounted) return;
     final current = WindowMetricsSnapshot.fromView(View.of(context));
-    final previous = _windowMetricsSnapshot;
-    _windowMetricsSnapshot = current;
-    if (previous != null) {
-      final change = classifyWindowMetricsChange(previous, current);
+    final tracker = _windowMetricsChangeTracker;
+    if (tracker != null) {
+      final change = tracker.update(current);
       if (change == WindowMetricsChange.imeOnly) {
         _windowMetricsRecoveryScheduler.cancel();
         return;
@@ -856,6 +857,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
       if (change == WindowMetricsChange.unchanged) {
         return;
       }
+    } else {
+      _windowMetricsChangeTracker = WindowMetricsChangeTracker(current);
     }
     _applyOrientationPolicy();
     _scheduleWindowMetricsRecovery();
@@ -870,9 +873,13 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   void _scheduleWindowMetricsRecovery() {
     _windowMetricsRecoveryScheduler.schedule(() {
       if (!mounted) return;
+      final tracker = _windowMetricsChangeTracker;
+      if (tracker?.isImeVisible ?? false) return;
       setState(() {});
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        if (tracker?.isImeVisible ?? false) return;
+        tracker?.markCurrentGeometryStable();
         widget.browserController.fitGameScreen().catchError((Object _) {});
       });
     });
@@ -969,6 +976,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     );
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         left: false,
         right: false,

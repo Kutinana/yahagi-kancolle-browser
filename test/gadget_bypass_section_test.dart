@@ -137,6 +137,50 @@ void main() {
     expect(store.settings.endpoint, 'https://luckyjervis.com/');
   });
 
+  testWidgets('custom endpoint opens a standalone input dialog', (
+    tester,
+  ) async {
+    final store = _MemoryBypassStore();
+    final controller = await GadgetBypassController.load(
+      store,
+      port: _FakeBypassPort(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: GadgetBypassSection(controller: controller)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('gadget-bypass-endpoint-dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('自定义').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.byKey(const Key('gadget-bypass-custom-endpoint')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('gadget-bypass-endpoint-dialog')),
+      findsOneWidget,
+    );
+    await tester.enterText(
+      find.byKey(const Key('gadget-bypass-endpoint-dialog-field')),
+      'https://example.com/cache/',
+    );
+    await tester.tap(
+      find.byKey(const Key('gadget-bypass-endpoint-dialog-confirm')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.endpoint, 'https://example.com/cache/');
+    expect(store.settings.endpoint, 'https://example.com/cache/');
+    expect(find.byType(TextField), findsNothing);
+  });
+
   testWidgets('diagnose button shows probe results', (tester) async {
     final store = _MemoryBypassStore();
     final controller = await GadgetBypassController.load(

@@ -579,7 +579,8 @@ void main() {
     final eoTitle = tester.widget<Text>(find.text('EO 战果奖励'));
     expect(eoTitle.style!.fontSize, 15);
     final footerText = tester.widget<Text>(find.textContaining('合计'));
-    final fontSize = footerText.style?.fontSize ?? footerText.textSpan?.style?.fontSize;
+    final fontSize =
+        footerText.style?.fontSize ?? footerText.textSpan?.style?.fontSize;
     expect(fontSize, 13);
     expect(find.text('实时计算'), findsNothing);
     expect(find.text('单击循环切换状态'), findsNothing);
@@ -612,38 +613,59 @@ void main() {
     expect(leftRect.top, closeTo(eoFrameRect.top, 0.01));
   });
 
-  testWidgets('计算输入实时更新，无效值保留且负数归零', (tester) async {
+  testWidgets('计算数值在独立弹窗确认后更新', (tester) async {
     await pumpCalculator(tester, controller, const Size(1280, 680));
+
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.byKey(const Key('senka-current-input')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('senka-value-input-dialog')), findsOneWidget);
     await tester.enterText(
-      find.byKey(const Key('senka-current-input')),
+      find.byKey(const Key('senka-value-input-dialog-field')),
       '850.5',
     );
-    await tester.pump();
+    await tester.tap(find.byKey(const Key('senka-value-input-dialog-confirm')));
+    await tester.pumpAndSettle();
     expect(controller.state.calculatorCurrentSenka, 850.5);
 
-    await tester.enterText(find.byKey(const Key('senka-target-input')), '1800');
-    await tester.pump();
-    expect(controller.state.targetSenka, 1800);
-
-    await tester.enterText(find.byKey(const Key('senka-current-input')), 'abc');
-    await tester.pump();
-    expect(controller.state.calculatorCurrentSenka, 850.5);
-
+    await tester.tap(find.byKey(const Key('senka-target-input')));
+    await tester.pumpAndSettle();
     await tester.enterText(
-      find.byKey(const Key('senka-current-input')),
+      find.byKey(const Key('senka-value-input-dialog-field')),
+      '1800',
+    );
+    await tester.tap(find.byKey(const Key('senka-value-input-dialog-confirm')));
+    await tester.pumpAndSettle();
+    expect(controller.state.targetSenka, 1800);
+  });
+
+  testWidgets('计算弹窗取消不修改数值，负数确认后归零', (tester) async {
+    await pumpCalculator(tester, controller, const Size(1280, 680));
+    final original = controller.state.calculatorCurrentSenka;
+
+    await tester.tap(find.byKey(const Key('senka-current-input')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('senka-value-input-dialog-field')),
+      '999',
+    );
+    await tester.tap(find.byKey(const Key('senka-value-input-dialog-cancel')));
+    await tester.pumpAndSettle();
+    expect(controller.state.calculatorCurrentSenka, original);
+
+    await tester.tap(find.byKey(const Key('senka-current-input')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('senka-value-input-dialog-field')),
       '-120',
     );
-    await tester.pump();
+    await tester.tap(find.byKey(const Key('senka-value-input-dialog-confirm')));
+    await tester.pumpAndSettle();
     expect(controller.state.calculatorCurrentSenka, 0);
   });
 
-  testWidgets('计算输入同步外部状态且不打断等值尾随小数点', (tester) async {
+  testWidgets('计算数值同步外部状态', (tester) async {
     await pumpCalculator(tester, controller, const Size(1280, 680));
-    final targetFinder = find.byKey(const Key('senka-target-input'));
-    await tester.enterText(targetFinder, '1500.');
-    await tester.pump();
-    expect(find.text('1500.'), findsOneWidget);
-
     controller.setTargetSenka(2200);
     await tester.pump();
     expect(find.text('2200.00'), findsOneWidget);

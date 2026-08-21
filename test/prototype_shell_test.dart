@@ -44,6 +44,14 @@ import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
+  test('root workspace scaffold does not resize when the keyboard opens', () {
+    final source = File('lib/main.dart').readAsStringSync();
+    expect(
+      source,
+      matches(RegExp(r'return Scaffold\(\s*resizeToAvoidBottomInset: false,')),
+    );
+  });
+
   test('app resume does not schedule a platform-view recovery frame', () {
     final source = File('lib/main.dart').readAsStringSync();
     final lifecycleBody = RegExp(
@@ -55,7 +63,7 @@ void main() {
     expect(lifecycleBody, isNot(contains('_scheduleWindowMetricsRecovery')));
   });
 
-  testWidgets('opening the IME does not trigger game surface recovery', (
+  testWidgets('foldable IME geometry does not trigger game surface recovery', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -110,11 +118,22 @@ void main() {
     await tester.pump();
     final callsBeforeIme = browserPort.fitGameScreenCalls;
 
+    tester.view.physicalSize = const Size(1180, 700);
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
     await tester.pump(const Duration(seconds: 1));
 
     expect(browserPort.fitGameScreenCalls, callsBeforeIme);
 
+    tester.view.physicalSize = const Size(1160, 700);
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      browserPort.fitGameScreenCalls,
+      callsBeforeIme,
+      reason: 'temporary foldable geometry must be ignored while IME is open',
+    );
+
+    tester.view.physicalSize = const Size(1200, 700);
     tester.view.resetViewInsets();
     await tester.pump(const Duration(seconds: 1));
 

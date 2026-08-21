@@ -14,6 +14,37 @@ import 'package:yahagi_kancolle_browser/src/settings/data_settings_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
+  testWidgets('横屏键盘弹出后素战果输入弹窗不溢出', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(844, 390);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetViewInsets);
+
+    final dependencies = await _Dependencies.create();
+    addTearDown(dependencies.dispose);
+    final senka = SenkaController(
+      store: _MemorySenkaStore(),
+      now: () => DateTime.utc(2026, 8, 20, 3),
+    );
+    await senka.initialize();
+    addTearDown(senka.dispose);
+    await dependencies.pump(tester, senkaController: senka);
+
+    final set = find.byKey(const Key('settings-set-base-senka'));
+    await tester.ensureVisible(set);
+    await tester.tap(set);
+    await tester.pumpAndSettle();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 230);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final save = find.byKey(const Key('settings-base-senka-save'));
+    expect(save, findsOneWidget);
+    expect(tester.getRect(save).bottom, lessThanOrEqualTo(160));
+  });
+
   testWidgets('数据设置可归零并手动填写本月累计素战果', (tester) async {
     final dependencies = await _Dependencies.create();
     addTearDown(dependencies.dispose);

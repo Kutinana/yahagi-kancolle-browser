@@ -5,6 +5,7 @@ import 'network_settings_store.dart';
 import 'network_settings_validator.dart';
 import '../browser/network_proxy_channel.dart';
 import '../widgets/top_notice.dart';
+import '../widgets/adaptive_input_dialog.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 class NetworkSettingsSection extends StatefulWidget {
@@ -84,6 +85,24 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
       NetworkSettingsValidator.formatProxyHost(host),
       port,
     );
+  }
+
+  Future<void> _editProxyInput(AppLocalizations l10n) async {
+    final value = await showDialog<_ProxyInputValue>(
+      context: context,
+      builder: (_) => _NetworkProxyInputDialog(
+        l10n: l10n,
+        initialHost: _hostController.text,
+        initialPort: _portController.text,
+        validationMessage: _validationMessage,
+      ),
+    );
+    if (!mounted || value == null) return;
+    setState(() {
+      _hostController.text = value.host;
+      _portController.text = value.port;
+    });
+    widget.controller.clearTestResult();
   }
 
   Future<void> _applySettings() async {
@@ -394,51 +413,72 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
                   horizontal: 16,
                   vertical: 12,
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: _hostController,
-                        decoration: InputDecoration(
-                          labelText: l10n.hostAddress,
-                          hintText: l10n.hostHint,
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
+                child: Material(
+                  key: const Key('network-proxy-input'),
+                  color: Colors.transparent,
+                  shape: const RoundedRectangleBorder(
+                    side: BorderSide(color: Color(0xff8197a5)),
+                    borderRadius: BorderRadius.all(Radius.circular(4)),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () => _editProxyInput(l10n),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 1,
-                      child: TextField(
-                        controller: _portController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.hostAddress,
+                                  style: const TextStyle(
+                                    color: Color(0xff8197a5),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  _hostController.text,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.port,
+                                style: const TextStyle(
+                                  color: Color(0xff8197a5),
+                                  fontSize: 11,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                _portController.text,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 10),
+                          const Icon(Icons.edit_outlined, size: 18),
                         ],
-                        decoration: InputDecoration(
-                          labelText: l10n.port,
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
 
@@ -578,6 +618,133 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+final class _ProxyInputValue {
+  const _ProxyInputValue({required this.host, required this.port});
+
+  final String host;
+  final String port;
+}
+
+class _NetworkProxyInputDialog extends StatefulWidget {
+  const _NetworkProxyInputDialog({
+    required this.l10n,
+    required this.initialHost,
+    required this.initialPort,
+    required this.validationMessage,
+  });
+
+  final AppLocalizations l10n;
+  final String initialHost;
+  final String initialPort;
+  final String Function(NetworkValidationError error) validationMessage;
+
+  @override
+  State<_NetworkProxyInputDialog> createState() =>
+      _NetworkProxyInputDialogState();
+}
+
+class _NetworkProxyInputDialogState extends State<_NetworkProxyInputDialog> {
+  late final TextEditingController _host;
+  late final TextEditingController _port;
+  String? _hostError;
+  String? _portError;
+
+  @override
+  void initState() {
+    super.initState();
+    _host = TextEditingController(text: widget.initialHost);
+    _port = TextEditingController(text: widget.initialPort);
+  }
+
+  @override
+  void dispose() {
+    _host.dispose();
+    _port.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AdaptiveInputDialog(
+    dialogKey: const Key('network-proxy-input-dialog'),
+    title: Text(widget.l10n.networkSettings),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          key: const Key('network-proxy-host-field'),
+          controller: _host,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(
+            labelText: widget.l10n.hostAddress,
+            hintText: widget.l10n.hostHint,
+            errorText: _hostError,
+            border: const OutlineInputBorder(),
+          ),
+          onChanged: (_) {
+            if (_hostError != null) setState(() => _hostError = null);
+          },
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          key: const Key('network-proxy-port-field'),
+          controller: _port,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            labelText: widget.l10n.port,
+            errorText: _portError,
+            border: const OutlineInputBorder(),
+          ),
+          onChanged: (_) {
+            if (_portError != null) setState(() => _portError = null);
+          },
+          onSubmitted: (_) => _submit(),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        key: const Key('network-proxy-input-cancel'),
+        onPressed: () => Navigator.pop(context),
+        child: Text(widget.l10n.cancel),
+      ),
+      TextButton(
+        key: const Key('network-proxy-input-confirm'),
+        onPressed: _submit,
+        child: Text(widget.l10n.confirm),
+      ),
+    ],
+  );
+
+  void _submit() {
+    final host = _host.text.trim();
+    final port = _port.text.trim();
+    final hostError = NetworkSettingsValidator.validateHost(host);
+    final portError = NetworkSettingsValidator.validatePort(port);
+    if (hostError != null || portError != null) {
+      setState(() {
+        _hostError = hostError == null
+            ? null
+            : widget.validationMessage(hostError);
+        _portError = portError == null
+            ? null
+            : widget.validationMessage(portError);
+      });
+      return;
+    }
+    Navigator.pop(
+      context,
+      _ProxyInputValue(
+        host: NetworkSettingsValidator.formatProxyHost(host),
+        port: port,
       ),
     );
   }
