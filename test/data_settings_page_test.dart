@@ -11,6 +11,11 @@ import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_store.da
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/data_settings_page.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
+
+Widget withTopNotice(Widget child) => MaterialApp(
+  home: TopNoticeHost(child: Scaffold(body: child)),
+);
 
 void main() {
   testWidgets('data settings contain capture mode and local data actions', (
@@ -28,8 +33,8 @@ void main() {
     addTearDown(gameState.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: DataSettingsPage(
+      withTopNotice(
+        DataSettingsPage(
           captureModeController: capture,
           browserController: browser,
           gameCaptureController: gameCapture,
@@ -79,16 +84,14 @@ void main() {
       addTearDown(cacheController.dispose);
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: DataSettingsPage(
-              captureModeController: capture,
-              browserController: browser,
-              gameCaptureController: gameCapture,
-              prototypeStatusController: prototype,
-              gameStateController: gameState,
-              gameResourceCacheController: cacheController,
-            ),
+        withTopNotice(
+          DataSettingsPage(
+            captureModeController: capture,
+            browserController: browser,
+            gameCaptureController: gameCapture,
+            prototypeStatusController: prototype,
+            gameStateController: gameState,
+            gameResourceCacheController: cacheController,
           ),
         ),
       );
@@ -112,11 +115,50 @@ void main() {
       expect(webDx, 32.0);
     },
   );
+
+  testWidgets('clearing quest cache reports success in a top notice', (
+    tester,
+  ) async {
+    final capture = await CaptureModeController.load(_MemoryCaptureModeStore());
+    final browser = GameBrowserController();
+    final gameCapture = GameCaptureController();
+    final prototype = PrototypeStatusController();
+    final gameState = GameStateController();
+    addTearDown(capture.dispose);
+    addTearDown(browser.dispose);
+    addTearDown(gameCapture.dispose);
+    addTearDown(prototype.dispose);
+    addTearDown(gameState.dispose);
+
+    await tester.pumpWidget(
+      withTopNotice(
+        DataSettingsPage(
+          captureModeController: capture,
+          browserController: browser,
+          gameCaptureController: gameCapture,
+          prototypeStatusController: prototype,
+          gameStateController: gameState,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('settings-clear-quest-cache')));
+    await tester.pump();
+
+    expect(find.text('已清除任务数据本地缓存'), findsOneWidget);
+    expect(find.byKey(topNoticeKey), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(topNoticeKey),
+        matching: find.byIcon(Icons.check_circle_outline_rounded),
+      ),
+      findsOneWidget,
+    );
+  });
 }
 
 final class _MemoryCacheStore implements GameResourceCacheStore {
-  _MemoryCacheStore([this.mode = GameResourceCacheMode.full]);
-  GameResourceCacheMode mode;
+  GameResourceCacheMode mode = GameResourceCacheMode.full;
 
   @override
   Future<GameResourceCacheMode> load() async => mode;

@@ -16,6 +16,7 @@ import '../logbook/logbook_database.dart';
 import '../prototype_status_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../senka/senka_controller.dart';
+import '../widgets/top_notice.dart';
 import 'diagnostic_user_section.dart';
 import 'diagnostics_section.dart';
 import 'fcd_map_update_section.dart';
@@ -201,8 +202,10 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                     onTap: () async {
                       await gameStateController.clearQuestsCache();
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.questCacheCleared)),
+                        TopNotice.show(
+                          context,
+                          message: l10n.questCacheCleared,
+                          tone: TopNoticeTone.success,
                         );
                       }
                     },
@@ -260,15 +263,19 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     try {
       await browserController.logoutAndClearSession();
       if (context.mounted) {
-        ScaffoldMessenger.of(
+        TopNotice.show(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.logoutSucceeded)));
+          message: l10n.logoutSucceeded,
+          tone: TopNoticeTone.success,
+        );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
+        TopNotice.show(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.logoutFailed)));
+          message: l10n.logoutFailed,
+          tone: TopNoticeTone.error,
+        );
       }
     }
   }
@@ -286,9 +293,11 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     if (!confirmed) return;
     await browserController.clearCache();
     if (context.mounted) {
-      ScaffoldMessenger.of(
+      TopNotice.show(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10n.webCacheCleared)));
+        message: l10n.webCacheCleared,
+        tone: TopNoticeTone.success,
+      );
     }
   }
 
@@ -319,12 +328,10 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     if (confirmed != true) return;
     final saved = await controller.resetBaseSenka();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          saved ? l10n.baseSenkaResetSuccess : l10n.baseSenkaSaveFailed,
-        ),
-      ),
+    TopNotice.show(
+      context,
+      message: saved ? l10n.baseSenkaResetSuccess : l10n.baseSenkaSaveFailed,
+      tone: saved ? TopNoticeTone.success : TopNoticeTone.error,
     );
   }
 
@@ -343,14 +350,12 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     if (value == null) return;
     final saved = await controller.setBaseSenka(value);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          saved
-              ? l10n.baseSenkaSetSuccess(value.toStringAsFixed(2))
-              : l10n.baseSenkaSaveFailed,
-        ),
-      ),
+    TopNotice.show(
+      context,
+      message: saved
+          ? l10n.baseSenkaSetSuccess(value.toStringAsFixed(2))
+          : l10n.baseSenkaSaveFailed,
+      tone: saved ? TopNoticeTone.success : TopNoticeTone.error,
     );
   }
 
@@ -371,9 +376,11 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
       debugPrint('清理航海日志失败: $error');
     }
     if (context.mounted) {
-      ScaffoldMessenger.of(
+      TopNotice.show(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10n.logbookCleared)));
+        message: l10n.logbookCleared,
+        tone: TopNoticeTone.success,
+      );
     }
   }
 

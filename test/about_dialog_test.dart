@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/settings/about_dialog.dart';
 import 'package:yahagi_kancolle_browser/src/settings/about_support_settings_page.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
+
+Widget withTopNotice(Widget child) => MaterialApp(
+  home: TopNoticeHost(child: Scaffold(body: child)),
+);
 
 void main() {
   testWidgets('GitHub button directly launches the repository URL', (
@@ -14,14 +19,12 @@ void main() {
 
     Uri? launchedUri;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: AboutContentWidget(
-            externalUrlLauncher: (uri) async {
-              launchedUri = uri;
-              return true;
-            },
-          ),
+      withTopNotice(
+        AboutContentWidget(
+          externalUrlLauncher: (uri) async {
+            launchedUri = uri;
+            return true;
+          },
         ),
       ),
     );
@@ -41,10 +44,8 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: AboutContentWidget(externalUrlLauncher: (_) async => false),
-        ),
+      withTopNotice(
+        AboutContentWidget(externalUrlLauncher: (_) async => false),
       ),
     );
 
@@ -52,6 +53,14 @@ void main() {
     await tester.pump();
 
     expect(find.text('无法打开链接，请检查是否已安装浏览器。'), findsOneWidget);
+    expect(find.byKey(topNoticeKey), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(topNoticeKey),
+        matching: find.byIcon(Icons.error_outline_rounded),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('about dialog fits a compact landscape viewport', (tester) async {
@@ -60,9 +69,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: AboutContentWidget())),
-    );
+    await tester.pumpWidget(withTopNotice(const AboutContentWidget()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -81,9 +88,7 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: AboutSupportSettingsPage(currentVersion: '1.0.2')),
-      ),
+      withTopNotice(const AboutSupportSettingsPage(currentVersion: '1.0.2')),
     );
     await tester.pumpAndSettle();
 

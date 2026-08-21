@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
+import '../widgets/top_notice.dart';
 import 'release_check_service.dart';
 
 typedef ExternalUrlLauncher = Future<bool> Function(Uri uri);
@@ -35,9 +36,11 @@ class AboutContentWidget extends StatelessWidget {
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
-    ScaffoldMessenger.maybeOf(
+    TopNotice.show(
       context,
-    )?.showSnackBar(SnackBar(content: Text(l10n.externalLinkOpenFailed)));
+      message: l10n.externalLinkOpenFailed,
+      tone: TopNoticeTone.error,
+    );
   }
 
   Future<void> _checkForUpdates(BuildContext context) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../diagnostics/diagnostic_controller.dart';
+import '../widgets/top_notice.dart';
 
 class DiagnosticUserSection extends StatelessWidget {
   const DiagnosticUserSection({super.key, required this.controller});
@@ -106,16 +107,27 @@ class DiagnosticUserSection extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
     try {
       final fileName = await controller.save();
-      if (fileName != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.diagnosticSaveSucceeded(fileName))),
+      if (!context.mounted) return;
+      if (fileName != null) {
+        TopNotice.show(
+          context,
+          message: l10n.diagnosticSaveSucceeded(fileName),
+          tone: TopNoticeTone.success,
+        );
+      } else {
+        TopNotice.show(
+          context,
+          message: l10n.diagnosticSaveFailed,
+          tone: TopNoticeTone.error,
         );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
+        TopNotice.show(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.diagnosticSaveFailed)));
+          message: l10n.diagnosticSaveFailed,
+          tone: TopNoticeTone.error,
+        );
       }
     }
   }
@@ -147,9 +159,11 @@ class DiagnosticUserSection extends StatelessWidget {
       await controller.share();
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
+        TopNotice.show(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.diagnosticShareFailed)));
+          message: l10n.diagnosticShareFailed,
+          tone: TopNoticeTone.error,
+        );
       }
     }
   }
