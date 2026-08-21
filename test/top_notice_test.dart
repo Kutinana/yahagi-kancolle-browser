@@ -103,20 +103,23 @@ void main() {
     },
   );
 
-  testWidgets('keeps horizontal margins and limits long text to two lines', (
-    tester,
-  ) async {
-    const message = '这是一个很长很长的提示文案，用于确认窄屏设备不会发生水平溢出，并且文本最多只显示两行。';
-    await showNotice(tester, message: message, size: const Size(240, 600));
+  testWidgets(
+    'keeps toolbar capsule height and truncates long text to one line',
+    (tester) async {
+      const message = '这是一个很长很长的提示文案，用于确认窄屏设备不会发生水平溢出，并且文本最多只显示两行。';
+      await showNotice(tester, message: message, size: const Size(240, 600));
 
-    final noticeRect = tester.getRect(find.byKey(topNoticeKey));
-    expect(noticeRect.left, greaterThanOrEqualTo(16));
-    expect(noticeRect.right, lessThanOrEqualTo(224));
-    final text = tester.widget<Text>(find.byKey(topNoticeTextKey));
-    expect(text.maxLines, 2);
-    expect(text.overflow, TextOverflow.ellipsis);
-    expect(tester.takeException(), isNull);
-  });
+      final noticeRect = tester.getRect(find.byKey(topNoticeKey));
+      expect(noticeRect.left, greaterThanOrEqualTo(16));
+      expect(noticeRect.right, lessThanOrEqualTo(224));
+      expect(noticeRect.height, 36);
+      final text = tester.widget<Text>(find.byKey(topNoticeTextKey));
+      expect(text.maxLines, 1);
+      expect(text.style?.fontSize, 14);
+      expect(text.overflow, TextOverflow.ellipsis);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('uses four seconds by default and then animates out', (
     tester,

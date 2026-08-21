@@ -137,6 +137,7 @@ class _TopNoticeHostState extends State<TopNoticeHost> {
                       constraints: const BoxConstraints(
                         maxWidth: 720,
                         minHeight: 36,
+                        maxHeight: 36,
                       ),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 180),
@@ -227,7 +228,7 @@ class _NoticeCapsule extends StatelessWidget {
                     child: Text(
                       notice.message,
                       key: topNoticeTextKey,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: palette.foreground,
