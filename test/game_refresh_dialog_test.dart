@@ -76,7 +76,13 @@ void main() {
 
     expect(find.text('尚未找到游戏框架，请进入游戏后重试。'), findsOneWidget);
     expect(find.byKey(topNoticeKey), findsOneWidget);
-    expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(topNoticeKey),
+        matching: find.byIcon(Icons.error_outline_rounded),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('reports a blocked reload when the native command fails', (
@@ -112,10 +118,18 @@ void main() {
 
     expect(find.text('当前设备的 Android WebView 太旧，不支持对子框架注入。'), findsOneWidget);
     expect(find.byKey(topNoticeKey), findsOneWidget);
-    expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(topNoticeKey),
+        matching: find.byIcon(Icons.error_outline_rounded),
+      ),
+      findsOneWidget,
+    );
+    final logicalHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
     expect(
       tester.getRect(find.byKey(topNoticeKey)).top,
-      lessThan(tester.view.physicalSize.height / 2),
+      lessThan(logicalHeight / 2),
     );
   });
 }

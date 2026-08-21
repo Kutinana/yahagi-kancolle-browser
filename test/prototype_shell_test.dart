@@ -279,7 +279,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('yahagi-test.png'), findsOneWidget);
     expect(find.byKey(topNoticeKey), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(topNoticeKey),
+        matching: find.byIcon(Icons.check_circle_outline_rounded),
+      ),
+      findsOneWidget,
+    );
     TopNotice.hide(tester.element(find.byType(Scaffold).first));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('yahagi-brand-button')));
