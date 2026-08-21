@@ -69,6 +69,7 @@ import 'src/game_state/game_state_store.dart';
 import 'src/layout/adaptive_layout.dart';
 import 'src/layout/workspace_navigation_side.dart';
 import 'src/layout/workspace_context_header.dart';
+import 'src/layout/window_metrics_change.dart';
 import 'src/layout/window_metrics_recovery_scheduler.dart';
 import 'src/performance/second_tick_scope.dart';
 import 'src/inventory/owned_inventory_page.dart';
@@ -767,6 +768,7 @@ class YahagiShell extends StatefulWidget {
 class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   final WindowMetricsRecoveryScheduler _windowMetricsRecoveryScheduler =
       WindowMetricsRecoveryScheduler();
+  WindowMetricsSnapshot? _windowMetricsSnapshot;
   int _workspaceIndex = 0;
   int? _expeditionCheckFleetId;
   int? _fleetCenterInitialFleetId;
@@ -803,12 +805,32 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _windowMetricsSnapshot ??= WindowMetricsSnapshot.fromView(View.of(context));
+  }
+
   void _onLayoutSettingsChanged() {
     widget.browserController.fitGameScreen().catchError((Object _) {});
   }
 
   @override
   void didChangeMetrics() {
+    if (!mounted) return;
+    final current = WindowMetricsSnapshot.fromView(View.of(context));
+    final previous = _windowMetricsSnapshot;
+    _windowMetricsSnapshot = current;
+    if (previous != null) {
+      final change = classifyWindowMetricsChange(previous, current);
+      if (change == WindowMetricsChange.imeOnly) {
+        _windowMetricsRecoveryScheduler.cancel();
+        return;
+      }
+      if (change == WindowMetricsChange.unchanged) {
+        return;
+      }
+    }
     _applyOrientationPolicy();
     _scheduleWindowMetricsRecovery();
   }
@@ -1826,6 +1848,7 @@ class _InformationPanelState extends State<_InformationPanel> {
                 onOpenQuest: widget.onOpenQuest,
               ),
               'battle' => LiveBattleCard(
+                key: const PageStorageKey('dashboard-live-battle'),
                 controller: widget.battleController,
                 damagePulseMode:
                     widget.layoutSettingsController.enhancedDamagePulse
@@ -1835,6 +1858,7 @@ class _InformationPanelState extends State<_InformationPanel> {
                 onToggleCollapse: toggle,
               ),
               'pre_sortie' => PreSortieCheckSummary(
+                key: const PageStorageKey('dashboard-pre-sortie'),
                 controller: widget.gameStateController,
                 collapsed: isCollapsed,
                 onToggleCollapse: toggle,

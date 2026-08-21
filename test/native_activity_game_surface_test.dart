@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:yahagi_kancolle_browser/src/audio/game_audio_controller.dart';
@@ -28,6 +29,25 @@ import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
 
 void main() {
+  test('native startup error exposes platform code and create stage', () {
+    final message = nativeWebViewStartupErrorMessage(
+      PlatformException(
+        code: 'native_webview_create_failed',
+        message: 'Native WebView creation failed at configure_web_view.',
+        details: <String, Object?>{
+          'stage': 'configure_web_view',
+          'exceptionType': 'IllegalStateException',
+        },
+      ),
+    );
+
+    expect(
+      message,
+      '原生 WebView 启动失败 [native_webview_create_failed/configure_web_view] '
+      '(IllegalStateException)',
+    );
+  });
+
   testWidgets('manual fit resends native bounds before fitting the page', (
     tester,
   ) async {

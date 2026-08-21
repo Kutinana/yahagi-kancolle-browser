@@ -46,6 +46,34 @@ void main() {
       expect(equipment.single.master?.name, '12.7cm 连装炮');
     });
 
+    test('equipment capacity matches Poi uncounted master item ids', () {
+      const state = GameState(
+        masterSlotItems: <int, MasterSlotItem>{
+          201: MasterSlotItem(id: 201, name: '主炮', type: <int>[1, 1, 1]),
+          42: MasterSlotItem(id: 42, name: '损管', type: <int>[1, 1, 23]),
+          43: MasterSlotItem(id: 43, name: '女神', type: <int>[1, 1, 23]),
+          145: MasterSlotItem(id: 145, name: '战斗粮食', type: <int>[1, 1, 43]),
+          146: MasterSlotItem(id: 146, name: '洋上补给', type: <int>[1, 1, 44]),
+          150: MasterSlotItem(id: 150, name: '特别饭团', type: <int>[1, 1, 43]),
+          241: MasterSlotItem(id: 241, name: '秋刀鱼罐头', type: <int>[1, 1, 43]),
+          999: MasterSlotItem(id: 999, name: '其他损管类装备', type: <int>[1, 1, 23]),
+        },
+        slotItems: <int, OwnedSlotItem>{
+          1: OwnedSlotItem(id: 1, masterId: 201),
+          2: OwnedSlotItem(id: 2, masterId: 42),
+          3: OwnedSlotItem(id: 3, masterId: 43),
+          4: OwnedSlotItem(id: 4, masterId: 145),
+          5: OwnedSlotItem(id: 5, masterId: 146),
+          6: OwnedSlotItem(id: 6, masterId: 150),
+          7: OwnedSlotItem(id: 7, masterId: 241),
+          8: OwnedSlotItem(id: 8, masterId: 999),
+          9: OwnedSlotItem(id: 9, masterId: 1000),
+        },
+      );
+
+      expect(state.equipmentCapacityUsed, 3);
+    });
+
     test('keeps all eight resource types in stable game id order', () {
       expect(GameResourceType.values.map((type) => type.apiId), <int>[
         1,

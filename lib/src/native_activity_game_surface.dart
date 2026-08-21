@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'audio/game_audio_controller.dart';
 import 'browser/game_browser_controller.dart';
@@ -37,6 +38,22 @@ abstract interface class NativeActivityGameWebViewPort
   Future<void> setVisible(bool visible);
 
   Future<void> dispose();
+}
+
+String nativeWebViewStartupErrorMessage(Object error) {
+  if (error is! PlatformException) {
+    return '原生 WebView 启动失败：${error.runtimeType}';
+  }
+  final details = error.details;
+  final stage = details is Map ? details['stage'] : null;
+  final exceptionType = details is Map ? details['exceptionType'] : null;
+  final location = stage is String && stage.isNotEmpty
+      ? '${error.code}/$stage'
+      : error.code;
+  final cause = exceptionType is String && exceptionType.isNotEmpty
+      ? ' ($exceptionType)'
+      : '';
+  return '原生 WebView 启动失败 [$location]$cause';
 }
 
 final class MethodChannelNativeActivityGameWebViewPort
@@ -445,7 +462,7 @@ final class _NativeActivityGameSurfaceState
     } catch (error, stackTrace) {
       debugPrint('Native game surface startup failed: $error\n$stackTrace');
       if (_matchesAttempt(port, operationEpoch)) {
-        _setFatalError('原生 WebView 启动失败：${error.runtimeType}');
+        _setFatalError(nativeWebViewStartupErrorMessage(error));
       }
     }
   }
@@ -568,7 +585,7 @@ final class _NativeActivityGameSurfaceState
     } catch (error, stackTrace) {
       debugPrint('Native game surface startup failed: $error\n$stackTrace');
       if (_matchesAttempt(port, operationEpoch)) {
-        _setFatalError('原生 WebView 启动失败：${error.runtimeType}');
+        _setFatalError(nativeWebViewStartupErrorMessage(error));
       }
     }
   }

@@ -359,7 +359,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
       key: Key(ships ? 'header-ship-capacity' : 'header-equipment-capacity'),
       label: ships ? l10n.shipGirl : l10n.equipment,
       current: widget.state.hasPortData
-          ? (ships ? widget.state.ships.length : widget.state.slotItems.length)
+          ? (ships
+                ? widget.state.ships.length
+                : widget.state.equipmentCapacityUsed)
           : null,
       maximum: ships
           ? widget.state.maxShipCount
@@ -454,7 +456,7 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                             id: id,
                             label: ships ? l10n.shipGirl : l10n.equipment,
                             value:
-                                '${widget.state.hasPortData ? (ships ? widget.state.ships.length : widget.state.slotItems.length) : '—'} / ${ships ? widget.state.maxShipCount ?? '—' : widget.state.maxEquipmentCount ?? '—'}',
+                                '${widget.state.hasPortData ? (ships ? widget.state.ships.length : widget.state.equipmentCapacityUsed) : '—'} / ${ships ? widget.state.maxShipCount ?? '—' : widget.state.maxEquipmentCount ?? '—'}',
                             icon: ships
                                 ? Icons.directions_boat_filled_rounded
                                 : Icons.build_rounded,

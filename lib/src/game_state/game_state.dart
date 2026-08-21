@@ -767,6 +767,15 @@ class LandBaseState {
 }
 
 class GameState {
+  static const Set<int> _uncountedEquipmentMasterIds = <int>{
+    42,
+    43,
+    145,
+    146,
+    150,
+    241,
+  };
+
   const GameState({
     this.admiralLevel = 0,
     this.maxShipCount,
@@ -851,6 +860,9 @@ class GameState {
   int? useItemCount(int id) => hasUseItemData ? (useItems[id] ?? 0) : null;
   int get furnitureCoins => _furnitureCoins ?? 0;
   bool get hasFurnitureCoinData => _hasFurnitureCoinData ?? false;
+  int get equipmentCapacityUsed => slotItems.values
+      .where((item) => !_uncountedEquipmentMasterIds.contains(item.masterId))
+      .length;
 
   List<OwnedShip> shipsForFleet(int fleetId) {
     Fleet? fleet;

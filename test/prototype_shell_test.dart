@@ -54,6 +54,81 @@ void main() {
     expect(lifecycleBody, isNot(contains('_scheduleWindowMetricsRecovery')));
   });
 
+  testWidgets('opening the IME does not trigger game surface recovery', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetViewInsets);
+    final browserPort = _NoopBrowserPort();
+    final captureModeController = await CaptureModeController.load(
+      _MemoryModeStore(),
+    );
+    final toolbarController = GameToolbarController();
+    final gameCaptureController = GameCaptureController();
+    final gameStateController = GameStateController();
+    final battleController = BattleController(
+      gameState: () => gameStateController.state,
+    );
+    addTearDown(gameCaptureController.dispose);
+    addTearDown(gameStateController.dispose);
+    addTearDown(battleController.dispose);
+    addTearDown(toolbarController.dispose);
+
+    await tester.pumpWidget(
+      YahagiApp(
+        layoutSettingsController: await LayoutSettingsController.load(
+          _MemoryLayoutSettingsStore(),
+        ),
+        networkSettingsController: NetworkSettingsController(
+          store: _MemoryNetworkSettingsStore(),
+        ),
+        gadgetBypassController: GadgetBypassController(
+          store: _MemoryGadgetBypassStore(),
+          port: _FakeGadgetBypassPort(),
+        ),
+        safetySettingsController: await SafetySettingsController.load(
+          MemorySafetySettingsStore(),
+        ),
+        displayModeController: await DisplayModeController.load(
+          MemoryDisplayModeStore(),
+        ),
+        controller: PrototypeStatusController(),
+        browserController: GameBrowserController(port: browserPort),
+        captureModeController: captureModeController,
+        audioController: await GameAudioController.load(_MemoryAudioStore()),
+        toolbarController: toolbarController,
+        gameCaptureController: gameCaptureController,
+        gameStateController: gameStateController,
+        battleController: battleController,
+        gameSurface: const ColoredBox(color: Colors.black),
+      ),
+    );
+    await tester.pump();
+    final callsBeforeIme = browserPort.fitGameScreenCalls;
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(browserPort.fitGameScreenCalls, callsBeforeIme);
+
+    tester.view.resetViewInsets();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(browserPort.fitGameScreenCalls, callsBeforeIme);
+
+    tester.view.physicalSize = const Size(1000, 700);
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      browserPort.fitGameScreenCalls,
+      callsBeforeIme + 4,
+      reason: 'real geometry changes must retain the existing recovery passes',
+    );
+  });
+
   testWidgets('shows the game surface, information panel, and capture modes', (
     tester,
   ) async {
@@ -1164,8 +1239,12 @@ final class _MemoryNetworkSettingsStore implements NetworkSettingsStore {
 }
 
 final class _NoopBrowserPort implements GameBrowserPort {
+  int fitGameScreenCalls = 0;
+
   @override
-  Future<void> fitGameScreen() async {}
+  Future<void> fitGameScreen() async {
+    fitGameScreenCalls++;
+  }
 
   @override
   Future<bool> canGoBack() async => false;

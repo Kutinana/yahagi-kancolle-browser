@@ -74,7 +74,7 @@ void main() {
       );
 
       expect(state.maxShipCount, 310);
-      expect(state.maxEquipmentCount, 1499);
+      expect(state.maxEquipmentCount, 1502);
     });
 
     test('start2 captures base ASW and resolved per-ship equip types', () {
@@ -854,12 +854,113 @@ void main() {
         kcsapiEvent(
           '/kcsapi/api_req_kaisou/powerup',
           const <String, Object?>{},
-          requestParams: const <String, Object?>{'api_id_items': '2'},
+          requestParams: const <String, Object?>{
+            'api_id_items': '2',
+            'api_slot_dest_flag': '1',
+          },
         ),
       );
       expect(state.ships, isEmpty);
       expect(state.slotItems, isNot(contains(12)));
       expect(state.fleets.single.shipIds, isEmpty);
+    });
+
+    test('modernization retains equipment when destruction is disabled', () {
+      const initial = GameState(
+        ships: <int, OwnedShip>{
+          1: OwnedShip(
+            id: 1,
+            masterId: 101,
+            level: 1,
+            slotIds: <int>[11],
+            extraSlotId: 12,
+          ),
+        },
+        slotItems: <int, OwnedSlotItem>{
+          11: OwnedSlotItem(id: 11, masterId: 201),
+          12: OwnedSlotItem(id: 12, masterId: 202),
+        },
+      );
+
+      final state = GameStateReducer().reduce(
+        initial,
+        kcsapiEvent(
+          '/kcsapi/api_req_kaisou/powerup',
+          const <String, Object?>{},
+          requestParams: const <String, Object?>{
+            'api_id_items': '1',
+            'api_slot_dest_flag': '0',
+          },
+        ),
+      );
+
+      expect(state.ships, isEmpty);
+      expect(state.slotItems.keys, containsAll(<int>[11, 12]));
+    });
+
+    test('modernization destroys equipment for a list of material ships', () {
+      const initial = GameState(
+        ships: <int, OwnedShip>{
+          1: OwnedShip(
+            id: 1,
+            masterId: 101,
+            level: 1,
+            slotIds: <int>[11],
+            extraSlotId: 12,
+          ),
+          2: OwnedShip(
+            id: 2,
+            masterId: 102,
+            level: 1,
+            slotIds: <int>[21],
+            extraSlotId: 22,
+          ),
+        },
+        slotItems: <int, OwnedSlotItem>{
+          11: OwnedSlotItem(id: 11, masterId: 201),
+          12: OwnedSlotItem(id: 12, masterId: 202),
+          21: OwnedSlotItem(id: 21, masterId: 203),
+          22: OwnedSlotItem(id: 22, masterId: 204),
+          99: OwnedSlotItem(id: 99, masterId: 299),
+        },
+      );
+
+      final state = GameStateReducer().reduce(
+        initial,
+        kcsapiEvent(
+          '/kcsapi/api_req_kaisou/powerup',
+          const <String, Object?>{},
+          requestParams: const <String, Object?>{
+            'api_id_items': <Object?>['1', 2],
+            'api_slot_dest_flag': '1',
+          },
+        ),
+      );
+
+      expect(state.ships, isEmpty);
+      expect(state.slotItems.keys, <int>[99]);
+    });
+
+    test('modernization ignores a missing material ship safely', () {
+      const initial = GameState(
+        slotItems: <int, OwnedSlotItem>{
+          99: OwnedSlotItem(id: 99, masterId: 299),
+        },
+      );
+
+      final state = GameStateReducer().reduce(
+        initial,
+        kcsapiEvent(
+          '/kcsapi/api_req_kaisou/powerup',
+          const <String, Object?>{},
+          requestParams: const <String, Object?>{
+            'api_id_items': '404',
+            'api_slot_dest_flag': '1',
+          },
+        ),
+      );
+
+      expect(state.slotItems.keys, <int>[99]);
     });
 
     test('slot exchange accepts single and list ship payloads', () {

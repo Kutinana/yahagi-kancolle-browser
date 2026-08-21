@@ -43,4 +43,18 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(runs, 0);
   });
+
+  testWidgets('cancels pending recovery when an IME transition starts', (
+    tester,
+  ) async {
+    final scheduler = WindowMetricsRecoveryScheduler();
+    addTearDown(scheduler.dispose);
+    var runs = 0;
+
+    scheduler.schedule(() => runs += 1);
+    scheduler.cancel();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(runs, 0);
+  });
 }

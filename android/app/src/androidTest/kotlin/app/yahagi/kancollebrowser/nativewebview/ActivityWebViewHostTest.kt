@@ -52,7 +52,11 @@ class ActivityWebViewHostTest {
                 initialCacheMode = webView.settings.cacheMode
                 initialFileAccessFromFileUrls = webView.settings.allowFileAccessFromFileURLs
                 initialUniversalAccessFromFileUrls = webView.settings.allowUniversalAccessFromFileURLs
-                NativeGameWebViewConfigurator.configure(webView, client) { action ->
+                NativeGameWebViewConfigurator.configure(
+                    webView,
+                    client,
+                    onPresentationStateChanged = {},
+                ) { action ->
                     configurationActions += action
                 }
             },
@@ -290,7 +294,9 @@ class ActivityWebViewHostTest {
             webViewFactory = { throw IllegalStateException("factory failure") },
         )
 
-        assertNull(failing.create())
+        assertCreateFailure(NativeGameWebViewCreateStage.CREATE_WEB_VIEW) {
+            failing.create()
+        }
         assertEquals(0, root.childCount)
         assertNull(failing.currentGeneration)
         host = ActivityWebViewHost(context, root, recordingSink(mutableListOf()))
@@ -309,7 +315,9 @@ class ActivityWebViewHostTest {
         })
         host = ActivityWebViewHost(context, root, recordingSink(mutableListOf()))
 
-        assertNull(host!!.create())
+        assertCreateFailure(NativeGameWebViewCreateStage.ATTACH_OVERLAY) {
+            host!!.create()
+        }
         assertEquals(0, root.childCount)
         assertNull(host!!.currentGeneration)
         assertNull(host!!.currentWebView)
@@ -337,7 +345,9 @@ class ActivityWebViewHostTest {
             webViewCleanup = rollbackCleanup(cleanupCalls),
         )
 
-        assertNull(failing.create())
+        assertCreateFailure(NativeGameWebViewCreateStage.CONFIGURE_WEB_VIEW) {
+            failing.create()
+        }
         assertEquals(0, root.childCount)
         assertNull(failing.currentWebView)
         assertNull(failing.currentGeneration)
@@ -461,6 +471,19 @@ class ActivityWebViewHostTest {
         override fun destroyed(generation: Long) {
             events += "destroyed:$generation"
         }
+    }
+
+    private fun assertCreateFailure(
+        expectedStage: NativeGameWebViewCreateStage,
+        operation: () -> Unit,
+    ) {
+        try {
+            operation()
+        } catch (error: NativeGameWebViewCreateException) {
+            assertEquals(expectedStage, error.stage)
+            return
+        }
+        throw AssertionError("Expected native WebView creation to fail at ${expectedStage.wireName}")
     }
 
     private fun onMain(block: () -> Unit) {

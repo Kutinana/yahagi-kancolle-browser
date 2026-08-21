@@ -193,7 +193,7 @@ class GameStateReducer {
       '/kcsapi/api_req_kaisou/powerup' => _consumeShips(
         state,
         _requestIds(event.requestParams['api_id_items']),
-        removeEquipment: true,
+        removeEquipment: _asInt(event.requestParams['api_slot_dest_flag']) != 0,
         event: event,
         origin: origin,
       ),
@@ -372,8 +372,17 @@ class GameStateReducer {
     );
   }
 
-  Set<int> _requestIds(Object? value) =>
-      value.toString().split(',').map(_asInt).where((id) => id > 0).toSet();
+  Set<int> _requestIds(Object? value) {
+    final values = value is Iterable ? value : <Object?>[value];
+    final ids = <int>{};
+    for (final rawValue in values) {
+      for (final part in rawValue.toString().split(',')) {
+        final id = _asInt(part);
+        if (id > 0) ids.add(id);
+      }
+    }
+    return ids;
+  }
 
   GameState _revalidateF96(GameState state, DateTime updatedAt) {
     final quest = state.quests[_f96QuestId];
@@ -1110,7 +1119,7 @@ class GameStateReducer {
         ? _asInt(basic['api_max_chara'])
         : null,
     maxEquipmentCount: basic.containsKey('api_max_slotitem')
-        ? _asInt(basic['api_max_slotitem'])
+        ? _equipmentCapacityFromApi(basic['api_max_slotitem'])
         : null,
     furnitureCoins: basic.containsKey('api_fcoin')
         ? _asInt(basic['api_fcoin'])
@@ -1134,7 +1143,7 @@ class GameStateReducer {
           ? _asInt(basic!['api_max_chara'])
           : null,
       maxEquipmentCount: basic?.containsKey('api_max_slotitem') == true
-          ? _asInt(basic!['api_max_slotitem'])
+          ? _equipmentCapacityFromApi(basic!['api_max_slotitem'])
           : null,
       furnitureCoins: basic?.containsKey('api_fcoin') == true
           ? _asInt(basic!['api_fcoin'])
@@ -1895,6 +1904,11 @@ class GameStateReducer {
       String text => int.tryParse(text) ?? fallback,
       _ => fallback,
     };
+  }
+
+  static int _equipmentCapacityFromApi(Object? value) {
+    final capacity = _asInt(value);
+    return capacity > 0 ? capacity + 3 : capacity;
   }
 
   static double _asDouble(Object? value, [double fallback = 0]) {

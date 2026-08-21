@@ -36,7 +36,6 @@ internal interface NativeGameWebViewHostOperations {
 
 internal class ActivityNativeGameWebViewHostOperations(
     private val host: ActivityWebViewHost,
-    private val onPresentationStateChanged: (Boolean) -> Unit = {},
 ) : NativeGameWebViewHostOperations {
     override val currentGeneration: Long?
         get() = host.currentGeneration
@@ -78,10 +77,7 @@ internal class ActivityNativeGameWebViewHostOperations(
     }
 
     override fun fitGameScreen(javascript: String) {
-        val webView = requireWebView()
-        webView.evaluateJavascript(javascript) { rawResult ->
-            onPresentationStateChanged(isGameSurfaceResult(rawResult))
-        }
+        requireWebView().evaluateJavascript(javascript, null)
     }
 
     override fun clearCache() {
@@ -109,10 +105,6 @@ internal class ActivityNativeGameWebViewHostOperations(
 
     private fun requireWebView() = checkNotNull(host.currentWebView) {
         "Native game WebView is not ready"
-    }
-
-    private fun isGameSurfaceResult(rawResult: String?): Boolean {
-        return rawResult?.trim()?.equals("true", ignoreCase = true) == true
     }
 
     private companion object {
@@ -627,7 +619,20 @@ internal class NativeGameWebViewChannel(
             }
         } catch (error: Exception) {
             finish(binding, pending) {
-                safeError(pending.result, HOST_ERROR, error.message ?: "Native WebView operation failed.")
+                if (error is NativeGameWebViewCreateException) {
+                    safeError(
+                        pending.result,
+                        CREATE_FAILED,
+                        error.message,
+                        error.safeDetails,
+                    )
+                } else {
+                    safeError(
+                        pending.result,
+                        HOST_ERROR,
+                        error.message ?: "Native WebView operation failed.",
+                    )
+                }
             }
         }
     }
@@ -1004,9 +1009,14 @@ internal class NativeGameWebViewChannel(
         }
     }
 
-    private fun safeError(result: MethodChannel.Result, code: String, message: String?) {
+    private fun safeError(
+        result: MethodChannel.Result,
+        code: String,
+        message: String?,
+        details: Any? = null,
+    ) {
         try {
-            result.error(code, message, null)
+            result.error(code, message, details)
         } catch (_: Exception) {
             // A detached Dart caller must not stop command serialization.
         }
@@ -1045,6 +1055,7 @@ internal class NativeGameWebViewChannel(
         const val STALE_GENERATION = "stale_generation"
         const val HOST_UNAVAILABLE = "native_webview_unavailable"
         const val HOST_ERROR = "native_webview_error"
+        const val CREATE_FAILED = "native_webview_create_failed"
         const val ACTIVITY_DESTROYED = "activity_destroyed"
         const val CLEAR_SESSION_TIMEOUT_MS = 10_000L
         const val MAX_LOCAL_HOME_LENGTH = 64 * 1024

@@ -573,7 +573,6 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 nativeAttachment,
                 ActivityNativeGameWebViewHostOperations(
                     host,
-                    ::applyNativeGamePresentation,
                 ),
             )
             nativeGameWebViewHost = host
@@ -1350,7 +1349,6 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             if (webView != null) {
                 webView.settings.useWideViewPort = false
                 webView.settings.loadWithOverviewMode = false
-                webView.setInitialScale(0)
             }
             result.success(null)
         } catch (error: RuntimeException) {

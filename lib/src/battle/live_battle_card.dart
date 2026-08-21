@@ -34,6 +34,26 @@ class LiveBattleCard extends StatefulWidget {
 
 class _LiveBattleCardState extends State<LiveBattleCard> {
   BattlePanelMode _mode = BattlePanelMode.detailed;
+  bool _modeRestored = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_modeRestored) return;
+    final storedMode = PageStorage.maybeOf(context)?.readState(context);
+    if (storedMode is String) {
+      _mode = BattlePanelMode.values.firstWhere(
+        (mode) => mode.name == storedMode,
+        orElse: () => _mode,
+      );
+    }
+    _modeRestored = true;
+  }
+
+  void _setMode(BattlePanelMode mode) {
+    setState(() => _mode = mode);
+    PageStorage.maybeOf(context)?.writeState(context, mode.name);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,14 +69,7 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
           collapsed: widget.collapsed,
           onToggleCollapse: widget.onToggleCollapse,
           titleBadge: idle ? const _IdleBadge() : _StatusBadge(battle: battle),
-          trailing: _ModeSwitch(
-            mode: _mode,
-            onChanged: (mode) {
-              setState(() {
-                _mode = mode;
-              });
-            },
-          ),
+          trailing: _ModeSwitch(mode: _mode, onChanged: _setMode),
           borderColor: widget.collapsed || idle
               ? null
               : battle.status == LiveBattleStatus.forecast

@@ -83,10 +83,21 @@ void main() {
           1: OwnedShip(id: 1, masterId: 101, level: 1),
           2: OwnedShip(id: 2, masterId: 102, level: 1),
         },
+        masterSlotItems: <int, MasterSlotItem>{
+          201: MasterSlotItem(id: 201, name: '主炮', type: <int>[1, 1, 1]),
+          202: MasterSlotItem(id: 202, name: '副炮', type: <int>[1, 1, 4]),
+          203: MasterSlotItem(id: 203, name: '鱼雷', type: <int>[1, 1, 5]),
+          42: MasterSlotItem(id: 42, name: '损管', type: <int>[1, 1, 23]),
+          145: MasterSlotItem(id: 145, name: '战斗粮食', type: <int>[1, 1, 43]),
+          146: MasterSlotItem(id: 146, name: '洋上补给', type: <int>[1, 1, 44]),
+        },
         slotItems: <int, OwnedSlotItem>{
           1: OwnedSlotItem(id: 1, masterId: 201),
           2: OwnedSlotItem(id: 2, masterId: 202),
           3: OwnedSlotItem(id: 3, masterId: 203),
+          4: OwnedSlotItem(id: 4, masterId: 42),
+          5: OwnedSlotItem(id: 5, masterId: 145),
+          6: OwnedSlotItem(id: 6, masterId: 146),
         },
       );
 
@@ -221,9 +232,7 @@ void main() {
     final title = tester.getRect(
       find.byKey(const Key('workspace-title-senka')),
     );
-    final switcher = tester.getRect(
-      find.byKey(const Key('senka-mode-tabs')),
-    );
+    final switcher = tester.getRect(find.byKey(const Key('senka-mode-tabs')));
     expect(switcher.left, greaterThan(title.right));
     expect(switcher.height, 38);
 

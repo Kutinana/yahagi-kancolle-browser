@@ -29,6 +29,26 @@ class PreSortieCheckSummary extends StatefulWidget {
 class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
   SortieCheckMode _mode = SortieCheckMode.ships;
   bool _showClearedMaps = true;
+  bool _modeRestored = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_modeRestored) return;
+    final storedMode = PageStorage.maybeOf(context)?.readState(context);
+    if (storedMode is String) {
+      _mode = SortieCheckMode.values.firstWhere(
+        (mode) => mode.name == storedMode,
+        orElse: () => _mode,
+      );
+    }
+    _modeRestored = true;
+  }
+
+  void _setMode(SortieCheckMode mode) {
+    setState(() => _mode = mode);
+    PageStorage.maybeOf(context)?.writeState(context, mode.name);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +69,7 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
             mode: _mode,
             shipsLabel: l10n.sortieCheckShipsMode,
             mapsLabel: l10n.sortieCheckMapsMode,
-            onChanged: (mode) => setState(() => _mode = mode),
+            onChanged: _setMode,
           ),
           child: _mode == SortieCheckMode.ships
               ? _buildShipsCheckView(state, l10n)

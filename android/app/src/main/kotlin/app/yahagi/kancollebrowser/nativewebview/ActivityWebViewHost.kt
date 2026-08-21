@@ -107,6 +107,7 @@ class ActivityWebViewHost internal constructor(
         val resources = OwnedWebViewResources(generation)
         // Publish a token before any allocation or hierarchy operation can throw.
         ownedResources = resources
+        var createStage = NativeGameWebViewCreateStage.CREATE_OVERLAY
         try {
             val createdOverlay = FrameLayout(context)
             resources.overlay = createdOverlay
@@ -116,6 +117,7 @@ class ActivityWebViewHost internal constructor(
                 clipChildren = true
                 clipToPadding = true
             }
+            createStage = NativeGameWebViewCreateStage.ATTACH_OVERLAY
             contentRoot.addView(
                 createdOverlay,
                 FrameLayout.LayoutParams(
@@ -123,6 +125,7 @@ class ActivityWebViewHost internal constructor(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 ),
             )
+            createStage = NativeGameWebViewCreateStage.CREATE_WEB_VIEW
             val createdWebView = webViewFactory(context)
             if (!isCurrentCreate(resources)) {
                 cleanupStandaloneWebView(createdWebView)
@@ -137,11 +140,13 @@ class ActivityWebViewHost internal constructor(
                 prepareRenderProcessGone = ::prepareRenderProcessGone,
                 onRenderProcessGone = ::onRenderProcessGone,
             )
+            createStage = NativeGameWebViewCreateStage.CONFIGURE_WEB_VIEW
             configureWebView(createdWebView, client)
             if (!isCurrentCreate(resources)) {
                 rollbackCreate(resources)
                 return null
             }
+            createStage = NativeGameWebViewCreateStage.ATTACH_WEB_VIEW
             createdOverlay.addView(
                 createdWebView,
                 FrameLayout.LayoutParams(
@@ -154,15 +159,20 @@ class ActivityWebViewHost internal constructor(
                 return null
             }
             hasValidBounds = false
+            createStage = NativeGameWebViewCreateStage.MARK_READY
             if (!state.markReady(generation)) {
                 rollbackCreate(resources)
                 return null
             }
             runCatching { eventSink.created(generation) }
             return generation.takeIf { isCurrentReady(resources) }
-        } catch (_: Throwable) {
+        } catch (error: Throwable) {
             rollbackCreate(resources)
-            return null
+            throw NativeGameWebViewCreateFailureReporter.report(
+                context,
+                createStage,
+                error,
+            )
         }
     }
 

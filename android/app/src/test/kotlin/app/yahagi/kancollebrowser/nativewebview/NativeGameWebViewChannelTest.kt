@@ -12,6 +12,39 @@ import org.junit.Test
 
 class NativeGameWebViewChannelTest {
     @Test
+    fun createFailurePreservesStageAndSafeDetails() {
+        val host = FakeHost().apply {
+            createFailure = NativeGameWebViewCreateException(
+                stage = NativeGameWebViewCreateStage.CONFIGURE_WEB_VIEW,
+                cause = IllegalStateException("configuration failure"),
+                webViewPackage = "com.google.android.webview",
+                webViewVersion = "151.0.7922.85",
+                sdkInt = 36,
+            )
+        }
+        val channel = activeChannel(host)
+        val result = RecordingResult()
+
+        channel.onMethodCall(
+            MethodCall("create", mapOf("renderer" to "webgl")),
+            result,
+        )
+
+        assertEquals("native_webview_create_failed", result.errorCode)
+        assertTrue(result.errorMessage!!.contains("configure_web_view"))
+        assertEquals(
+            mapOf(
+                "stage" to "configure_web_view",
+                "exceptionType" to "IllegalStateException",
+                "webViewPackage" to "com.google.android.webview",
+                "webViewVersion" to "151.0.7922.85",
+                "sdkInt" to 36,
+            ),
+            result.errorDetails,
+        )
+    }
+
+    @Test
     fun channelNamesExactlyMatchDartContract() {
         assertEquals(
             "app.yahagi.kancollebrowser/native_game_webview",
@@ -1196,6 +1229,8 @@ class NativeGameWebViewChannelTest {
     private class RecordingResult : MethodChannel.Result {
         var successValue: Any? = null
         var errorCode: String? = null
+        var errorMessage: String? = null
+        var errorDetails: Any? = null
         var notImplemented = false
         var completionCount = 0
 
@@ -1207,6 +1242,8 @@ class NativeGameWebViewChannelTest {
         override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
             completionCount++
             this.errorCode = errorCode
+            this.errorMessage = errorMessage
+            this.errorDetails = errorDetails
         }
 
         override fun notImplemented() {
@@ -1313,6 +1350,7 @@ class NativeGameWebViewChannelTest {
         override var currentGeneration: Long? = null
             private set
         var createCalls = 0
+        var createFailure: RuntimeException? = null
         var reloadCalls = 0
         var loadUriCalls = 0
         var showLocalHomeCalls = 0
@@ -1328,6 +1366,7 @@ class NativeGameWebViewChannelTest {
         val operations = mutableListOf<String>()
 
         override fun create(): Long? {
+            createFailure?.let { throw it }
             val generation = createCalls.toLong()
             createCalls++
             currentGeneration = generation

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show FlutterView;
 
 import 'package:flutter/material.dart';
 
@@ -82,6 +83,8 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   int _boundsGeneration = 0;
   bool _resendCurrentBoundsToNewSink = false;
   bool _measureScheduled = false;
+  bool _boundsSyncDeferredForIme = false;
+  FlutterView? _view;
   bool _synchronizingRouteSubscription = false;
   bool? _workspaceActive;
 
@@ -110,6 +113,7 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _view = View.of(context);
     final workspaceActive = GameWorkspaceActive.of(context);
     if (workspaceActive != _workspaceActive) {
       _workspaceActive = workspaceActive;
@@ -146,6 +150,13 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
 
   @override
   void didChangeMetrics() {
+    if (_isImeVisible) {
+      _boundsSyncDeferredForIme = true;
+      return;
+    }
+    if (_boundsSyncDeferredForIme) {
+      _boundsSyncDeferredForIme = false;
+    }
     _restartBoundsRetries();
     _scheduleMeasurement();
   }
@@ -222,6 +233,10 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   }
 
   void _scheduleMeasurement() {
+    if (_isImeVisible) {
+      _boundsSyncDeferredForIme = true;
+      return;
+    }
     if (_measureScheduled) {
       return;
     }
@@ -235,6 +250,11 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   }
 
   void _measureAndReport() {
+    if (_isImeVisible) {
+      _boundsSyncDeferredForIme = true;
+      return;
+    }
+    _boundsSyncDeferredForIme = false;
     final bounds = readNativeGameSurfaceBounds(
       context.findRenderObject(),
       devicePixelRatio: View.of(context).devicePixelRatio,
@@ -269,6 +289,8 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     _ignoreErrors(_visibility.setSlotAttached(false));
     _drainBounds();
   }
+
+  bool get _isImeVisible => (_view?.viewInsets.bottom ?? 0) > 0;
 
   void _drainBounds() {
     if (_boundsDrainRunning) {
@@ -418,4 +440,3 @@ class YahagiGameRouteObserver extends RouteObserver<ModalRoute<dynamic>> {
     super.didPop(route, previousRoute);
   }
 }
-
