@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
@@ -398,15 +397,6 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
     if (_disposed) {
       throw StateError('Native WebView has been disposed.');
     }
-  }
-}
-
-Object? _decodeJavaScriptResult(Object? value) {
-  if (value is! String) return value;
-  try {
-    return jsonDecode(value);
-  } on FormatException {
-    return value;
   }
 }
 
