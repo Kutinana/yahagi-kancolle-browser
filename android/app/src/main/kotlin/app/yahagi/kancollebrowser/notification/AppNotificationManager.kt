@@ -113,6 +113,8 @@ object AppNotificationManager {
         saveSnapshot(context, persisted)
         runCatching { updateOngoingProgress(context, persisted) }
             .onFailure { failures += "ongoing" }
+        runCatching { NotificationProgressService.sync(context, persisted) }
+            .onFailure { failures += "progress-service" }
         return mapOf(
             "scheduledExact" to exact,
             "scheduledInexact" to inexact,
@@ -150,6 +152,7 @@ object AppNotificationManager {
         )
         saveSnapshot(context, next)
         updateOngoingProgress(context, next)
+        runCatching { NotificationProgressService.sync(context, next) }
     }
 
     fun canScheduleExactAlarms(context: Context): Boolean {
@@ -269,7 +272,7 @@ object AppNotificationManager {
         )
     }
 
-    private fun updateOngoingProgress(context: Context, snapshot: NativeNotificationSnapshot) {
+    internal fun updateOngoingProgress(context: Context, snapshot: NativeNotificationSnapshot) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
         if (!snapshot.presentation.enabled ||
             !snapshot.presentation.ongoingLive ||
@@ -281,12 +284,13 @@ object AppNotificationManager {
         manager.notify(ONGOING_NOTIFICATION_ID, buildOngoingNotification(context, snapshot))
     }
 
-    private fun buildOngoingNotification(
+    internal fun buildOngoingNotification(
         context: Context,
         snapshot: NativeNotificationSnapshot,
     ): Notification {
-        val items = snapshot.ongoingItems
-        val presentation = snapshot.presentation
+        val projected = NotificationProgressProjection.project(snapshot, System.currentTimeMillis())
+        val items = projected.ongoingItems
+        val presentation = projected.presentation
         val launchIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
