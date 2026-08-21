@@ -10,6 +10,10 @@ enum GameNotificationType {
 
 enum NotificationAlarmStage { preempt, milestone, complete }
 
+enum OngoingTaskState { running, settlementReady, completed }
+
+enum OngoingClockMode { countdown, elapsed }
+
 class ScheduledNotificationItem {
   const ScheduledNotificationItem({
     required this.key,
@@ -48,6 +52,9 @@ class OngoingTaskItem {
     required this.id,
     required this.type,
     required this.title,
+    this.state = OngoingTaskState.running,
+    this.clockMode = OngoingClockMode.countdown,
+    this.anchorEpochMs,
     required this.progress,
     required this.remainingSeconds,
     this.targetEpochMs,
@@ -57,6 +64,9 @@ class OngoingTaskItem {
   final String id;
   final GameNotificationType type;
   final String title;
+  final OngoingTaskState state;
+  final OngoingClockMode clockMode;
+  final int? anchorEpochMs;
   final double progress; // 0.0 to 1.0
   final int remainingSeconds;
   final int? targetEpochMs;
@@ -66,6 +76,9 @@ class OngoingTaskItem {
     'id': id,
     'type': type.name,
     'title': title,
+    'state': state.name,
+    'clockMode': clockMode.name,
+    'anchorEpochMs': anchorEpochMs,
     'progress': progress,
     'remainingSeconds': remainingSeconds,
     'targetEpochMs': targetEpochMs,
