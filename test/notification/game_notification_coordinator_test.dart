@@ -14,6 +14,38 @@ class FakeNotificationPort implements NotificationPort {
   bool allAlarmsCanceled = false;
   OngoingProgressSummary? currentOngoingSummary;
   bool ongoingCanceled = false;
+  NotificationSnapshot? latestSnapshot;
+
+  @override
+  Future<NotificationApplyResult> applySnapshot(
+    NotificationSnapshot snapshot,
+  ) async {
+    latestSnapshot = snapshot;
+    return const NotificationApplyResult(
+      scheduledExact: 0,
+      scheduledInexact: 0,
+      canceled: 0,
+      failures: [],
+    );
+  }
+
+  @override
+  Future<NotificationPlatformCapabilities> getCapabilities() async {
+    return const NotificationPlatformCapabilities(
+      notificationsGranted: true,
+      exactAlarmsGranted: true,
+      channelsEnabled: true,
+    );
+  }
+
+  @override
+  Future<void> openSystemNotificationSettings() async {}
+
+  @override
+  Future<void> requestExactAlarmPermission() async {}
+
+  @override
+  Future<bool> requestNotificationPermission() async => true;
 
   @override
   Future<void> scheduleAlarm(ScheduledNotificationItem item) async {
@@ -82,11 +114,7 @@ void main() {
           ),
         },
         fleets: [
-          const Fleet(
-            id: 1,
-            name: '第1舰队',
-            shipIds: [1],
-          ),
+          const Fleet(id: 1, name: '第1舰队', shipIds: [1]),
           Fleet(
             id: 2,
             name: '第2舰队',
@@ -152,12 +180,7 @@ void main() {
           ),
         },
         repairDocks: [
-          RepairDock(
-            id: 1,
-            state: 1,
-            shipId: 10,
-            completionTime: completeTime,
-          ),
+          RepairDock(id: 1, state: 1, shipId: 10, completionTime: completeTime),
         ],
       );
 
@@ -183,7 +206,10 @@ void main() {
       // Trigger setting change or notification sync
       settingsController.notifyListeners();
 
-      expect(fakePort.scheduledAlarms.containsKey('repair_1_complete'), isFalse);
+      expect(
+        fakePort.scheduledAlarms.containsKey('repair_1_complete'),
+        isFalse,
+      );
       expect(fakePort.canceledAlarms.contains('repair_1_complete'), isTrue);
 
       coordinator.dispose();
@@ -238,66 +264,66 @@ void main() {
 
       expect(fakePort.scheduledAlarms.containsKey('anchorage_1_20m'), isTrue);
       final alarm = fakePort.scheduledAlarms['anchorage_1_20m']!;
-      expect(
-        alarm.triggerTime,
-        ancStarted.add(const Duration(minutes: 20)),
-      );
+      expect(alarm.triggerTime, ancStarted.add(const Duration(minutes: 20)));
       expect(alarm.body, contains('20 分钟'));
 
       coordinator.dispose();
     });
 
-    test('cancels construction alarm and drops ongoing progress on fast build', () {
-      final completeTime = testNow.add(const Duration(hours: 1));
-      testState = testState.copyWith(
-        masterShips: {
-          153: const MasterShip(id: 153, name: '大凤', shipTypeId: 11),
-        },
-        constructionDocks: [
-          ConstructionDock(
-            id: 1,
-            state: 1,
-            createdShipMasterId: 153,
-            completionTime: completeTime,
-          ),
-        ],
-      );
+    test(
+      'cancels construction alarm and drops ongoing progress on fast build',
+      () {
+        final completeTime = testNow.add(const Duration(hours: 1));
+        testState = testState.copyWith(
+          masterShips: {
+            153: const MasterShip(id: 153, name: '大凤', shipTypeId: 11),
+          },
+          constructionDocks: [
+            ConstructionDock(
+              id: 1,
+              state: 1,
+              createdShipMasterId: 153,
+              completionTime: completeTime,
+            ),
+          ],
+        );
 
-      final coordinator = GameNotificationCoordinator(
-        gameStateController: gameStateController,
-        settingsController: settingsController,
-        notificationPort: fakePort,
-        gameStateProvider: () => testState,
-        nowProvider: () => testNow,
-      );
-      coordinator.start();
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+        );
+        coordinator.start();
 
-      expect(
-        fakePort.scheduledAlarms.containsKey('construction_1_complete'),
-        isTrue,
-      );
-      expect(fakePort.currentOngoingSummary?.items.length, 1);
+        expect(
+          fakePort.scheduledAlarms.containsKey('construction_1_complete'),
+          isTrue,
+        );
+        expect(fakePort.currentOngoingSummary?.items.length, 1);
 
-      // Fast build (speedchange) sets state to 3 and completionTime to now
-      testState = testState.copyWith(
-        constructionDocks: [
-          ConstructionDock(
-            id: 1,
-            state: 3,
-            createdShipMasterId: 153,
-            completionTime: testNow,
-          ),
-        ],
-      );
-      gameStateController.notifyListeners();
+        // Fast build (speedchange) sets state to 3 and completionTime to now
+        testState = testState.copyWith(
+          constructionDocks: [
+            ConstructionDock(
+              id: 1,
+              state: 3,
+              createdShipMasterId: 153,
+              completionTime: testNow,
+            ),
+          ],
+        );
+        gameStateController.notifyListeners();
 
-      expect(
-        fakePort.scheduledAlarms.containsKey('construction_1_complete'),
-        isFalse,
-      );
-      expect(fakePort.currentOngoingSummary, isNull);
+        expect(
+          fakePort.scheduledAlarms.containsKey('construction_1_complete'),
+          isFalse,
+        );
+        expect(fakePort.currentOngoingSummary, isNull);
 
-      coordinator.dispose();
-    });
+        coordinator.dispose();
+      },
+    );
   });
 }

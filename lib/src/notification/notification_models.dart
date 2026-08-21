@@ -8,25 +8,35 @@ enum GameNotificationType {
   String get channelId => 'channel_$name';
 }
 
+enum NotificationAlarmStage { preempt, milestone, complete }
+
 class ScheduledNotificationItem {
   const ScheduledNotificationItem({
     required this.key,
+    this.taskId = '',
     required this.type,
+    this.stage = NotificationAlarmStage.complete,
+    this.removeTaskOnFire = false,
     required this.triggerTime,
     required this.title,
     required this.body,
   });
 
   final String key;
+  final String taskId;
   final GameNotificationType type;
+  final NotificationAlarmStage stage;
+  final bool removeTaskOnFire;
   final DateTime triggerTime;
   final String title;
   final String body;
 
   Map<String, Object?> toMap() => {
     'key': key,
+    'taskId': taskId,
     'type': type.name,
-    'channelId': type.channelId,
+    'stage': stage.name,
+    'removeTaskOnFire': removeTaskOnFire,
     'triggerTimeEpochMs': triggerTime.millisecondsSinceEpoch,
     'title': title,
     'body': body,
@@ -82,4 +92,141 @@ class OngoingProgressSummary {
     'showPercent': showPercent,
     'showCountdown': showCountdown,
   };
+}
+
+class NotificationPresentation {
+  const NotificationPresentation({
+    required this.enabled,
+    required this.sound,
+    required this.vibration,
+    required this.showProgress,
+    required this.showPercent,
+    required this.showCountdown,
+    required this.ongoingLive,
+  });
+
+  final bool enabled;
+  final bool sound;
+  final bool vibration;
+  final bool showProgress;
+  final bool showPercent;
+  final bool showCountdown;
+  final bool ongoingLive;
+
+  Map<String, Object?> toMap() => {
+    'enabled': enabled,
+    'sound': sound,
+    'vibration': vibration,
+    'showProgress': showProgress,
+    'showPercent': showPercent,
+    'showCountdown': showCountdown,
+    'ongoingLive': ongoingLive,
+  };
+}
+
+class NotificationSnapshot {
+  const NotificationSnapshot({
+    this.schemaVersion = 1,
+    required this.updatedAt,
+    required this.alarms,
+    required this.ongoingItems,
+    required this.presentation,
+  });
+
+  final int schemaVersion;
+  final DateTime updatedAt;
+  final List<ScheduledNotificationItem> alarms;
+  final List<OngoingTaskItem> ongoingItems;
+  final NotificationPresentation presentation;
+
+  Map<String, Object?> toMap() => {
+    'schemaVersion': schemaVersion,
+    'updatedAtEpochMs': updatedAt.millisecondsSinceEpoch,
+    'alarms': alarms.map((item) => item.toMap()).toList(),
+    'ongoingItems': ongoingItems.map((item) => item.toMap()).toList(),
+    'presentation': presentation.toMap(),
+  };
+}
+
+class NotificationApplyResult {
+  const NotificationApplyResult({
+    required this.scheduledExact,
+    required this.scheduledInexact,
+    required this.canceled,
+    required this.failures,
+  });
+
+  factory NotificationApplyResult.fromMap(Map<Object?, Object?> map) {
+    final rawFailures = map['failures'];
+    return NotificationApplyResult(
+      scheduledExact: _intValue(map['scheduledExact']),
+      scheduledInexact: _intValue(map['scheduledInexact']),
+      canceled: _intValue(map['canceled']),
+      failures: rawFailures is List
+          ? rawFailures.whereType<String>().toList(growable: false)
+          : const [],
+    );
+  }
+
+  final int scheduledExact;
+  final int scheduledInexact;
+  final int canceled;
+  final List<String> failures;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NotificationApplyResult &&
+      scheduledExact == other.scheduledExact &&
+      scheduledInexact == other.scheduledInexact &&
+      canceled == other.canceled &&
+      _stringListsEqual(failures, other.failures);
+
+  @override
+  int get hashCode => Object.hash(
+    scheduledExact,
+    scheduledInexact,
+    canceled,
+    Object.hashAll(failures),
+  );
+}
+
+class NotificationPlatformCapabilities {
+  const NotificationPlatformCapabilities({
+    required this.notificationsGranted,
+    required this.exactAlarmsGranted,
+    required this.channelsEnabled,
+  });
+
+  factory NotificationPlatformCapabilities.fromMap(Map<Object?, Object?> map) {
+    return NotificationPlatformCapabilities(
+      notificationsGranted: map['notificationsGranted'] == true,
+      exactAlarmsGranted: map['exactAlarmsGranted'] == true,
+      channelsEnabled: map['channelsEnabled'] == true,
+    );
+  }
+
+  final bool notificationsGranted;
+  final bool exactAlarmsGranted;
+  final bool channelsEnabled;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NotificationPlatformCapabilities &&
+      notificationsGranted == other.notificationsGranted &&
+      exactAlarmsGranted == other.exactAlarmsGranted &&
+      channelsEnabled == other.channelsEnabled;
+
+  @override
+  int get hashCode =>
+      Object.hash(notificationsGranted, exactAlarmsGranted, channelsEnabled);
+}
+
+int _intValue(Object? value) => value is num ? value.toInt() : 0;
+
+bool _stringListsEqual(List<String> first, List<String> second) {
+  if (first.length != second.length) return false;
+  for (var index = 0; index < first.length; index++) {
+    if (first[index] != second[index]) return false;
+  }
+  return true;
 }
