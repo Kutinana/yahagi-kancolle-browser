@@ -204,6 +204,13 @@ class NotificationSnapshotTest {
     }
 
     @Test
+    fun `countdown format escapes the visible percent sign`() {
+        assertEquals("53%%  %s", NotificationChronometer.countdownFormat(53, true))
+        assertEquals("%s", NotificationChronometer.countdownFormat(53, false))
+        assertEquals("53%%", NotificationChronometer.percentOnlyFormat(53))
+    }
+
+    @Test
     fun `completion notification id is stable and separate from ongoing summary`() {
         val first = NotificationDelivery.notificationId("expedition_2_complete", 100L)
         val second = NotificationDelivery.notificationId("expedition_2_complete", 100L)

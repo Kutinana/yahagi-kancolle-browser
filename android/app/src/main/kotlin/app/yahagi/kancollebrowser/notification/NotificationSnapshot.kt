@@ -149,6 +149,11 @@ object NotificationChronometer {
         elapsedRealtimeMs: Long,
         anchorEpochMs: Long,
     ): Long = elapsedRealtimeMs - (nowEpochMs - anchorEpochMs).coerceAtLeast(0L)
+
+    fun countdownFormat(percent: Int, showPercent: Boolean): String =
+        if (showPercent) "$percent%%  %s" else "%s"
+
+    fun percentOnlyFormat(percent: Int): String = "$percent%%"
 }
 
 object NotificationDelivery {

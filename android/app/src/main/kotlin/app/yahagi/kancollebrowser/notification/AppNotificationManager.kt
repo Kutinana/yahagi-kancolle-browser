@@ -367,13 +367,23 @@ object AppNotificationManager {
         } else if (presentation.showCountdown && item.targetEpochMs != null) {
             val base = SystemClock.elapsedRealtime() + (item.targetEpochMs - System.currentTimeMillis())
             views.setViewVisibility(statsId, View.VISIBLE)
-            views.setChronometer(statsId, base, if (presentation.showPercent) "$percent%  %s" else "%s", true)
+            views.setChronometer(
+                statsId,
+                base,
+                NotificationChronometer.countdownFormat(percent, presentation.showPercent),
+                true,
+            )
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 views.setChronometerCountDown(statsId, true)
             }
         } else if (presentation.showPercent) {
             views.setViewVisibility(statsId, View.VISIBLE)
-            views.setChronometer(statsId, SystemClock.elapsedRealtime(), "$percent%", false)
+            views.setChronometer(
+                statsId,
+                SystemClock.elapsedRealtime(),
+                NotificationChronometer.percentOnlyFormat(percent),
+                false,
+            )
         } else {
             views.setViewVisibility(statsId, View.GONE)
         }
