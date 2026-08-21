@@ -24,10 +24,12 @@ class GameStateReducer {
       // api_result_msg. Its state transition is driven by request parameters.
       allowMissingData:
           event.path == '/kcsapi/api_req_hensei/change' ||
+          event.path == '/kcsapi/api_req_hensei/combined' ||
           event.path == '/kcsapi/api_req_kaisou/slotset' ||
           event.path == '/kcsapi/api_req_kaisou/slotset_ex' ||
           event.path == '/kcsapi/api_req_kaisou/unsetslot_all' ||
           event.path == '/kcsapi/api_req_kousyou/createship' ||
+          event.path == '/kcsapi/api_req_kousyou/createship_speedchange' ||
           event.path == '/kcsapi/api_req_nyukyo/start' ||
           event.path == '/kcsapi/api_req_nyukyo/speedchange' ||
           event.path == '/kcsapi/api_req_quest/clearitemget' ||

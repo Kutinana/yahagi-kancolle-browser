@@ -1409,6 +1409,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTabBattle => '战斗';
 
   @override
+  String get settingsTabNotification => '通知';
+
+  @override
   String get settingsTabNetwork => '网络';
 
   @override
@@ -1416,6 +1419,75 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsTabAboutSupport => '关于';
+
+  @override
+  String get notificationSectionGeneral => '全局通知服务';
+
+  @override
+  String get notificationEnableMaster => '启用通知服务';
+
+  @override
+  String get notificationSound => '通知提示音';
+
+  @override
+  String get notificationVibration => '振动提醒';
+
+  @override
+  String get notificationSectionOngoing => '后台常驻进行中进度 (Ongoing)';
+
+  @override
+  String get notificationOngoingLive => '常驻实时进度条卡片';
+
+  @override
+  String get notificationProgress => '进度条';
+
+  @override
+  String get notificationPercent => '百分比';
+
+  @override
+  String get notificationCountdown => '实时倒计时';
+
+  @override
+  String get notificationSectionTypes => '业务通知分类与提醒时机 (Type)';
+
+  @override
+  String get notificationExpedition => '远征归还 (Expedition)';
+
+  @override
+  String get notificationRepair => '入渠修复 (Repair)';
+
+  @override
+  String get notificationAnchorage => '泊地修理 (Anchorage Repair)';
+
+  @override
+  String get notificationConstruction => '工厂建造 (Construction)';
+
+  @override
+  String get notificationMorale => '士气 / 疲劳与刷闪 (Morale)';
+
+  @override
+  String get notificationPunctual => '0s (准点)';
+
+  @override
+  String get notificationPreempt30s => '提前 30s';
+
+  @override
+  String get notificationPreempt60s => '提前 60s';
+
+  @override
+  String get notificationPreempt120s => '提前 2m';
+
+  @override
+  String get notificationRepairPunctual => '准点 (0s)';
+
+  @override
+  String get notificationAnchorage20m => '满20min首轮';
+
+  @override
+  String get notificationAnchorageFull => '全部修满';
+
+  @override
+  String get notificationAnchorageBoth => '双阶段均提醒';
 
   @override
   String get frameRateSettingsSection => '帧率设置';
@@ -3237,6 +3309,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsTabBattle => '戰鬥';
 
   @override
+  String get settingsTabNotification => '通知';
+
+  @override
   String get settingsTabNetwork => '網路';
 
   @override
@@ -3244,6 +3319,75 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsTabAboutSupport => '關於';
+
+  @override
+  String get notificationSectionGeneral => '全域通知服務';
+
+  @override
+  String get notificationEnableMaster => '啟用通知服務';
+
+  @override
+  String get notificationSound => '通知提示音';
+
+  @override
+  String get notificationVibration => '震動提醒';
+
+  @override
+  String get notificationSectionOngoing => '後台常駐進行中進度 (Ongoing)';
+
+  @override
+  String get notificationOngoingLive => '常駐即時進度條卡片';
+
+  @override
+  String get notificationProgress => '進度條';
+
+  @override
+  String get notificationPercent => '百分比';
+
+  @override
+  String get notificationCountdown => '即時倒數';
+
+  @override
+  String get notificationSectionTypes => '業務通知分類與提醒時機 (Type)';
+
+  @override
+  String get notificationExpedition => '遠征歸還 (Expedition)';
+
+  @override
+  String get notificationRepair => '入渠修復 (Repair)';
+
+  @override
+  String get notificationAnchorage => '泊地修理 (Anchorage Repair)';
+
+  @override
+  String get notificationConstruction => '工廠建造 (Construction)';
+
+  @override
+  String get notificationMorale => '士氣 / 疲勞與刷閃 (Morale)';
+
+  @override
+  String get notificationPunctual => '0s (準時)';
+
+  @override
+  String get notificationPreempt30s => '提前 30s';
+
+  @override
+  String get notificationPreempt60s => '提前 60s';
+
+  @override
+  String get notificationPreempt120s => '提前 2m';
+
+  @override
+  String get notificationRepairPunctual => '準時 (0s)';
+
+  @override
+  String get notificationAnchorage20m => '滿20min首輪';
+
+  @override
+  String get notificationAnchorageFull => '全部修滿';
+
+  @override
+  String get notificationAnchorageBoth => '雙階段均提醒';
 
   @override
   String get frameRateSettingsSection => '幀率設定';

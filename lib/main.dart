@@ -102,6 +102,10 @@ import 'src/settings/battle_prediction_settings.dart';
 import 'src/settings/game_frame_rate_settings.dart';
 import 'src/settings/game_rendering_mode_controller.dart';
 import 'src/settings/game_rendering_mode.dart';
+import 'src/settings/notification_settings_controller.dart';
+import 'src/settings/notification_settings_store.dart';
+import 'src/notification/game_notification_coordinator.dart';
+import 'src/notification/method_channel_notification_port.dart';
 import 'src/senka/senka_controller.dart';
 import 'src/senka/senka_page.dart';
 import 'src/senka/senka_store.dart';
@@ -117,6 +121,10 @@ Future<void> main() async {
       WidgetsBinding.instance.platformDispatcher.locale,
     ),
   );
+  final notificationSettingsController = NotificationSettingsController(
+    store: const SharedPreferencesNotificationSettingsStore(),
+  );
+  await notificationSettingsController.initialize();
   final networkSettingsController = NetworkSettingsController(
     store: SharedPreferencesNetworkSettingsStore(),
   );
@@ -372,12 +380,19 @@ Future<void> main() async {
     },
   );
   await diagnosticController.initialize();
+  final notificationCoordinator = GameNotificationCoordinator(
+    gameStateController: gameStateController,
+    settingsController: notificationSettingsController,
+    notificationPort: const MethodChannelNotificationPort(),
+  );
+  notificationCoordinator.start();
   runApp(
     YahagiApp(
       layoutSettingsController: layoutSettingsController,
       networkSettingsController: networkSettingsController,
       gadgetBypassController: gadgetBypassController,
       safetySettingsController: safetySettingsController,
+      notificationSettingsController: notificationSettingsController,
       battlePredictionSettingsController: battlePredictionSettingsController,
       gameFrameRateSettingsController: gameFrameRateSettingsController,
       gameRenderingModeController: gameRenderingModeController,
@@ -454,6 +469,7 @@ class YahagiApp extends StatelessWidget {
     required this.networkSettingsController,
     required this.gadgetBypassController,
     required this.safetySettingsController,
+    this.notificationSettingsController,
     this.battlePredictionSettingsController,
     this.gameFrameRateSettingsController,
     this.gameRenderingModeController,
@@ -488,6 +504,7 @@ class YahagiApp extends StatelessWidget {
   final NetworkSettingsController networkSettingsController;
   final GadgetBypassController gadgetBypassController;
   final SafetySettingsController safetySettingsController;
+  final NotificationSettingsController? notificationSettingsController;
   final BattlePredictionSettingsController? battlePredictionSettingsController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final GameRenderingModeController? gameRenderingModeController;
@@ -571,6 +588,8 @@ class YahagiApp extends StatelessWidget {
                   networkSettingsController: networkSettingsController,
                   gadgetBypassController: gadgetBypassController,
                   safetySettingsController: safetySettingsController,
+                  notificationSettingsController:
+                      notificationSettingsController,
                   battlePredictionSettingsController:
                       battlePredictionSettingsController,
                   gameFrameRateSettingsController:
@@ -708,6 +727,7 @@ class YahagiShell extends StatefulWidget {
     required this.networkSettingsController,
     required this.gadgetBypassController,
     required this.safetySettingsController,
+    this.notificationSettingsController,
     this.battlePredictionSettingsController,
     this.gameFrameRateSettingsController,
     this.gameRenderingModeController,
@@ -739,6 +759,7 @@ class YahagiShell extends StatefulWidget {
   final NetworkSettingsController networkSettingsController;
   final GadgetBypassController gadgetBypassController;
   final SafetySettingsController safetySettingsController;
+  final NotificationSettingsController? notificationSettingsController;
   final BattlePredictionSettingsController? battlePredictionSettingsController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final GameRenderingModeController? gameRenderingModeController;
@@ -1509,6 +1530,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                 widget.gameResourceCacheController,
                             safetySettingsController:
                                 widget.safetySettingsController,
+                            notificationSettingsController:
+                                widget.notificationSettingsController,
                             battlePredictionSettingsController:
                                 widget.battlePredictionSettingsController,
                             gameFrameRateSettingsController:

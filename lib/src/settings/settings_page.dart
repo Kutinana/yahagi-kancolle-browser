@@ -22,6 +22,8 @@ import '../quest/quest_catalog_controller.dart';
 import '../improvement/improvement_planner_controller.dart';
 import 'screen_settings_page.dart';
 import 'battle_settings_page.dart';
+import 'notification_settings_controller.dart';
+import 'notification_settings_page.dart';
 import 'network_settings_page_new.dart';
 import 'data_settings_page.dart';
 import 'about_support_settings_page.dart';
@@ -45,6 +47,7 @@ class SettingsPage extends StatelessWidget {
     this.senkaController,
     this.gameResourceCacheController,
     required this.safetySettingsController,
+    this.notificationSettingsController,
     required this.currentVersion,
     this.releaseChecker,
     this.screenAwakeController,
@@ -75,6 +78,7 @@ class SettingsPage extends StatelessWidget {
   final SenkaController? senkaController;
   final GameResourceCacheController? gameResourceCacheController;
   final SafetySettingsController safetySettingsController;
+  final NotificationSettingsController? notificationSettingsController;
   final bool showTitle;
   final String currentVersion;
   final ReleaseChecker? releaseChecker;
@@ -110,6 +114,11 @@ class SettingsPage extends StatelessWidget {
           battlePredictionSettingsController:
               battlePredictionSettingsController,
           safetySettingsController: safetySettingsController,
+        ),
+        NotificationSettingsPage(
+          controller:
+              notificationSettingsController ??
+              NotificationSettingsController(),
         ),
         NetworkSettingsPageNew(
           networkSettingsController: networkSettingsController,

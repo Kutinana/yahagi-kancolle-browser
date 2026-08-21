@@ -137,9 +137,6 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
   }
 
   String get _nosakiElapsed {
-    if (!NosakiSparkleCalculator.hasReadyFleet(widget.state)) {
-      return '--:--:--';
-    }
     return formatNosakiSparkleElapsed(widget.nosakiSparkleStartedAt, _now);
   }
 

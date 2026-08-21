@@ -465,6 +465,7 @@ class SettingsSegmented extends StatelessWidget {
     final labels = <String>[
       l10n.settingsTabScreen,
       l10n.settingsTabBattle,
+      l10n.settingsTabNotification,
       l10n.settingsTabNetwork,
       l10n.settingsTabData,
       l10n.settingsTabAboutSupport,

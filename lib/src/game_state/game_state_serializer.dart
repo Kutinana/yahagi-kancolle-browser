@@ -108,6 +108,37 @@ class GameStateSerializer {
             },
           )
           .toList(),
+      'masterMissions': state.masterMissions.map(
+        (k, v) => MapEntry(k.toString(), {
+          'id': v.id,
+          'name': v.name,
+          'durationSeconds': v.duration.inSeconds,
+          'displayNumber': v.displayNumber,
+          'mapAreaId': v.mapAreaId,
+        }),
+      ),
+      'masterShips': state.masterShips.map(
+        (k, v) => MapEntry(k.toString(), {
+          'id': v.id,
+          'name': v.name,
+          'shipTypeId': v.shipTypeId,
+          'buildTimeMinutes': v.buildTimeMinutes,
+          'sortNo': v.sortNo,
+        }),
+      ),
+      'ships': state.ships.map(
+        (k, v) => MapEntry(k.toString(), {
+          'id': v.id,
+          'masterId': v.masterId,
+          'level': v.level,
+          'currentHp': v.currentHp,
+          'maxHp': v.maxHp,
+          'condition': v.condition,
+          'repairDurationMilliseconds': v.repairDurationMilliseconds,
+          'repairFuelCost': v.repairFuelCost,
+          'repairSteelCost': v.repairSteelCost,
+        }),
+      ),
       'updatedAt': state.updatedAt?.millisecondsSinceEpoch,
     });
   }
@@ -326,6 +357,67 @@ class GameStateSerializer {
         }
       }
 
+      final masterMissions = <int, MasterMission>{};
+      final rawMasterMissions = map['masterMissions'];
+      if (rawMasterMissions is Map) {
+        for (final entry in rawMasterMissions.entries) {
+          final id = int.tryParse('${entry.key}');
+          final v = entry.value;
+          if (id != null && id > 0 && v is Map) {
+            masterMissions[id] = MasterMission(
+              id: id,
+              name: _string(v['name']),
+              duration: Duration(seconds: _int(v['durationSeconds']) ?? 0),
+              displayNumber: _string(v['displayNumber']),
+              mapAreaId: _int(v['mapAreaId']) ?? 0,
+            );
+          }
+        }
+      }
+
+      final masterShips = <int, MasterShip>{};
+      final rawMasterShips = map['masterShips'];
+      if (rawMasterShips is Map) {
+        for (final entry in rawMasterShips.entries) {
+          final id = int.tryParse('${entry.key}');
+          final v = entry.value;
+          if (id != null && id > 0 && v is Map) {
+            masterShips[id] = MasterShip(
+              id: id,
+              name: _string(v['name']),
+              shipTypeId: _int(v['shipTypeId']) ?? 0,
+              buildTimeMinutes: _int(v['buildTimeMinutes']) ?? 0,
+              sortNo: _int(v['sortNo']) ?? 0,
+            );
+          }
+        }
+      }
+
+      final ships = <int, OwnedShip>{};
+      final rawShips = map['ships'];
+      if (rawShips is Map) {
+        for (final entry in rawShips.entries) {
+          final id = int.tryParse('${entry.key}');
+          final v = entry.value;
+          if (id != null && id > 0 && v is Map) {
+            ships[id] = OwnedShip(
+              id: id,
+              masterId: _int(v['masterId']) ?? 0,
+              level: _int(v['level']) ?? 1,
+              currentHp: _int(v['currentHp']) ?? 0,
+              maxHp: _int(v['maxHp']) ?? 0,
+              condition: _int(v['condition']) ?? 49,
+              currentFuel: 100,
+              currentAmmo: 100,
+              slotIds: const [],
+              repairDurationMilliseconds: _int(v['repairDurationMilliseconds']) ?? 0,
+              repairFuelCost: _int(v['repairFuelCost']) ?? 0,
+              repairSteelCost: _int(v['repairSteelCost']) ?? 0,
+            );
+          }
+        }
+      }
+
       final updatedAt = _int(map['updatedAt']);
       return GameState(
         admiralLevel: _int(map['admiralLevel']) ?? 0,
@@ -344,6 +436,9 @@ class GameStateSerializer {
         repairDocks: repairDocks,
         constructionDocks: constructionDocks,
         landBases: landBases,
+        masterMissions: masterMissions,
+        masterShips: masterShips,
+        ships: ships,
         updatedAt: updatedAt != null
             ? DateTime.fromMillisecondsSinceEpoch(updatedAt)
             : null,

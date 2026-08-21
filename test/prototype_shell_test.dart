@@ -343,9 +343,12 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('settings-tab-2')));
     await tester.pumpAndSettle();
+    expect(find.text('启用通知服务'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings-tab-3')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('settings-logout-label')), findsNothing);
     expect(find.textContaining('VPN 状态'), findsNothing);
-    await tester.tap(find.byKey(const Key('settings-tab-3')));
+    await tester.tap(find.byKey(const Key('settings-tab-4')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('settings-logout-label')));
     await tester.pumpAndSettle();
@@ -430,7 +433,7 @@ void main() {
     await tester.tap(find.byKey(const Key('workspace-nav-settings')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('settings-tab-3')));
+    await tester.tap(find.byKey(const Key('settings-tab-4')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('纯浏览模式'));
     await tester.pumpAndSettle();

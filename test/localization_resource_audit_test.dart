@@ -139,10 +139,19 @@ void main() {
       'mapHpGauges',
       'allMapsCleared',
       'gameRenderingModeCompatibility',
+      'settingsTabNotification',
+      'notificationSound',
+      'notificationPercent',
+      'notificationPreempt30s',
+      'notificationPreempt60s',
+      'notificationPreempt120s',
+      'notificationAnchorage',
     };
     const reviewedJa = <String>{
       'appTitle',
       'construction',
+      'settingsTabNotification',
+      'notificationAnchorage',
       // 入渠 and 泊地 are the established Japanese in-game repair mode names.
       'repairDockMode',
       'anchorageRepairMode',

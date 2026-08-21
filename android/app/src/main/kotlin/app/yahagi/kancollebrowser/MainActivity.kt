@@ -1,4 +1,4 @@
-﻿package app.yahagi.kancollebrowser
+package app.yahagi.kancollebrowser
 
 import android.Manifest
 import android.app.Activity
@@ -78,6 +78,7 @@ import app.yahagi.kancollebrowser.nativewebview.NativeWebViewActivityStartupOutc
 import app.yahagi.kancollebrowser.nativewebview.NativeWebViewProcessState
 import app.yahagi.kancollebrowser.nativewebview.NativeWebViewStartupGuard
 import app.yahagi.kancollebrowser.nativewebview.SharedPreferencesNativeWebViewStartupStore
+import app.yahagi.kancollebrowser.notification.AppNotificationManager
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -115,6 +116,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             window.attributes = attr
         }
         enableNativeActivityWebViewIfSelected()
+        AppNotificationManager.initChannels(this)
     }
 
     override fun onMultiWindowModeChanged(
@@ -149,6 +151,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         const val GAME_FRAME_RATE_CHANNEL = "app.yahagi.kancollebrowser/game_frame_rate"
         const val GAME_FRAME_RELOAD_CHANNEL = "app.yahagi.kancollebrowser/game_frame_reload"
         const val BATTLE_DAMAGE_ALERT_CHANNEL = "app.yahagi.kancollebrowser/battle_damage_alert"
+        const val NOTIFICATION_CHANNEL = "app.yahagi.kancollebrowser/notification"
         const val DIAGNOSTICS_CHANNEL = "app.yahagi.kancollebrowser/diagnostics"
         const val GAME_ENVIRONMENT_CHANNEL = "app.yahagi.kancollebrowser/game_environment"
         const val GAME_RESOURCE_CACHE_CHANNEL = "app.yahagi.kancollebrowser/game_resource_cache"
@@ -381,6 +384,83 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                         return@setMethodCallHandler
                     }
                     result.success(BattleDamageVibrator.alert(this, severity))
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NOTIFICATION_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "scheduleAlarm" -> {
+                    val key = call.argument<String>("key")
+                    val channelId = call.argument<String>("channelId") ?: "channel_expedition"
+                    val triggerTime = call.argument<Number>("triggerTimeEpochMs")?.toLong()
+                    val title = call.argument<String>("title") ?: "矢矧通知"
+                    val body = call.argument<String>("body") ?: ""
+                    if (key != null && triggerTime != null) {
+                        AppNotificationManager.scheduleAlarm(
+                            this,
+                            key,
+                            channelId,
+                            triggerTime,
+                            title,
+                            body,
+                        )
+                        result.success(null)
+                    } else {
+                        result.error("invalid_argument", "key and triggerTimeEpochMs required", null)
+                    }
+                }
+                "cancelAlarm" -> {
+                    val key = call.argument<String>("key")
+                    if (key != null) {
+                        AppNotificationManager.cancelAlarm(this, key)
+                        result.success(null)
+                    } else {
+                        result.error("invalid_argument", "key required", null)
+                    }
+                }
+                "cancelAllAlarms" -> {
+                    result.success(null)
+                }
+                "updateOngoingProgress" -> {
+                    val items = call.argument<List<Map<String, Any>>>("items") ?: emptyList()
+                    val showProgress = call.argument<Boolean>("showProgress") ?: true
+                    val showPercent = call.argument<Boolean>("showPercent") ?: true
+                    val showCountdown = call.argument<Boolean>("showCountdown") ?: true
+                    AppNotificationManager.updateOngoingProgress(
+                        this,
+                        items,
+                        showProgress,
+                        showPercent,
+                        showCountdown,
+                    )
+                    result.success(null)
+                }
+                "cancelOngoingProgress" -> {
+                    AppNotificationManager.cancelOngoingProgress(this)
+                    result.success(null)
+                }
+                "requestPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val hasPermission = ContextCompat.checkSelfPermission(
+                            this,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (!hasPermission) {
+                            ActivityCompat.requestPermissions(
+                                this,
+                                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                                1001,
+                            )
+                        }
+                        result.success(hasPermission)
+                    } else {
+                        result.success(true)
+                    }
                 }
                 else -> result.notImplemented()
             }

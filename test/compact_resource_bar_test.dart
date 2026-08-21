@@ -310,7 +310,7 @@ void main() {
     expect(find.byKey(const Key('header-resource-material-2')), findsOneWidget);
   });
 
-  testWidgets('header shows --:--:-- when Akashi or Nozaki are damaged or unsupplied', (tester) async {
+  testWidgets('header shows --:--:-- for anchorage when damaged, while nosaki shows continuous timer when started', (tester) async {
     final startedAt = DateTime.utc(2026, 8, 20, 10);
     // Damaged Akashi (hp 10/45 <= 50%) and damaged Nozaki (hp 30/48 < max)
     const damagedState = GameState(
@@ -340,7 +340,7 @@ void main() {
     );
 
     expect(find.text('泊地：--:--:--'), findsOneWidget);
-    expect(find.text('野埼：--:--:--'), findsOneWidget);
+    expect(find.text('野埼：--:--:--'), findsNothing);
   });
 
   testWidgets('header shows active elapsed time when Akashi and Nozaki are ready', (tester) async {
