@@ -407,6 +407,56 @@ void main() {
       expect(state.sortieStats['7-5']?.aWins, 1);
     });
 
+    test('Boss 事件标识优先于内部节点编号识别途中 Boss', () {
+      var state = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(areaId: 2, mapNo: 2, nodeNo: 1, bossCellNo: 11),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_map/next', {
+          'api_no': 13,
+          'api_bosscell_no': 11,
+          'api_event_id': 5,
+        }, atJst: DateTime(2026, 8, 10, 10, 1)),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_sortie/battleresult', {
+          'api_win_rank': 'A',
+        }, atJst: DateTime(2026, 8, 10, 10, 2)),
+      );
+
+      expect(state.sortieStats['2-2']?.sorties, 1);
+      expect(state.sortieStats['2-2']?.bossArrivals, 1);
+      expect(state.sortieStats['2-2']?.aWins, 1);
+      expect(state.activeSortie, isNull);
+    });
+
+    test('Boss 事件标识优先于内部节点编号识别起始 Boss', () {
+      var state = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        apiEvent('/kcsapi/api_req_map/start', {
+          'api_maparea_id': 6,
+          'api_mapinfo_no': 4,
+          'api_no': 14,
+          'api_bosscell_no': 11,
+          'api_event_id': 5,
+        }, atJst: DateTime(2026, 8, 10, 10)),
+      );
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_sortie/battleresult', {
+          'api_win_rank': 'S',
+        }, atJst: DateTime(2026, 8, 10, 10, 1)),
+      );
+
+      expect(state.sortieStats['6-4']?.sorties, 1);
+      expect(state.sortieStats['6-4']?.bossArrivals, 1);
+      expect(state.sortieStats['6-4']?.sWins, 1);
+      expect(state.activeSortie, isNull);
+    });
+
     test('非 Boss 结果不计胜场且不清除出击上下文', () {
       var state = reducer.reduce(
         SenkaState.forMonth('2026-08'),

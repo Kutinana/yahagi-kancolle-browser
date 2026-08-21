@@ -147,7 +147,11 @@ class SenkaReducer {
     }
     final nodeNo = _positiveInt(data['api_no']);
     final bossCellNo = _positiveInt(data['api_bosscell_no']);
-    final arrived = nodeNo != null && nodeNo == bossCellNo;
+    final arrived = _isBossNode(
+      data,
+      nodeNo: nodeNo,
+      bossCellNos: [bossCellNo],
+    );
     final mapKey = senkaMapKey(areaId, mapNo);
     if (state.lastSortieStartAt == capturedAt.toUtc() &&
         state.lastSortieStartMapKey == mapKey) {
@@ -187,9 +191,11 @@ class SenkaReducer {
     }
     final nodeNo = _positiveInt(data['api_no']);
     final responseBossCellNo = _positiveInt(data['api_bosscell_no']);
-    final arrived =
-        nodeNo != null &&
-        (nodeNo == active.bossCellNo || nodeNo == responseBossCellNo);
+    final arrived = _isBossNode(
+      data,
+      nodeNo: nodeNo,
+      bossCellNos: [active.bossCellNo, responseBossCellNo],
+    );
     final nextActive = active.copyWith(
       bossCellNo: responseBossCellNo,
       lastEventAt: capturedAt,
@@ -447,5 +453,13 @@ int? _positiveInt(Object? value) {
   final result = value.toInt();
   return result > 0 && value == result ? result : null;
 }
+
+bool _isBossNode(
+  Map<Object?, Object?> data, {
+  required int? nodeNo,
+  required Iterable<int?> bossCellNos,
+}) =>
+    _int(data['api_event_id']) == 5 ||
+    (nodeNo != null && bossCellNos.any((bossCellNo) => nodeNo == bossCellNo));
 
 int _gcd(int left, int right) => right == 0 ? left : _gcd(right, left % right);
