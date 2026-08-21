@@ -116,6 +116,28 @@ object NotificationSnapshotRecovery {
     )
 }
 
+object NotificationSnapshotReconciliation {
+    fun beforeApply(
+        previous: NativeNotificationSnapshot,
+        desired: NativeNotificationSnapshot,
+        nowEpochMs: Long,
+    ): NativeNotificationSnapshot {
+        if (!desired.presentation.enabled) return desired
+
+        val desiredAlarmKeys = desired.alarms.mapTo(mutableSetOf(), NotificationAlarm::key)
+        val visibleTaskIds = desired.ongoingItems.mapTo(mutableSetOf(), OngoingNotificationItem::id)
+        val dueCompletionAlarms = previous.alarms.filter { alarm ->
+            alarm.key !in desiredAlarmKeys &&
+                alarm.stage == "complete" &&
+                alarm.triggerTimeEpochMs <= nowEpochMs &&
+                alarm.taskId in visibleTaskIds
+        }
+        if (dueCompletionAlarms.isEmpty()) return desired
+
+        return desired.copy(alarms = desired.alarms + dueCompletionAlarms)
+    }
+}
+
 object NotificationSnapshotTransitions {
     fun onAlarmFired(
         previous: NativeNotificationSnapshot,

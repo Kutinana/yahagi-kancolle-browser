@@ -137,6 +137,66 @@ class NotificationSnapshotTest {
     }
 
     @Test
+    fun `due completion alarm remains armed while its task is still visible`() {
+        val dueAlarm = alarm("expedition_2_complete", 200L).copy(
+            taskId = "expedition:2",
+        )
+        val previous = snapshot(
+            dueAlarm,
+            sound = true,
+            vibration = true,
+            ongoingItems = listOf(ongoing("expedition:2")),
+        )
+        val desired = previous.copy(
+            updatedAtEpochMs = 201L,
+            alarms = emptyList(),
+            ongoingItems = listOf(
+                ongoing("expedition:2").copy(
+                    state = "completed",
+                    progress = 1.0,
+                    remainingSeconds = 0,
+                ),
+            ),
+        )
+
+        val reconciled = NotificationSnapshotReconciliation.beforeApply(
+            previous = previous,
+            desired = desired,
+            nowEpochMs = 201L,
+        )
+
+        assertEquals(listOf(dueAlarm), reconciled.alarms)
+        assertEquals(emptySet<String>(), NotificationSnapshotDiff.between(previous, reconciled).cancelKeys)
+    }
+
+    @Test
+    fun `due completion alarm is canceled after game removes its task`() {
+        val dueAlarm = alarm("expedition_2_complete", 200L).copy(
+            taskId = "expedition:2",
+        )
+        val previous = snapshot(
+            dueAlarm,
+            sound = true,
+            vibration = true,
+            ongoingItems = listOf(ongoing("expedition:2")),
+        )
+        val desired = previous.copy(
+            updatedAtEpochMs = 201L,
+            alarms = emptyList(),
+            ongoingItems = emptyList(),
+        )
+
+        val reconciled = NotificationSnapshotReconciliation.beforeApply(
+            previous = previous,
+            desired = desired,
+            nowEpochMs = 201L,
+        )
+
+        assertEquals(emptyList<NotificationAlarm>(), reconciled.alarms)
+        assertEquals(setOf(dueAlarm.key), NotificationSnapshotDiff.between(previous, reconciled).cancelKeys)
+    }
+
+    @Test
     fun `complete alarm marks matching ongoing item completed and is idempotent`() {
         val original = snapshot(
             alarm("expedition_2_complete", 200L),

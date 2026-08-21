@@ -79,9 +79,14 @@ object AppNotificationManager {
     @Synchronized
     fun applySnapshot(context: Context, raw: Map<*, *>): Map<String, Any> {
         initChannels(context)
-        val next = NotificationSnapshotCodec.fromMap(raw)
-        require(next.schemaVersion == 1) { "Unsupported notification snapshot schema" }
+        val desired = NotificationSnapshotCodec.fromMap(raw)
+        require(desired.schemaVersion == 1) { "Unsupported notification snapshot schema" }
         val previous = loadSnapshot(context)
+        val next = NotificationSnapshotReconciliation.beforeApply(
+            previous = previous,
+            desired = desired,
+            nowEpochMs = System.currentTimeMillis(),
+        )
         val diff = NotificationSnapshotDiff.between(previous, next)
         val failures = mutableListOf<String>()
         val failedScheduleKeys = mutableSetOf<String>()
