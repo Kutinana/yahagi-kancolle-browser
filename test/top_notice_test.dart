@@ -60,6 +60,7 @@ void main() {
       padding: const EdgeInsets.only(top: 24),
       size: const Size(800, 600),
     );
+    expect(tester.getRect(find.byKey(topNoticeKey)).top, lessThan(28));
     await tester.pump(const Duration(milliseconds: 180));
 
     final rect = tester.getRect(find.byKey(topNoticeKey));
@@ -124,6 +125,7 @@ void main() {
   testWidgets('a new message replaces the old one and owns its timer', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     late BuildContext noticeContext;
     await tester.pumpWidget(
       buildApp(
@@ -150,16 +152,23 @@ void main() {
     );
     await tester.pump();
 
+    expect(find.text('first'), findsNothing);
     expect(find.text('second'), findsOneWidget);
+    expect(find.byKey(topNoticeKey), findsOneWidget);
+    expect(find.bySemanticsLabel('first'), findsNothing);
+    final secondSemantics = tester.getSemantics(
+      find.bySemanticsLabel('second'),
+    );
+    expect(secondSemantics.label, 'second');
+    expect(secondSemantics.flagsCollection.isLiveRegion, isTrue);
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('second'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 41));
-    expect(find.text('first'), findsNothing);
-    await tester.pump(const Duration(milliseconds: 258));
+    await tester.pump(const Duration(milliseconds: 299));
     expect(find.text('second'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pump(const Duration(milliseconds: 141));
     expect(find.text('second'), findsNothing);
+    semantics.dispose();
   });
 
   for (final entry in <(TopNoticeTone, IconData, Color, Color, Color)>[
@@ -246,6 +255,7 @@ void main() {
 
       TopNotice.hide(noticeContext);
       await tester.pump();
+      expect(find.text('hidden early'), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 141));
       expect(find.text('hidden early'), findsNothing);
 

@@ -158,7 +158,7 @@ class _TopNoticeHostState extends State<TopNoticeHost> {
                                 key: ValueKey('top-notice-empty'),
                               )
                             : _NoticeCapsule(
-                                key: ValueKey(notice.id),
+                                key: const ValueKey('top-notice-visible'),
                                 notice: notice,
                               ),
                       ),
