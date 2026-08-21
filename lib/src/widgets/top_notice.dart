@@ -201,36 +201,43 @@ class _NoticeCapsule extends StatelessWidget {
       liveRegion: true,
       label: notice.message,
       child: ExcludeSemantics(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: palette.background,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: palette.border),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black45,
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(palette.icon, size: 20, color: palette.foreground),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    notice.message,
-                    key: topNoticeTextKey,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: palette.foreground),
-                  ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: palette.background,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: palette.border),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black45,
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
               ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(palette.icon, size: 20, color: palette.foreground),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      notice.message,
+                      key: topNoticeTextKey,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.foreground,
+                        fontSize: 14,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

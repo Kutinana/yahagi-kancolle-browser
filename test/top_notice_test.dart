@@ -70,6 +70,39 @@ void main() {
     expect(rect.height, greaterThanOrEqualTo(36));
   });
 
+  testWidgets(
+    'provides Material text styling in the production host topology',
+    (tester) async {
+      late BuildContext noticeContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TopNoticeHost(
+            child: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  noticeContext = context;
+                  return const SizedBox.expand();
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      TopNotice.show(noticeContext, message: 'compact notice');
+      await tester.pump();
+
+      final materialAncestors = find.ancestor(
+        of: find.byKey(topNoticeTextKey),
+        matching: find.byType(Material),
+      );
+      expect(materialAncestors, findsWidgets);
+      final text = tester.widget<Text>(find.byKey(topNoticeTextKey));
+      expect(text.style?.fontSize, 14);
+      expect(text.style?.decoration, TextDecoration.none);
+    },
+  );
+
   testWidgets('keeps horizontal margins and limits long text to two lines', (
     tester,
   ) async {
