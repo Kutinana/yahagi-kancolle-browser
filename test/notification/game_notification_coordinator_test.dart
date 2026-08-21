@@ -170,6 +170,62 @@ void main() {
       coordinator.dispose();
     });
 
+    test('uses the game expedition display number in ongoing titles', () {
+      final returnTime = testNow.add(const Duration(minutes: 30));
+      testState = testState.copyWith(
+        masterMissions: const {
+          110: MasterMission(
+            id: 110,
+            name: '南西方面航空侦察作战',
+            duration: Duration(minutes: 35),
+          ),
+        },
+        fleets: [
+          Fleet(
+            id: 4,
+            name: '第4舰队',
+            shipIds: const [1],
+            mission: FleetMission(
+              state: 1,
+              missionId: 110,
+              completionTime: returnTime,
+            ),
+          ),
+        ],
+      );
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+
+      coordinator.start();
+
+      expect(
+        fakePort.latestSnapshot!.ongoingItems.single.title,
+        '⚓ 第4舰队 · 远征 B1 · 南西方面航空侦察作战',
+      );
+
+      testState = testState.copyWith(
+        masterMissions: const {
+          110: MasterMission(
+            id: 110,
+            name: '南西方面航空侦察作战',
+            duration: Duration(minutes: 35),
+            displayNumber: 'B-自定义',
+          ),
+        },
+      );
+      gameStateController.notifyListeners();
+      expect(
+        fakePort.latestSnapshot!.ongoingItems.single.title,
+        '⚓ 第4舰队 · 远征 B-自定义 · 南西方面航空侦察作战',
+      );
+      coordinator.dispose();
+    });
+
     test('schedules repair dock alarm and cancels when repaired', () {
       final completeTime = testNow.add(const Duration(hours: 1));
       testState = testState.copyWith(

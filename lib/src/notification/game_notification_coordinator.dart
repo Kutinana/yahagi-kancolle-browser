@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../fleet/anchorage_repair_calculator.dart';
 import '../fleet/nosaki_sparkle_calculator.dart';
+import '../expedition/expedition_mission_picker.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import '../settings/notification_settings_controller.dart';
@@ -490,13 +491,17 @@ class GameNotificationCoordinator {
         final mission = fleet.mission;
         if (mission.isActive && mission.completionTime != null) {
           final masterMission = state.masterMissions[mission.missionId];
+          final displayId = expeditionDisplayId(
+            mission.missionId,
+            masterMission,
+          );
           final totalSec =
               masterMission != null && masterMission.duration.inSeconds > 0
               ? masterMission.duration.inSeconds
               : 1800;
           final formattedMission = masterMission?.name.isNotEmpty == true
-              ? '远征 ${mission.missionId} · ${masterMission!.name}'
-              : (mission.missionId > 0 ? '远征 ${mission.missionId}' : '远征');
+              ? '远征 $displayId · ${masterMission!.name}'
+              : (mission.missionId > 0 ? '远征 $displayId' : '远征');
           items.add(
             _deadlineItem(
               id: 'expedition:${fleet.id}',
