@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../fleet/anchorage_repair_calculator.dart';
 import '../fleet/nosaki_sparkle_calculator.dart';
 import '../game_state/game_state.dart';
@@ -17,6 +18,7 @@ class GameNotificationCoordinator {
     DateTime Function()? nowProvider,
     DateTime? Function()? anchorageRepairStartedAtProvider,
     DateTime? Function()? nosakiSparkleStartedAtProvider,
+    void Function(Object error, StackTrace stackTrace)? onError,
   }) : _gameStateProvider =
            gameStateProvider ?? (() => gameStateController.state),
        _now = nowProvider ?? DateTime.now,
@@ -25,7 +27,8 @@ class GameNotificationCoordinator {
            (() => gameStateController.anchorageRepairStartedAt),
        _nosakiStartedAt =
            nosakiSparkleStartedAtProvider ??
-           (() => gameStateController.nosakiSparkleStartedAt);
+           (() => gameStateController.nosakiSparkleStartedAt),
+       _onError = onError ?? _reportFlutterError;
 
   final GameStateController gameStateController;
   final NotificationSettingsController settingsController;
@@ -34,6 +37,7 @@ class GameNotificationCoordinator {
   final DateTime Function() _now;
   final DateTime? Function() _anchorageStartedAt;
   final DateTime? Function() _nosakiStartedAt;
+  final void Function(Object error, StackTrace stackTrace) _onError;
 
   bool _disposed = false;
 
@@ -68,7 +72,33 @@ class GameNotificationCoordinator {
         ongoingLive: settings.ongoingLive,
       ),
     );
-    unawaited(notificationPort.applySnapshot(snapshot));
+    unawaited(_applySnapshot(snapshot));
+  }
+
+  Future<void> _applySnapshot(NotificationSnapshot snapshot) async {
+    try {
+      final result = await notificationPort.applySnapshot(snapshot);
+      if (result.failures.isNotEmpty) {
+        _onError(
+          StateError(
+            'Native notification failures: ${result.failures.join(', ')}',
+          ),
+          StackTrace.current,
+        );
+      }
+    } catch (error, stackTrace) {
+      _onError(error, stackTrace);
+    }
+  }
+
+  static void _reportFlutterError(Object error, StackTrace stackTrace) {
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: error,
+        stack: stackTrace,
+        library: 'game notification coordinator',
+      ),
+    );
   }
 
   List<ScheduledNotificationItem> _buildScheduledAlarms() {
@@ -326,7 +356,8 @@ class GameNotificationCoordinator {
           if (minCond < 49) {
             final neededTicks = ((49 - minCond) / 3).ceil();
             final neededDuration = Duration(minutes: neededTicks * 3);
-            final completeTime = now.add(neededDuration);
+            final completeTime = (state.updatedAt ?? now).add(neededDuration);
+            if (!completeTime.isAfter(now)) continue;
             final key = 'morale_${fleet.id}_normal';
             desiredAlarms[key] = ScheduledNotificationItem(
               key: key,
@@ -572,7 +603,12 @@ class GameNotificationCoordinator {
           }
           if (minCond < 49) {
             final neededTicks = ((49 - minCond) / 3).ceil();
-            final remainingSec = neededTicks * 180;
+            final totalDurationSec = neededTicks * 180;
+            final target = (state.updatedAt ?? now).add(
+              Duration(seconds: totalDurationSec),
+            );
+            final remainingSec = target.difference(now).inSeconds;
+            if (remainingSec <= 0) continue;
             final progress = (minCond / 49.0).clamp(0.0, 1.0);
             items.add(
               OngoingTaskItem(
@@ -581,10 +617,8 @@ class GameNotificationCoordinator {
                 title: '✨ 第${fleet.id}舰队 · 疲劳恢复 (Cond $minCond/49)',
                 progress: progress,
                 remainingSeconds: remainingSec,
-                targetEpochMs: now
-                    .add(Duration(seconds: remainingSec))
-                    .millisecondsSinceEpoch,
-                totalDurationSec: remainingSec,
+                targetEpochMs: target.millisecondsSinceEpoch,
+                totalDurationSec: totalDurationSec,
               ),
             );
           }

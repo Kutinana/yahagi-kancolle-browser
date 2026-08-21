@@ -67,6 +67,21 @@ data class NotificationAlarmDiff(
 
 object NotificationSnapshotDiff {
     fun between(
+        previous: NativeNotificationSnapshot,
+        next: NativeNotificationSnapshot,
+    ): NotificationAlarmDiff {
+        val alarmDiff = between(previous.alarms, next.alarms)
+        val presentationChanged =
+            previous.presentation.sound != next.presentation.sound ||
+                previous.presentation.vibration != next.presentation.vibration
+        return if (presentationChanged) {
+            alarmDiff.copy(upsert = next.alarms)
+        } else {
+            alarmDiff
+        }
+    }
+
+    fun between(
         previous: List<NotificationAlarm>,
         next: List<NotificationAlarm>,
     ): NotificationAlarmDiff {

@@ -69,6 +69,37 @@ class NotificationSnapshotTest {
         assertEquals(setOf("changed", "new"), diff.upsert.map { it.key }.toSet())
     }
 
+    @Test
+    fun `presentation sound or vibration change rebinds existing alarms`() {
+        val sharedAlarm = alarm("same", 200L)
+        val previous = snapshot(sharedAlarm, sound = true, vibration = true)
+        val next = snapshot(sharedAlarm, sound = false, vibration = true)
+
+        val diff = NotificationSnapshotDiff.between(previous, next)
+
+        assertEquals(listOf(sharedAlarm), diff.upsert)
+    }
+
+    private fun snapshot(
+        alarm: NotificationAlarm,
+        sound: Boolean,
+        vibration: Boolean,
+    ) = NativeNotificationSnapshot(
+        schemaVersion = 1,
+        updatedAtEpochMs = 1L,
+        alarms = listOf(alarm),
+        ongoingItems = emptyList(),
+        presentation = NotificationPresentation(
+            enabled = true,
+            sound = sound,
+            vibration = vibration,
+            showProgress = true,
+            showPercent = true,
+            showCountdown = true,
+            ongoingLive = true,
+        ),
+    )
+
     private fun alarm(key: String, triggerAt: Long) = NotificationAlarm(
         key = key,
         taskId = "task:$key",

@@ -82,7 +82,7 @@ object AppNotificationManager {
         val next = NotificationSnapshotCodec.fromMap(raw)
         require(next.schemaVersion == 1) { "Unsupported notification snapshot schema" }
         val previous = loadSnapshot(context)
-        val diff = NotificationSnapshotDiff.between(previous.alarms, next.alarms)
+        val diff = NotificationSnapshotDiff.between(previous, next)
         val failures = mutableListOf<String>()
         diff.cancelKeys.forEach { key ->
             runCatching { cancelAlarm(context, key) }

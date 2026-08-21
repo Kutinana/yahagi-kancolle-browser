@@ -23,7 +23,7 @@ class NotificationSettingsPage extends StatefulWidget {
 }
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage>
-    with SettingsUIHelpers {
+    with SettingsUIHelpers, WidgetsBindingObserver {
   late Future<NotificationPlatformCapabilities> _capabilities;
 
   NotificationSettingsController get controller => widget.controller;
@@ -31,7 +31,21 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _refreshCapabilities();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      setState(_refreshCapabilities);
+    }
   }
 
   void _refreshCapabilities() {

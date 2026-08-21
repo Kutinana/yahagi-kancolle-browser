@@ -11,11 +11,13 @@ import 'package:yahagi_kancolle_browser/src/settings/notification_settings_store
 class FakeNotificationPort implements NotificationPort {
   final Map<String, ScheduledNotificationItem> scheduledAlarms = {};
   NotificationSnapshot? latestSnapshot;
+  bool failApply = false;
 
   @override
   Future<NotificationApplyResult> applySnapshot(
     NotificationSnapshot snapshot,
   ) async {
+    if (failApply) throw StateError('native apply failed');
     latestSnapshot = snapshot;
     scheduledAlarms
       ..clear()
@@ -399,5 +401,66 @@ void main() {
         coordinator.dispose();
       },
     );
+
+    test('reports native snapshot application failures', () async {
+      fakePort.failApply = true;
+      final errors = <Object>[];
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+        onError: (error, _) => errors.add(error),
+      );
+
+      coordinator.start();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(errors.single, isA<StateError>());
+      coordinator.dispose();
+    });
+
+    test('natural morale deadline stays anchored to the game snapshot', () {
+      testState = GameState.empty.copyWith(
+        updatedAt: testNow,
+        ships: const {
+          1: OwnedShip(
+            id: 1,
+            masterId: 1,
+            level: 1,
+            currentHp: 10,
+            maxHp: 10,
+            condition: 40,
+            currentFuel: 10,
+            currentAmmo: 10,
+            slotIds: [],
+          ),
+        },
+        fleets: const [
+          Fleet(id: 1, name: 'Fleet 1', shipIds: [1]),
+        ],
+      );
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+      coordinator.start();
+      final firstDeadline = fakePort.latestSnapshot!.alarms
+          .singleWhere((alarm) => alarm.key == 'morale_1_normal')
+          .triggerTime;
+
+      testNow = testNow.add(const Duration(minutes: 1));
+      settingsController.notifyListeners();
+      final secondDeadline = fakePort.latestSnapshot!.alarms
+          .singleWhere((alarm) => alarm.key == 'morale_1_normal')
+          .triggerTime;
+
+      expect(secondDeadline, firstDeadline);
+      coordinator.dispose();
+    });
   });
 }
