@@ -360,6 +360,7 @@ void main() {
               },
               slotItems: <int, OwnedSlotItem>{
                 1: OwnedSlotItem(id: 1, masterId: 1),
+                2: OwnedSlotItem(id: 2, masterId: 42),
               },
             ),
             selectedFleetId: 1,
@@ -375,6 +376,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('owned-inventory-segmented')), findsOneWidget);
+    expect(find.text('装备 1'), findsOneWidget);
     final title = tester.getRect(
       find.byKey(const Key('workspace-title-owned-inventory')),
     );

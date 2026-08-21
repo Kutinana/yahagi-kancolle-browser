@@ -53,6 +53,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('section control uses the Poi equipment capacity count', (
+    tester,
+  ) async {
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller.accept(start2Event);
+    controller.accept(portEvent);
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_get_member/slot_item', <Object?>[
+        <String, Object?>{'api_id': 1, 'api_slotitem_id': 201},
+        <String, Object?>{'api_id': 2, 'api_slotitem_id': 42},
+      ]),
+    );
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    expect(find.text('装备 1'), findsOneWidget);
+  });
+
   testWidgets('uses uniform 78 widths for ship stat columns', (tester) async {
     final controller = GameStateController();
     addTearDown(controller.dispose);

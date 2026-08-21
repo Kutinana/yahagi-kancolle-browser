@@ -165,7 +165,7 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                 child: OwnedInventorySegmented(
                   showShips: _showShips,
                   shipCount: _state.ships.length,
-                  equipmentCount: _state.slotItems.length,
+                  equipmentCount: _state.equipmentCapacityUsed,
                   onChanged: _changeSection,
                 ),
               ),

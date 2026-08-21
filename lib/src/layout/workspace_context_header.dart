@@ -241,7 +241,7 @@ class WorkspaceContextHeader extends StatelessWidget {
           OwnedInventorySegmented(
             showShips: inventoryShowShips,
             shipCount: state.ships.length,
-            equipmentCount: state.slotItems.length,
+            equipmentCount: state.equipmentCapacityUsed,
             onChanged: onInventorySectionChanged ?? (_) {},
           ),
         ],
@@ -390,11 +390,7 @@ class ConstructionModeTabs extends StatelessWidget {
 }
 
 class SenkaModeTabs extends StatelessWidget {
-  const SenkaModeTabs({
-    super.key,
-    required this.mode,
-    required this.onChanged,
-  });
+  const SenkaModeTabs({super.key, required this.mode, required this.onChanged});
 
   final SenkaCenterMode mode;
   final ValueChanged<SenkaCenterMode> onChanged;
