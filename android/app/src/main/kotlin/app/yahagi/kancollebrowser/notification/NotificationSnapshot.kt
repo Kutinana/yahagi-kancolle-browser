@@ -182,6 +182,22 @@ object NotificationDelivery {
     fun notificationId(key: String, triggerTimeEpochMs: Long): Int =
         ("$key:$triggerTimeEpochMs".hashCode() and 0x3FFFFFFF) + 1_000
 
+    fun notificationIdForAlarm(
+        snapshot: NativeNotificationSnapshot,
+        alarm: NotificationAlarm,
+    ): Int {
+        val deliveryAlarm = if (alarm.stage == "preempt") {
+            snapshot.alarms.firstOrNull { candidate ->
+                candidate.taskId == alarm.taskId && candidate.stage == "complete"
+            } ?: alarm
+        } else {
+            alarm
+        }
+        return notificationId(deliveryAlarm.key, deliveryAlarm.triggerTimeEpochMs)
+    }
+
+    fun onlyAlertOnce(stage: String): Boolean = stage != "complete"
+
     fun stageFor(key: String, explicitStage: String?): String = explicitStage ?: when {
         key.endsWith("_preempt") -> "preempt"
         key.endsWith("_20m") -> "milestone"

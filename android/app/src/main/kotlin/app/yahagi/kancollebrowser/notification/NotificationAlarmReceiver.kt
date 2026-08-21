@@ -44,7 +44,7 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setOnlyAlertOnce(true)
+            .setOnlyAlertOnce(NotificationDelivery.onlyAlertOnce(stage))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             builder.setVibrate(if (vibration) AppNotificationManager.VIBRATION_PATTERN else null)
@@ -56,7 +56,11 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
         }
         val notification = builder.build()
 
-        val notificationId = NotificationDelivery.notificationId(key, triggerTimeEpochMs)
+        val snapshot = AppNotificationManager.loadSnapshot(context)
+        val currentAlarm = snapshot.alarms.firstOrNull { it.key == key }
+        val notificationId = currentAlarm?.let {
+            NotificationDelivery.notificationIdForAlarm(snapshot, it)
+        } ?: NotificationDelivery.notificationId(key, triggerTimeEpochMs)
         notificationManager.notify(notificationId, notification)
         AppNotificationManager.onAlarmFired(context, key, taskId, stage)
     }

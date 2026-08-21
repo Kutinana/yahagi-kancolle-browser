@@ -283,6 +283,42 @@ class NotificationSnapshotTest {
     }
 
     @Test
+    fun `preempt and completion alarms for one task replace the same notification`() {
+        val preempt = alarm("repair_1_preempt", 140L).copy(
+            taskId = "repair:1",
+            type = "repair",
+            stage = "preempt",
+        )
+        val complete = alarm("repair_1_complete", 200L).copy(
+            taskId = "repair:1",
+            type = "repair",
+            stage = "complete",
+        )
+        val current = snapshot(
+            preempt,
+            sound = true,
+            vibration = true,
+        ).copy(alarms = listOf(preempt, complete))
+
+        val preemptId = NotificationDelivery.notificationIdForAlarm(
+            snapshot = current,
+            alarm = preempt,
+        )
+        val completeId = NotificationDelivery.notificationIdForAlarm(
+            snapshot = current,
+            alarm = complete,
+        )
+
+        assertEquals(completeId, preemptId)
+    }
+
+    @Test
+    fun `completion replacement alerts again while preempt updates only once`() {
+        assertTrue(NotificationDelivery.onlyAlertOnce("preempt"))
+        assertEquals(false, NotificationDelivery.onlyAlertOnce("complete"))
+    }
+
+    @Test
     fun `legacy alarm keys recover their stage when intent extra is missing`() {
         assertEquals("preempt", NotificationDelivery.stageFor("repair_1_preempt", null))
         assertEquals("milestone", NotificationDelivery.stageFor("anchorage_1_20m", null))
