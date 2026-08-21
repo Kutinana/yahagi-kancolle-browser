@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_local_home.dart';
-import 'package:yahagi_kancolle_browser/src/browser/game_frame_reload_script.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_frame_reload_port.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_page_alignment_script.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_contract.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_port.dart';
@@ -39,13 +39,14 @@ void main() {
         calls.add(call);
         if (call.method == 'create') return 7;
         if (call.method == 'canGoBack') return true;
-        if (call.method == 'reloadGameFrame') return '"reloaded"';
         return null;
       });
       final events = StreamController<Object?>.broadcast();
+      final frameReload = _FakeGameFrameReloadPort();
       final port = MethodChannelNativeGameWebViewPort(
         channel: channel,
         eventStream: events.stream,
+        frameReloadPort: frameReload,
       );
       addTearDown(events.close);
       addTearDown(port.dispose);
@@ -79,7 +80,6 @@ void main() {
         'loadUri',
         'showLocalHome',
         'reload',
-        'reloadGameFrame',
         'canGoBack',
         'goBack',
         'runJavaScript',
@@ -110,60 +110,18 @@ void main() {
         'generationId': 7,
         'html': gameLocalHomeHtml,
       });
-      expect(calls[6].arguments, <String, Object?>{
-        'generationId': 7,
-        'javascript': gameFrameReloadScript,
-      });
-      expect(calls[9].arguments, <String, Object?>{
+      expect(calls[8].arguments, <String, Object?>{
         'generationId': 7,
         'javascript': 'window.test()',
       });
-      expect(calls[10].arguments, <String, Object?>{
+      expect(calls[9].arguments, <String, Object?>{
         'generationId': 7,
         'javascript': gamePageAlignmentScript,
       });
-      for (final index in <int>[5, 7, 8, 11, 12]) {
+      for (final index in <int>[5, 6, 7, 10, 11]) {
         expect(calls[index].arguments, <String, Object?>{'generationId': 7});
       }
-    },
-  );
-
-  test(
-    'maps every game frame reload result and rejects invalid wire data',
-    () async {
-      final responses = <Object?>[
-        '"reloaded"',
-        '"game_frame_not_found"',
-        '"html_wrap_not_found"',
-        '"blocked"',
-        '"unexpected"',
-      ];
-      messenger.setMockMethodCallHandler(channel, (call) async {
-        if (call.method == 'create') return 70;
-        if (call.method == 'reloadGameFrame') return responses.removeAt(0);
-        return null;
-      });
-      final port = MethodChannelNativeGameWebViewPort(
-        channel: channel,
-        eventStream: const Stream<Object?>.empty(),
-      );
-      addTearDown(port.dispose);
-      await port.create();
-
-      expect(await port.reloadGameFrame(), GameFrameReloadResult.reloaded);
-      expect(
-        await port.reloadGameFrame(),
-        GameFrameReloadResult.gameFrameNotFound,
-      );
-      expect(
-        await port.reloadGameFrame(),
-        GameFrameReloadResult.htmlWrapNotFound,
-      );
-      expect(await port.reloadGameFrame(), GameFrameReloadResult.blocked);
-      await expectLater(
-        port.reloadGameFrame(),
-        throwsA(isA<NativeGameWebViewSchemaException>()),
-      );
+      expect(frameReload.reloadCalls, 1);
     },
   );
 
@@ -835,4 +793,17 @@ void main() {
       expect(received.single, isA<NativeGameWebViewEvent>());
     },
   );
+}
+
+final class _FakeGameFrameReloadPort implements GameFrameReloadPort {
+  int reloadCalls = 0;
+
+  @override
+  Future<void> configure() async {}
+
+  @override
+  Future<GameFrameReloadResult> reload() async {
+    reloadCalls += 1;
+    return GameFrameReloadResult.reloaded;
+  }
 }

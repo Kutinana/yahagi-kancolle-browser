@@ -11,7 +11,7 @@ import 'audio/game_audio_port.dart';
 import 'bridge/native_game_capture_script.dart';
 import 'browser/game_browser_controller.dart';
 import 'browser/game_frame_rate_port.dart';
-import 'browser/game_frame_reload_script.dart';
+import 'browser/game_frame_reload_port.dart';
 import 'browser/game_frame_rate_policy.dart';
 import 'browser/game_frame_rate_runtime_controller.dart';
 import 'browser/game_local_home.dart';
@@ -783,6 +783,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     _browserPort = WebViewGameBrowserPort(
       _webViewController,
       gameLocalHomeHtml,
+      gameFrameReloadPort: MethodChannelGameFrameReloadPort(),
       compatibilityReady: _compatibilityReady,
       prepareForRealNavigation: _prepareCapture,
       synchronizeGamePresentation: _synchronizeGamePresentation,
@@ -1404,6 +1405,7 @@ final class WebViewGameBrowserPort implements GameBrowserPort {
   WebViewGameBrowserPort(
     this.controller,
     this.localHomeHtml, {
+    required this.gameFrameReloadPort,
     Future<void>? compatibilityReady,
     this.prepareForRealNavigation,
     required this.synchronizeGamePresentation,
@@ -1411,6 +1413,7 @@ final class WebViewGameBrowserPort implements GameBrowserPort {
 
   final WebViewController controller;
   final String localHomeHtml;
+  final GameFrameReloadPort gameFrameReloadPort;
   final Future<void> compatibilityReady;
   final Future<void> Function()? prepareForRealNavigation;
   final Future<void> Function() synchronizeGamePresentation;
@@ -1424,6 +1427,7 @@ final class WebViewGameBrowserPort implements GameBrowserPort {
   @override
   Future<void> loadUri(Uri uri) async {
     await compatibilityReady;
+    await gameFrameReloadPort.configure();
     await prepareForRealNavigation?.call();
     await controller.loadRequest(uri);
   }
@@ -1432,17 +1436,8 @@ final class WebViewGameBrowserPort implements GameBrowserPort {
   Future<void> reload() => controller.reload();
 
   @override
-  Future<GameFrameReloadResult> reloadGameFrame() async {
-    final result = await controller.runJavaScriptReturningResult(
-      gameFrameReloadScript,
-    );
-    return switch (result) {
-      'reloaded' => GameFrameReloadResult.reloaded,
-      'game_frame_not_found' => GameFrameReloadResult.gameFrameNotFound,
-      'html_wrap_not_found' => GameFrameReloadResult.htmlWrapNotFound,
-      _ => GameFrameReloadResult.blocked,
-    };
-  }
+  Future<GameFrameReloadResult> reloadGameFrame() =>
+      gameFrameReloadPort.reload();
 
   @override
   Future<void> showLocalHome() => controller.loadHtmlString(localHomeHtml);

@@ -10,10 +10,12 @@ import 'package:yahagi_kancolle_browser/src/audio/game_audio_port.dart';
 import 'package:yahagi_kancolle_browser/src/audio/game_audio_store.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_frame_reload_port.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_launch_config.dart';
 import 'package:yahagi_kancolle_browser/src/browser/network_proxy_channel.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_surface_slot.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_contract.dart';
+import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_port.dart';
 import 'package:yahagi_kancolle_browser/src/capture/capture_mode.dart';
 import 'package:yahagi_kancolle_browser/src/capture/capture_mode_controller.dart';
 import 'package:yahagi_kancolle_browser/src/capture/capture_mode_store.dart';
@@ -29,6 +31,51 @@ import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
 
 void main() {
+  test(
+    'method-channel native port configures frame bridge before navigation',
+    () async {
+      const nativeChannel = MethodChannel('test/native-frame-reload');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      final sequence = <String>[];
+      final nativeCalls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(nativeChannel, (call) async {
+        nativeCalls.add(call);
+        if (call.method == 'create') return 9;
+        if (call.method == 'loadUri') sequence.add('navigate');
+        return null;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(nativeChannel, null),
+      );
+      final events = StreamController<Object?>.broadcast();
+      addTearDown(events.close);
+      final delegate = MethodChannelNativeGameWebViewPort(
+        channel: nativeChannel,
+        eventStream: events.stream,
+      );
+      final frameReload = _FakeFrameReloadPort(
+        onConfigure: () => sequence.add('configure'),
+      );
+      final port = MethodChannelNativeActivityGameWebViewPort(
+        delegate: delegate,
+        frameReloadPort: frameReload,
+      );
+      addTearDown(port.dispose);
+
+      await port.create();
+      await port.loadUri(Uri.parse('https://www.dmm.com/game'));
+
+      expect(sequence, <String>['configure', 'navigate']);
+      expect(await port.reloadGameFrame(), GameFrameReloadResult.reloaded);
+      expect(frameReload.reloadCalls, 1);
+      expect(
+        nativeCalls.map((call) => call.method),
+        isNot(contains('reloadGameFrame')),
+      );
+    },
+  );
+
   test('native startup error exposes platform code and create stage', () {
     final message = nativeWebViewStartupErrorMessage(
       PlatformException(
@@ -1897,6 +1944,22 @@ void main() {
       );
     },
   );
+}
+
+final class _FakeFrameReloadPort implements GameFrameReloadPort {
+  _FakeFrameReloadPort({this.onConfigure});
+
+  final void Function()? onConfigure;
+  int reloadCalls = 0;
+
+  @override
+  Future<void> configure() async => onConfigure?.call();
+
+  @override
+  Future<GameFrameReloadResult> reload() async {
+    reloadCalls += 1;
+    return GameFrameReloadResult.reloaded;
+  }
 }
 
 NativeGameWebViewEvent _event(

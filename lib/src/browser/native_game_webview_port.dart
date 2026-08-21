@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import 'game_browser_controller.dart';
+import 'game_frame_reload_port.dart';
 import 'game_local_home.dart';
-import 'game_frame_reload_script.dart';
 import 'game_page_alignment_script.dart';
 import 'native_game_webview_contract.dart';
 import 'safe_page_address.dart';
@@ -16,9 +16,11 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   MethodChannelNativeGameWebViewPort({
     MethodChannel? channel,
     Stream<Object?>? eventStream,
+    GameFrameReloadPort? frameReloadPort,
     this.eventCancellationTimeout = const Duration(seconds: 2),
   }) : _channel =
            channel ?? const MethodChannel(nativeGameWebViewMethodChannelName),
+       _frameReloadPort = frameReloadPort ?? MethodChannelGameFrameReloadPort(),
        _eventStream =
            eventStream ??
            const EventChannel(
@@ -31,6 +33,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
       );
 
   final MethodChannel _channel;
+  final GameFrameReloadPort _frameReloadPort;
   final Stream<Object?> _eventStream;
   final Duration eventCancellationTimeout;
 
@@ -243,21 +246,7 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   Future<void> reload() => _invoke('reload');
 
   @override
-  Future<GameFrameReloadResult> reloadGameFrame() async {
-    final wireResult = await _invokeResult('reloadGameFrame', <String, Object?>{
-      'javascript': gameFrameReloadScript,
-    });
-    final decoded = _decodeJavaScriptResult(wireResult);
-    return switch (decoded) {
-      'reloaded' => GameFrameReloadResult.reloaded,
-      'game_frame_not_found' => GameFrameReloadResult.gameFrameNotFound,
-      'html_wrap_not_found' => GameFrameReloadResult.htmlWrapNotFound,
-      'blocked' => GameFrameReloadResult.blocked,
-      _ => throw const NativeGameWebViewSchemaException(
-        'reloadGameFrame returned an invalid result.',
-      ),
-    };
-  }
+  Future<GameFrameReloadResult> reloadGameFrame() => _frameReloadPort.reload();
 
   @override
   Future<bool> canGoBack() async {

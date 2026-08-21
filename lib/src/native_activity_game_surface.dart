@@ -11,6 +11,7 @@ import 'browser/game_browser_controller.dart';
 import 'browser/game_frame_rate_policy.dart';
 import 'browser/game_frame_rate_port.dart';
 import 'browser/game_frame_rate_runtime_controller.dart';
+import 'browser/game_frame_reload_port.dart';
 import 'browser/game_launch_config.dart';
 import 'browser/game_toolbar_controller.dart';
 import 'browser/native_game_surface_slot.dart';
@@ -60,9 +61,12 @@ final class MethodChannelNativeActivityGameWebViewPort
     implements NativeActivityGameWebViewPort {
   MethodChannelNativeActivityGameWebViewPort({
     MethodChannelNativeGameWebViewPort? delegate,
-  }) : _delegate = delegate ?? MethodChannelNativeGameWebViewPort();
+    GameFrameReloadPort? frameReloadPort,
+  }) : _delegate = delegate ?? MethodChannelNativeGameWebViewPort(),
+       _frameReloadPort = frameReloadPort ?? MethodChannelGameFrameReloadPort();
 
   final MethodChannelNativeGameWebViewPort _delegate;
+  final GameFrameReloadPort _frameReloadPort;
 
   @override
   Stream<NativeGameWebViewEvent> get events => _delegate.events;
@@ -78,7 +82,10 @@ final class MethodChannelNativeActivityGameWebViewPort
   Future<void> setVisible(bool visible) => _delegate.setVisible(visible);
 
   @override
-  Future<void> loadUri(Uri uri) => _delegate.loadUri(uri);
+  Future<void> loadUri(Uri uri) async {
+    await _frameReloadPort.configure();
+    await _delegate.loadUri(uri);
+  }
 
   @override
   Future<void> showLocalHome() => _delegate.showLocalHome();
@@ -87,8 +94,7 @@ final class MethodChannelNativeActivityGameWebViewPort
   Future<void> reload() => _delegate.reload();
 
   @override
-  Future<GameFrameReloadResult> reloadGameFrame() =>
-      _delegate.reloadGameFrame();
+  Future<GameFrameReloadResult> reloadGameFrame() => _frameReloadPort.reload();
 
   @override
   Future<bool> canGoBack() => _delegate.canGoBack();

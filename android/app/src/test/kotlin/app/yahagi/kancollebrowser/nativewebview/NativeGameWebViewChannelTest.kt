@@ -117,12 +117,6 @@ class NativeGameWebViewChannelTest {
             null,
         )
         assertSuccess(channel, "reload", generation(0), null)
-        assertSuccess(
-            channel,
-            "reloadGameFrame",
-            mapOf("generationId" to 0, "javascript" to "window.reloadGame()"),
-            "\"reloaded\"",
-        )
         assertSuccess(channel, "canGoBack", generation(0), true)
         assertSuccess(channel, "goBack", generation(0), null)
         assertSuccess(channel, "runJavaScript", mapOf("generationId" to 0, "javascript" to "1 + 1"), null)
@@ -134,7 +128,6 @@ class NativeGameWebViewChannelTest {
         )
         assertEquals("<html>native home</html>", host.localHomeHtml)
         assertEquals("window.fit()", host.fitJavascript)
-        assertEquals("window.reloadGame()", host.reloadGameFrameJavascript)
         assertSuccess(channel, "clearCache", generation(0), null)
         assertSuccess(channel, "clearSession", generation(0), null)
 
@@ -153,7 +146,6 @@ class NativeGameWebViewChannelTest {
             "setVisible" to mapOf("generationId" to 0, "visible" to 1),
             "loadUri" to mapOf("generationId" to 0, "uri" to "javascript:alert(1)"),
             "reload" to mapOf("generationId" to 0, "extra" to true),
-            "reloadGameFrame" to mapOf("generationId" to 0, "javascript" to 1),
             "runJavaScript" to mapOf("generationId" to 0, "javascript" to 1),
             "goBack" to mapOf("generationId" to 0.0),
         )
@@ -1360,7 +1352,6 @@ class NativeGameWebViewChannelTest {
         var createCalls = 0
         var createFailure: RuntimeException? = null
         var reloadCalls = 0
-        var reloadGameFrameJavascript: String? = null
         var loadUriCalls = 0
         var showLocalHomeCalls = 0
         var fitGameScreenCalls = 0
@@ -1404,14 +1395,6 @@ class NativeGameWebViewChannelTest {
 
         override fun reload() {
             reloadCalls++
-        }
-
-        override fun reloadGameFrame(
-            javascript: String,
-            onComplete: (String?, Exception?) -> Unit,
-        ) {
-            reloadGameFrameJavascript = javascript
-            onComplete("\"reloaded\"", null)
         }
 
         override fun canGoBack() = true
