@@ -162,24 +162,27 @@ void main() {
     expect(find.text('second'), findsNothing);
   });
 
-  for (final entry in <(TopNoticeTone, IconData, Color, Color)>[
+  for (final entry in <(TopNoticeTone, IconData, Color, Color, Color)>[
     (
       TopNoticeTone.neutral,
       Icons.info_outline_rounded,
       const Color(0xff1a3447),
       const Color(0xff3c586b),
+      Colors.white,
     ),
     (
       TopNoticeTone.success,
       Icons.check_circle_outline_rounded,
       const Color(0xff173d3b),
       const Color(0xff4fa79b),
+      const Color(0xffb9f1e8),
     ),
     (
       TopNoticeTone.error,
       Icons.error_outline_rounded,
       const Color(0xff54292d),
       const Color(0xff9b464c),
+      const Color(0xffffaaa4),
     ),
   ]) {
     testWidgets('${entry.$1.name} uses its specified icon and colors', (
@@ -199,6 +202,11 @@ void main() {
       final decoration = decorated.decoration as BoxDecoration;
       expect(decoration.color, entry.$3);
       expect((decoration.border! as Border).top.color, entry.$4);
+      expect(tester.widget<Icon>(find.byIcon(entry.$2)).color, entry.$5);
+      expect(
+        tester.widget<Text>(find.byKey(topNoticeTextKey)).style?.color,
+        entry.$5,
+      );
     });
   }
 
