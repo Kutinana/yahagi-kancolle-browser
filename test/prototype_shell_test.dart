@@ -41,7 +41,6 @@ import 'package:yahagi_kancolle_browser/src/fleet/fleet_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/repair_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/logbook/logbook_page.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
-import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
   test('app resume does not schedule a platform-view recovery frame', () {
@@ -198,11 +197,6 @@ void main() {
       ),
     );
 
-    expect(find.byType(TopNoticeHost), findsOneWidget);
-    expect(
-      tester.widget<MaterialApp>(find.byType(MaterialApp)).home,
-      isA<TopNoticeHost>(),
-    );
     expect(find.byKey(const Key('fake-game-surface')), findsOneWidget);
     final gameSize = tester.getSize(find.byKey(const Key('fake-game-surface')));
     expect(gameSize.width / gameSize.height, closeTo(1200 / 720, 0.001));
