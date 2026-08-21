@@ -1,0 +1,257 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
+
+void main() {
+  Widget buildApp({
+    required Widget child,
+    Size size = const Size(400, 800),
+    EdgeInsets padding = EdgeInsets.zero,
+  }) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox.fromSize(
+        size: size,
+        child: MaterialApp(
+          builder: (context, materialChild) => MediaQuery(
+            data: MediaQueryData(size: size, padding: padding),
+            child: materialChild!,
+          ),
+          home: Scaffold(body: TopNoticeHost(child: child)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> showNotice(
+    WidgetTester tester, {
+    String message = '舰队准备完成',
+    TopNoticeTone tone = TopNoticeTone.neutral,
+    Duration duration = const Duration(seconds: 4),
+    Size size = const Size(400, 800),
+    EdgeInsets padding = EdgeInsets.zero,
+  }) async {
+    await tester.pumpWidget(
+      buildApp(
+        size: size,
+        padding: padding,
+        child: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => TopNotice.show(
+              context,
+              message: message,
+              tone: tone,
+              duration: duration,
+            ),
+            child: const Text('show'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('show'));
+    await tester.pump();
+  }
+
+  testWidgets('uses the safe-area top inset and stays horizontally centered', (
+    tester,
+  ) async {
+    await showNotice(
+      tester,
+      padding: const EdgeInsets.only(top: 24),
+      size: const Size(800, 600),
+    );
+    await tester.pump(const Duration(milliseconds: 180));
+
+    final rect = tester.getRect(find.byKey(topNoticeKey));
+    expect(rect.top, 28);
+    expect(rect.center.dx, 400);
+    expect(rect.width, lessThanOrEqualTo(720));
+    expect(rect.height, greaterThanOrEqualTo(36));
+  });
+
+  testWidgets('keeps horizontal margins and limits long text to two lines', (
+    tester,
+  ) async {
+    const message = '这是一个很长很长的提示文案，用于确认窄屏设备不会发生水平溢出，并且文本最多只显示两行。';
+    await showNotice(tester, message: message, size: const Size(240, 600));
+
+    final noticeRect = tester.getRect(find.byKey(topNoticeKey));
+    expect(noticeRect.left, greaterThanOrEqualTo(16));
+    expect(noticeRect.right, lessThanOrEqualTo(224));
+    final text = tester.widget<Text>(find.byKey(topNoticeTextKey));
+    expect(text.maxLines, 2);
+    expect(text.overflow, TextOverflow.ellipsis);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses four seconds by default and then animates out', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(
+        child: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => TopNotice.show(context, message: 'default'),
+            child: const Text('show'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('show'));
+    await tester.pump();
+
+    await tester.pump(const Duration(milliseconds: 3999));
+    expect(find.text('default'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 141));
+    expect(find.text('default'), findsNothing);
+  });
+
+  testWidgets('honors an explicit display duration', (tester) async {
+    await showNotice(
+      tester,
+      message: 'brief',
+      duration: const Duration(milliseconds: 250),
+    );
+
+    await tester.pump(const Duration(milliseconds: 249));
+    expect(find.text('brief'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 141));
+    expect(find.text('brief'), findsNothing);
+  });
+
+  testWidgets('a new message replaces the old one and owns its timer', (
+    tester,
+  ) async {
+    late BuildContext noticeContext;
+    await tester.pumpWidget(
+      buildApp(
+        child: Builder(
+          builder: (context) {
+            noticeContext = context;
+            return const SizedBox.expand();
+          },
+        ),
+      ),
+    );
+
+    TopNotice.show(
+      noticeContext,
+      message: 'first',
+      duration: const Duration(milliseconds: 300),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    TopNotice.show(
+      noticeContext,
+      message: 'second',
+      duration: const Duration(milliseconds: 400),
+    );
+    await tester.pump();
+
+    expect(find.text('second'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('second'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 41));
+    expect(find.text('first'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 258));
+    expect(find.text('second'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 141));
+    expect(find.text('second'), findsNothing);
+  });
+
+  for (final entry in <(TopNoticeTone, IconData, Color, Color)>[
+    (
+      TopNoticeTone.neutral,
+      Icons.info_outline_rounded,
+      const Color(0xff1a3447),
+      const Color(0xff3c586b),
+    ),
+    (
+      TopNoticeTone.success,
+      Icons.check_circle_outline_rounded,
+      const Color(0xff173d3b),
+      const Color(0xff4fa79b),
+    ),
+    (
+      TopNoticeTone.error,
+      Icons.error_outline_rounded,
+      const Color(0xff54292d),
+      const Color(0xff9b464c),
+    ),
+  ]) {
+    testWidgets('${entry.$1.name} uses its specified icon and colors', (
+      tester,
+    ) async {
+      await showNotice(tester, tone: entry.$1);
+
+      expect(find.byIcon(entry.$2), findsOneWidget);
+      final decorated = tester.widget<DecoratedBox>(
+        find
+            .descendant(
+              of: find.byKey(topNoticeKey),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
+      final decoration = decorated.decoration as BoxDecoration;
+      expect(decoration.color, entry.$3);
+      expect((decoration.border! as Border).top.color, entry.$4);
+    });
+  }
+
+  testWidgets('announces the full message as a live region', (tester) async {
+    final semantics = tester.ensureSemantics();
+    const message = '完整的无障碍提示文案';
+    await showNotice(tester, message: message);
+
+    final widget = tester.widget<Semantics>(find.byKey(topNoticeKey));
+    expect(widget.properties.label, message);
+    expect(widget.properties.liveRegion, isTrue);
+    semantics.dispose();
+  });
+
+  testWidgets('does not intercept taps intended for content underneath', (
+    tester,
+  ) async {
+    var taps = 0;
+    late BuildContext noticeContext;
+    await tester.pumpWidget(
+      buildApp(
+        child: Builder(
+          builder: (context) {
+            noticeContext = context;
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => taps++,
+              child: const SizedBox.expand(),
+            );
+          },
+        ),
+      ),
+    );
+    TopNotice.show(noticeContext, message: 'tap through');
+    await tester.pump();
+
+    final ignorePointers = tester.widgetList<IgnorePointer>(
+      find.ancestor(
+        of: find.byKey(topNoticeKey),
+        matching: find.byType(IgnorePointer),
+      ),
+    );
+    expect(ignorePointers.any((widget) => widget.ignoring), isTrue);
+    await tester.tapAt(tester.getCenter(find.byKey(topNoticeKey)));
+    expect(taps, 1);
+  });
+
+  testWidgets('disposing the host cancels its pending timer', (tester) async {
+    await showNotice(tester, duration: const Duration(minutes: 1));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+}
