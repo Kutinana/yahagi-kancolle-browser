@@ -16,7 +16,10 @@ import 'package:yahagi_kancolle_browser/src/capture/game_capture_controller.dart
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/display_mode_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/display_mode_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/header_resource_settings.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
@@ -32,21 +35,20 @@ void main() {
   testWidgets('YahagiApp exposes one TopNoticeHost directly as home', (
     tester,
   ) async {
-    late BuildContext context;
-    await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: Builder(
-          builder: (builderContext) {
-            context = builderContext;
-            return const SizedBox();
-          },
-        ),
-      ),
-    );
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
 
     GameStateController.disableTimerForTest = true;
     addTearDown(() => GameStateController.disableTimerForTest = false);
+    final layoutSettingsController = _LayoutSettingsControllerStub();
+    final networkSettingsController = _NetworkSettingsControllerStub();
+    final gadgetBypassController = _GadgetBypassControllerStub();
+    final safetySettingsController = _SafetySettingsControllerStub();
+    final displayModeController = _DisplayModeControllerStub();
+    final controller = PrototypeStatusController();
+    final browserController = GameBrowserController();
     final captureModeController = await CaptureModeController.load(
       _MemoryCaptureModeStore(),
     );
@@ -57,41 +59,65 @@ void main() {
     final battleController = BattleController(
       gameState: () => gameStateController.state,
     );
+    addTearDown(layoutSettingsController.dispose);
+    addTearDown(networkSettingsController.dispose);
+    addTearDown(gadgetBypassController.dispose);
+    addTearDown(safetySettingsController.dispose);
+    addTearDown(displayModeController.dispose);
+    addTearDown(controller.dispose);
+    addTearDown(browserController.dispose);
     addTearDown(captureModeController.dispose);
     addTearDown(audioController.dispose);
     addTearDown(toolbarController.dispose);
     addTearDown(gameCaptureController.dispose);
     addTearDown(gameStateController.dispose);
     addTearDown(battleController.dispose);
+    addTearDown(() async => tester.pumpWidget(const SizedBox()));
 
-    final app = YahagiApp(
-      layoutSettingsController: _LayoutSettingsControllerStub(),
-      networkSettingsController: _NetworkSettingsControllerStub(),
-      gadgetBypassController: _GadgetBypassControllerStub(),
-      safetySettingsController: _SafetySettingsControllerStub(),
-      displayModeController: _DisplayModeControllerStub(),
-      controller: PrototypeStatusController(),
-      browserController: GameBrowserController(),
-      captureModeController: captureModeController,
-      audioController: audioController,
-      toolbarController: toolbarController,
-      gameCaptureController: gameCaptureController,
-      gameStateController: gameStateController,
-      battleController: battleController,
-      gameSurface: const SizedBox(),
+    await tester.pumpWidget(
+      YahagiApp(
+        layoutSettingsController: layoutSettingsController,
+        networkSettingsController: networkSettingsController,
+        gadgetBypassController: gadgetBypassController,
+        safetySettingsController: safetySettingsController,
+        displayModeController: displayModeController,
+        controller: controller,
+        browserController: browserController,
+        captureModeController: captureModeController,
+        audioController: audioController,
+        toolbarController: toolbarController,
+        gameCaptureController: gameCaptureController,
+        gameStateController: gameStateController,
+        battleController: battleController,
+        gameSurface: const SizedBox(),
+      ),
     );
 
-    final animatedBuilder = app.build(context) as AnimatedBuilder;
-    final materialApp = animatedBuilder.builder(context, null) as MaterialApp;
-    final home = materialApp.home;
-
-    expect(home, isA<TopNoticeHost>());
-    expect((home! as TopNoticeHost).child, isNot(isA<TopNoticeHost>()));
+    expect(find.byType(TopNoticeHost, skipOffstage: false), findsOneWidget);
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).home,
+      isA<TopNoticeHost>(),
+    );
   });
 }
 
 class _LayoutSettingsControllerStub extends ChangeNotifier
     implements LayoutSettingsController {
+  @override
+  bool get autoZoom => false;
+
+  @override
+  List<String> get dashboardCardCollapsed => const <String>[];
+
+  @override
+  List<String> get dashboardCardHidden => const <String>[];
+
+  @override
+  List<String> get dashboardCardOrder => const <String>[];
+
+  @override
+  bool get enhancedDamagePulse => false;
+
   @override
   String get fontFamily => 'sans-serif';
 
@@ -99,34 +125,60 @@ class _LayoutSettingsControllerStub extends ChangeNotifier
   List<String> get fontFamilyFallback => const <String>[];
 
   @override
+  double get gameAreaRatio => 0.65;
+
+  @override
+  List<String> get headerResourceOrder => allHeaderResourceIds;
+
+  @override
   String? get localeCode => null;
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => null;
+  List<String> get visibleHeaderResourceIds => defaultVisibleHeaderResourceIds;
+
+  @override
+  List<String> get workspaceMenuOrder =>
+      LayoutSettingsStore.defaultWorkspaceMenuOrder;
+
+  @override
+  bool get workspaceMenuOnRight => false;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => _unexpected(invocation);
 }
 
 class _NetworkSettingsControllerStub extends ChangeNotifier
     implements NetworkSettingsController {
   @override
-  dynamic noSuchMethod(Invocation invocation) => null;
+  dynamic noSuchMethod(Invocation invocation) => _unexpected(invocation);
 }
 
 class _GadgetBypassControllerStub extends ChangeNotifier
     implements GadgetBypassController {
   @override
-  dynamic noSuchMethod(Invocation invocation) => null;
+  dynamic noSuchMethod(Invocation invocation) => _unexpected(invocation);
 }
 
 class _SafetySettingsControllerStub extends ChangeNotifier
     implements SafetySettingsController {
   @override
-  dynamic noSuchMethod(Invocation invocation) => null;
+  bool get battleDamageVibrationEnabled => false;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => _unexpected(invocation);
 }
 
 class _DisplayModeControllerStub extends ChangeNotifier
     implements DisplayModeController {
   @override
-  dynamic noSuchMethod(Invocation invocation) => null;
+  DisplayMode get displayMode => DisplayMode.auto;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => _unexpected(invocation);
+}
+
+Never _unexpected(Invocation invocation) {
+  throw UnsupportedError('Unexpected invocation: ${invocation.memberName}');
 }
 
 class _MemoryCaptureModeStore implements CaptureModeStore {
