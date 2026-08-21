@@ -11,6 +11,7 @@ import 'package:yahagi_kancolle_browser/src/senka/senka_controller.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/data_settings_page.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
   testWidgets('数据设置可归零并手动填写本月累计素战果', (tester) async {
@@ -60,10 +61,19 @@ void main() {
     await tester.tap(
       find.byKey(const Key('settings-reset-base-senka-confirm')),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(senka.monthBaseSenka, 0);
     expect(senka.state.day(DateTime(2026, 8, 19)).eo, 75);
     expect(senka.state.day(DateTime(2026, 8, 20)).quest, 80);
+    expect(find.text('本月累计素战果已归零'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(topNoticeKey),
+        matching: find.byIcon(Icons.check_circle_outline_rounded),
+      ),
+      findsOneWidget,
+    );
 
     await tester.ensureVisible(set);
     await tester.tap(set);
@@ -72,9 +82,17 @@ void main() {
     expect(input, findsOneWidget);
     await tester.enterText(input, '123.45');
     await tester.tap(find.byKey(const Key('settings-base-senka-save')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(senka.monthBaseSenka, 123.45);
     expect(find.textContaining('123.45'), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byKey(topNoticeKey),
+        matching: find.byIcon(Icons.check_circle_outline_rounded),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('手动填写素战果拒绝非法值并保持对话框', (tester) async {
@@ -145,14 +163,16 @@ final class _Dependencies {
     required SenkaController senkaController,
   }) => tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(
-        body: DataSettingsPage(
-          captureModeController: capture,
-          browserController: browser,
-          gameCaptureController: gameCapture,
-          prototypeStatusController: prototype,
-          gameStateController: gameState,
-          senkaController: senkaController,
+      home: TopNoticeHost(
+        child: Scaffold(
+          body: DataSettingsPage(
+            captureModeController: capture,
+            browserController: browser,
+            gameCaptureController: gameCapture,
+            prototypeStatusController: prototype,
+            gameStateController: gameState,
+            senkaController: senkaController,
+          ),
         ),
       ),
     ),

@@ -18,6 +18,7 @@ void main() {
     tester,
   ) async {
     final fixture = _Fixture.create();
+    addTearDown(() => fixture.dispose(tester));
     await tester.pumpWidget(fixture.app());
 
     expect(find.byKey(const Key('saveDiagnosticFileButton')), findsOneWidget);
@@ -31,6 +32,7 @@ void main() {
     tester,
   ) async {
     final fixture = _Fixture.create();
+    addTearDown(() => fixture.dispose(tester));
     await tester.pumpWidget(fixture.app());
 
     await tester.tap(find.byKey(const Key('saveDiagnosticFileButton')));
@@ -51,6 +53,7 @@ void main() {
 
   testWidgets('share exception reports error in a top notice', (tester) async {
     final fixture = _Fixture.create(shareFails: true);
+    addTearDown(() => fixture.dispose(tester));
     await tester.pumpWidget(fixture.app());
 
     await tester.tap(find.byKey(const Key('shareDiagnosticFileButton')));
@@ -67,6 +70,19 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('cancelled save does not show a top notice', (tester) async {
+    final fixture = _Fixture.create(savedName: null);
+    addTearDown(() => fixture.dispose(tester));
+    await tester.pumpWidget(fixture.app());
+
+    await tester.tap(find.byKey(const Key('saveDiagnosticFileButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmSaveDiagnosticFileButton')));
+    await _waitForExport(tester, fixture, fixture.platform.saveCalled);
+
+    expect(find.byKey(topNoticeKey), findsNothing);
   });
 }
 
@@ -93,17 +109,25 @@ final class _Fixture {
     required this.root,
     required this.controller,
     required this.platform,
+    required this.recorder,
   });
 
   final Directory root;
   final DiagnosticController controller;
   final _FakePlatform platform;
+  final DiagnosticRecorder recorder;
 
-  static _Fixture create({bool shareFails = false}) {
+  static _Fixture create({
+    bool shareFails = false,
+    String? savedName = 'Yahagi-Diagnostics-test.json',
+  }) {
     final root = Directory.systemTemp.createTempSync('diagnostic-section-');
     final storage = DiagnosticStorage(directory: Directory('${root.path}/log'));
     final recorder = DiagnosticRecorder(sink: storage, enabled: false);
-    final platform = _FakePlatform(shareFails: shareFails);
+    final platform = _FakePlatform(
+      shareFails: shareFails,
+      savedName: savedName,
+    );
     final controller = DiagnosticController(
       settings: MemoryDiagnosticSettingsStore(false),
       storage: storage,
@@ -116,7 +140,12 @@ final class _Fixture {
       ),
       manageGlobalErrors: false,
     );
-    return _Fixture(root: root, controller: controller, platform: platform);
+    return _Fixture(
+      root: root,
+      controller: controller,
+      platform: platform,
+      recorder: recorder,
+    );
   }
 
   Widget app() => MaterialApp(
@@ -127,12 +156,25 @@ final class _Fixture {
       child: Scaffold(body: DiagnosticUserSection(controller: controller)),
     ),
   );
+
+  Future<void> dispose(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+    await recorder.dispose();
+    await tester.runAsync(() async {
+      if (await root.exists()) await root.delete(recursive: true);
+    });
+  }
 }
 
 final class _FakePlatform implements DiagnosticPlatformPort {
-  _FakePlatform({this.shareFails = false});
+  _FakePlatform({
+    this.shareFails = false,
+    this.savedName = 'Yahagi-Diagnostics-test.json',
+  });
 
   final bool shareFails;
+  final String? savedName;
   final Completer<void> saveCalled = Completer<void>();
   final Completer<void> shareCalled = Completer<void>();
 
@@ -163,7 +205,7 @@ final class _FakePlatform implements DiagnosticPlatformPort {
   @override
   Future<String?> saveJson(String path) async {
     saveCalled.complete();
-    return 'Yahagi-Diagnostics-test.json';
+    return savedName;
   }
 
   @override

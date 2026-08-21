@@ -72,7 +72,7 @@ void main() {
       final prototype = PrototypeStatusController();
       final gameState = GameStateController();
       final cacheController = GameResourceCacheController(
-        store: _MemoryCacheStore(),
+        store: _MemoryCacheStore(GameResourceCacheMode.full),
         port: _FakePort(),
       );
       await cacheController.initialize();
@@ -158,7 +158,8 @@ void main() {
 }
 
 final class _MemoryCacheStore implements GameResourceCacheStore {
-  GameResourceCacheMode mode = GameResourceCacheMode.full;
+  _MemoryCacheStore([this.mode = GameResourceCacheMode.full]);
+  GameResourceCacheMode mode;
 
   @override
   Future<GameResourceCacheMode> load() async => mode;

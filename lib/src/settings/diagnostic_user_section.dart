@@ -107,20 +107,12 @@ class DiagnosticUserSection extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
     try {
       final fileName = await controller.save();
-      if (!context.mounted) return;
-      if (fileName != null) {
-        TopNotice.show(
-          context,
-          message: l10n.diagnosticSaveSucceeded(fileName),
-          tone: TopNoticeTone.success,
-        );
-      } else {
-        TopNotice.show(
-          context,
-          message: l10n.diagnosticSaveFailed,
-          tone: TopNoticeTone.error,
-        );
-      }
+      if (fileName == null || !context.mounted) return;
+      TopNotice.show(
+        context,
+        message: l10n.diagnosticSaveSucceeded(fileName),
+        tone: TopNoticeTone.success,
+      );
     } catch (_) {
       if (context.mounted) {
         TopNotice.show(
