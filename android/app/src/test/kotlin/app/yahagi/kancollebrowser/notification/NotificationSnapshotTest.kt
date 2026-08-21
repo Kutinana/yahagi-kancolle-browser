@@ -195,12 +195,14 @@ class NotificationSnapshotTest {
 
     @Test
     fun `completion notification id is stable and separate from ongoing summary`() {
-        val first = NotificationDelivery.notificationId("expedition_2_complete")
-        val second = NotificationDelivery.notificationId("expedition_2_complete")
+        val first = NotificationDelivery.notificationId("expedition_2_complete", 100L)
+        val second = NotificationDelivery.notificationId("expedition_2_complete", 100L)
+        val nextMission = NotificationDelivery.notificationId("expedition_2_complete", 200L)
 
         assertEquals(first, second)
+        assertTrue(first != nextMission)
         assertTrue(first != AppNotificationManager.ONGOING_NOTIFICATION_ID)
-        assertTrue(first in 1_000..1_899)
+        assertTrue(first >= 1_000)
     }
 
     @Test

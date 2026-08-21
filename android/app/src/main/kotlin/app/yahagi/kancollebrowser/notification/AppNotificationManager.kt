@@ -184,6 +184,7 @@ object AppNotificationManager {
             putExtra("key", alarm.key)
             putExtra("taskId", alarm.taskId)
             putExtra("stage", alarm.stage)
+            putExtra("triggerTimeEpochMs", alarm.triggerTimeEpochMs)
             putExtra("removeTaskOnFire", alarm.removeTaskOnFire)
             putExtra("channelId", channelId(alarm.type, presentation.sound, presentation.vibration))
             putExtra("sound", presentation.sound)

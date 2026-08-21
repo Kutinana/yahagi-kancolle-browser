@@ -142,7 +142,8 @@ object NotificationChronometer {
 }
 
 object NotificationDelivery {
-    fun notificationId(key: String): Int = (key.hashCode() and 0x7FFFFFFF) % 900 + 1_000
+    fun notificationId(key: String, triggerTimeEpochMs: Long): Int =
+        ("$key:$triggerTimeEpochMs".hashCode() and 0x3FFFFFFF) + 1_000
 
     fun stageFor(key: String, explicitStage: String?): String = explicitStage ?: when {
         key.endsWith("_preempt") -> "preempt"

@@ -15,6 +15,7 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
         val key = intent.getStringExtra("key") ?: return
         val taskId = intent.getStringExtra("taskId") ?: return
         val stage = NotificationDelivery.stageFor(key, intent.getStringExtra("stage"))
+        val triggerTimeEpochMs = intent.getLongExtra("triggerTimeEpochMs", 0L)
         val channelId = intent.getStringExtra("channelId") ?: "channel_expedition"
         val title = intent.getStringExtra("title") ?: "矢矧通知"
         val body = intent.getStringExtra("body") ?: ""
@@ -55,7 +56,7 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
         }
         val notification = builder.build()
 
-        val notificationId = NotificationDelivery.notificationId(key)
+        val notificationId = NotificationDelivery.notificationId(key, triggerTimeEpochMs)
         notificationManager.notify(notificationId, notification)
         AppNotificationManager.onAlarmFired(context, key, taskId, stage)
     }
