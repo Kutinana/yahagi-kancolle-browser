@@ -4,6 +4,7 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import '../browser/gadget_bypass_channel.dart';
 import '../browser/gadget_bypass_controller.dart';
 import '../browser/gadget_bypass_store.dart';
+import '../widgets/standalone_text_input_dialog.dart';
 
 class GadgetBypassSection extends StatefulWidget {
   const GadgetBypassSection({
@@ -25,19 +26,11 @@ class _GadgetBypassSectionState extends State<GadgetBypassSection> {
   static const String _presetCustom = 'custom';
 
   late String _selectedPreset;
-  late final TextEditingController _customController;
 
   @override
   void initState() {
     super.initState();
     _selectedPreset = _presetFor(widget.controller.endpoint);
-    _customController = TextEditingController(text: widget.controller.endpoint);
-  }
-
-  @override
-  void dispose() {
-    _customController.dispose();
-    super.dispose();
   }
 
   String _presetFor(String endpoint) {
@@ -61,16 +54,26 @@ class _GadgetBypassSectionState extends State<GadgetBypassSection> {
     }
   }
 
-  Future<void> _applyCustomEndpoint() async {
-    final value = _customController.text.trim();
-    if (value.isEmpty) {
-      _customController.text = widget.controller.endpoint;
-      return;
-    }
-    final applied = await _setEndpoint(value);
-    if (!applied) {
-      _customController.text = widget.controller.endpoint;
-    }
+  Future<void> _editCustomEndpoint(AppLocalizations l10n) async {
+    final value = await showDialog<String>(
+      context: context,
+      builder: (_) => StandaloneTextInputDialog(
+        key: const Key('gadget-bypass-endpoint-dialog'),
+        title: l10n.gadgetBypassEndpoint,
+        label: l10n.endpointCustom,
+        initialValue: widget.controller.endpoint,
+        fieldKey: const Key('gadget-bypass-endpoint-dialog-field'),
+        cancelKey: const Key('gadget-bypass-endpoint-dialog-cancel'),
+        confirmKey: const Key('gadget-bypass-endpoint-dialog-confirm'),
+        cancelLabel: l10n.cancel,
+        confirmLabel: l10n.confirm,
+        keyboardType: TextInputType.url,
+        validate: (raw) =>
+            normalizeGadgetBypassEndpoint(raw) == null ? 'HTTPS URL' : null,
+      ),
+    );
+    if (!mounted || value == null) return;
+    await _setEndpoint(value);
   }
 
   Future<bool> _setEndpoint(String endpoint) async {
@@ -188,20 +191,36 @@ class _GadgetBypassSectionState extends State<GadgetBypassSection> {
             if (_selectedPreset == _presetCustom)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: TextField(
+                child: Material(
                   key: const Key('gadget-bypass-custom-endpoint'),
-                  controller: _customController,
-                  style: const TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'https://example.com/cache/',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 9,
-                    ),
-                    border: const OutlineInputBorder(),
+                  color: Colors.transparent,
+                  shape: const RoundedRectangleBorder(
+                    side: BorderSide(color: Color(0xff8197a5)),
+                    borderRadius: BorderRadius.all(Radius.circular(4)),
                   ),
-                  onSubmitted: (_) => _applyCustomEndpoint(),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () => _editCustomEndpoint(l10n),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 9,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              controller.endpoint,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          const Icon(Icons.edit_outlined, size: 17),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             Padding(

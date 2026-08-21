@@ -36,7 +36,6 @@ internal interface NativeGameWebViewHostOperations {
 
 internal class ActivityNativeGameWebViewHostOperations(
     private val host: ActivityWebViewHost,
-    private val onPresentationStateChanged: (Boolean) -> Unit = {},
 ) : NativeGameWebViewHostOperations {
     override val currentGeneration: Long?
         get() = host.currentGeneration
@@ -78,10 +77,7 @@ internal class ActivityNativeGameWebViewHostOperations(
     }
 
     override fun fitGameScreen(javascript: String) {
-        val webView = requireWebView()
-        webView.evaluateJavascript(javascript) { rawResult ->
-            onPresentationStateChanged(isGameSurfaceResult(rawResult))
-        }
+        requireWebView().evaluateJavascript(javascript, null)
     }
 
     override fun clearCache() {
@@ -109,10 +105,6 @@ internal class ActivityNativeGameWebViewHostOperations(
 
     private fun requireWebView() = checkNotNull(host.currentWebView) {
         "Native game WebView is not ready"
-    }
-
-    private fun isGameSurfaceResult(rawResult: String?): Boolean {
-        return rawResult?.trim()?.equals("true", ignoreCase = true) == true
     }
 
     private companion object {

@@ -11,10 +11,13 @@ class NativeGameWebViewConfiguratorTest {
         val bridge = NativeGamePresentationBridge(presentationStates::add)
 
         bridge.postMessage("web")
+        bridge.postMessage("web")
         bridge.postMessage("game")
+        bridge.postMessage("game")
+        bridge.postMessage("web")
         bridge.postMessage("ignored")
 
-        assertEquals(listOf(false, true), presentationStates)
+        assertEquals(listOf(false, true, false), presentationStates)
     }
 
     @Test

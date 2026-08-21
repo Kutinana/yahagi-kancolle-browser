@@ -29,6 +29,11 @@ class WindowMetricsRecoveryScheduler {
     }
   }
 
+  void cancel() {
+    if (_disposed) return;
+    _cancelTimers();
+  }
+
   void dispose() {
     if (_disposed) return;
     _disposed = true;

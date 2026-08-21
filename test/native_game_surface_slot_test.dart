@@ -333,6 +333,41 @@ void main() {
       expect(bounds, hasLength(2));
     });
 
+    testWidgets('defers bounds updates until the IME closes', (tester) async {
+      addTearDown(tester.view.resetViewInsets);
+      final bounds = <NativeGameWebViewBounds>[];
+      await tester.pumpWidget(
+        _slotApp(
+          width: 100,
+          onBoundsChanged: (value) async => bounds.add(value),
+        ),
+      );
+      await tester.pump();
+      expect(bounds.map((value) => value.width), <double>[100]);
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.pumpWidget(
+        _slotApp(
+          width: 120,
+          onBoundsChanged: (value) async => bounds.add(value),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        bounds.map((value) => value.width),
+        <double>[100],
+        reason: 'the native overlay must not move while text input is active',
+      );
+
+      tester.view.resetViewInsets();
+      await tester.pump();
+      await tester.pump();
+
+      expect(bounds.map((value) => value.width), <double>[100, 120]);
+    });
+
     testWidgets('retries failed static bounds on a later frame', (
       tester,
     ) async {
@@ -796,9 +831,7 @@ void main() {
 
       // Push a non-modal popup (like PopupMenuButton with no barrier)
       unawaited(
-        navigatorKey.currentState!.push<void>(
-          _TestNonModalPopupRoute(),
-        ),
+        navigatorKey.currentState!.push<void>(_TestNonModalPopupRoute()),
       );
       await tester.pumpAndSettle();
       // Must stay visible throughout non-modal popup menu

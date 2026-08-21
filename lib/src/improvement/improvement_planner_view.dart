@@ -7,6 +7,7 @@ import '../fleet/equipment_type_icon.dart';
 import '../game_state/game_state.dart';
 import '../inventory/owned_inventory_projection.dart';
 import '../widgets/filter_controls.dart';
+import '../widgets/adaptive_input_dialog.dart';
 import '../widgets/frozen_data_table.dart';
 import 'improvement_dataset.dart';
 import 'improvement_planner_controller.dart';
@@ -175,7 +176,7 @@ class _ImprovementSearchDialogState extends State<_ImprovementSearchDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => AdaptiveInputDialog(
     title: const Text('搜索装备'),
     content: TextField(
       key: const Key('improvement-search-field'),

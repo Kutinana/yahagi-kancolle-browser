@@ -7,6 +7,7 @@ import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import '../game_state/quest_text_normalizer.dart';
 import '../widgets/filter_controls.dart';
+import '../widgets/adaptive_input_dialog.dart';
 import 'quest_catalog.dart';
 import 'quest_catalog_controller.dart';
 
@@ -260,7 +261,7 @@ Future<void> _showQuestSearch(
   final textController = TextEditingController(text: filters.query);
   await showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AdaptiveInputDialog(
       title: Text(l10n.searchQuest),
       content: TextField(
         key: const Key('quest-search-field'),
