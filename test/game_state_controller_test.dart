@@ -217,6 +217,36 @@ void main() {
         expect(controller.state.resource(GameResourceType.fuel), 321);
       },
     );
+
+    test('initialize waits until the cached game state is restored', () async {
+      final store = _DelayedGameStateStore();
+      final controller = GameStateController(gameStateStore: store);
+      addTearDown(controller.dispose);
+      var completed = false;
+      final initialization = controller.initialize().then((_) {
+        completed = true;
+      });
+
+      await Future<void>.delayed(Duration.zero);
+      expect(completed, isFalse);
+
+      store.completeLoad(
+        GameState(
+          masterMissions: const {
+            37: MasterMission(
+              id: 37,
+              name: '东京急行',
+              duration: Duration(minutes: 165),
+            ),
+          },
+          hasPortData: true,
+          updatedAt: DateTime.utc(2026),
+        ),
+      );
+      await initialization;
+
+      expect(controller.state.masterMissions[37]?.name, '东京急行');
+    });
   });
 }
 

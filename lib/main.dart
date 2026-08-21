@@ -176,6 +176,7 @@ Future<void> main() async {
     questStore: questStore,
     gameStateStore: gameStateStore,
   );
+  await gameStateController.initialize();
   final gameResourceCacheController = GameResourceCacheController();
   await gameResourceCacheController.initialize();
   final senkaController = SenkaController(

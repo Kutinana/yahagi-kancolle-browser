@@ -30,8 +30,7 @@ final class GameStateController extends ChangeNotifier
        _captureNotifications =
            captureNotifications ?? FrameNotificationCoalescer(),
        _timerService = timerService ?? TimerMechanicsService() {
-    _initQuests();
-    _initGameState();
+    _initialization = _initialize();
     _startExpirationTimer();
   }
 
@@ -42,9 +41,17 @@ final class GameStateController extends ChangeNotifier
   final QuestStore? questStore;
   final GameStateStore? gameStateStore;
   Timer? _expirationTimer;
+  late final Future<void> _initialization;
 
   @visibleForTesting
   static bool disableTimerForTest = false;
+
+  Future<void> initialize() => _initialization;
+
+  Future<void> _initialize() async {
+    await _initQuests();
+    await _initGameState();
+  }
 
   void _startExpirationTimer() {
     if (disableTimerForTest) return;
