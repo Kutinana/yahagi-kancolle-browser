@@ -28,6 +28,9 @@ class NotificationSnapshotTest {
                         "id" to "expedition:2",
                         "type" to "expedition",
                         "title" to "fleet 2",
+                        "state" to "completed",
+                        "clockMode" to "elapsed",
+                        "anchorEpochMs" to 1_700_000_000_000L,
                         "progress" to 0.5,
                         "remainingSeconds" to 600,
                         "targetEpochMs" to 1_700_000_600_000L,
@@ -49,7 +52,32 @@ class NotificationSnapshotTest {
         assertEquals("expedition:2", snapshot.alarms.single().taskId)
         assertTrue(snapshot.alarms.single().removeTaskOnFire)
         assertEquals(1_700_000_600_000L, snapshot.ongoingItems.single().targetEpochMs)
+        assertEquals("completed", snapshot.ongoingItems.single().state)
+        assertEquals("elapsed", snapshot.ongoingItems.single().clockMode)
+        assertEquals(1_700_000_000_000L, snapshot.ongoingItems.single().anchorEpochMs)
         assertEquals(false, snapshot.presentation.sound)
+    }
+
+    @Test
+    fun `codec round trip preserves ongoing task lifecycle fields`() {
+        val alarm = alarm("same", 200L)
+        val original = snapshot(
+            alarm,
+            sound = true,
+            vibration = false,
+            ongoingItems = listOf(
+                ongoing("anchorage:1").copy(
+                    state = "settlementReady",
+                    clockMode = "elapsed",
+                    anchorEpochMs = 100L,
+                ),
+            ),
+        )
+
+        assertEquals(
+            original,
+            NotificationSnapshotCodec.fromJson(NotificationSnapshotCodec.toJson(original)),
+        )
     }
 
     @Test
@@ -98,15 +126,71 @@ class NotificationSnapshotTest {
         assertEquals(listOf(failed), retry.upsert)
     }
 
+    @Test
+    fun `complete alarm marks matching ongoing item completed and is idempotent`() {
+        val original = snapshot(
+            alarm("expedition_2_complete", 200L),
+            sound = true,
+            vibration = true,
+            ongoingItems = listOf(ongoing("expedition:2")),
+        )
+
+        val first = NotificationSnapshotTransitions.onAlarmFired(
+            original,
+            key = "expedition_2_complete",
+            taskId = "expedition:2",
+            stage = "complete",
+        )
+        val second = NotificationSnapshotTransitions.onAlarmFired(
+            first,
+            key = "expedition_2_complete",
+            taskId = "expedition:2",
+            stage = "complete",
+        )
+
+        assertEquals(emptyList<NotificationAlarm>(), first.alarms)
+        assertEquals("completed", first.ongoingItems.single().state)
+        assertEquals(1.0, first.ongoingItems.single().progress, 0.0)
+        assertEquals(0, first.ongoingItems.single().remainingSeconds)
+        assertEquals(first, second)
+    }
+
+    @Test
+    fun `milestone marks anchorage settlement ready while preempt keeps running`() {
+        val original = snapshot(
+            alarm("anchorage_1_20m", 200L),
+            sound = true,
+            vibration = true,
+            ongoingItems = listOf(ongoing("anchorage:1")),
+        )
+
+        val milestone = NotificationSnapshotTransitions.onAlarmFired(
+            original,
+            key = "anchorage_1_20m",
+            taskId = "anchorage:1",
+            stage = "milestone",
+        )
+        val preempt = NotificationSnapshotTransitions.onAlarmFired(
+            original,
+            key = "anchorage_1_20m",
+            taskId = "anchorage:1",
+            stage = "preempt",
+        )
+
+        assertEquals("settlementReady", milestone.ongoingItems.single().state)
+        assertEquals("running", preempt.ongoingItems.single().state)
+    }
+
     private fun snapshot(
         alarm: NotificationAlarm,
         sound: Boolean,
         vibration: Boolean,
+        ongoingItems: List<OngoingNotificationItem> = emptyList(),
     ) = NativeNotificationSnapshot(
         schemaVersion = 1,
         updatedAtEpochMs = 1L,
         alarms = listOf(alarm),
-        ongoingItems = emptyList(),
+        ongoingItems = ongoingItems,
         presentation = NotificationPresentation(
             enabled = true,
             sound = sound,
@@ -127,5 +211,18 @@ class NotificationSnapshotTest {
         triggerTimeEpochMs = triggerAt,
         title = key,
         body = "body",
+    )
+
+    private fun ongoing(id: String) = OngoingNotificationItem(
+        id = id,
+        type = if (id.startsWith("anchorage:")) "anchorage" else "expedition",
+        title = "task",
+        state = "running",
+        clockMode = "countdown",
+        anchorEpochMs = null,
+        progress = 0.5,
+        remainingSeconds = 60,
+        targetEpochMs = 200L,
+        totalDurationSec = 120,
     )
 }

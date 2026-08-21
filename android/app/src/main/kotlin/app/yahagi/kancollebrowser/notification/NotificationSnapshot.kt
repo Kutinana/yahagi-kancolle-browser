@@ -18,6 +18,9 @@ data class OngoingNotificationItem(
     val id: String,
     val type: String,
     val title: String,
+    val state: String = "running",
+    val clockMode: String = "countdown",
+    val anchorEpochMs: Long? = null,
     val progress: Double,
     val remainingSeconds: Int,
     val targetEpochMs: Long?,
@@ -103,6 +106,33 @@ object NotificationSnapshotRecovery {
     )
 }
 
+object NotificationSnapshotTransitions {
+    fun onAlarmFired(
+        previous: NativeNotificationSnapshot,
+        key: String,
+        taskId: String,
+        stage: String,
+    ): NativeNotificationSnapshot {
+        return previous.copy(
+            alarms = previous.alarms.filterNot { it.key == key },
+            ongoingItems = previous.ongoingItems.map { item ->
+                if (item.id != taskId) return@map item
+                when {
+                    stage == "complete" -> item.copy(
+                        state = "completed",
+                        progress = 1.0,
+                        remainingSeconds = 0,
+                    )
+                    stage == "milestone" && item.type == "anchorage" -> item.copy(
+                        state = "settlementReady",
+                    )
+                    else -> item
+                }
+            },
+        )
+    }
+}
+
 object NotificationSnapshotCodec {
     fun fromMap(raw: Map<*, *>): NativeNotificationSnapshot {
         val alarms = raw.list("alarms").map { alarmRaw ->
@@ -124,6 +154,9 @@ object NotificationSnapshotCodec {
                 id = item.string("id"),
                 type = item.string("type"),
                 title = item.string("title"),
+                state = item.optionalString("state") ?: "running",
+                clockMode = item.optionalString("clockMode") ?: "countdown",
+                anchorEpochMs = item.optionalNumber("anchorEpochMs")?.toLong(),
                 progress = item.number("progress").toDouble().coerceIn(0.0, 1.0),
                 remainingSeconds = item.number("remainingSeconds").toInt().coerceAtLeast(0),
                 targetEpochMs = item.optionalNumber("targetEpochMs")?.toLong(),
@@ -171,6 +204,9 @@ object NotificationSnapshotCodec {
                     put("id", item.id)
                     put("type", item.type)
                     put("title", item.title)
+                    put("state", item.state)
+                    put("clockMode", item.clockMode)
+                    put("anchorEpochMs", item.anchorEpochMs ?: JSONObject.NULL)
                     put("progress", item.progress)
                     put("remainingSeconds", item.remainingSeconds)
                     put("targetEpochMs", item.targetEpochMs ?: JSONObject.NULL)
@@ -200,6 +236,8 @@ private fun Any?.asMap(): Map<*, *> = this as? Map<*, *>
 
 private fun Map<*, *>.string(key: String): String = this[key] as? String
     ?: throw IllegalArgumentException("$key must be a string")
+
+private fun Map<*, *>.optionalString(key: String): String? = this[key] as? String
 
 private fun Map<*, *>.number(key: String): Number = this[key] as? Number
     ?: throw IllegalArgumentException("$key must be a number")
