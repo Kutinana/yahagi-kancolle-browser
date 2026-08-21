@@ -26,6 +26,14 @@ class GameFrameReloadBridgeTest {
     }
 
     @Test
+    fun scriptObservesHtmlWrapInsertedAfterDomContentLoaded() {
+        val source = GameFrameReloadBridgeScript.source
+
+        assertTrue(source.contains("MutationObserver"))
+        assertTrue(source.contains("observer.observe"))
+    }
+
+    @Test
     fun coordinatorCompletesMatchingRequestOnlyOnce() {
         val coordinator = GameFrameReloadRequestCoordinator(
             requestIdFactory = { "request-1" },

@@ -48,6 +48,8 @@ import app.yahagi.kancollebrowser.browser.GameFrameRateManager
 import app.yahagi.kancollebrowser.browser.GameFrameRateBridge
 import app.yahagi.kancollebrowser.browser.GameFrameRateMode
 import app.yahagi.kancollebrowser.browser.AndroidGameFrameRateSystemConstraints
+import app.yahagi.kancollebrowser.browser.AndroidGameFrameReloadBridge
+import app.yahagi.kancollebrowser.browser.GameFrameReloadManager
 import app.yahagi.kancollebrowser.browser.GameResourceCacheEngine
 import app.yahagi.kancollebrowser.browser.GameResourceCacheIndex
 import app.yahagi.kancollebrowser.browser.GameResourceCacheMode
@@ -145,6 +147,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         const val SCREEN_AWAKE_CHANNEL = "app.yahagi.kancollebrowser/screen_awake"
         const val GAME_SCREENSHOT_CHANNEL = "app.yahagi.kancollebrowser/game_screenshot"
         const val GAME_FRAME_RATE_CHANNEL = "app.yahagi.kancollebrowser/game_frame_rate"
+        const val GAME_FRAME_RELOAD_CHANNEL = "app.yahagi.kancollebrowser/game_frame_reload"
         const val BATTLE_DAMAGE_ALERT_CHANNEL = "app.yahagi.kancollebrowser/battle_damage_alert"
         const val DIAGNOSTICS_CHANNEL = "app.yahagi.kancollebrowser/diagnostics"
         const val GAME_ENVIRONMENT_CHANNEL = "app.yahagi.kancollebrowser/game_environment"
@@ -158,6 +161,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     private var webViewProxyManager: WebViewProxyManager? = null
     private var gadgetBypassManager: GadgetBypassManager? = null
     private var gameFrameRateManager: GameFrameRateManager? = null
+    private var gameFrameReloadManager: GameFrameReloadManager? = null
     private var gameResourceCacheEngine: GameResourceCacheEngine? = null
     private var gameResourceCacheManager: GameResourceCacheManager? = null
     @Volatile
@@ -449,6 +453,15 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             flutterEngine.dartExecutor.binaryMessenger,
             GAME_FRAME_RATE_CHANNEL,
         ).setMethodCallHandler(frameRateManager)
+
+        val frameReloadManager = GameFrameReloadManager(
+            AndroidGameFrameReloadBridge(this),
+        )
+        gameFrameReloadManager = frameReloadManager
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            GAME_FRAME_RELOAD_CHANNEL,
+        ).setMethodCallHandler(frameReloadManager)
     }
 
     override fun onDestroy() {
@@ -476,6 +489,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         gameResourceCacheEngine = null
         gameFrameRateManager?.dispose()
         gameFrameRateManager = null
+        gameFrameReloadManager?.dispose()
+        gameFrameReloadManager = null
         diagnosticPlatformHandler?.dispose()
         diagnosticPlatformHandler = null
         fixedCanvasLayoutListener?.let { listener ->
