@@ -105,6 +105,7 @@ import 'src/settings/game_rendering_mode.dart';
 import 'src/senka/senka_controller.dart';
 import 'src/senka/senka_page.dart';
 import 'src/senka/senka_store.dart';
+import 'src/widgets/top_notice.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -559,43 +560,45 @@ class YahagiApp extends StatelessWidget {
             scaffoldBackgroundColor: const Color(0xff0a1823),
             useMaterial3: true,
           ),
-          home: StartupUpdateNotice(
-            checker: releaseChecker ?? GitHubReleaseChecker(),
-            currentVersion: currentVersion,
-            enabled: releaseChecker != null,
-            child: SecondTickScope(
-              child: YahagiShell(
-                layoutSettingsController: layoutSettingsController,
-                networkSettingsController: networkSettingsController,
-                gadgetBypassController: gadgetBypassController,
-                safetySettingsController: safetySettingsController,
-                battlePredictionSettingsController:
-                    battlePredictionSettingsController,
-                gameFrameRateSettingsController:
-                    gameFrameRateSettingsController,
-                gameRenderingModeController: gameRenderingModeController,
-                displayModeController: displayModeController,
-                controller: controller,
-                browserController: browserController,
-                captureModeController: captureModeController,
-                audioController: audioController,
-                toolbarController: toolbarController,
-                gameCaptureController: gameCaptureController,
-                gameStateController: gameStateController,
-                gameResourceCacheController: gameResourceCacheController,
-                senkaController: senkaController,
-                battleController: battleController,
-                fcdMapController: fcdMapController,
-                questCatalogController: questCatalogController,
-                improvementPlannerController: improvementPlannerController,
-                currentVersion: currentVersion,
-                releaseChecker: releaseChecker,
-                screenAwakeController: screenAwakeController,
-                toolbarDisplayController: toolbarDisplayController,
-                gameScreenshotController: gameScreenshotController,
-                showDeveloperDiagnostics: showDeveloperDiagnostics,
-                diagnosticController: diagnosticController,
-                gameSurface: _buildGameSurface(),
+          home: TopNoticeHost(
+            child: StartupUpdateNotice(
+              checker: releaseChecker ?? GitHubReleaseChecker(),
+              currentVersion: currentVersion,
+              enabled: releaseChecker != null,
+              child: SecondTickScope(
+                child: YahagiShell(
+                  layoutSettingsController: layoutSettingsController,
+                  networkSettingsController: networkSettingsController,
+                  gadgetBypassController: gadgetBypassController,
+                  safetySettingsController: safetySettingsController,
+                  battlePredictionSettingsController:
+                      battlePredictionSettingsController,
+                  gameFrameRateSettingsController:
+                      gameFrameRateSettingsController,
+                  gameRenderingModeController: gameRenderingModeController,
+                  displayModeController: displayModeController,
+                  controller: controller,
+                  browserController: browserController,
+                  captureModeController: captureModeController,
+                  audioController: audioController,
+                  toolbarController: toolbarController,
+                  gameCaptureController: gameCaptureController,
+                  gameStateController: gameStateController,
+                  gameResourceCacheController: gameResourceCacheController,
+                  senkaController: senkaController,
+                  battleController: battleController,
+                  fcdMapController: fcdMapController,
+                  questCatalogController: questCatalogController,
+                  improvementPlannerController: improvementPlannerController,
+                  currentVersion: currentVersion,
+                  releaseChecker: releaseChecker,
+                  screenAwakeController: screenAwakeController,
+                  toolbarDisplayController: toolbarDisplayController,
+                  gameScreenshotController: gameScreenshotController,
+                  showDeveloperDiagnostics: showDeveloperDiagnostics,
+                  diagnosticController: diagnosticController,
+                  gameSurface: _buildGameSurface(),
+                ),
               ),
             ),
           ),
