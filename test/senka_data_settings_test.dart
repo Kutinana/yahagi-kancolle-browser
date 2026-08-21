@@ -85,10 +85,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(senka.monthBaseSenka, 123.45);
-    expect(find.textContaining('123.45'), findsWidgets);
+    final setNotice = find.byKey(topNoticeKey);
+    expect(
+      find.descendant(of: setNotice, matching: find.text('本月累计素战果已设为 123.45')),
+      findsOneWidget,
+    );
+    expect(find.text('本月累计素战果已归零'), findsNothing);
     expect(
       find.descendant(
-        of: find.byKey(topNoticeKey),
+        of: setNotice,
         matching: find.byIcon(Icons.check_circle_outline_rounded),
       ),
       findsOneWidget,
