@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import '../fleet/anchorage_repair_calculator.dart';
 import '../fleet/nosaki_sparkle_calculator.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
@@ -17,12 +17,15 @@ class GameNotificationCoordinator {
     DateTime Function()? nowProvider,
     DateTime? Function()? anchorageRepairStartedAtProvider,
     DateTime? Function()? nosakiSparkleStartedAtProvider,
-  })  : _gameStateProvider = gameStateProvider ?? (() => gameStateController.state),
-        _now = nowProvider ?? DateTime.now,
-        _anchorageStartedAt = anchorageRepairStartedAtProvider ??
-            (() => gameStateController.anchorageRepairStartedAt),
-        _nosakiStartedAt = nosakiSparkleStartedAtProvider ??
-            (() => gameStateController.nosakiSparkleStartedAt);
+  }) : _gameStateProvider =
+           gameStateProvider ?? (() => gameStateController.state),
+       _now = nowProvider ?? DateTime.now,
+       _anchorageStartedAt =
+           anchorageRepairStartedAtProvider ??
+           (() => gameStateController.anchorageRepairStartedAt),
+       _nosakiStartedAt =
+           nosakiSparkleStartedAtProvider ??
+           (() => gameStateController.nosakiSparkleStartedAt);
 
   final GameStateController gameStateController;
   final NotificationSettingsController settingsController;
@@ -32,25 +35,16 @@ class GameNotificationCoordinator {
   final DateTime? Function() _anchorageStartedAt;
   final DateTime? Function() _nosakiStartedAt;
 
-  final Set<String> _activeAlarmKeys = <String>{};
-  Timer? _ongoingRefreshTimer;
   bool _disposed = false;
 
   void start() {
     gameStateController.addListener(_onStateOrSettingsChanged);
     settingsController.addListener(_onStateOrSettingsChanged);
     _onStateOrSettingsChanged();
-
-    _ongoingRefreshTimer?.cancel();
-    _ongoingRefreshTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) => _refreshOngoingProgress(),
-    );
   }
 
   void dispose() {
     _disposed = true;
-    _ongoingRefreshTimer?.cancel();
     gameStateController.removeListener(_onStateOrSettingsChanged);
     settingsController.removeListener(_onStateOrSettingsChanged);
   }
@@ -58,23 +52,27 @@ class GameNotificationCoordinator {
   void _onStateOrSettingsChanged() {
     if (_disposed) return;
     final settings = settingsController.settings;
-    if (!settings.master) {
-      _cancelAll();
-      return;
-    }
-    _syncScheduledAlarms();
-    _refreshOngoingProgress();
+    final snapshot = NotificationSnapshot(
+      updatedAt: _now(),
+      alarms: settings.master ? _buildScheduledAlarms() : const [],
+      ongoingItems: settings.master && settings.ongoingLive
+          ? _buildOngoingItems()
+          : const [],
+      presentation: NotificationPresentation(
+        enabled: settings.master,
+        sound: settings.sound,
+        vibration: settings.vibration,
+        showProgress: settings.showProgress,
+        showPercent: settings.showPercent,
+        showCountdown: settings.showCountdown,
+        ongoingLive: settings.ongoingLive,
+      ),
+    );
+    unawaited(notificationPort.applySnapshot(snapshot));
   }
 
-  void _cancelAll() {
-    _activeAlarmKeys.clear();
-    unawaited(notificationPort.cancelAllAlarms());
-    unawaited(notificationPort.cancelOngoingProgress());
-  }
-
-  void _syncScheduledAlarms() {
+  List<ScheduledNotificationItem> _buildScheduledAlarms() {
     final settings = settingsController.settings;
-    if (!settings.master) return;
 
     final state = _gameStateProvider();
     final now = _now();
@@ -103,10 +101,14 @@ class GameNotificationCoordinator {
               final key = 'expedition_${fleet.id}_preempt';
               desiredAlarms[key] = ScheduledNotificationItem(
                 key: key,
+                taskId: 'expedition:${fleet.id}',
                 type: GameNotificationType.expedition,
+                stage: NotificationAlarmStage.preempt,
+                removeTaskOnFire: false,
                 triggerTime: preemptTime,
                 title: '远征即将归还 · $fleetName',
-                body: '$missionName 还有 ${settings.expeditionPreemptSeconds} 秒返回母港，请做好迎接准备。',
+                body:
+                    '$missionName 还有 ${settings.expeditionPreemptSeconds} 秒返回母港，请做好迎接准备。',
               );
             }
           }
@@ -115,7 +117,10 @@ class GameNotificationCoordinator {
           final key = 'expedition_${fleet.id}_complete';
           desiredAlarms[key] = ScheduledNotificationItem(
             key: key,
+            taskId: 'expedition:${fleet.id}',
             type: GameNotificationType.expedition,
+            stage: NotificationAlarmStage.complete,
+            removeTaskOnFire: true,
             triggerTime: retTime,
             title: '远征完成 · $fleetName',
             body: '$missionName 已顺利返抵母港！',
@@ -132,7 +137,9 @@ class GameNotificationCoordinator {
             dock.completionTime!.isAfter(now)) {
           final compTime = dock.completionTime!;
           final ship = state.ships[dock.shipId];
-          final masterShip = ship != null ? state.masterShips[ship.masterId] : null;
+          final masterShip = ship != null
+              ? state.masterShips[ship.masterId]
+              : null;
           final shipName = masterShip?.name.isNotEmpty == true
               ? masterShip!.name
               : '舰船';
@@ -145,7 +152,10 @@ class GameNotificationCoordinator {
               final key = 'repair_${dock.id}_preempt';
               desiredAlarms[key] = ScheduledNotificationItem(
                 key: key,
+                taskId: 'repair:${dock.id}',
                 type: GameNotificationType.repair,
+                stage: NotificationAlarmStage.preempt,
+                removeTaskOnFire: false,
                 triggerTime: preemptTime,
                 title: '修复即将完成 · 船坞 #${dock.id}',
                 body: '$shipName 还有 ${settings.repairPreemptSeconds} 秒修理完毕。',
@@ -156,7 +166,10 @@ class GameNotificationCoordinator {
           final key = 'repair_${dock.id}_complete';
           desiredAlarms[key] = ScheduledNotificationItem(
             key: key,
+            taskId: 'repair:${dock.id}',
             type: GameNotificationType.repair,
+            stage: NotificationAlarmStage.complete,
+            removeTaskOnFire: true,
             triggerTime: compTime,
             title: '舰船修复完成 · 船坞 #${dock.id}',
             body: '$shipName 已经在船坞修理完毕，HP 已完全修满！',
@@ -185,7 +198,10 @@ class GameNotificationCoordinator {
           final key = 'construction_${dock.id}_complete';
           desiredAlarms[key] = ScheduledNotificationItem(
             key: key,
+            taskId: 'construction:${dock.id}',
             type: GameNotificationType.construction,
+            stage: NotificationAlarmStage.complete,
+            removeTaskOnFire: true,
             triggerTime: compTime,
             title: '建造完成 · 船坞 #${dock.id}',
             body: '$shipName 已在船坞建造完成！',
@@ -197,19 +213,60 @@ class GameNotificationCoordinator {
     // 4. Anchorage Repair
     if (settings.anchorage) {
       final ancStart = _anchorageStartedAt();
-      if (ancStart != null) {
+      final projection = ancStart == null
+          ? null
+          : AnchorageRepairCalculator.project(
+              state: state,
+              fleetId: 1,
+              elapsed: now.difference(ancStart),
+            );
+      final hasRepairTarget =
+          projection?.isReady == true &&
+          projection!.rows.any(
+            (row) => row.status == AnchorageRepairShipStatus.repairing,
+          );
+      if (ancStart != null && hasRepairTarget) {
         final twentyMinTime = ancStart.add(const Duration(minutes: 20));
         if (twentyMinTime.isAfter(now) &&
-            (settings.anchorageMode == AnchorageNotificationMode.twentyMinutes ||
+            (settings.anchorageMode ==
+                    AnchorageNotificationMode.twentyMinutes ||
                 settings.anchorageMode == AnchorageNotificationMode.both)) {
           const key = 'anchorage_1_20m';
           desiredAlarms[key] = ScheduledNotificationItem(
             key: key,
+            taskId: 'anchorage:1',
             type: GameNotificationType.anchorage,
+            stage: NotificationAlarmStage.milestone,
+            removeTaskOnFire: false,
             triggerTime: twentyMinTime,
             title: '泊地修理结算就绪 · 第1舰队',
             body: '明石泊地修理已满 20 分钟！可返回母港刷新以结算首轮回血。',
           );
+        }
+
+        if (settings.anchorageMode == AnchorageNotificationMode.allRepaired ||
+            settings.anchorageMode == AnchorageNotificationMode.both) {
+          var remaining = Duration.zero;
+          for (final row in projection.rows) {
+            if (row.status == AnchorageRepairShipStatus.repairing &&
+                row.remaining != null &&
+                row.remaining! > remaining) {
+              remaining = row.remaining!;
+            }
+          }
+          if (remaining > Duration.zero) {
+            const key = 'anchorage_1_all_repaired';
+            desiredAlarms[key] = ScheduledNotificationItem(
+              key: key,
+              taskId: 'anchorage:1',
+              type: GameNotificationType.anchorage,
+              stage: NotificationAlarmStage.complete,
+              removeTaskOnFire: true,
+              triggerTime: now.add(remaining),
+              title: '泊地修理预计完成 · 第1舰队',
+              body: '第1舰队可修理舰船预计已全部恢复。',
+            );
+          }
         }
       }
     }
@@ -247,7 +304,10 @@ class GameNotificationCoordinator {
             final key = 'morale_${fleet.id}_nosaki';
             desiredAlarms[key] = ScheduledNotificationItem(
               key: key,
+              taskId: 'morale:${fleet.id}',
               type: GameNotificationType.morale,
+              stage: NotificationAlarmStage.complete,
+              removeTaskOnFire: true,
               triggerTime: completeTime,
               title: '野崎刷闪完成 · $fleetName',
               body: '$fleetName 随伴舰已全部达到 54 闪。',
@@ -270,7 +330,10 @@ class GameNotificationCoordinator {
             final key = 'morale_${fleet.id}_normal';
             desiredAlarms[key] = ScheduledNotificationItem(
               key: key,
+              taskId: 'morale:${fleet.id}',
               type: GameNotificationType.morale,
+              stage: NotificationAlarmStage.complete,
+              removeTaskOnFire: true,
               triggerTime: completeTime,
               title: '疲劳恢复完毕 · $fleetName',
               body: '$fleetName 全队舰船士气已恢复至 49。',
@@ -280,27 +343,11 @@ class GameNotificationCoordinator {
       }
     }
 
-    // Cancel alarms that are no longer present
-    final keysToRemove = _activeAlarmKeys.difference(desiredAlarms.keys.toSet());
-    for (final key in keysToRemove) {
-      unawaited(notificationPort.cancelAlarm(key));
-    }
-    _activeAlarmKeys.removeAll(keysToRemove);
-
-    // Schedule new / updated alarms
-    for (final entry in desiredAlarms.entries) {
-      _activeAlarmKeys.add(entry.key);
-      unawaited(notificationPort.scheduleAlarm(entry.value));
-    }
+    return desiredAlarms.values.toList(growable: false);
   }
 
-  void _refreshOngoingProgress() {
-    if (_disposed) return;
+  List<OngoingTaskItem> _buildOngoingItems() {
     final settings = settingsController.settings;
-    if (!settings.master || !settings.ongoingLive) {
-      unawaited(notificationPort.cancelOngoingProgress());
-      return;
-    }
 
     final state = _gameStateProvider();
     final now = _now();
@@ -314,18 +361,20 @@ class GameNotificationCoordinator {
             mission.completionTime != null &&
             mission.completionTime!.isAfter(now)) {
           final masterMission = state.masterMissions[mission.missionId];
-          final totalSec = masterMission != null &&
-                  masterMission.duration.inSeconds > 0
+          final totalSec =
+              masterMission != null && masterMission.duration.inSeconds > 0
               ? masterMission.duration.inSeconds
               : 1800;
-          final remainingSec = mission.completionTime!.difference(now).inSeconds;
+          final remainingSec = mission.completionTime!
+              .difference(now)
+              .inSeconds;
           final progress = (1.0 - (remainingSec / totalSec)).clamp(0.0, 1.0);
           final formattedMission = masterMission?.name.isNotEmpty == true
               ? '远征 ${mission.missionId} · ${masterMission!.name}'
               : (mission.missionId > 0 ? '远征 ${mission.missionId}' : '远征');
           items.add(
             OngoingTaskItem(
-              id: 'exp_${fleet.id}',
+              id: 'expedition:${fleet.id}',
               type: GameNotificationType.expedition,
               title: '⚓ 第${fleet.id}舰队 · $formattedMission',
               progress: progress,
@@ -352,14 +401,15 @@ class GameNotificationCoordinator {
           final progress = totalSec > 0
               ? (1.0 - (remainingSec / totalSec)).clamp(0.0, 1.0)
               : 1.0;
-          final masterShip =
-              ship != null ? state.masterShips[ship.masterId] : null;
+          final masterShip = ship != null
+              ? state.masterShips[ship.masterId]
+              : null;
           final shipName = masterShip?.name.isNotEmpty == true
               ? masterShip!.name
               : '舰船';
           items.add(
             OngoingTaskItem(
-              id: 'repair_${dock.id}',
+              id: 'repair:${dock.id}',
               type: GameNotificationType.repair,
               title: '🔧 船坞 #${dock.id} · $shipName',
               progress: progress,
@@ -375,20 +425,50 @@ class GameNotificationCoordinator {
     // 3. Anchorage Repair
     if (settings.anchorage) {
       final ancStart = _anchorageStartedAt();
-      if (ancStart != null) {
+      final projection = ancStart == null
+          ? null
+          : AnchorageRepairCalculator.project(
+              state: state,
+              fleetId: 1,
+              elapsed: now.difference(ancStart),
+            );
+      final repairingRows = projection?.isReady == true
+          ? projection!.rows
+                .where(
+                  (row) => row.status == AnchorageRepairShipStatus.repairing,
+                )
+                .toList(growable: false)
+          : const <AnchorageRepairShipProjection>[];
+      if (ancStart != null && repairingRows.isNotEmpty) {
         final twentyMinTime = ancStart.add(const Duration(minutes: 20));
-        if (twentyMinTime.isAfter(now)) {
-          final remainingSec = twentyMinTime.difference(now).inSeconds;
-          final progress = (1.0 - (remainingSec / 1200)).clamp(0.0, 1.0);
+        var target = twentyMinTime;
+        var totalSeconds = 1200;
+        if (settings.anchorageMode != AnchorageNotificationMode.twentyMinutes) {
+          var remaining = Duration.zero;
+          for (final row in repairingRows) {
+            if (row.remaining != null && row.remaining! > remaining) {
+              remaining = row.remaining!;
+            }
+          }
+          if (remaining > Duration.zero) {
+            target = now.add(remaining);
+            totalSeconds = target.difference(ancStart).inSeconds;
+          }
+        }
+        if (target.isAfter(now)) {
+          final remainingSec = target.difference(now).inSeconds;
+          final progress = totalSeconds > 0
+              ? (1.0 - (remainingSec / totalSeconds)).clamp(0.0, 1.0)
+              : 0.0;
           items.add(
             OngoingTaskItem(
-              id: 'anc_1',
+              id: 'anchorage:1',
               type: GameNotificationType.anchorage,
               title: '⚓ 泊地修理 · 明石 (第1舰队)',
               progress: progress,
               remainingSeconds: remainingSec,
-              targetEpochMs: twentyMinTime.millisecondsSinceEpoch,
-              totalDurationSec: 1200,
+              targetEpochMs: target.millisecondsSinceEpoch,
+              totalDurationSec: totalSeconds,
             ),
           );
         }
@@ -411,7 +491,9 @@ class GameNotificationCoordinator {
           }
           int totalSec = 3600;
           if (dock.startedAt != null) {
-            final diff = dock.completionTime!.difference(dock.startedAt!).inSeconds;
+            final diff = dock.completionTime!
+                .difference(dock.startedAt!)
+                .inSeconds;
             if (diff > 0) totalSec = diff;
           } else if (master != null && master.buildTimeMinutes > 0) {
             totalSec = master.buildTimeMinutes * 60;
@@ -421,7 +503,7 @@ class GameNotificationCoordinator {
               : 1.0;
           items.add(
             OngoingTaskItem(
-              id: 'build_${dock.id}',
+              id: 'construction:${dock.id}',
               type: GameNotificationType.construction,
               title: '🔨 船坞 #${dock.id} · $shipName 建造中',
               progress: progress,
@@ -470,7 +552,7 @@ class GameNotificationCoordinator {
                 : 1.0;
             items.add(
               OngoingTaskItem(
-                id: 'morale_${fleet.id}',
+                id: 'morale:${fleet.id}',
                 type: GameNotificationType.morale,
                 title: '✨ 第${fleet.id}舰队 · 野崎刷闪 (→ 54闪)',
                 progress: progress,
@@ -494,12 +576,14 @@ class GameNotificationCoordinator {
             final progress = (minCond / 49.0).clamp(0.0, 1.0);
             items.add(
               OngoingTaskItem(
-                id: 'morale_${fleet.id}',
+                id: 'morale:${fleet.id}',
                 type: GameNotificationType.morale,
                 title: '✨ 第${fleet.id}舰队 · 疲劳恢复 (Cond $minCond/49)',
                 progress: progress,
                 remainingSeconds: remainingSec,
-                targetEpochMs: now.add(Duration(seconds: remainingSec)).millisecondsSinceEpoch,
+                targetEpochMs: now
+                    .add(Duration(seconds: remainingSec))
+                    .millisecondsSinceEpoch,
                 totalDurationSec: remainingSec,
               ),
             );
@@ -508,19 +592,6 @@ class GameNotificationCoordinator {
       }
     }
 
-    if (items.isEmpty) {
-      unawaited(notificationPort.cancelOngoingProgress());
-    } else {
-      unawaited(
-        notificationPort.updateOngoingProgress(
-          OngoingProgressSummary(
-            items: items,
-            showProgress: settings.showProgress,
-            showPercent: settings.showPercent,
-            showCountdown: settings.showCountdown,
-          ),
-        ),
-      );
-    }
+    return items;
   }
 }

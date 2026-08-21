@@ -21,6 +21,17 @@ class FakeNotificationPort implements NotificationPort {
     NotificationSnapshot snapshot,
   ) async {
     latestSnapshot = snapshot;
+    scheduledAlarms
+      ..clear()
+      ..addEntries(snapshot.alarms.map((alarm) => MapEntry(alarm.key, alarm)));
+    currentOngoingSummary = snapshot.ongoingItems.isEmpty
+        ? null
+        : OngoingProgressSummary(
+            items: snapshot.ongoingItems,
+            showProgress: snapshot.presentation.showProgress,
+            showPercent: snapshot.presentation.showPercent,
+            showCountdown: snapshot.presentation.showCountdown,
+          );
     return const NotificationApplyResult(
       scheduledExact: 0,
       scheduledInexact: 0,
@@ -78,6 +89,45 @@ class FakeNotificationPort implements NotificationPort {
 
   @override
   Future<bool> requestPermission() async => true;
+}
+
+GameState _anchorageState({bool akashiFlagship = true}) {
+  const akashiMaster = MasterShip(id: 182, name: '明石', shipTypeId: 19);
+  const escortMaster = MasterShip(id: 1, name: '护卫舰', shipTypeId: 2);
+  const akashi = OwnedShip(
+    id: 1,
+    masterId: 182,
+    level: 35,
+    currentHp: 39,
+    maxHp: 39,
+    condition: 49,
+    currentFuel: 50,
+    currentAmmo: 10,
+    slotIds: [],
+  );
+  const escort = OwnedShip(
+    id: 2,
+    masterId: 1,
+    level: 50,
+    currentHp: 20,
+    maxHp: 30,
+    condition: 49,
+    currentFuel: 15,
+    currentAmmo: 20,
+    slotIds: [],
+    repairDurationMilliseconds: 3_600_000,
+  );
+  return GameState.empty.copyWith(
+    masterShips: const {182: akashiMaster, 1: escortMaster},
+    ships: const {1: akashi, 2: escort},
+    fleets: [
+      Fleet(
+        id: 1,
+        name: '第1舰队',
+        shipIds: akashiFlagship ? const [1, 2] : const [2, 1],
+      ),
+    ],
+  );
 }
 
 void main() {
@@ -210,7 +260,10 @@ void main() {
         fakePort.scheduledAlarms.containsKey('repair_1_complete'),
         isFalse,
       );
-      expect(fakePort.canceledAlarms.contains('repair_1_complete'), isTrue);
+      expect(
+        fakePort.latestSnapshot?.alarms.map((item) => item.key),
+        isNot(contains('repair_1_complete')),
+      );
 
       coordinator.dispose();
     });
@@ -252,6 +305,7 @@ void main() {
 
     test('schedules anchorage repair 20m alarm when timer is active', () {
       final ancStarted = testNow.subtract(const Duration(minutes: 5));
+      testState = _anchorageState();
       final coordinator = GameNotificationCoordinator(
         gameStateController: gameStateController,
         settingsController: settingsController,
@@ -269,6 +323,68 @@ void main() {
 
       coordinator.dispose();
     });
+
+    test('drops anchorage task when Akashi is moved out of flagship', () {
+      final ancStarted = testNow.subtract(const Duration(minutes: 5));
+      testState = _anchorageState();
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+        anchorageRepairStartedAtProvider: () => ancStarted,
+      );
+      coordinator.start();
+
+      expect(
+        fakePort.latestSnapshot?.ongoingItems.map((item) => item.id),
+        contains('anchorage:1'),
+      );
+
+      testState = _anchorageState(akashiFlagship: false);
+      gameStateController.notifyListeners();
+
+      expect(
+        fakePort.latestSnapshot?.ongoingItems.map((item) => item.id),
+        isNot(contains('anchorage:1')),
+      );
+      expect(
+        fakePort.latestSnapshot?.alarms.map((alarm) => alarm.taskId),
+        isNot(contains('anchorage:1')),
+      );
+
+      coordinator.dispose();
+    });
+
+    test(
+      'all-repaired mode schedules the projected final repair deadline',
+      () async {
+        await settingsController.setAnchorageMode(
+          AnchorageNotificationMode.allRepaired,
+        );
+        final ancStarted = testNow.subtract(const Duration(minutes: 5));
+        testState = _anchorageState();
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+          anchorageRepairStartedAtProvider: () => ancStarted,
+        );
+        coordinator.start();
+
+        final alarm = fakePort.latestSnapshot?.alarms.singleWhere(
+          (item) => item.key == 'anchorage_1_all_repaired',
+        );
+        expect(alarm?.taskId, 'anchorage:1');
+        expect(alarm?.removeTaskOnFire, isTrue);
+        expect(alarm?.triggerTime.isAfter(testNow), isTrue);
+
+        coordinator.dispose();
+      },
+    );
 
     test(
       'cancels construction alarm and drops ongoing progress on fast build',
@@ -321,6 +437,8 @@ void main() {
           isFalse,
         );
         expect(fakePort.currentOngoingSummary, isNull);
+        expect(fakePort.latestSnapshot?.alarms, isEmpty);
+        expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
 
         coordinator.dispose();
       },
