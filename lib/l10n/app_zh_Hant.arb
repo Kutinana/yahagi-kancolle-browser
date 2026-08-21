@@ -634,5 +634,6 @@
   "reloadGame": "重新載入遊戲",
   "gameFrameNotFound": "尚未找到遊戲框架，請進入遊戲後重試。",
   "gameHtmlWrapNotFound": "尚未找到遊戲本體，請等待頁面載入後重試。",
-  "gameFrameReloadBlocked": "遊戲框架未能重新載入，請稍後重試。"
+  "gameFrameReloadBlocked": "遊戲框架未能重新載入，請稍後重試。",
+  "gameFrameReloadUnsupported": "目前裝置的 Android WebView 過舊，不支援向子框架注入指令碼。"
 }

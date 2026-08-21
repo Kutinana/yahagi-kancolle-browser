@@ -3535,6 +3535,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'游戏框架未能重新载入，请稍后重试。'**
   String get gameFrameReloadBlocked;
+
+  /// No description provided for @gameFrameReloadUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前设备的 Android WebView 太旧，不支持对子框架注入。'**
+  String get gameFrameReloadUnsupported;
 }
 
 class _AppLocalizationsDelegate

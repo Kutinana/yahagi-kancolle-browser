@@ -47,6 +47,8 @@ Future<void> showGameRefreshDialog({
               GameFrameReloadResult.htmlWrapNotFound =>
                 l10n.gameHtmlWrapNotFound,
               GameFrameReloadResult.blocked => l10n.gameFrameReloadBlocked,
+              GameFrameReloadResult.unsupported =>
+                l10n.gameFrameReloadUnsupported,
               GameFrameReloadResult.reloaded => '',
             };
             ScaffoldMessenger.of(

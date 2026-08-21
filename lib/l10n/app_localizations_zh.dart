@@ -1825,6 +1825,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameFrameReloadBlocked => '游戏框架未能重新载入，请稍后重试。';
+
+  @override
+  String get gameFrameReloadUnsupported =>
+      '当前设备的 Android WebView 太旧，不支持对子框架注入。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3649,4 +3653,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameFrameReloadBlocked => '遊戲框架未能重新載入，請稍後重試。';
+
+  @override
+  String get gameFrameReloadUnsupported =>
+      '目前裝置的 Android WebView 過舊，不支援向子框架注入指令碼。';
 }

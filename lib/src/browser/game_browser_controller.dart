@@ -12,6 +12,7 @@ enum GameFrameReloadResult {
   gameFrameNotFound,
   htmlWrapNotFound,
   blocked,
+  unsupported,
 }
 
 abstract interface class GameBrowserPort {

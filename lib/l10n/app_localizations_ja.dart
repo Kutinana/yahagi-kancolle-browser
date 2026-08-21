@@ -1840,4 +1840,8 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get gameFrameReloadBlocked =>
       'ゲームフレームを再読み込みできませんでした。しばらくしてから再試行してください。';
+
+  @override
+  String get gameFrameReloadUnsupported =>
+      '現在の端末の Android WebView は古いため、子フレームへのスクリプト注入に対応していません。';
 }
