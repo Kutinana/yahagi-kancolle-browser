@@ -84,20 +84,28 @@ object AppNotificationManager {
         val previous = loadSnapshot(context)
         val diff = NotificationSnapshotDiff.between(previous, next)
         val failures = mutableListOf<String>()
+        val failedScheduleKeys = mutableSetOf<String>()
         diff.cancelKeys.forEach { key ->
             runCatching { cancelAlarm(context, key) }
                 .onFailure { failures += "$key:cancel" }
         }
-        saveSnapshot(context, next)
 
         var exact = 0
         var inexact = 0
         diff.upsert.forEach { alarm ->
             runCatching {
                 if (scheduleAlarm(context, alarm, next.presentation)) exact++ else inexact++
-            }.onFailure { failures += "${alarm.key}:schedule" }
+            }.onFailure {
+                failures += "${alarm.key}:schedule"
+                failedScheduleKeys += alarm.key
+            }
         }
-        runCatching { updateOngoingProgress(context, next) }
+        val persisted = NotificationSnapshotRecovery.afterScheduleFailures(
+            next,
+            failedScheduleKeys,
+        )
+        saveSnapshot(context, persisted)
+        runCatching { updateOngoingProgress(context, persisted) }
             .onFailure { failures += "ongoing" }
         return mapOf(
             "scheduledExact" to exact,

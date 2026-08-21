@@ -80,6 +80,24 @@ class NotificationSnapshotTest {
         assertEquals(listOf(sharedAlarm), diff.upsert)
     }
 
+    @Test
+    fun `failed alarm schedules are omitted from the persisted snapshot so they retry`() {
+        val successful = alarm("successful", 200L)
+        val failed = alarm("failed", 300L)
+        val desired = snapshot(successful, sound = true, vibration = true).copy(
+            alarms = listOf(successful, failed),
+        )
+
+        val persisted = NotificationSnapshotRecovery.afterScheduleFailures(
+            desired,
+            setOf("failed"),
+        )
+        val retry = NotificationSnapshotDiff.between(persisted, desired)
+
+        assertEquals(listOf(successful), persisted.alarms)
+        assertEquals(listOf(failed), retry.upsert)
+    }
+
     private fun snapshot(
         alarm: NotificationAlarm,
         sound: Boolean,

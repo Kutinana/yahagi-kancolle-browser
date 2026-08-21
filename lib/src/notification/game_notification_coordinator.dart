@@ -242,7 +242,7 @@ class GameNotificationCoordinator {
 
     // 4. Anchorage Repair
     if (settings.anchorage) {
-      final ancStart = _anchorageStartedAt();
+      final ancStart = _anchorageStartFor(state);
       final projection = ancStart == null
           ? null
           : AnchorageRepairCalculator.project(
@@ -455,7 +455,7 @@ class GameNotificationCoordinator {
 
     // 3. Anchorage Repair
     if (settings.anchorage) {
-      final ancStart = _anchorageStartedAt();
+      final ancStart = _anchorageStartFor(state);
       final projection = ancStart == null
           ? null
           : AnchorageRepairCalculator.project(
@@ -627,5 +627,12 @@ class GameNotificationCoordinator {
     }
 
     return items;
+  }
+
+  DateTime? _anchorageStartFor(GameState state) {
+    final liveAnchor = _anchorageStartedAt();
+    if (liveAnchor != null) return liveAnchor;
+    if (!AnchorageRepairCalculator.hasReadyFleet(state)) return null;
+    return state.updatedAt;
   }
 }

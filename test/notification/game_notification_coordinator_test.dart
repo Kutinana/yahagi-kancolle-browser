@@ -282,6 +282,32 @@ void main() {
       coordinator.dispose();
     });
 
+    test(
+      'restores anchorage estimate from cached state after process restart',
+      () {
+        final cachedAt = testNow.subtract(const Duration(minutes: 5));
+        testState = _anchorageState().copyWith(updatedAt: cachedAt);
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+          anchorageRepairStartedAtProvider: () => null,
+        );
+        coordinator.start();
+
+        final alarm = fakePort.scheduledAlarms['anchorage_1_20m'];
+        expect(alarm?.triggerTime, cachedAt.add(const Duration(minutes: 20)));
+        expect(
+          fakePort.latestSnapshot?.ongoingItems.map((item) => item.id),
+          contains('anchorage:1'),
+        );
+
+        coordinator.dispose();
+      },
+    );
+
     test('drops anchorage task when Akashi is moved out of flagship', () {
       final ancStarted = testNow.subtract(const Duration(minutes: 5));
       testState = _anchorageState();

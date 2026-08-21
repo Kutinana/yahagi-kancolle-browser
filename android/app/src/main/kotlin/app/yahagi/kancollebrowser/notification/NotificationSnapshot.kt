@@ -94,6 +94,15 @@ object NotificationSnapshotDiff {
     }
 }
 
+object NotificationSnapshotRecovery {
+    fun afterScheduleFailures(
+        desired: NativeNotificationSnapshot,
+        failedKeys: Set<String>,
+    ): NativeNotificationSnapshot = desired.copy(
+        alarms = desired.alarms.filterNot { it.key in failedKeys },
+    )
+}
+
 object NotificationSnapshotCodec {
     fun fromMap(raw: Map<*, *>): NativeNotificationSnapshot {
         val alarms = raw.list("alarms").map { alarmRaw ->
