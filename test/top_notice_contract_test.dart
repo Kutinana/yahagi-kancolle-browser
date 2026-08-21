@@ -52,20 +52,162 @@ List<String> findForbiddenBottomNoticeUsages(Map<String, String> sources) {
       (a, b) =>
           a.key.replaceAll(r'\', '/').compareTo(b.key.replaceAll(r'\', '/')),
     );
-  final forbiddenIdentifier = RegExp(r'\b(?:SnackBar|ScaffoldMessenger)\b');
 
   for (final entry in entries) {
     final path = entry.key.replaceAll(r'\', '/');
     final lines = entry.value.split('\n');
-    for (var index = 0; index < lines.length; index++) {
-      final source = lines[index].replaceFirst(RegExp(r'\r$'), '');
-      if (forbiddenIdentifier.hasMatch(source)) {
-        violations.add('$path:${index + 1}:$source');
-      }
+    final lineNumbers =
+        _DartIdentifierScanner(entry.value)
+            .findForbiddenOffsets()
+            .map(
+              (offset) =>
+                  '\n'.allMatches(entry.value.substring(0, offset)).length + 1,
+            )
+            .toSet()
+            .toList()
+          ..sort();
+    for (final lineNumber in lineNumbers) {
+      violations.add('$path:$lineNumber: ${lines[lineNumber - 1].trim()}');
     }
   }
 
   return violations;
+}
+
+class _DartIdentifierScanner {
+  _DartIdentifierScanner(this.source);
+
+  static const forbiddenIdentifiers = <String>{
+    'SnackBar',
+    'ScaffoldMessenger',
+    'showSnackBar',
+    'hideCurrentSnackBar',
+  };
+
+  final String source;
+  final List<int> _forbiddenOffsets = <int>[];
+  var _index = 0;
+
+  List<int> findForbiddenOffsets() {
+    _scanCode();
+    return _forbiddenOffsets;
+  }
+
+  void _scanCode({bool stopAtClosingBrace = false}) {
+    while (_index < source.length) {
+      if (stopAtClosingBrace && source[_index] == '}') {
+        _index++;
+        return;
+      }
+      if (source.startsWith('//', _index)) {
+        _skipLineComment();
+      } else if (source.startsWith('/*', _index)) {
+        _skipBlockComment();
+      } else if (_isRawStringStart()) {
+        _index++;
+        _skipString(raw: true);
+      } else if (_isQuote(source[_index])) {
+        _skipString(raw: false);
+      } else if (_isIdentifierStart(source.codeUnitAt(_index))) {
+        _scanIdentifier();
+      } else if (source[_index] == '{') {
+        _index++;
+        _scanCode(stopAtClosingBrace: true);
+      } else {
+        _index++;
+      }
+    }
+  }
+
+  void _skipLineComment() {
+    final newline = source.indexOf('\n', _index + 2);
+    _index = newline < 0 ? source.length : newline + 1;
+  }
+
+  void _skipBlockComment() {
+    var depth = 1;
+    _index += 2;
+    while (_index < source.length && depth > 0) {
+      if (source.startsWith('/*', _index)) {
+        depth++;
+        _index += 2;
+      } else if (source.startsWith('*/', _index)) {
+        depth--;
+        _index += 2;
+      } else {
+        _index++;
+      }
+    }
+  }
+
+  void _skipString({required bool raw}) {
+    final quote = source[_index];
+    final tripleQuote = '$quote$quote$quote';
+    final delimiter = source.startsWith(tripleQuote, _index)
+        ? tripleQuote
+        : quote;
+    _index += delimiter.length;
+    while (_index < source.length) {
+      if (source.startsWith(delimiter, _index)) {
+        _index += delimiter.length;
+        return;
+      }
+      if (!raw && source[_index] == r'\') {
+        _index += _index + 1 < source.length ? 2 : 1;
+      } else if (!raw && source[_index] == r'$') {
+        _scanInterpolation();
+      } else {
+        _index++;
+      }
+    }
+  }
+
+  void _scanInterpolation() {
+    if (_index + 1 >= source.length) {
+      _index++;
+      return;
+    }
+    if (source[_index + 1] == '{') {
+      _index += 2;
+      _scanCode(stopAtClosingBrace: true);
+      return;
+    }
+    if (_isIdentifierStart(source.codeUnitAt(_index + 1))) {
+      _index++;
+      _scanIdentifier();
+      return;
+    }
+    _index++;
+  }
+
+  void _scanIdentifier() {
+    final start = _index;
+    _index++;
+    while (_index < source.length &&
+        _isIdentifierPart(source.codeUnitAt(_index))) {
+      _index++;
+    }
+    if (forbiddenIdentifiers.contains(source.substring(start, _index))) {
+      _forbiddenOffsets.add(start);
+    }
+  }
+
+  bool _isRawStringStart() =>
+      _index + 1 < source.length &&
+      (source[_index] == 'r' || source[_index] == 'R') &&
+      _isQuote(source[_index + 1]);
+
+  static bool _isQuote(String character) =>
+      character == "'" || character == '"';
+
+  static bool _isIdentifierStart(int character) =>
+      character == 0x5f ||
+      character == 0x24 ||
+      (character >= 0x41 && character <= 0x5a) ||
+      (character >= 0x61 && character <= 0x7a);
+
+  static bool _isIdentifierPart(int character) =>
+      _isIdentifierStart(character) || (character >= 0x30 && character <= 0x39);
 }
 
 void main() {
@@ -78,30 +220,77 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'Business source must use TopNotice.show instead of SnackBar or '
-          'ScaffoldMessenger.\n${violations.join('\n')}',
+          'Business source must use TopNotice.show instead of SnackBar, '
+          'ScaffoldMessenger, showSnackBar, or hideCurrentSnackBar.\n'
+          '${violations.join('\n')}',
     );
   });
 
-  test(
-    'bottom notice detector reports normalized locations in stable order',
-    () {
-      final violations = findForbiddenBottomNoticeUsages(<String, String>{
-        r'lib\src\z.dart': 'void z() { ScaffoldMessenger.of(context); }',
-        'lib/src/a.dart': '''
-void a() {
-  const notice = SnackBar(content: Text('message'));
-  TopNotice.show('allowed');
-}
-''',
-      });
+  test('collector recursively scans only business Dart sources', () {
+    final project = Directory.systemTemp.createTempSync('top_notice_contract_');
+    addTearDown(() {
+      if (project.existsSync()) {
+        project.deleteSync(recursive: true);
+      }
+    });
+    Directory('${project.path}/lib/src/nested').createSync(recursive: true);
+    Directory('${project.path}/test').createSync();
+    File('${project.path}/lib/main.dart').writeAsStringSync(
+      'void main() {\r\n'
+      "  final notice = SnackBar(content: Text('message'));\r\n"
+      '  messengerKey.currentState!.showSnackBar(notice);\r\n'
+      '  ScaffoldMessenger.of(context);\r\n'
+      '}\r\n',
+    );
+    File(
+      '${project.path}/lib/src/nested/feature.dart',
+    ).writeAsStringSync('void hide(key) {\n  key.hideCurrentSnackBar();\n}\n');
+    File('${project.path}/lib/src/ignored.txt').writeAsStringSync('SnackBar');
+    File(
+      '${project.path}/test/ignored_test.dart',
+    ).writeAsStringSync('SnackBar');
 
-      expect(violations, <String>[
-        "lib/src/a.dart:2:  const notice = SnackBar(content: Text('message'));",
-        'lib/src/z.dart:1:void z() { ScaffoldMessenger.of(context); }',
-      ]);
-    },
-  );
+    final sources = collectBusinessDartSources(project);
+    final violations = findForbiddenBottomNoticeUsages(sources);
+
+    expect(sources.keys, <String>[
+      'lib/main.dart',
+      'lib/src/nested/feature.dart',
+    ]);
+    expect(violations, <String>[
+      "lib/main.dart:2: final notice = SnackBar(content: Text('message'));",
+      'lib/main.dart:3: messengerKey.currentState!.showSnackBar(notice);',
+      'lib/main.dart:4: ScaffoldMessenger.of(context);',
+      'lib/src/nested/feature.dart:2: key.hideCurrentSnackBar();',
+    ]);
+  });
+
+  test('detector ignores comments and strings but scans interpolation code', () {
+    final source = <String>[
+      r'// SnackBar and showSnackBar are documentation.',
+      r'/* ScaffoldMessenger',
+      r'/* showSnackBar */ hideCurrentSnackBar',
+      r'*/',
+      r"const ordinary = 'SnackBar ScaffoldMessenger showSnackBar';",
+      r"const escaped = 'can\'t hideCurrentSnackBar';",
+      "const triple = '''SnackBar",
+      "ScaffoldMessenger''';",
+      r"const rawTriple = r'''showSnackBar",
+      "hideCurrentSnackBar''';",
+      r"const interpolated = '${messengerKey.showSnackBar(value)}';",
+      r"const shorthand = '$SnackBar';",
+    ].join('\r\n');
+
+    expect(
+      findForbiddenBottomNoticeUsages(<String, String>{
+        r'lib\src\strings.dart': source,
+      }),
+      <String>[
+        r"lib/src/strings.dart:11: const interpolated = '${messengerKey.showSnackBar(value)}';",
+        r"lib/src/strings.dart:12: const shorthand = '$SnackBar';",
+      ],
+    );
+  });
 
   test('app mounts exactly one TopNoticeHost at MaterialApp home', () {
     final source = File('lib/main.dart').readAsStringSync();
