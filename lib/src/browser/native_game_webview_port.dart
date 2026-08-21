@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
 import 'game_browser_controller.dart';
 import 'game_local_home.dart';
+import 'game_frame_reload_script.dart';
 import 'game_page_alignment_script.dart';
 import 'native_game_webview_contract.dart';
 import 'safe_page_address.dart';
@@ -241,6 +243,23 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
   Future<void> reload() => _invoke('reload');
 
   @override
+  Future<GameFrameReloadResult> reloadGameFrame() async {
+    final wireResult = await _invokeResult('reloadGameFrame', <String, Object?>{
+      'javascript': gameFrameReloadScript,
+    });
+    final decoded = _decodeJavaScriptResult(wireResult);
+    return switch (decoded) {
+      'reloaded' => GameFrameReloadResult.reloaded,
+      'game_frame_not_found' => GameFrameReloadResult.gameFrameNotFound,
+      'html_wrap_not_found' => GameFrameReloadResult.htmlWrapNotFound,
+      'blocked' => GameFrameReloadResult.blocked,
+      _ => throw const NativeGameWebViewSchemaException(
+        'reloadGameFrame returned an invalid result.',
+      ),
+    };
+  }
+
+  @override
   Future<bool> canGoBack() async {
     final result = await _invokeResult('canGoBack');
     if (result is! bool) {
@@ -367,9 +386,13 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
     });
   }
 
-  Future<Object?> _invokeResult(String method) async {
+  Future<Object?> _invokeResult(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) async {
     return _channel.invokeMethod<Object?>(method, <String, Object?>{
       'generationId': _requireGeneration(),
+      ...arguments,
     });
   }
 
@@ -386,6 +409,15 @@ final class MethodChannelNativeGameWebViewPort implements GameBrowserPort {
     if (_disposed) {
       throw StateError('Native WebView has been disposed.');
     }
+  }
+}
+
+Object? _decodeJavaScriptResult(Object? value) {
+  if (value is! String) return value;
+  try {
+    return jsonDecode(value);
+  } on FormatException {
+    return value;
   }
 }
 

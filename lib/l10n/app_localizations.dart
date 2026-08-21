@@ -3493,6 +3493,48 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'缓存操作未完成，请稍后重试。'**
   String get gameResourceCacheActionFailed;
+
+  /// No description provided for @confirmGameRefreshTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认刷新游戏？'**
+  String get confirmGameRefreshTitle;
+
+  /// No description provided for @gameRefreshDialogDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要刷新游戏吗？\n\n“刷新游戏页面”与浏览器刷新效果相同。\n“重新载入游戏”只重新载入游戏框架部分，通常更快，但可能导致猫袭或网络异常。请自行承担风险。'**
+  String get gameRefreshDialogDescription;
+
+  /// No description provided for @refreshGamePage.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新游戏页面'**
+  String get refreshGamePage;
+
+  /// No description provided for @reloadGame.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新载入游戏'**
+  String get reloadGame;
+
+  /// No description provided for @gameFrameNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未找到游戏框架，请进入游戏后重试。'**
+  String get gameFrameNotFound;
+
+  /// No description provided for @gameHtmlWrapNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未找到游戏本体，请等待页面载入后重试。'**
+  String get gameHtmlWrapNotFound;
+
+  /// No description provided for @gameFrameReloadBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'游戏框架未能重新载入，请稍后重试。'**
+  String get gameFrameReloadBlocked;
 }
 
 class _AppLocalizationsDelegate

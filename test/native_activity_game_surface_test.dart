@@ -2339,6 +2339,12 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   }
 
   @override
+  Future<GameFrameReloadResult> reloadGameFrame() async {
+    calls.add('reloadGameFrame');
+    return GameFrameReloadResult.reloaded;
+  }
+
+  @override
   Future<void> runJavaScript(String javascript) async {}
 
   @override
@@ -2433,6 +2439,10 @@ final class _RecordingBrowserPort implements GameBrowserPort {
 
   @override
   Future<void> reload() async => reloadCalls += 1;
+
+  @override
+  Future<GameFrameReloadResult> reloadGameFrame() async =>
+      GameFrameReloadResult.reloaded;
 
   @override
   Future<bool> canGoBack() async => false;

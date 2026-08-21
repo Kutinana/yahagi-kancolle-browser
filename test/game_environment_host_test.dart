@@ -672,6 +672,10 @@ final class _HotBrowserPort implements GameBrowserPort {
   Future<void> reload() async => reloadCalls += 1;
 
   @override
+  Future<GameFrameReloadResult> reloadGameFrame() async =>
+      GameFrameReloadResult.reloaded;
+
+  @override
   Future<bool> canGoBack() async => false;
 
   @override

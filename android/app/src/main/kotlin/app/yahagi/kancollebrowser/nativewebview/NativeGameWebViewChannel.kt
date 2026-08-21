@@ -25,6 +25,7 @@ internal interface NativeGameWebViewHostOperations {
     fun loadUri(uri: String)
     fun showLocalHome(html: String)
     fun reload()
+    fun reloadGameFrame(javascript: String, onComplete: (String?, Exception?) -> Unit)
     fun canGoBack(): Boolean
     fun goBack()
     fun runJavaScript(javascript: String)
@@ -64,6 +65,15 @@ internal class ActivityNativeGameWebViewHostOperations(
 
     override fun reload() {
         requireWebView().reload()
+    }
+
+    override fun reloadGameFrame(
+        javascript: String,
+        onComplete: (String?, Exception?) -> Unit,
+    ) {
+        requireWebView().evaluateJavascript(javascript) { result ->
+            onComplete(result, null)
+        }
     }
 
     override fun canGoBack(): Boolean = requireWebView().canGoBack()
@@ -592,6 +602,12 @@ internal class NativeGameWebViewChannel(
                     host.reload()
                     finishSuccess(binding, pending)
                 }
+                "reloadGameFrame" -> startReloadGameFrame(
+                    binding,
+                    pending,
+                    host,
+                    checkNotNull(parsed.text),
+                )
                 "canGoBack" -> finish(binding, pending) {
                     safeSuccess(pending.result, host.canGoBack())
                 }
@@ -666,6 +682,99 @@ internal class NativeGameWebViewChannel(
                     includeRebindCalls = false,
                 )
             }
+        }
+    }
+
+    private fun startReloadGameFrame(
+        binding: ActivityBinding,
+        pending: PendingCall,
+        host: NativeGameWebViewHostOperations,
+        javascript: String,
+    ) {
+        val version = ++asyncVersion
+        val attachmentId = binding.token.id
+        val weakChannel = WeakReference(this)
+        val weakPending = WeakReference(pending)
+        try {
+            binding.operationWatchdog = operationTimeoutScheduler.schedule(ASYNC_OPERATION_TIMEOUT_MS) {
+                val activePending = weakPending.get() ?: return@schedule
+                weakChannel.get()?.onReloadGameFrameWatchdog(version, attachmentId, activePending)
+            }
+            host.reloadGameFrame(javascript) { result, error ->
+                val activePending = weakPending.get() ?: return@reloadGameFrame
+                weakChannel.get()?.onReloadGameFrameComplete(
+                    version,
+                    attachmentId,
+                    activePending,
+                    result,
+                    error,
+                )
+            }
+        } catch (error: Exception) {
+            binding.operationWatchdog?.cancel()
+            binding.operationWatchdog = null
+            finish(binding, pending) {
+                safeError(
+                    pending.result,
+                    HOST_ERROR,
+                    error.message ?: "Unable to reload the game frame.",
+                )
+            }
+        }
+    }
+
+    private fun onReloadGameFrameComplete(
+        version: Long,
+        attachmentId: Long,
+        pending: PendingCall,
+        result: String?,
+        error: Exception?,
+    ) {
+        if (!pending.asyncCompletionClaimed.compareAndSet(false, true)) return
+        val binding = activityBinding ?: return
+        if (
+            version != asyncVersion ||
+            binding.token.id != attachmentId ||
+            binding.detaching ||
+            binding.unavailable != null ||
+            pending.terminal.get()
+        ) {
+            return
+        }
+        finish(binding, pending) {
+            if (error == null && result != null) {
+                safeSuccess(pending.result, result)
+            } else {
+                safeError(
+                    pending.result,
+                    HOST_ERROR,
+                    error?.message ?: "Game frame reload returned no result.",
+                )
+            }
+        }
+    }
+
+    private fun onReloadGameFrameWatchdog(
+        version: Long,
+        attachmentId: Long,
+        pending: PendingCall,
+    ) {
+        if (!pending.asyncCompletionClaimed.compareAndSet(false, true)) return
+        val binding = activityBinding ?: return
+        if (
+            version != asyncVersion ||
+            binding.token.id != attachmentId ||
+            binding.detaching ||
+            pending.terminal.get()
+        ) {
+            return
+        }
+        finish(binding, pending) {
+            safeError(
+                pending.result,
+                HOST_ERROR,
+                "Game frame reload timed out.",
+            )
         }
     }
 
@@ -814,7 +923,7 @@ internal class NativeGameWebViewChannel(
                 if (html.length > MAX_LOCAL_HOME_LENGTH) invalid("html is too large")
                 ParsedCall(call.method, requireGeneration(arguments), text = html)
             }
-            "runJavaScript" -> {
+            "runJavaScript", "reloadGameFrame" -> {
                 requireExactKeys(arguments, setOf("generationId", "javascript"))
                 val javascript = arguments["javascript"] as? String ?: invalid("javascript must be a string")
                 ParsedCall(call.method, requireGeneration(arguments), text = javascript)
@@ -1042,6 +1151,7 @@ internal class NativeGameWebViewChannel(
             "loadUri",
             "showLocalHome",
             "reload",
+            "reloadGameFrame",
             "canGoBack",
             "goBack",
             "runJavaScript",
@@ -1058,6 +1168,7 @@ internal class NativeGameWebViewChannel(
         const val CREATE_FAILED = "native_webview_create_failed"
         const val ACTIVITY_DESTROYED = "activity_destroyed"
         const val CLEAR_SESSION_TIMEOUT_MS = 10_000L
+        const val ASYNC_OPERATION_TIMEOUT_MS = 10_000L
         const val MAX_LOCAL_HOME_LENGTH = 64 * 1024
         const val MAX_FIT_SCRIPT_LENGTH = 64 * 1024
 

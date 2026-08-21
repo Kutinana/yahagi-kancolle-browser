@@ -627,5 +627,12 @@
   "gameResourceCacheClearConfirmTitle": "清除游戏资源缓存？",
   "gameResourceCacheClearConfirmDesc": "将删除已下载的游戏资源；模式设置会保留。",
   "gameResourceCacheCapacityBlocked": "可用存储空间不足，或本地游戏资源缓存已达到 50 GB 上限。",
-  "gameResourceCacheActionFailed": "缓存操作未完成，请稍后重试。"
+  "gameResourceCacheActionFailed": "缓存操作未完成，请稍后重试。",
+  "confirmGameRefreshTitle": "确认刷新游戏？",
+  "gameRefreshDialogDescription": "确定要刷新游戏吗？\n\n“刷新游戏页面”与浏览器刷新效果相同。\n“重新载入游戏”只重新载入游戏框架部分，通常更快，但可能导致猫袭或网络异常。请自行承担风险。",
+  "refreshGamePage": "刷新游戏页面",
+  "reloadGame": "重新载入游戏",
+  "gameFrameNotFound": "尚未找到游戏框架，请进入游戏后重试。",
+  "gameHtmlWrapNotFound": "尚未找到游戏本体，请等待页面载入后重试。",
+  "gameFrameReloadBlocked": "游戏框架未能重新载入，请稍后重试。"
 }

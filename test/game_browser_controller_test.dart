@@ -107,6 +107,54 @@ void main() {
     await Future.wait(<Future<void>>[first, second]);
   });
 
+  test(
+    'reload game frame delegates without refreshing the full page',
+    () async {
+      final port = FakeGameBrowserPort();
+      final controller = GameBrowserController(port: port);
+
+      final result = await controller.reloadGameFrame();
+
+      expect(result, GameFrameReloadResult.reloaded);
+      expect(port.reloadGameFrameCalls, 1);
+      expect(port.reloadCalls, 0);
+    },
+  );
+
+  test('coalesces rapid game frame reload taps', () async {
+    final port = FakeGameBrowserPort()
+      ..reloadGameFrameCompleter = Completer<GameFrameReloadResult>();
+    final controller = GameBrowserController(port: port);
+
+    final first = controller.reloadGameFrame();
+    final second = controller.reloadGameFrame();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(port.reloadGameFrameCalls, 1);
+    port.reloadGameFrameCompleter!.complete(GameFrameReloadResult.reloaded);
+    expect(
+      await Future.wait(<Future<GameFrameReloadResult>>[first, second]),
+      everyElement(GameFrameReloadResult.reloaded),
+    );
+  });
+
+  test('a replacement port can reload its game frame immediately', () async {
+    final first = FakeGameBrowserPort()
+      ..reloadGameFrameCompleter = Completer<GameFrameReloadResult>();
+    final second = FakeGameBrowserPort();
+    final controller = GameBrowserController(port: first);
+
+    final oldReload = controller.reloadGameFrame();
+    await Future<void>.delayed(Duration.zero);
+    controller.attachPort(second);
+    final replacementReload = controller.reloadGameFrame();
+
+    expect(await replacementReload, GameFrameReloadResult.reloaded);
+    expect(second.reloadGameFrameCalls, 1);
+    first.reloadGameFrameCompleter!.complete(GameFrameReloadResult.reloaded);
+    expect(await oldReload, GameFrameReloadResult.reloaded);
+  });
+
   test('logout clears the WebView session before loading DMM login', () async {
     final port = FakeGameBrowserPort();
     final controller = GameBrowserController(port: port);
@@ -188,10 +236,12 @@ final class FakeGameBrowserPort implements GameBrowserPort {
   final List<Uri> loadedUris = [];
   var showLocalHomeCalls = 0;
   var reloadCalls = 0;
+  var reloadGameFrameCalls = 0;
   var goBackCalls = 0;
   var clearSessionCalls = 0;
   var fitGameScreenCalls = 0;
   Completer<void>? reloadCompleter;
+  Completer<GameFrameReloadResult>? reloadGameFrameCompleter;
 
   @override
   Future<bool> canGoBack() async => canGoBackResult;
@@ -210,6 +260,13 @@ final class FakeGameBrowserPort implements GameBrowserPort {
   Future<void> reload() async {
     reloadCalls++;
     await reloadCompleter?.future;
+  }
+
+  @override
+  Future<GameFrameReloadResult> reloadGameFrame() async {
+    reloadGameFrameCalls++;
+    return await reloadGameFrameCompleter?.future ??
+        GameFrameReloadResult.reloaded;
   }
 
   @override

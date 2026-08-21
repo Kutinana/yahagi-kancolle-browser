@@ -11,6 +11,7 @@ import 'audio/game_audio_port.dart';
 import 'bridge/native_game_capture_script.dart';
 import 'browser/game_browser_controller.dart';
 import 'browser/game_frame_rate_port.dart';
+import 'browser/game_frame_reload_script.dart';
 import 'browser/game_frame_rate_policy.dart';
 import 'browser/game_frame_rate_runtime_controller.dart';
 import 'browser/game_local_home.dart';
@@ -1429,6 +1430,19 @@ final class WebViewGameBrowserPort implements GameBrowserPort {
 
   @override
   Future<void> reload() => controller.reload();
+
+  @override
+  Future<GameFrameReloadResult> reloadGameFrame() async {
+    final result = await controller.runJavaScriptReturningResult(
+      gameFrameReloadScript,
+    );
+    return switch (result) {
+      'reloaded' => GameFrameReloadResult.reloaded,
+      'game_frame_not_found' => GameFrameReloadResult.gameFrameNotFound,
+      'html_wrap_not_found' => GameFrameReloadResult.htmlWrapNotFound,
+      _ => GameFrameReloadResult.blocked,
+    };
+  }
 
   @override
   Future<void> showLocalHome() => controller.loadHtmlString(localHomeHtml);

@@ -627,5 +627,12 @@
   "gameResourceCacheClearConfirmTitle": "清除遊戲資源快取？",
   "gameResourceCacheClearConfirmDesc": "將刪除已下載的遊戲資源；模式設定會保留。",
   "gameResourceCacheCapacityBlocked": "可用儲存空間不足，或本機遊戲資源快取已達 50 GB 上限。",
-  "gameResourceCacheActionFailed": "快取操作未完成，請稍後重試。"
+  "gameResourceCacheActionFailed": "快取操作未完成，請稍後重試。",
+  "confirmGameRefreshTitle": "確定要重新整理遊戲嗎？",
+  "gameRefreshDialogDescription": "確定要重新整理遊戲嗎？\n\n「重新整理遊戲頁面」與瀏覽器重新整理效果相同。\n「重新載入遊戲」只重新載入遊戲框架部分，通常更快，但可能導致貓襲或網路異常。請自行承擔風險。",
+  "refreshGamePage": "重新整理遊戲頁面",
+  "reloadGame": "重新載入遊戲",
+  "gameFrameNotFound": "尚未找到遊戲框架，請進入遊戲後重試。",
+  "gameHtmlWrapNotFound": "尚未找到遊戲本體，請等待頁面載入後重試。",
+  "gameFrameReloadBlocked": "遊戲框架未能重新載入，請稍後重試。"
 }

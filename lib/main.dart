@@ -25,6 +25,7 @@ import 'src/browser/gadget_bypass_controller.dart';
 import 'src/browser/gadget_bypass_store.dart';
 import 'src/browser/game_browser_overlay.dart';
 import 'src/browser/game_browser_toolbar.dart';
+import 'src/browser/game_refresh_dialog.dart';
 import 'src/browser/game_toolbar_controller.dart';
 import 'src/browser/game_toolbar_display_controller.dart';
 import 'src/browser/game_screenshot_controller.dart';
@@ -890,7 +891,11 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         },
         onReload: () async {
           widget.toolbarController.resetAutoHide();
-          await widget.browserController.reload();
+          await showGameRefreshDialog(
+            context: context,
+            onRefreshPage: widget.browserController.reload,
+            onReloadGame: widget.browserController.reloadGameFrame,
+          );
         },
         onHome: () async {
           widget.toolbarController.resetAutoHide();

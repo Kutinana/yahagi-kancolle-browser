@@ -1803,6 +1803,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameResourceCacheActionFailed => '缓存操作未完成，请稍后重试。';
+
+  @override
+  String get confirmGameRefreshTitle => '确认刷新游戏？';
+
+  @override
+  String get gameRefreshDialogDescription =>
+      '确定要刷新游戏吗？\n\n“刷新游戏页面”与浏览器刷新效果相同。\n“重新载入游戏”只重新载入游戏框架部分，通常更快，但可能导致猫袭或网络异常。请自行承担风险。';
+
+  @override
+  String get refreshGamePage => '刷新游戏页面';
+
+  @override
+  String get reloadGame => '重新载入游戏';
+
+  @override
+  String get gameFrameNotFound => '尚未找到游戏框架，请进入游戏后重试。';
+
+  @override
+  String get gameHtmlWrapNotFound => '尚未找到游戏本体，请等待页面载入后重试。';
+
+  @override
+  String get gameFrameReloadBlocked => '游戏框架未能重新载入，请稍后重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3605,4 +3627,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameResourceCacheActionFailed => '快取操作未完成，請稍後重試。';
+
+  @override
+  String get confirmGameRefreshTitle => '確定要重新整理遊戲嗎？';
+
+  @override
+  String get gameRefreshDialogDescription =>
+      '確定要重新整理遊戲嗎？\n\n「重新整理遊戲頁面」與瀏覽器重新整理效果相同。\n「重新載入遊戲」只重新載入遊戲框架部分，通常更快，但可能導致貓襲或網路異常。請自行承擔風險。';
+
+  @override
+  String get refreshGamePage => '重新整理遊戲頁面';
+
+  @override
+  String get reloadGame => '重新載入遊戲';
+
+  @override
+  String get gameFrameNotFound => '尚未找到遊戲框架，請進入遊戲後重試。';
+
+  @override
+  String get gameHtmlWrapNotFound => '尚未找到遊戲本體，請等待頁面載入後重試。';
+
+  @override
+  String get gameFrameReloadBlocked => '遊戲框架未能重新載入，請稍後重試。';
 }

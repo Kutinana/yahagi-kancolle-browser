@@ -1259,6 +1259,10 @@ final class _NoopBrowserPort implements GameBrowserPort {
   Future<void> reload() async {}
 
   @override
+  Future<GameFrameReloadResult> reloadGameFrame() async =>
+      GameFrameReloadResult.reloaded;
+
+  @override
   Future<void> showLocalHome() async {}
 
   @override

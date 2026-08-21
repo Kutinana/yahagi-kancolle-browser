@@ -1817,4 +1817,27 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get gameResourceCacheActionFailed =>
       'キャッシュ操作を完了できませんでした。しばらくしてからお試しください。';
+
+  @override
+  String get confirmGameRefreshTitle => 'ゲームを更新しますか？';
+
+  @override
+  String get gameRefreshDialogDescription =>
+      'ゲームを更新しますか？\n\n「ゲームページを更新」はブラウザーの更新と同じです。\n「ゲームを再読み込み」はゲームフレームだけを再読み込みするため通常は高速ですが、猫や通信エラーが発生する可能性があります。自己責任で使用してください。';
+
+  @override
+  String get refreshGamePage => 'ゲームページを更新';
+
+  @override
+  String get reloadGame => 'ゲームを再読み込み';
+
+  @override
+  String get gameFrameNotFound => 'ゲームフレームが見つかりません。ゲームに入ってから再試行してください。';
+
+  @override
+  String get gameHtmlWrapNotFound => 'ゲーム本体が見つかりません。読み込みを待ってから再試行してください。';
+
+  @override
+  String get gameFrameReloadBlocked =>
+      'ゲームフレームを再読み込みできませんでした。しばらくしてから再試行してください。';
 }

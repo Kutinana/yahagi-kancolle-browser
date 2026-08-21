@@ -7,12 +7,21 @@ enum GameBrowserMode { localPrototype, realWeb }
 
 enum GamePageLoadState { idle, loading, ready, failed }
 
+enum GameFrameReloadResult {
+  reloaded,
+  gameFrameNotFound,
+  htmlWrapNotFound,
+  blocked,
+}
+
 abstract interface class GameBrowserPort {
   Future<void> loadUri(Uri uri);
 
   Future<void> showLocalHome();
 
   Future<void> reload();
+
+  Future<GameFrameReloadResult> reloadGameFrame();
 
   Future<bool> canGoBack();
 
@@ -41,6 +50,7 @@ final class GameBrowserController extends ChangeNotifier {
   String _displayAddress = GameLaunchConfig.dmmGameEntry.toString();
   String? _errorMessage;
   Future<void>? _reloadInFlight;
+  Future<GameFrameReloadResult>? _gameFrameReloadInFlight;
 
   GameBrowserMode get mode => _mode;
   GamePageLoadState get loadState => _loadState;
@@ -53,12 +63,14 @@ final class GameBrowserController extends ChangeNotifier {
     }
     _port = port;
     _reloadInFlight = null;
+    _gameFrameReloadInFlight = null;
   }
 
   void detachPort(GameBrowserPort port) {
     if (identical(_port, port)) {
       _port = null;
       _reloadInFlight = null;
+      _gameFrameReloadInFlight = null;
     }
   }
 
@@ -92,6 +104,26 @@ final class GameBrowserController extends ChangeNotifier {
         if (identical(_reloadInFlight, pending)) {
           _reloadInFlight = null;
         }
+      }
+    }
+  }
+
+  Future<GameFrameReloadResult> reloadGameFrame() async {
+    final inFlight = _gameFrameReloadInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+    final port = _readyPort();
+    if (port == null) {
+      return GameFrameReloadResult.blocked;
+    }
+    final pending = port.reloadGameFrame();
+    _gameFrameReloadInFlight = pending;
+    try {
+      return await pending;
+    } finally {
+      if (identical(_gameFrameReloadInFlight, pending)) {
+        _gameFrameReloadInFlight = null;
       }
     }
   }

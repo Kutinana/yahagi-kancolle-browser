@@ -87,6 +87,10 @@ final class MethodChannelNativeActivityGameWebViewPort
   Future<void> reload() => _delegate.reload();
 
   @override
+  Future<GameFrameReloadResult> reloadGameFrame() =>
+      _delegate.reloadGameFrame();
+
+  @override
   Future<bool> canGoBack() => _delegate.canGoBack();
 
   @override
@@ -140,6 +144,9 @@ final class _BoundsRecoveringNativeActivityGameWebViewPort
 
   @override
   Future<void> reload() => delegate.reload();
+
+  @override
+  Future<GameFrameReloadResult> reloadGameFrame() => delegate.reloadGameFrame();
 
   @override
   Future<bool> canGoBack() => delegate.canGoBack();
