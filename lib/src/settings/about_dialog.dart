@@ -77,7 +77,7 @@ class AboutContentWidget extends StatelessWidget {
         lookupAppLocalizations(const Locale('zh'));
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
             Text(
@@ -129,7 +129,7 @@ class AboutContentWidget extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
               l10n.later,
               style: const TextStyle(color: Color(0xff8197a5)),
@@ -137,7 +137,7 @@ class AboutContentWidget extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
               await _openExternalUrl(context, Uri.parse(htmlUrl));
             },
             child: Text(
