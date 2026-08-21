@@ -20,6 +20,7 @@ import android.os.Environment
 import android.os.SystemClock
 import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -87,6 +88,7 @@ import java.util.Locale
 
 class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateManager.Host,
     DiagnosticExportDirectoryHost {
+    private var pendingNotificationPermissionResult: MethodChannel.Result? = null
     @Suppress("DEPRECATION")
     override fun getFlutterShellArgs(): FlutterShellArgs {
         val shellArgs = super.getFlutterShellArgs()
@@ -394,73 +396,72 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             NOTIFICATION_CHANNEL,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
-                "scheduleAlarm" -> {
-                    val key = call.argument<String>("key")
-                    val channelId = call.argument<String>("channelId") ?: "channel_expedition"
-                    val triggerTime = call.argument<Number>("triggerTimeEpochMs")?.toLong()
-                    val title = call.argument<String>("title") ?: "矢矧通知"
-                    val body = call.argument<String>("body") ?: ""
-                    if (key != null && triggerTime != null) {
-                        AppNotificationManager.scheduleAlarm(
+                "applySnapshot" -> {
+                    val snapshot = call.arguments as? Map<*, *>
+                    if (snapshot == null) {
+                        result.error("invalid_argument", "notification snapshot required", null)
+                    } else {
+                        runCatching { AppNotificationManager.applySnapshot(this, snapshot) }
+                            .onSuccess(result::success)
+                            .onFailure {
+                                result.error("apply_failed", it.message, it.javaClass.simpleName)
+                            }
+                    }
+                }
+                "getCapabilities" -> {
+                    val notificationsGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                        ContextCompat.checkSelfPermission(
                             this,
-                            key,
-                            channelId,
-                            triggerTime,
-                            title,
-                            body,
-                        )
-                        result.success(null)
-                    } else {
-                        result.error("invalid_argument", "key and triggerTimeEpochMs required", null)
-                    }
-                }
-                "cancelAlarm" -> {
-                    val key = call.argument<String>("key")
-                    if (key != null) {
-                        AppNotificationManager.cancelAlarm(this, key)
-                        result.success(null)
-                    } else {
-                        result.error("invalid_argument", "key required", null)
-                    }
-                }
-                "cancelAllAlarms" -> {
-                    result.success(null)
-                }
-                "updateOngoingProgress" -> {
-                    val items = call.argument<List<Map<String, Any>>>("items") ?: emptyList()
-                    val showProgress = call.argument<Boolean>("showProgress") ?: true
-                    val showPercent = call.argument<Boolean>("showPercent") ?: true
-                    val showCountdown = call.argument<Boolean>("showCountdown") ?: true
-                    AppNotificationManager.updateOngoingProgress(
-                        this,
-                        items,
-                        showProgress,
-                        showPercent,
-                        showCountdown,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) == PackageManager.PERMISSION_GRANTED
+                    result.success(
+                        mapOf(
+                            "notificationsGranted" to notificationsGranted,
+                            "exactAlarmsGranted" to AppNotificationManager.canScheduleExactAlarms(this),
+                            "channelsEnabled" to AppNotificationManager.channelsEnabled(this),
+                        ),
                     )
-                    result.success(null)
                 }
-                "cancelOngoingProgress" -> {
-                    AppNotificationManager.cancelOngoingProgress(this)
-                    result.success(null)
-                }
-                "requestPermission" -> {
+                "requestNotificationPermission" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         val hasPermission = ContextCompat.checkSelfPermission(
                             this,
                             Manifest.permission.POST_NOTIFICATIONS,
                         ) == PackageManager.PERMISSION_GRANTED
-                        if (!hasPermission) {
+                        if (hasPermission) {
+                            result.success(true)
+                        } else if (pendingNotificationPermissionResult != null) {
+                            result.error("request_in_progress", "notification permission request already active", null)
+                        } else {
+                            pendingNotificationPermissionResult = result
                             ActivityCompat.requestPermissions(
                                 this,
                                 arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                                 1001,
                             )
                         }
-                        result.success(hasPermission)
                     } else {
                         result.success(true)
                     }
+                }
+                "requestExactAlarmPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        startActivity(
+                            Intent(
+                                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                Uri.parse("package:$packageName"),
+                            ),
+                        )
+                    }
+                    result.success(null)
+                }
+                "openSystemNotificationSettings" -> {
+                    startActivity(
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                        },
+                    )
+                    result.success(null)
                 }
                 else -> result.notImplemented()
             }
@@ -739,6 +740,13 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001) {
+            pendingNotificationPermissionResult?.success(
+                grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED,
+            )
+            pendingNotificationPermissionResult = null
+            return
+        }
         if (requestCode != SCREENSHOT_PERMISSION_REQUEST) return
 
         val result = pendingScreenshotResult ?: return
