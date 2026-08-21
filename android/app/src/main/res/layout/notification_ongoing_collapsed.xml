@@ -16,11 +16,11 @@
 
         <TextView
             android:id="@+id/notif_collapsed_title"
+            style="@style/TextAppearance.Compat.Notification.Title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="⚓ 任务进行中"
-            android:textColor="?android:attr/textColorPrimary"
             android:textSize="13sp"
             android:textStyle="bold"
             android:maxLines="1"
@@ -28,11 +28,11 @@
 
         <Chronometer
             android:id="@+id/notif_collapsed_stats"
+            style="@style/TextAppearance.Compat.Notification.Info"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="53% 00:00:14"
-            android:textColor="?android:attr/textColorPrimary"
             android:textSize="12sp"
             android:textStyle="bold" />
     </LinearLayout>
