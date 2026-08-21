@@ -14,6 +14,30 @@ enum OngoingTaskState { running, settlementReady, completed }
 
 enum OngoingClockMode { countdown, elapsed }
 
+class ImmediateNotificationItem {
+  const ImmediateNotificationItem({
+    required this.key,
+    required this.type,
+    required this.occurredAt,
+    required this.title,
+    required this.body,
+  });
+
+  final String key;
+  final GameNotificationType type;
+  final DateTime occurredAt;
+  final String title;
+  final String body;
+
+  Map<String, Object?> toMap() => {
+    'key': key,
+    'type': type.name,
+    'occurredAtEpochMs': occurredAt.millisecondsSinceEpoch,
+    'title': title,
+    'body': body,
+  };
+}
+
 class ScheduledNotificationItem {
   const ScheduledNotificationItem({
     required this.key,
@@ -120,6 +144,7 @@ class NotificationSnapshot {
   const NotificationSnapshot({
     this.schemaVersion = 1,
     required this.updatedAt,
+    this.immediateAlerts = const [],
     required this.alarms,
     required this.ongoingItems,
     required this.presentation,
@@ -127,6 +152,7 @@ class NotificationSnapshot {
 
   final int schemaVersion;
   final DateTime updatedAt;
+  final List<ImmediateNotificationItem> immediateAlerts;
   final List<ScheduledNotificationItem> alarms;
   final List<OngoingTaskItem> ongoingItems;
   final NotificationPresentation presentation;
@@ -134,6 +160,7 @@ class NotificationSnapshot {
   Map<String, Object?> toMap() => {
     'schemaVersion': schemaVersion,
     'updatedAtEpochMs': updatedAt.millisecondsSinceEpoch,
+    'immediateAlerts': immediateAlerts.map((item) => item.toMap()).toList(),
     'alarms': alarms.map((item) => item.toMap()).toList(),
     'ongoingItems': ongoingItems.map((item) => item.toMap()).toList(),
     'presentation': presentation.toMap(),

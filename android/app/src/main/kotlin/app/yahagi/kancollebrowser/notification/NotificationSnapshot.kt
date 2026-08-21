@@ -14,6 +14,14 @@ data class NotificationAlarm(
     val body: String,
 )
 
+data class ImmediateNotificationAlert(
+    val key: String,
+    val type: String,
+    val occurredAtEpochMs: Long,
+    val title: String,
+    val body: String,
+)
+
 data class OngoingNotificationItem(
     val id: String,
     val type: String,
@@ -40,6 +48,7 @@ data class NotificationPresentation(
 data class NativeNotificationSnapshot(
     val schemaVersion: Int,
     val updatedAtEpochMs: Long,
+    val immediateAlerts: List<ImmediateNotificationAlert> = emptyList(),
     val alarms: List<NotificationAlarm>,
     val ongoingItems: List<OngoingNotificationItem>,
     val presentation: NotificationPresentation,
@@ -48,6 +57,7 @@ data class NativeNotificationSnapshot(
         val EMPTY = NativeNotificationSnapshot(
             schemaVersion = 1,
             updatedAtEpochMs = 0L,
+            immediateAlerts = emptyList(),
             alarms = emptyList(),
             ongoingItems = emptyList(),
             presentation = NotificationPresentation(
@@ -154,6 +164,16 @@ object NotificationDelivery {
 
 object NotificationSnapshotCodec {
     fun fromMap(raw: Map<*, *>): NativeNotificationSnapshot {
+        val immediateAlerts = raw.optionalList("immediateAlerts").map { alertRaw ->
+            val alert = alertRaw.asMap()
+            ImmediateNotificationAlert(
+                key = alert.string("key"),
+                type = alert.string("type"),
+                occurredAtEpochMs = alert.long("occurredAtEpochMs"),
+                title = alert.string("title"),
+                body = alert.string("body"),
+            )
+        }
         val alarms = raw.list("alarms").map { alarmRaw ->
             val alarm = alarmRaw.asMap()
             NotificationAlarm(
@@ -186,6 +206,7 @@ object NotificationSnapshotCodec {
         return NativeNotificationSnapshot(
             schemaVersion = raw.number("schemaVersion").toInt(),
             updatedAtEpochMs = raw.long("updatedAtEpochMs"),
+            immediateAlerts = immediateAlerts,
             alarms = alarms,
             ongoingItems = ongoingItems,
             presentation = NotificationPresentation(
@@ -203,6 +224,17 @@ object NotificationSnapshotCodec {
     fun toJson(snapshot: NativeNotificationSnapshot): String = JSONObject().apply {
         put("schemaVersion", snapshot.schemaVersion)
         put("updatedAtEpochMs", snapshot.updatedAtEpochMs)
+        put("immediateAlerts", JSONArray().apply {
+            snapshot.immediateAlerts.forEach { alert ->
+                put(JSONObject().apply {
+                    put("key", alert.key)
+                    put("type", alert.type)
+                    put("occurredAtEpochMs", alert.occurredAtEpochMs)
+                    put("title", alert.title)
+                    put("body", alert.body)
+                })
+            }
+        })
         put("alarms", JSONArray().apply {
             snapshot.alarms.forEach { alarm ->
                 put(JSONObject().apply {
@@ -270,6 +302,8 @@ private fun Map<*, *>.boolean(key: String): Boolean = this[key] as? Boolean
 
 private fun Map<*, *>.list(key: String): List<*> = this[key] as? List<*>
     ?: throw IllegalArgumentException("$key must be a list")
+
+private fun Map<*, *>.optionalList(key: String): List<*> = this[key] as? List<*> ?: emptyList<Any?>()
 
 private fun JSONObject.toMap(): Map<String, Any?> = keys().asSequence().associateWith { key ->
     when (val value = get(key)) {

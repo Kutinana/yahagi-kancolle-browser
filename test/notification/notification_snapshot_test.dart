@@ -7,6 +7,15 @@ void main() {
     final target = DateTime.fromMillisecondsSinceEpoch(1_700_000_600_000);
     final snapshot = NotificationSnapshot(
       updatedAt: updatedAt,
+      immediateAlerts: [
+        ImmediateNotificationItem(
+          key: 'construction:1:manual:1700000000000',
+          type: GameNotificationType.construction,
+          occurredAt: updatedAt,
+          title: 'Construction complete',
+          body: 'Dock 1 is ready',
+        ),
+      ],
       alarms: [
         ScheduledNotificationItem(
           key: 'expedition:2:complete',
@@ -46,6 +55,15 @@ void main() {
     expect(snapshot.toMap(), {
       'schemaVersion': 1,
       'updatedAtEpochMs': updatedAt.millisecondsSinceEpoch,
+      'immediateAlerts': [
+        {
+          'key': 'construction:1:manual:1700000000000',
+          'type': 'construction',
+          'occurredAtEpochMs': updatedAt.millisecondsSinceEpoch,
+          'title': 'Construction complete',
+          'body': 'Dock 1 is ready',
+        },
+      ],
       'alarms': [
         {
           'key': 'expedition:2:complete',

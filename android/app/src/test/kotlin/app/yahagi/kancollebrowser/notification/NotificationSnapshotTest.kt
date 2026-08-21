@@ -11,6 +11,15 @@ class NotificationSnapshotTest {
             mapOf(
                 "schemaVersion" to 1,
                 "updatedAtEpochMs" to 1_700_000_000_000L,
+                "immediateAlerts" to listOf(
+                    mapOf(
+                        "key" to "construction:1:manual:1700000000000",
+                        "type" to "construction",
+                        "occurredAtEpochMs" to 1_700_000_000_000L,
+                        "title" to "done now",
+                        "body" to "dock ready",
+                    ),
+                ),
                 "alarms" to listOf(
                     mapOf(
                         "key" to "expedition_2_complete",
@@ -50,6 +59,7 @@ class NotificationSnapshotTest {
         )
 
         assertEquals("expedition:2", snapshot.alarms.single().taskId)
+        assertEquals("construction", snapshot.immediateAlerts.single().type)
         assertTrue(snapshot.alarms.single().removeTaskOnFire)
         assertEquals(1_700_000_600_000L, snapshot.ongoingItems.single().targetEpochMs)
         assertEquals("completed", snapshot.ongoingItems.single().state)

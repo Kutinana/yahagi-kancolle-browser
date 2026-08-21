@@ -40,24 +40,41 @@ class GameNotificationCoordinator {
   final void Function(Object error, StackTrace stackTrace) _onError;
 
   bool _disposed = false;
+  Map<String, _ManualCompletionTask> _manualCompletionTasks = const {};
 
   void start() {
-    gameStateController.addListener(_onStateOrSettingsChanged);
-    settingsController.addListener(_onStateOrSettingsChanged);
-    _onStateOrSettingsChanged();
+    _manualCompletionTasks = _captureManualCompletionTasks(
+      _gameStateProvider(),
+      _now(),
+    );
+    gameStateController.addListener(_onGameStateChanged);
+    settingsController.addListener(_syncSnapshot);
+    _syncSnapshot();
   }
 
   void dispose() {
     _disposed = true;
-    gameStateController.removeListener(_onStateOrSettingsChanged);
-    settingsController.removeListener(_onStateOrSettingsChanged);
+    gameStateController.removeListener(_onGameStateChanged);
+    settingsController.removeListener(_syncSnapshot);
   }
 
-  void _onStateOrSettingsChanged() {
+  void _onGameStateChanged() {
+    if (_disposed) return;
+    final now = _now();
+    final state = _gameStateProvider();
+    final alerts = _buildImmediateAlerts(state, now);
+    _manualCompletionTasks = _captureManualCompletionTasks(state, now);
+    _syncSnapshot(immediateAlerts: alerts);
+  }
+
+  void _syncSnapshot({
+    List<ImmediateNotificationItem> immediateAlerts = const [],
+  }) {
     if (_disposed) return;
     final settings = settingsController.settings;
     final snapshot = NotificationSnapshot(
       updatedAt: _now(),
+      immediateAlerts: immediateAlerts,
       alarms: settings.master ? _buildScheduledAlarms() : const [],
       ongoingItems: settings.master && settings.ongoingLive
           ? _buildOngoingItems()
@@ -73,6 +90,89 @@ class GameNotificationCoordinator {
       ),
     );
     unawaited(_applySnapshot(snapshot));
+  }
+
+  Map<String, _ManualCompletionTask> _captureManualCompletionTasks(
+    GameState state,
+    DateTime now,
+  ) {
+    final tasks = <String, _ManualCompletionTask>{};
+    for (final dock in state.constructionDocks) {
+      final deadline = dock.completionTime;
+      if (!dock.isBuilding ||
+          dock.state == 3 ||
+          deadline == null ||
+          !deadline.isAfter(now)) {
+        continue;
+      }
+      final master = state.masterShips[dock.createdShipMasterId];
+      final shipName = master?.name.isNotEmpty == true ? master!.name : '舰娘';
+      final id = 'construction:${dock.id}';
+      tasks[id] = _ManualCompletionTask(
+        id: id,
+        dockId: dock.id,
+        type: GameNotificationType.construction,
+        deadline: deadline,
+        title: '建造完成 · 船坞 #${dock.id}',
+        body: '$shipName 已在船坞建造完成！',
+      );
+    }
+    for (final dock in state.repairDocks) {
+      final deadline = dock.completionTime;
+      if (!dock.isRepairing || deadline == null || !deadline.isAfter(now)) {
+        continue;
+      }
+      final ship = state.ships[dock.shipId];
+      final master = ship == null ? null : state.masterShips[ship.masterId];
+      final shipName = master?.name.isNotEmpty == true ? master!.name : '舰船';
+      final id = 'repair:${dock.id}';
+      tasks[id] = _ManualCompletionTask(
+        id: id,
+        dockId: dock.id,
+        type: GameNotificationType.repair,
+        deadline: deadline,
+        title: '舰船修复完成 · 船坞 #${dock.id}',
+        body: '$shipName 已经在船坞修理完毕，HP 已完全修满！',
+      );
+    }
+    return tasks;
+  }
+
+  List<ImmediateNotificationItem> _buildImmediateAlerts(
+    GameState state,
+    DateTime now,
+  ) {
+    final settings = settingsController.settings;
+    if (!settings.master) return const [];
+    final alerts = <ImmediateNotificationItem>[];
+    for (final task in _manualCompletionTasks.values) {
+      if (!task.deadline.isAfter(now)) continue;
+      final manuallyCompleted = switch (task.type) {
+        GameNotificationType.construction => state.constructionDocks.any(
+          (dock) => dock.id == task.dockId && dock.state == 3,
+        ),
+        GameNotificationType.repair => state.repairDocks.any(
+          (dock) => dock.id == task.dockId && !dock.isRepairing,
+        ),
+        _ => false,
+      };
+      final typeEnabled = switch (task.type) {
+        GameNotificationType.construction => settings.construction,
+        GameNotificationType.repair => settings.repair,
+        _ => false,
+      };
+      if (!manuallyCompleted || !typeEnabled) continue;
+      alerts.add(
+        ImmediateNotificationItem(
+          key: '${task.id}:manual:${task.deadline.millisecondsSinceEpoch}',
+          type: task.type,
+          occurredAt: now,
+          title: task.title,
+          body: task.body,
+        ),
+      );
+    }
+    return alerts;
   }
 
   Future<void> _applySnapshot(NotificationSnapshot snapshot) async {
@@ -513,7 +613,7 @@ class GameNotificationCoordinator {
     // 4. Construction Docks
     if (settings.construction) {
       for (final dock in state.constructionDocks) {
-        if (dock.isBuilding && dock.state != 3 && dock.completionTime != null) {
+        if (dock.isBuilding && dock.completionTime != null) {
           String shipName = '舰娘';
           final masterId = dock.createdShipMasterId;
           final master = masterId > 0 ? state.masterShips[masterId] : null;
@@ -529,11 +629,14 @@ class GameNotificationCoordinator {
           } else if (master != null && master.buildTimeMinutes > 0) {
             totalSec = master.buildTimeMinutes * 60;
           }
+          final title = dock.isCompletedAt(now)
+              ? '🔨 船坞 #${dock.id} · $shipName 建造完成'
+              : '🔨 船坞 #${dock.id} · $shipName 建造中';
           items.add(
             _deadlineItem(
               id: 'construction:${dock.id}',
               type: GameNotificationType.construction,
-              title: '🔨 船坞 #${dock.id} · $shipName 建造中',
+              title: title,
               deadline: dock.completionTime!,
               totalSeconds: totalSec,
               now: now,
@@ -652,4 +755,22 @@ class GameNotificationCoordinator {
     if (!AnchorageRepairCalculator.hasReadyFleet(state)) return null;
     return state.updatedAt;
   }
+}
+
+class _ManualCompletionTask {
+  const _ManualCompletionTask({
+    required this.id,
+    required this.dockId,
+    required this.type,
+    required this.deadline,
+    required this.title,
+    required this.body,
+  });
+
+  final String id;
+  final int dockId;
+  final GameNotificationType type;
+  final DateTime deadline;
+  final String title;
+  final String body;
 }

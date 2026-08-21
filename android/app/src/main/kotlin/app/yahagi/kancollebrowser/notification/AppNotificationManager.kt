@@ -100,10 +100,16 @@ object AppNotificationManager {
                 failedScheduleKeys += alarm.key
             }
         }
+        if (next.presentation.enabled) {
+            next.immediateAlerts.forEach { alert ->
+                runCatching { showImmediateAlert(context, alert, next.presentation) }
+                    .onFailure { failures += "${alert.key}:notify" }
+            }
+        }
         val persisted = NotificationSnapshotRecovery.afterScheduleFailures(
             next,
             failedScheduleKeys,
-        )
+        ).copy(immediateAlerts = emptyList())
         saveSnapshot(context, persisted)
         runCatching { updateOngoingProgress(context, persisted) }
             .onFailure { failures += "ongoing" }
@@ -219,6 +225,48 @@ object AppNotificationManager {
         ) ?: return
         manager.cancel(pendingIntent)
         pendingIntent.cancel()
+    }
+
+    private fun showImmediateAlert(
+        context: Context,
+        alert: ImmediateNotificationAlert,
+        presentation: NotificationPresentation,
+    ) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            ?: error("NotificationManager unavailable")
+        val launchIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val builder = NotificationCompat.Builder(
+            context,
+            channelId(alert.type, presentation.sound, presentation.vibration),
+        )
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(alert.title)
+            .setContentText(alert.body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(alert.body))
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setOnlyAlertOnce(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            builder.setVibrate(if (presentation.vibration) VIBRATION_PATTERN else null)
+            builder.setSound(
+                if (presentation.sound) RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) else null,
+            )
+        }
+        manager.notify(
+            NotificationDelivery.notificationId(alert.key, alert.occurredAtEpochMs),
+            builder.build(),
+        )
     }
 
     private fun updateOngoingProgress(context: Context, snapshot: NativeNotificationSnapshot) {

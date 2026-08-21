@@ -10,6 +10,7 @@ import 'package:yahagi_kancolle_browser/src/settings/notification_settings_store
 
 class FakeNotificationPort implements NotificationPort {
   final Map<String, ScheduledNotificationItem> scheduledAlarms = {};
+  final List<ImmediateNotificationItem> deliveredImmediateAlerts = [];
   NotificationSnapshot? latestSnapshot;
   bool failApply = false;
 
@@ -19,6 +20,7 @@ class FakeNotificationPort implements NotificationPort {
   ) async {
     if (failApply) throw StateError('native apply failed');
     latestSnapshot = snapshot;
+    deliveredImmediateAlerts.addAll(snapshot.immediateAlerts);
     scheduledAlarms
       ..clear()
       ..addEntries(snapshot.alarms.map((alarm) => MapEntry(alarm.key, alarm)));
@@ -526,7 +528,7 @@ void main() {
     );
 
     test(
-      'cancels construction alarm and drops ongoing progress on fast build',
+      'fast build alerts immediately and keeps completed ongoing progress',
       () {
         final completeTime = testNow.add(const Duration(hours: 1));
         testState = testState.copyWith(
@@ -575,13 +577,104 @@ void main() {
           fakePort.scheduledAlarms.containsKey('construction_1_complete'),
           isFalse,
         );
-        expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
         expect(fakePort.latestSnapshot?.alarms, isEmpty);
+        final completed = fakePort.latestSnapshot!.ongoingItems.single;
+        expect(completed.id, 'construction:1');
+        expect(completed.state, OngoingTaskState.completed);
+        expect(completed.progress, 1);
+        expect(completed.remainingSeconds, 0);
+        expect(fakePort.deliveredImmediateAlerts, hasLength(1));
+        expect(fakePort.deliveredImmediateAlerts.single.title, '建造完成 · 船坞 #1');
+        expect(fakePort.deliveredImmediateAlerts.single.body, contains('大凤'));
+
+        gameStateController.notifyListeners();
+        expect(fakePort.deliveredImmediateAlerts, hasLength(1));
+
+        testState = testState.copyWith(
+          constructionDocks: const [ConstructionDock(id: 1)],
+        );
+        gameStateController.notifyListeners();
         expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
+        expect(fakePort.deliveredImmediateAlerts, hasLength(1));
 
         coordinator.dispose();
       },
     );
+
+    test('fast repair alerts immediately without retaining handled task', () {
+      final completeTime = testNow.add(const Duration(hours: 1));
+      testState = testState.copyWith(
+        masterShips: const {
+          131: MasterShip(id: 131, name: '大和', shipTypeId: 9),
+        },
+        ships: const {
+          10: OwnedShip(
+            id: 10,
+            masterId: 131,
+            level: 99,
+            currentHp: 20,
+            maxHp: 96,
+            condition: 49,
+            currentFuel: 100,
+            currentAmmo: 100,
+            slotIds: [],
+          ),
+        },
+        repairDocks: [
+          RepairDock(id: 1, state: 1, shipId: 10, completionTime: completeTime),
+        ],
+      );
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+      coordinator.start();
+
+      testState = testState.copyWith(repairDocks: const [RepairDock(id: 1)]);
+      gameStateController.notifyListeners();
+
+      expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
+      expect(fakePort.deliveredImmediateAlerts, hasLength(1));
+      expect(fakePort.deliveredImmediateAlerts.single.title, '舰船修复完成 · 船坞 #1');
+      expect(fakePort.deliveredImmediateAlerts.single.body, contains('大和'));
+
+      coordinator.dispose();
+    });
+
+    test('does not alert for an already completed dock on startup', () {
+      testState = testState.copyWith(
+        masterShips: const {
+          153: MasterShip(id: 153, name: '大凤', shipTypeId: 11),
+        },
+        constructionDocks: [
+          ConstructionDock(
+            id: 1,
+            state: 3,
+            createdShipMasterId: 153,
+            completionTime: testNow,
+          ),
+        ],
+      );
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+
+      coordinator.start();
+
+      expect(fakePort.deliveredImmediateAlerts, isEmpty);
+      expect(
+        fakePort.latestSnapshot?.ongoingItems.single.state,
+        OngoingTaskState.completed,
+      );
+      coordinator.dispose();
+    });
 
     test('reports native snapshot application failures', () async {
       fakePort.failApply = true;
