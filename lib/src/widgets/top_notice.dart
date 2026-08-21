@@ -141,9 +141,18 @@ class _TopNoticeHostState extends State<TopNoticeHost> {
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 180),
                         reverseDuration: const Duration(milliseconds: 140),
+                        layoutBuilder: (currentChild, previousChildren) {
+                          return Stack(
+                            alignment: Alignment.topCenter,
+                            children: notice == null
+                                ? [...previousChildren, ?currentChild]
+                                : [?currentChild],
+                          );
+                        },
                         transitionBuilder: (child, animation) {
                           return FadeTransition(
                             opacity: animation,
+                            alwaysIncludeSemantics: true,
                             child: SlideTransition(
                               position: Tween<Offset>(
                                 begin: const Offset(0, -0.25),

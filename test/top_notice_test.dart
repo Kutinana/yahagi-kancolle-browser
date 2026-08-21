@@ -275,6 +275,61 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a notice shown during hide exit immediately replaces the outgoing notice',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      late BuildContext noticeContext;
+      await tester.pumpWidget(
+        buildApp(
+          child: Builder(
+            builder: (context) {
+              noticeContext = context;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      );
+      TopNotice.show(
+        noticeContext,
+        message: 'outgoing old',
+        duration: const Duration(milliseconds: 300),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 180));
+
+      TopNotice.hide(noticeContext);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 70));
+      expect(find.text('outgoing old'), findsOneWidget);
+
+      TopNotice.show(
+        noticeContext,
+        message: 'current new',
+        duration: const Duration(milliseconds: 400),
+      );
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(find.text('outgoing old'), findsNothing);
+      expect(find.text('current new'), findsOneWidget);
+      expect(find.byKey(topNoticeKey), findsOneWidget);
+      expect(find.bySemanticsLabel('outgoing old'), findsNothing);
+      final currentSemantics = tester.getSemantics(
+        find.bySemanticsLabel('current new'),
+      );
+      expect(currentSemantics.label, 'current new');
+      expect(currentSemantics.flagsCollection.isLiveRegion, isTrue);
+
+      await tester.pump(const Duration(milliseconds: 49));
+      expect(find.text('current new'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 349));
+      expect(find.text('current new'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump(const Duration(milliseconds: 141));
+      expect(find.text('current new'), findsNothing);
+      semantics.dispose();
+    },
+  );
+
   testWidgets('does not intercept taps intended for content underneath', (
     tester,
   ) async {
