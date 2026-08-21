@@ -460,38 +460,53 @@ class GameNotificationCoordinator {
                 .toList(growable: false)
           : const <AnchorageRepairShipProjection>[];
       if (ancStart != null && repairingRows.isNotEmpty) {
-        final twentyMinTime = ancStart.add(const Duration(minutes: 20));
-        var target = twentyMinTime;
-        var totalSeconds = 1200;
-        if (settings.anchorageMode != AnchorageNotificationMode.twentyMinutes) {
-          var remaining = Duration.zero;
+        final elapsed = now.difference(ancStart);
+        final includesMilestone =
+            settings.anchorageMode == AnchorageNotificationMode.twentyMinutes ||
+            settings.anchorageMode == AnchorageNotificationMode.both;
+        final includesAllRepaired =
+            settings.anchorageMode == AnchorageNotificationMode.allRepaired ||
+            settings.anchorageMode == AnchorageNotificationMode.both;
+        var remaining = const Duration(minutes: 20) - elapsed;
+        var totalSeconds = const Duration(minutes: 20).inSeconds;
+        var completed = false;
+        if (includesAllRepaired) {
+          remaining = Duration.zero;
           for (final row in repairingRows) {
             if (row.remaining != null && row.remaining! > remaining) {
               remaining = row.remaining!;
             }
           }
-          if (remaining > Duration.zero) {
-            target = now.add(remaining);
-            totalSeconds = target.difference(ancStart).inSeconds;
-          }
+          completed = remaining <= Duration.zero;
+          totalSeconds = (elapsed + remaining).inSeconds;
         }
-        if (target.isAfter(now)) {
-          final remainingSec = target.difference(now).inSeconds;
-          final progress = totalSeconds > 0
-              ? (1.0 - (remainingSec / totalSeconds)).clamp(0.0, 1.0)
-              : 0.0;
-          items.add(
-            OngoingTaskItem(
-              id: 'anchorage:1',
-              type: GameNotificationType.anchorage,
-              title: '⚓ 泊地修理 · 明石 (第1舰队)',
-              progress: progress,
-              remainingSeconds: remainingSec,
-              targetEpochMs: target.millisecondsSinceEpoch,
-              totalDurationSec: totalSeconds,
-            ),
-          );
-        }
+        if (remaining < Duration.zero) remaining = Duration.zero;
+        final state = completed
+            ? OngoingTaskState.completed
+            : includesMilestone &&
+                  elapsed >= AnchorageRepairCalculator.minimumRepairTime
+            ? OngoingTaskState.settlementReady
+            : OngoingTaskState.running;
+        final safeTotalSeconds = totalSeconds > 0 ? totalSeconds : 1;
+        final progress = completed
+            ? 1.0
+            : (elapsed.inSeconds / safeTotalSeconds).clamp(0.0, 1.0);
+        items.add(
+          OngoingTaskItem(
+            id: 'anchorage:1',
+            type: GameNotificationType.anchorage,
+            title: '⚓ 泊地修理 · 明石 (第1舰队)',
+            state: state,
+            clockMode: OngoingClockMode.elapsed,
+            anchorEpochMs: ancStart.millisecondsSinceEpoch,
+            progress: progress,
+            remainingSeconds: remaining.inSeconds,
+            targetEpochMs: ancStart
+                .add(Duration(seconds: safeTotalSeconds))
+                .millisecondsSinceEpoch,
+            totalDurationSec: safeTotalSeconds,
+          ),
+        );
       }
     }
 

@@ -283,7 +283,26 @@ object AppNotificationManager {
     ) {
         val percent = (item.progress * 100).toInt().coerceIn(0, 100)
         views.setTextViewText(titleId, item.title)
-        if (presentation.showCountdown && item.targetEpochMs != null) {
+        if (item.clockMode == "elapsed" && item.anchorEpochMs != null) {
+            val base = NotificationChronometer.elapsedRealtimeBase(
+                nowEpochMs = System.currentTimeMillis(),
+                elapsedRealtimeMs = SystemClock.elapsedRealtime(),
+                anchorEpochMs = item.anchorEpochMs,
+            )
+            val format = when (item.state) {
+                "completed" -> "预计修理完成 · 已修理 %s"
+                "settlementReady" -> "首轮结算就绪 · 已修理 %s"
+                else -> "已修理 %s"
+            }
+            views.setViewVisibility(statsId, View.VISIBLE)
+            views.setChronometer(statsId, base, format, true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                views.setChronometerCountDown(statsId, false)
+            }
+        } else if (item.state == "completed") {
+            views.setViewVisibility(statsId, View.VISIBLE)
+            views.setChronometer(statsId, SystemClock.elapsedRealtime(), "已完成", false)
+        } else if (presentation.showCountdown && item.targetEpochMs != null) {
             val base = SystemClock.elapsedRealtime() + (item.targetEpochMs - System.currentTimeMillis())
             views.setViewVisibility(statsId, View.VISIBLE)
             views.setChronometer(statsId, base, if (presentation.showPercent) "$percent%  %s" else "%s", true)

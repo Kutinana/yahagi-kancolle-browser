@@ -181,6 +181,18 @@ class NotificationSnapshotTest {
         assertEquals("running", preempt.ongoingItems.single().state)
     }
 
+    @Test
+    fun `elapsed chronometer base uses the shared game timer anchor`() {
+        assertEquals(
+            47_000L,
+            NotificationChronometer.elapsedRealtimeBase(
+                nowEpochMs = 100_000L,
+                elapsedRealtimeMs = 50_000L,
+                anchorEpochMs = 97_000L,
+            ),
+        )
+    }
+
     private fun snapshot(
         alarm: NotificationAlarm,
         sound: Boolean,

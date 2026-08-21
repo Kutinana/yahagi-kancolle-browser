@@ -374,9 +374,68 @@ void main() {
       final alarm = fakePort.scheduledAlarms['anchorage_1_20m']!;
       expect(alarm.triggerTime, ancStarted.add(const Duration(minutes: 20)));
       expect(alarm.body, contains('20 分钟'));
+      final item = fakePort.latestSnapshot!.ongoingItems.singleWhere(
+        (item) => item.id == 'anchorage:1',
+      );
+      expect(item.clockMode, OngoingClockMode.elapsed);
+      expect(item.anchorEpochMs, ancStarted.millisecondsSinceEpoch);
+      expect(item.state, OngoingTaskState.running);
 
       coordinator.dispose();
     });
+
+    test('anchorage keeps counting up after the 20 minute milestone', () {
+      final ancStarted = testNow.subtract(const Duration(minutes: 21));
+      testState = _anchorageState();
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+        anchorageRepairStartedAtProvider: () => ancStarted,
+      );
+      coordinator.start();
+
+      final item = fakePort.latestSnapshot!.ongoingItems.singleWhere(
+        (item) => item.id == 'anchorage:1',
+      );
+      expect(item.clockMode, OngoingClockMode.elapsed);
+      expect(item.anchorEpochMs, ancStarted.millisecondsSinceEpoch);
+      expect(item.state, OngoingTaskState.settlementReady);
+
+      coordinator.dispose();
+    });
+
+    test(
+      'anchorage all-repaired estimate waits for port confirmation',
+      () async {
+        await settingsController.setAnchorageMode(
+          AnchorageNotificationMode.allRepaired,
+        );
+        final ancStarted = testNow.subtract(const Duration(hours: 2));
+        testState = _anchorageState();
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+          anchorageRepairStartedAtProvider: () => ancStarted,
+        );
+        coordinator.start();
+
+        final item = fakePort.latestSnapshot!.ongoingItems.singleWhere(
+          (item) => item.id == 'anchorage:1',
+        );
+        expect(item.clockMode, OngoingClockMode.elapsed);
+        expect(item.anchorEpochMs, ancStarted.millisecondsSinceEpoch);
+        expect(item.state, OngoingTaskState.completed);
+        expect(item.progress, 1);
+
+        coordinator.dispose();
+      },
+    );
 
     test(
       'restores anchorage estimate from cached state after process restart',

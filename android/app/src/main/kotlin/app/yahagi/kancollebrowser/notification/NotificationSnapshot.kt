@@ -133,6 +133,14 @@ object NotificationSnapshotTransitions {
     }
 }
 
+object NotificationChronometer {
+    fun elapsedRealtimeBase(
+        nowEpochMs: Long,
+        elapsedRealtimeMs: Long,
+        anchorEpochMs: Long,
+    ): Long = elapsedRealtimeMs - (nowEpochMs - anchorEpochMs).coerceAtLeast(0L)
+}
+
 object NotificationSnapshotCodec {
     fun fromMap(raw: Map<*, *>): NativeNotificationSnapshot {
         val alarms = raw.list("alarms").map { alarmRaw ->
