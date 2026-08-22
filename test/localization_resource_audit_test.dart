@@ -53,6 +53,17 @@ void main() {
     },
   );
 
+  test('all locales include enemy preview portrait settings', () {
+    const keys = <String>{
+      'battleEnemyPreviewPortraits',
+      'battleEnemyPreviewPortraitsDesc',
+    };
+
+    for (final entry in resources.entries) {
+      expect(_messageKeys(entry.value), containsAll(keys), reason: entry.key);
+    }
+  });
+
   test('identical translations are limited to reviewed terminology', () {
     // Each entry is intentionally shared: product/game terminology, numerals,
     // protocol names, or a language self-name. Adding a key requires review.

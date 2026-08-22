@@ -1323,6 +1323,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     gameStateController:
                                         widget.gameStateController,
                                     battleController: widget.battleController,
+                                    battlePredictionSettingsController: widget
+                                        .battlePredictionSettingsController,
                                     onOpenFleet: (fleetId) {
                                       setState(() {
                                         _fleetCenterInitialFleetId = fleetId;
@@ -1784,6 +1786,7 @@ class _InformationPanel extends StatefulWidget {
     required this.gameCaptureController,
     required this.gameStateController,
     required this.battleController,
+    required this.battlePredictionSettingsController,
     required this.onOpenFleet,
     required this.onOpenRepair,
     required this.onOpenConstruction,
@@ -1799,6 +1802,7 @@ class _InformationPanel extends StatefulWidget {
   final GameCaptureController gameCaptureController;
   final GameStateController gameStateController;
   final BattleController battleController;
+  final BattlePredictionSettingsController? battlePredictionSettingsController;
   final ValueChanged<int> onOpenFleet;
   final ValueChanged<RepairDestination> onOpenRepair;
   final VoidCallback onOpenConstruction;
@@ -1826,6 +1830,8 @@ class _InformationPanelState extends State<_InformationPanel> {
           widget.layoutSettingsController,
           widget.browserController,
           widget.gameCaptureController,
+          if (widget.battlePredictionSettingsController != null)
+            widget.battlePredictionSettingsController!,
         ]),
         builder: (context, _) {
           final hasError =
@@ -1895,6 +1901,11 @@ class _InformationPanelState extends State<_InformationPanel> {
               'battle' => LiveBattleCard(
                 key: const PageStorageKey('dashboard-live-battle'),
                 controller: widget.battleController,
+                showEnemyPortraits:
+                    widget
+                        .battlePredictionSettingsController
+                        ?.enemyPortraitsEnabled ??
+                    true,
                 damagePulseMode:
                     widget.layoutSettingsController.enhancedDamagePulse
                     ? DamagePulseMode.enhanced
