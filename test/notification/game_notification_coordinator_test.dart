@@ -962,6 +962,73 @@ void main() {
       coordinator.dispose();
     });
 
+    test(
+      'recovered morale clears its anchor before the same fleet becomes tired again',
+      () async {
+        const fleet = Fleet(id: 1, name: '第1舰队', shipIds: [1]);
+        OwnedShip shipWithCondition(int condition) => OwnedShip(
+          id: 1,
+          masterId: 1,
+          level: 1,
+          currentHp: 10,
+          maxHp: 10,
+          condition: condition,
+          currentFuel: 10,
+          currentAmmo: 10,
+          slotIds: const [],
+        );
+
+        final expiredTarget = testNow.add(const Duration(minutes: 9));
+        testState = GameState.empty.copyWith(
+          updatedAt: testNow,
+          ships: {1: shipWithCondition(49)},
+          fleets: const [fleet],
+        );
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+          initialTimerAnchors: NotificationTimerAnchors(
+            moraleByFleet: {
+              1: MoraleNotificationTimerAnchor(
+                fleetSignature: NotificationTimerSignature.morale(fleet),
+                observedAt: testNow,
+                observedCondition: 40,
+                targetAt: expiredTarget,
+              ),
+            },
+          ),
+        );
+        coordinator.start();
+        await Future<void>.delayed(Duration.zero);
+
+        testNow = testNow.add(const Duration(hours: 1));
+        testState = testState.copyWith(
+          updatedAt: testNow,
+          ships: {1: shipWithCondition(40)},
+        );
+        gameStateController.notifyListeners();
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+
+        final alarm = fakePort.scheduledAlarms['morale_1_normal'];
+        expect(alarm, isNotNull);
+        expect(
+          alarm!.triggerTime.toUtc(),
+          testNow.add(const Duration(minutes: 9)).toUtc(),
+        );
+        expect(
+          fakePort.latestSnapshot!.ongoingItems
+              .singleWhere((item) => item.id == 'morale:1')
+              .state,
+          OngoingTaskState.running,
+        );
+        coordinator.dispose();
+      },
+    );
+
     test('schedules construction dock preempt alarm when configured', () async {
       await settingsController.setConstructionPreemptSeconds(30);
       final completeTime = testNow.add(const Duration(hours: 4));

@@ -106,6 +106,10 @@ class GameNotificationCoordinator {
   }) {
     if (_disposed) return;
     final settings = settingsController.settings;
+    _reconcileMoraleTimerAnchors(
+      _gameStateProvider(),
+      enabled: settings.master && settings.morale,
+    );
     if (!settings.master) {
       _pendingImmediateAlerts.clear();
     } else {
@@ -1032,6 +1036,40 @@ class GameNotificationCoordinator {
       ),
     );
     return anchor.targetAt;
+  }
+
+  void _reconcileMoraleTimerAnchors(GameState state, {required bool enabled}) {
+    final existing = _timerAnchors.moraleByFleet;
+    if (existing.isEmpty) return;
+    if (!enabled) {
+      _replaceTimerAnchors(_timerAnchors.copyWith(moraleByFleet: const {}));
+      return;
+    }
+
+    final fleetsById = {for (final fleet in state.fleets) fleet.id: fleet};
+    final retained = <int, MoraleNotificationTimerAnchor>{};
+    for (final entry in existing.entries) {
+      final fleet = fleetsById[entry.key];
+      if (fleet == null || fleet.shipIds.isEmpty) continue;
+      if (entry.value.fleetSignature !=
+          NotificationTimerSignature.morale(fleet)) {
+        continue;
+      }
+
+      final conditions = fleet.shipIds
+          .map((shipId) => state.ships[shipId]?.condition)
+          .whereType<int>()
+          .toList(growable: false);
+      if (conditions.length != fleet.shipIds.length) continue;
+      final minCondition = conditions.reduce((a, b) => a < b ? a : b);
+      if (minCondition >= 49 || minCondition != entry.value.observedCondition) {
+        continue;
+      }
+      retained[entry.key] = entry.value;
+    }
+
+    if (retained.length == existing.length) return;
+    _replaceTimerAnchors(_timerAnchors.copyWith(moraleByFleet: retained));
   }
 
   void _restoreGlobalTimerAnchors(GameState state) {
