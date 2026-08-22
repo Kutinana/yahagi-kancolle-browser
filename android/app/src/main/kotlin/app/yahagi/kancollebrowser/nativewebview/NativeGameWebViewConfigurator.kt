@@ -9,6 +9,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 
 internal enum class NativeGameWebViewConfigurationAction {
     JAVA_SCRIPT_ENABLED,
@@ -18,6 +20,7 @@ internal enum class NativeGameWebViewConfigurationAction {
     USER_AGENT_SET,
     BACKGROUND_BLACK,
     HARDWARE_LAYER,
+    TAP_HIGHLIGHT_SCRIPT_SET,
     ACCEPT_COOKIE,
     ACCEPT_THIRD_PARTY_COOKIES,
     PRESENTATION_BRIDGE_SET,
@@ -58,6 +61,15 @@ internal object NativeGameWebViewConfigurator {
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         onApplied(NativeGameWebViewConfigurationAction.HARDWARE_LAYER)
 
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            WebViewCompat.addDocumentStartJavaScript(
+                webView,
+                NativeGameTouchFeedbackScript.source,
+                NativeGameTouchFeedbackScript.allowedOriginRules,
+            )
+            onApplied(NativeGameWebViewConfigurationAction.TAP_HIGHLIGHT_SCRIPT_SET)
+        }
+
         CookieManager.getInstance().apply {
             setAcceptCookie(true)
             onApplied(NativeGameWebViewConfigurationAction.ACCEPT_COOKIE)
@@ -76,6 +88,39 @@ internal object NativeGameWebViewConfigurator {
         webView.webChromeClient = WebChromeClient()
         onApplied(NativeGameWebViewConfigurationAction.WEB_CHROME_CLIENT_SET)
     }
+}
+
+/** Removes Chromium's native press highlight from the canvas without consuming touch events. */
+internal object NativeGameTouchFeedbackScript {
+    val allowedOriginRules: Set<String> = setOf("https://*.kancolle-server.com")
+
+    val source: String =
+        """
+        (() => {
+          'use strict';
+          if (window.__yahagiTapHighlightDisabled) return;
+          window.__yahagiTapHighlightDisabled = true;
+
+          const apply = () => {
+            const root = document.documentElement;
+            if (!root) return false;
+            root.style.setProperty(
+              '-webkit-tap-highlight-color',
+              'transparent',
+              'important'
+            );
+            return true;
+          };
+
+          if (!apply()) {
+            const observer = new MutationObserver(() => {
+              if (!apply()) return;
+              observer.disconnect();
+            });
+            observer.observe(document, {childList: true});
+          }
+        })();
+        """.trimIndent()
 }
 
 internal class NativeGamePresentationBridge(
