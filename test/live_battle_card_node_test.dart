@@ -919,7 +919,10 @@ void main() {
 
     expect(tester.widget<Text>(friendTitle).style?.fontSize, 11);
     expect(tester.widget<Text>(friendHp).style?.fontSize, 10);
-    expect(tester.widget<Text>(find.text('Test Enemy Fleet')).style?.fontSize, 14);
+    expect(
+      tester.widget<Text>(find.text('Test Enemy Fleet')).style?.fontSize,
+      14,
+    );
     expect(tester.widget<Text>(find.text('S')).style?.fontSize, 20);
   });
 

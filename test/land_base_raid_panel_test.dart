@@ -58,9 +58,7 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: LandBaseRaidPanel(result: result, compact: true),
-        ),
+        home: Scaffold(body: LandBaseRaidPanel(result: result, compact: true)),
       ),
     );
 
