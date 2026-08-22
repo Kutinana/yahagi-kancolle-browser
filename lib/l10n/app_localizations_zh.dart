@@ -1353,6 +1353,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameRenderingModeFailed => '切换失败，已保留或回退到安全模式。';
 
   @override
+  String get nativeGameSurfaceSwitchRenderingModeHint =>
+      '当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式';
+
+  @override
   String get senka => '战果';
 
   @override
@@ -1424,6 +1428,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationSectionSystem => '系统通知状态';
 
   @override
+  String get notificationSectionSystemDesc =>
+      '授权通知与精确提醒权限，可确保在锁屏或后台时远征、入渠等提醒准时弹出，避免被系统省电策略延迟。点击对应项可直接前往系统设置开启。';
+
+  @override
   String get notificationPermissionGranted => '通知权限已授予';
 
   @override
@@ -1469,22 +1477,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationCountdown => '实时倒计时';
 
   @override
-  String get notificationSectionTypes => '业务通知分类与提醒时机';
+  String get notificationSectionTypes => '通知类型与时机';
 
   @override
-  String get notificationExpedition => '远征归还';
+  String get notificationExpedition => '远征';
 
   @override
-  String get notificationRepair => '入渠修复';
+  String get notificationRepair => '入渠';
 
   @override
-  String get notificationAnchorage => '泊地修理';
+  String get notificationAnchorage => '泊地';
 
   @override
-  String get notificationConstruction => '工厂建造';
+  String get notificationConstruction => '建造';
 
   @override
-  String get notificationMorale => '士气 / 疲劳与刷闪';
+  String get notificationMorale => '疲劳 / 刷闪';
 
   @override
   String get notificationPunctual => '准点';
@@ -3274,6 +3282,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameRenderingModeFailed => '切換失敗，已保留或回退至安全模式。';
 
   @override
+  String get nativeGameSurfaceSwitchRenderingModeHint =>
+      '目前裝置暫不相容此模式，請前往【設定 - 畫面與聲音】切換渲染模式';
+
+  @override
   String get senka => '戰果';
 
   @override
@@ -3345,6 +3357,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationSectionSystem => '系統通知狀態';
 
   @override
+  String get notificationSectionSystemDesc =>
+      '授權通知與精確提醒權限，可確保在鎖屏或後台時遠征、入渠等提醒準時彈出，避免被系統省電策略延遲。點擊對應項可直接前往系統設定開啟。';
+
+  @override
   String get notificationPermissionGranted => '通知權限已授予';
 
   @override
@@ -3390,22 +3406,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationCountdown => '即時倒數';
 
   @override
-  String get notificationSectionTypes => '業務通知分類與提醒時機';
+  String get notificationSectionTypes => '通知類型與時機';
 
   @override
-  String get notificationExpedition => '遠征歸還';
+  String get notificationExpedition => '遠征';
 
   @override
-  String get notificationRepair => '入渠修復';
+  String get notificationRepair => '入渠';
 
   @override
-  String get notificationAnchorage => '泊地修理';
+  String get notificationAnchorage => '泊地';
 
   @override
-  String get notificationConstruction => '工廠建造';
+  String get notificationConstruction => '建造';
 
   @override
-  String get notificationMorale => '士氣 / 疲勞與刷閃';
+  String get notificationMorale => '疲勞 / 刷閃';
 
   @override
   String get notificationPunctual => '準時';

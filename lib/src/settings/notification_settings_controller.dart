@@ -67,8 +67,14 @@ class NotificationSettingsController extends ChangeNotifier {
   Future<void> setConstruction(bool value) =>
       _saveAndNotify(_settings.copyWith(construction: value));
 
+  Future<void> setConstructionPreemptSeconds(int seconds) =>
+      _saveAndNotify(_settings.copyWith(constructionPreemptSeconds: seconds));
+
   Future<void> setMorale(bool value) =>
       _saveAndNotify(_settings.copyWith(morale: value));
+
+  Future<void> setMoralePreemptSeconds(int seconds) =>
+      _saveAndNotify(_settings.copyWith(moralePreemptSeconds: seconds));
 
   Future<void> resetToDefaults() =>
       _saveAndNotify(const NotificationSettings());

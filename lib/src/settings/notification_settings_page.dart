@@ -84,60 +84,68 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   future: _capabilities,
                   builder: (context, snapshot) {
                     final capabilities = snapshot.data;
-                    return buildCard(
-                      child: Column(
-                        children: [
-                          ListTile(
-                            leading: Icon(
-                              capabilities?.notificationsGranted == true
-                                  ? Icons.check_circle_outline
-                                  : Icons.notifications_off_outlined,
-                            ),
-                            title: Text(
-                              capabilities?.notificationsGranted == true
-                                  ? l10n.notificationPermissionGranted
-                                  : l10n.notificationPermissionDenied,
-                            ),
-                            onTap: capabilities?.notificationsGranted == true
-                                ? widget
-                                      .notificationPort
-                                      .openSystemNotificationSettings
-                                : _requestNotificationPermission,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildCard(
+                          child: Column(
+                            children: [
+                              buildActionTile(
+                                title: capabilities?.notificationsGranted == true
+                                    ? l10n.notificationPermissionGranted
+                                    : l10n.notificationPermissionDenied,
+                                trailing: Icon(
+                                  capabilities?.notificationsGranted == true
+                                      ? Icons.check_circle_outline
+                                      : Icons.notifications_off_outlined,
+                                ),
+                                onTap: capabilities?.notificationsGranted == true
+                                    ? widget
+                                          .notificationPort
+                                          .openSystemNotificationSettings
+                                    : _requestNotificationPermission,
+                              ),
+                              const Divider(color: Color(0xff294052), height: 1),
+                              buildActionTile(
+                                title: capabilities?.exactAlarmsGranted == true
+                                    ? l10n.notificationExactAlarmGranted
+                                    : l10n.notificationExactAlarmDenied,
+                                trailing: Icon(
+                                  capabilities?.exactAlarmsGranted == true
+                                      ? Icons.alarm_on_outlined
+                                      : Icons.alarm_off_outlined,
+                                ),
+                                onTap: _requestExactAlarmPermission,
+                              ),
+                              const Divider(color: Color(0xff294052), height: 1),
+                              buildActionTile(
+                                title: capabilities?.channelsEnabled == true
+                                    ? l10n.notificationChannelsEnabled
+                                    : l10n.notificationChannelsDisabled,
+                                trailing: Icon(
+                                  capabilities?.channelsEnabled == true
+                                      ? Icons.tune_outlined
+                                      : Icons.block_outlined,
+                                ),
+                                onTap: widget
+                                    .notificationPort
+                                    .openSystemNotificationSettings,
+                              ),
+                            ],
                           ),
-                          const Divider(color: Color(0xff294052), height: 1),
-                          ListTile(
-                            leading: Icon(
-                              capabilities?.exactAlarmsGranted == true
-                                  ? Icons.alarm_on_outlined
-                                  : Icons.alarm_off_outlined,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+                          child: Text(
+                            l10n.notificationSectionSystemDesc,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xff8197a5),
+                              height: 1.4,
                             ),
-                            title: Text(
-                              capabilities?.exactAlarmsGranted == true
-                                  ? l10n.notificationExactAlarmGranted
-                                  : l10n.notificationExactAlarmDenied,
-                            ),
-                            onTap: capabilities?.exactAlarmsGranted == true
-                                ? null
-                                : _requestExactAlarmPermission,
                           ),
-                          const Divider(color: Color(0xff294052), height: 1),
-                          ListTile(
-                            leading: Icon(
-                              capabilities?.channelsEnabled == true
-                                  ? Icons.tune_outlined
-                                  : Icons.block_outlined,
-                            ),
-                            title: Text(
-                              capabilities?.channelsEnabled == true
-                                  ? l10n.notificationChannelsEnabled
-                                  : l10n.notificationChannelsDisabled,
-                            ),
-                            onTap: widget
-                                .notificationPort
-                                .openSystemNotificationSettings,
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     );
                   },
                 ),
@@ -251,10 +259,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                             value: 60,
                             child: Text(l10n.notificationPreempt60s),
                           ),
-                          DropdownMenuItem<int>(
-                            value: 120,
-                            child: Text(l10n.notificationPreempt120s),
-                          ),
                         ],
                         menuEnabled: settings.master && settings.expedition,
                         onSelected: controller.setExpeditionPreemptSeconds,
@@ -278,6 +282,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                             child: Text(l10n.notificationRepairPunctual),
                           ),
                           DropdownMenuItem<int>(
+                            value: 30,
+                            child: Text(l10n.notificationPreempt30s),
+                          ),
+                          DropdownMenuItem<int>(
                             value: 60,
                             child: Text(l10n.notificationPreempt60s),
                           ),
@@ -291,14 +299,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                       ),
                       const Divider(color: Color(0xff294052), height: 1),
 
-                      // 3.3 泊地修理
+                      // 3.3 泊地
                       _buildNotificationTypeRow<AnchorageNotificationMode>(
                         rowKey: const Key('notification-anchorage-row'),
                         menuKey: const Key('notification-anchorage-menu'),
                         switchKey: const Key('notification-anchorage-switch'),
                         title: _notificationTypeTitle(
                           l10n.notificationAnchorage,
-                          isNew: true,
                         ),
                         selected: settings.anchorageMode,
                         items: [
@@ -324,23 +331,67 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                       ),
                       const Divider(color: Color(0xff294052), height: 1),
 
-                      // 3.4 工厂建造
-                      buildSwitchTile(
-                        title: l10n.notificationConstruction,
-                        value: settings.construction,
-                        onChanged: settings.master
-                            ? (v) => controller.setConstruction(v)
-                            : (v) {},
+                      // 3.4 建造
+                      _buildNotificationTypeRow<int>(
+                        rowKey: const Key('notification-construction-row'),
+                        menuKey: const Key('notification-construction-menu'),
+                        switchKey: const Key('notification-construction-switch'),
+                        title: _notificationTypeTitle(
+                          l10n.notificationConstruction,
+                        ),
+                        selected: settings.constructionPreemptSeconds,
+                        items: [
+                          DropdownMenuItem<int>(
+                            value: 0,
+                            child: Text(l10n.notificationPunctual),
+                          ),
+                          DropdownMenuItem<int>(
+                            value: 30,
+                            child: Text(l10n.notificationPreempt30s),
+                          ),
+                          DropdownMenuItem<int>(
+                            value: 60,
+                            child: Text(l10n.notificationPreempt60s),
+                          ),
+                        ],
+                        menuEnabled: settings.master && settings.construction,
+                        onSelected: controller.setConstructionPreemptSeconds,
+                        switchedOn: settings.construction,
+                        onSwitchChanged: settings.master
+                            ? controller.setConstruction
+                            : null,
                       ),
                       const Divider(color: Color(0xff294052), height: 1),
 
-                      // 3.5 士气 / 疲劳与刷闪
-                      buildSwitchTile(
-                        title: l10n.notificationMorale,
-                        value: settings.morale,
-                        onChanged: settings.master
-                            ? (v) => controller.setMorale(v)
-                            : (v) {},
+                      // 3.5 疲劳 / 刷闪
+                      _buildNotificationTypeRow<int>(
+                        rowKey: const Key('notification-morale-row'),
+                        menuKey: const Key('notification-morale-menu'),
+                        switchKey: const Key('notification-morale-switch'),
+                        title: _notificationTypeTitle(
+                          l10n.notificationMorale,
+                        ),
+                        selected: settings.moralePreemptSeconds,
+                        items: [
+                          DropdownMenuItem<int>(
+                            value: 0,
+                            child: Text(l10n.notificationPunctual),
+                          ),
+                          DropdownMenuItem<int>(
+                            value: 30,
+                            child: Text(l10n.notificationPreempt30s),
+                          ),
+                          DropdownMenuItem<int>(
+                            value: 60,
+                            child: Text(l10n.notificationPreempt60s),
+                          ),
+                        ],
+                        menuEnabled: settings.master && settings.morale,
+                        onSelected: controller.setMoralePreemptSeconds,
+                        switchedOn: settings.morale,
+                        onSwitchChanged: settings.master
+                            ? controller.setMorale
+                            : null,
                       ),
                     ],
                   ),
@@ -361,25 +412,37 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     required ValueChanged<bool?> onChanged,
   }) {
     return InkWell(
+      borderRadius: BorderRadius.circular(6),
       onTap: enabled ? () => onChanged(!value) : null,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Checkbox(
-            value: value,
-            onChanged: enabled ? onChanged : null,
-            activeColor: const Color(0xffd4a85f),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: enabled
-                  ? const Color(0xff8197a5)
-                  : const Color(0xff526776),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: Checkbox(
+                value: value,
+                onChanged: enabled ? onChanged : null,
+                activeColor: const Color(0xffd4a85f),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: enabled
+                    ? const Color(0xffc7d5dc)
+                    : const Color(0xff526776),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -396,6 +459,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     required bool switchedOn,
     required ValueChanged<bool>? onSwitchChanged,
   }) {
+    final effectiveSelected = items.any((item) => item.value == selected)
+        ? selected
+        : (items.isNotEmpty ? items.first.value : selected);
     return Padding(
       key: rowKey,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -403,13 +469,20 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         children: [
           Expanded(child: title),
           SizedBox(
-            width: 132,
+            width: 154,
             child: DropdownButtonHideUnderline(
               child: DropdownButton<T>(
                 key: menuKey,
-                value: selected,
+                value: effectiveSelected,
                 isExpanded: true,
-                alignment: AlignmentDirectional.centerEnd,
+                alignment: AlignmentDirectional.centerStart,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: menuEnabled
+                      ? const Color(0xffd4a85f)
+                      : const Color(0xff526776),
+                ),
                 items: items,
                 onChanged: menuEnabled
                     ? (value) {

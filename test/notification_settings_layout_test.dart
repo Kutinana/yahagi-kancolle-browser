@@ -51,11 +51,15 @@ void main() {
       Key('notification-expedition-menu'),
       Key('notification-repair-menu'),
       Key('notification-anchorage-menu'),
+      Key('notification-construction-menu'),
+      Key('notification-morale-menu'),
     ];
     const switchKeys = <Key>[
       Key('notification-expedition-switch'),
       Key('notification-repair-switch'),
       Key('notification-anchorage-switch'),
+      Key('notification-construction-switch'),
+      Key('notification-morale-switch'),
     ];
     for (var index = 0; index < menuKeys.length; index++) {
       final menu = find.byKey(menuKeys[index]);
@@ -78,6 +82,40 @@ void main() {
     expect(menuWidths, hasLength(1));
   });
 
+  testWidgets('capability items and general settings titles share the same left alignment', (
+    tester,
+  ) async {
+    final controller = NotificationSettingsController(
+      initialSettings: const NotificationSettings(),
+    );
+    await _pumpPage(tester, controller);
+
+    final titleFinders = <Finder>[
+      find.text('通知权限已授予'),
+      find.text('精确提醒已授权'),
+      find.text('通知渠道可用'),
+      find.text('启用通知服务'),
+      find.text('通知提示音'),
+      find.text('振动提醒'),
+      find.text('常驻实时进度条卡片'),
+      find.text('远征'),
+      find.text('入渠'),
+      find.text('泊地'),
+      find.text('建造'),
+      find.text('疲劳 / 刷闪'),
+    ];
+
+    for (final finder in titleFinders) {
+      expect(finder, findsOneWidget);
+    }
+
+    final titleDx = <double>[
+      for (final finder in titleFinders) tester.getTopLeft(finder).dx,
+    ];
+    expect(titleDx.toSet(), hasLength(1));
+    expect(titleDx.first, 32.0);
+  });
+
   testWidgets('expedition menu updates the selected preempt time', (
     tester,
   ) async {
@@ -96,6 +134,33 @@ void main() {
     expect(controller.settings.expeditionPreemptSeconds, 30);
   });
 
+  testWidgets('construction and morale menus update preempt time', (
+    tester,
+  ) async {
+    final controller = NotificationSettingsController(
+      initialSettings: const NotificationSettings(),
+    );
+    await _pumpPage(tester, controller);
+
+    final constrMenu = find.byKey(const Key('notification-construction-menu'));
+    await tester.ensureVisible(constrMenu);
+    await tester.tap(constrMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('提前 60 秒').last);
+    await tester.pumpAndSettle();
+
+    expect(controller.settings.constructionPreemptSeconds, 60);
+
+    final moraleMenu = find.byKey(const Key('notification-morale-menu'));
+    await tester.ensureVisible(moraleMenu);
+    await tester.tap(moraleMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('提前 30 秒').last);
+    await tester.pumpAndSettle();
+
+    expect(controller.settings.moralePreemptSeconds, 30);
+  });
+
   test(
     'notification setting labels contain no English annotations or units',
     () {
@@ -106,12 +171,12 @@ void main() {
       final ja = lookupAppLocalizations(const Locale('ja'));
 
       expect(zh.notificationSectionOngoing, '后台常驻进行中进度');
-      expect(zh.notificationSectionTypes, '业务通知分类与提醒时机');
-      expect(zh.notificationExpedition, '远征归还');
-      expect(zh.notificationRepair, '入渠修复');
-      expect(zh.notificationAnchorage, '泊地修理');
-      expect(zh.notificationConstruction, '工厂建造');
-      expect(zh.notificationMorale, '士气 / 疲劳与刷闪');
+      expect(zh.notificationSectionTypes, '通知类型与时机');
+      expect(zh.notificationExpedition, '远征');
+      expect(zh.notificationRepair, '入渠');
+      expect(zh.notificationAnchorage, '泊地');
+      expect(zh.notificationConstruction, '建造');
+      expect(zh.notificationMorale, '疲劳 / 刷闪');
       expect(zh.notificationPunctual, '准点');
       expect(zh.notificationPreempt30s, '提前 30 秒');
       expect(zh.notificationPreempt60s, '提前 60 秒');
@@ -120,18 +185,18 @@ void main() {
       expect(zh.notificationAnchorage20m, '满 20 分钟首轮');
 
       expect(zhHant.notificationSectionOngoing, '後台常駐進行中進度');
-      expect(zhHant.notificationSectionTypes, '業務通知分類與提醒時機');
+      expect(zhHant.notificationSectionTypes, '通知類型與時機');
       expect(zhHant.notificationPreempt60s, '提前 60 秒');
       expect(zhHant.notificationPreempt120s, '提前 2 分鐘');
       expect(zhHant.notificationAnchorage20m, '滿 20 分鐘首輪');
 
       expect(ja.notificationSectionOngoing, 'バックグラウンド進行中常駐');
       expect(ja.notificationSectionTypes, '通知種別とタイミング');
-      expect(ja.notificationExpedition, '遠征帰還');
-      expect(ja.notificationRepair, '入渠修復');
-      expect(ja.notificationAnchorage, '泊地修理');
-      expect(ja.notificationConstruction, '工廠建造');
-      expect(ja.notificationMorale, '士気 / 疲労とキラ付け');
+      expect(ja.notificationExpedition, '遠征');
+      expect(ja.notificationRepair, '入渠');
+      expect(ja.notificationAnchorage, '泊地');
+      expect(ja.notificationConstruction, '建造');
+      expect(ja.notificationMorale, '疲労 / キラ付け');
       expect(ja.notificationPunctual, '定刻');
       expect(ja.notificationRepairPunctual, '定刻');
     },

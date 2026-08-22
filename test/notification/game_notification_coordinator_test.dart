@@ -606,6 +606,8 @@ void main() {
         expect(alarm?.taskId, 'anchorage:1');
         expect(alarm?.removeTaskOnFire, isTrue);
         expect(alarm?.triggerTime.isAfter(testNow), isTrue);
+        expect(alarm?.title, '泊地修理完成 · 第1舰队');
+        expect(alarm?.body, '第1舰队 中符合条件的舰船预计已全部修复。');
 
         coordinator.dispose();
       },

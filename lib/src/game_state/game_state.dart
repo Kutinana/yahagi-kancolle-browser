@@ -451,6 +451,8 @@ class Fleet {
   final List<int> shipIds;
   final int slotCount;
   final FleetMission mission;
+
+  String get displayName => name.trim().isNotEmpty ? name.trim() : '第$id舰队';
 }
 
 class RepairDock {

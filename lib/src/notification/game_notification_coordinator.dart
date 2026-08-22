@@ -311,7 +311,7 @@ class GameNotificationCoordinator {
 
           if (_pendingSnapshot != null) break;
           if (retryIndex >= _snapshotRetryBackoff.length) {
-            _onError(lastError!, lastStackTrace!);
+            _onError(lastError, lastStackTrace);
             break;
           }
           final wake = Completer<void>();
@@ -558,8 +558,8 @@ class GameNotificationCoordinator {
               stage: NotificationAlarmStage.complete,
               removeTaskOnFire: true,
               triggerTime: now.add(remaining),
-              title: 'Anchorage repair complete · $fleet1Name',
-              body: 'All eligible ships in $fleet1Name should now be repaired.',
+              title: '泊地修理完成 · $fleet1Name',
+              body: '$fleet1Name 中符合条件的舰船预计已全部修复。',
             );
           }
         }

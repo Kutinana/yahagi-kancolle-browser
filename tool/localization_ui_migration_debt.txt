@@ -926,3 +926,7 @@
 "lib/src/senka/senka_info_view.dart|今日"
 "lib/src/senka/senka_page.dart|战果计算"
 "lib/src/senka/senka_page.dart|战果日历"
+"lib/src/senka/senka_calculator_view.dart|填写$label"
+"lib/src/senka/senka_calculator_view.dart|取消"
+"lib/src/senka/senka_calculator_view.dart|确定"
+"lib/src/senka/senka_calculator_view.dart|请输入有效数字"

@@ -1362,6 +1362,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get gameRenderingModeFailed => '切り替えに失敗しました。現在の設定を維持するか、安全なモードへ戻しました。';
 
   @override
+  String get nativeGameSurfaceSwitchRenderingModeHint =>
+      '現在の端末ではこのモードに対応していない可能性があります。【設定 - 画面と音声】から描画モードを変更してください';
+
+  @override
   String get senka => '戦果';
 
   @override
@@ -1433,6 +1437,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationSectionSystem => 'システム通知の状態';
 
   @override
+  String get notificationSectionSystemDesc =>
+      '通知と正確なアラーム権限を許可することで、画面消灯時やバックグラウンドでも遠征・入渠通知を遅延なく確実に受信できます。未許可の項目をタップすると設定画面を開きます。';
+
+  @override
   String get notificationPermissionGranted => '通知権限は許可されています';
 
   @override
@@ -1481,19 +1489,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get notificationSectionTypes => '通知種別とタイミング';
 
   @override
-  String get notificationExpedition => '遠征帰還';
+  String get notificationExpedition => '遠征';
 
   @override
-  String get notificationRepair => '入渠修復';
+  String get notificationRepair => '入渠';
 
   @override
-  String get notificationAnchorage => '泊地修理';
+  String get notificationAnchorage => '泊地';
 
   @override
-  String get notificationConstruction => '工廠建造';
+  String get notificationConstruction => '建造';
 
   @override
-  String get notificationMorale => '士気 / 疲労とキラ付け';
+  String get notificationMorale => '疲労 / キラ付け';
 
   @override
   String get notificationPunctual => '定刻';

@@ -31,7 +31,9 @@ class NotificationSettings {
     this.anchorage = true,
     this.anchorageMode = AnchorageNotificationMode.twentyMinutes,
     this.construction = true,
+    this.constructionPreemptSeconds = 0,
     this.morale = true,
+    this.moralePreemptSeconds = 0,
   });
 
   final bool master;
@@ -48,7 +50,9 @@ class NotificationSettings {
   final bool anchorage;
   final AnchorageNotificationMode anchorageMode;
   final bool construction;
+  final int constructionPreemptSeconds;
   final bool morale;
+  final int moralePreemptSeconds;
 
   NotificationSettings copyWith({
     bool? master,
@@ -65,7 +69,9 @@ class NotificationSettings {
     bool? anchorage,
     AnchorageNotificationMode? anchorageMode,
     bool? construction,
+    int? constructionPreemptSeconds,
     bool? morale,
+    int? moralePreemptSeconds,
   }) {
     return NotificationSettings(
       master: master ?? this.master,
@@ -83,7 +89,10 @@ class NotificationSettings {
       anchorage: anchorage ?? this.anchorage,
       anchorageMode: anchorageMode ?? this.anchorageMode,
       construction: construction ?? this.construction,
+      constructionPreemptSeconds:
+          constructionPreemptSeconds ?? this.constructionPreemptSeconds,
       morale: morale ?? this.morale,
+      moralePreemptSeconds: moralePreemptSeconds ?? this.moralePreemptSeconds,
     );
   }
 
@@ -106,7 +115,9 @@ class NotificationSettings {
           anchorage == other.anchorage &&
           anchorageMode == other.anchorageMode &&
           construction == other.construction &&
-          morale == other.morale;
+          constructionPreemptSeconds == other.constructionPreemptSeconds &&
+          morale == other.morale &&
+          moralePreemptSeconds == other.moralePreemptSeconds;
 
   @override
   int get hashCode => Object.hash(
@@ -124,7 +135,9 @@ class NotificationSettings {
     anchorage,
     anchorageMode,
     construction,
+    constructionPreemptSeconds,
     morale,
+    moralePreemptSeconds,
   );
 }
 
@@ -152,7 +165,15 @@ class SharedPreferencesNotificationSettingsStore
   static const String _keyAnchorage = '${_prefix}anchorage';
   static const String _keyAnchorageMode = '${_prefix}anchorage_mode';
   static const String _keyConstruction = '${_prefix}construction';
+  static const String _keyConstructionPreempt =
+      '${_prefix}construction_preempt';
   static const String _keyMorale = '${_prefix}morale';
+  static const String _keyMoralePreempt = '${_prefix}morale_preempt';
+
+  static int _sanitizePreempt(int? seconds, int fallback) {
+    if (seconds == 0 || seconds == 30 || seconds == 60) return seconds!;
+    return fallback;
+  }
 
   @override
   Future<NotificationSettings> load() async {
@@ -166,15 +187,29 @@ class SharedPreferencesNotificationSettingsStore
       showPercent: prefs.getBool(_keyShowPercent) ?? true,
       showCountdown: prefs.getBool(_keyShowCountdown) ?? true,
       expedition: prefs.getBool(_keyExpedition) ?? true,
-      expeditionPreemptSeconds: prefs.getInt(_keyExpPreempt) ?? 60,
+      expeditionPreemptSeconds: _sanitizePreempt(
+        prefs.getInt(_keyExpPreempt),
+        60,
+      ),
       repair: prefs.getBool(_keyRepair) ?? true,
-      repairPreemptSeconds: prefs.getInt(_keyRepairPreempt) ?? 0,
+      repairPreemptSeconds: _sanitizePreempt(
+        prefs.getInt(_keyRepairPreempt),
+        0,
+      ),
       anchorage: prefs.getBool(_keyAnchorage) ?? true,
       anchorageMode: AnchorageNotificationMode.fromStorage(
         prefs.getString(_keyAnchorageMode),
       ),
       construction: prefs.getBool(_keyConstruction) ?? true,
+      constructionPreemptSeconds: _sanitizePreempt(
+        prefs.getInt(_keyConstructionPreempt),
+        0,
+      ),
       morale: prefs.getBool(_keyMorale) ?? true,
+      moralePreemptSeconds: _sanitizePreempt(
+        prefs.getInt(_keyMoralePreempt),
+        0,
+      ),
     );
   }
 
@@ -196,7 +231,12 @@ class SharedPreferencesNotificationSettingsStore
       prefs.setBool(_keyAnchorage, settings.anchorage),
       prefs.setString(_keyAnchorageMode, settings.anchorageMode.storageValue),
       prefs.setBool(_keyConstruction, settings.construction),
+      prefs.setInt(
+        _keyConstructionPreempt,
+        settings.constructionPreemptSeconds,
+      ),
       prefs.setBool(_keyMorale, settings.morale),
+      prefs.setInt(_keyMoralePreempt, settings.moralePreemptSeconds),
     ]);
   }
 }

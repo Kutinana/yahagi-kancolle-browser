@@ -2630,6 +2630,12 @@ abstract class AppLocalizations {
   /// **'切换失败，已保留或回退到安全模式。'**
   String get gameRenderingModeFailed;
 
+  /// No description provided for @nativeGameSurfaceSwitchRenderingModeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式'**
+  String get nativeGameSurfaceSwitchRenderingModeHint;
+
   /// No description provided for @senka.
   ///
   /// In zh, this message translates to:
@@ -2768,6 +2774,12 @@ abstract class AppLocalizations {
   /// **'系统通知状态'**
   String get notificationSectionSystem;
 
+  /// No description provided for @notificationSectionSystemDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'授权通知与精确提醒权限，可确保在锁屏或后台时远征、入渠等提醒准时弹出，避免被系统省电策略延迟。点击对应项可直接前往系统设置开启。'**
+  String get notificationSectionSystemDesc;
+
   /// No description provided for @notificationPermissionGranted.
   ///
   /// In zh, this message translates to:
@@ -2861,37 +2873,37 @@ abstract class AppLocalizations {
   /// No description provided for @notificationSectionTypes.
   ///
   /// In zh, this message translates to:
-  /// **'业务通知分类与提醒时机'**
+  /// **'通知类型与时机'**
   String get notificationSectionTypes;
 
   /// No description provided for @notificationExpedition.
   ///
   /// In zh, this message translates to:
-  /// **'远征归还'**
+  /// **'远征'**
   String get notificationExpedition;
 
   /// No description provided for @notificationRepair.
   ///
   /// In zh, this message translates to:
-  /// **'入渠修复'**
+  /// **'入渠'**
   String get notificationRepair;
 
   /// No description provided for @notificationAnchorage.
   ///
   /// In zh, this message translates to:
-  /// **'泊地修理'**
+  /// **'泊地'**
   String get notificationAnchorage;
 
   /// No description provided for @notificationConstruction.
   ///
   /// In zh, this message translates to:
-  /// **'工厂建造'**
+  /// **'建造'**
   String get notificationConstruction;
 
   /// No description provided for @notificationMorale.
   ///
   /// In zh, this message translates to:
-  /// **'士气 / 疲劳与刷闪'**
+  /// **'疲劳 / 刷闪'**
   String get notificationMorale;
 
   /// No description provided for @notificationPunctual.
