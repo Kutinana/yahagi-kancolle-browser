@@ -61,38 +61,10 @@ class DetailedBattlePanel extends StatelessWidget {
           _DropResult(battle: battle, gameState: gameState),
         const SizedBox(height: 9),
         if (navigation)
-          if (battle.friendEscort.isEmpty)
-            _FleetGroup(
-              title: '我方舰队',
-              ships: battle.friendMain,
-              mvpPositions: battle.mvpPositions,
-              damagePulseMode: damagePulseMode,
-            )
-          else
-            Row(
-              key: const Key('navigation-combined-fleets'),
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Expanded(
-                  child: _FleetGroup(
-                    title: '我方主力',
-                    ships: battle.friendMain,
-                    mvpPositions: battle.mvpPositions,
-                    damagePulseMode: damagePulseMode,
-                  ),
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: _FleetGroup(
-                    title: '我方随伴',
-                    ships: battle.friendEscort,
-                    mvpPositions: battle.mvpPositions,
-                    positionOffset: 6,
-                    damagePulseMode: damagePulseMode,
-                  ),
-                ),
-              ],
-            )
+          NavigationFriendlyFleets(
+            battle: battle,
+            damagePulseMode: damagePulseMode,
+          )
         else
           Row(
             key: const Key('battle-side-by-side-fleets'),
@@ -334,6 +306,56 @@ class _DropResult extends StatelessWidget {
         runSpacing: 4,
         children: <Widget>[for (final entry in entries) DropPill(text: entry)],
       ),
+    );
+  }
+}
+
+class NavigationFriendlyFleets extends StatelessWidget {
+  const NavigationFriendlyFleets({
+    super.key,
+    required this.battle,
+    required this.damagePulseMode,
+  });
+
+  final LiveBattle battle;
+  final DamagePulseMode damagePulseMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = battle.friendEscort.isEmpty
+        ? _FleetGroup(
+            title: '我方舰队',
+            ships: battle.friendMain,
+            mvpPositions: battle.mvpPositions,
+            damagePulseMode: damagePulseMode,
+          )
+        : Row(
+            key: const Key('navigation-combined-fleets'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: _FleetGroup(
+                  title: '我方主力',
+                  ships: battle.friendMain,
+                  mvpPositions: battle.mvpPositions,
+                  damagePulseMode: damagePulseMode,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: _FleetGroup(
+                  title: '我方随伴',
+                  ships: battle.friendEscort,
+                  mvpPositions: battle.mvpPositions,
+                  positionOffset: 6,
+                  damagePulseMode: damagePulseMode,
+                ),
+              ),
+            ],
+          );
+    return KeyedSubtree(
+      key: const Key('navigation-friendly-fleets'),
+      child: content,
     );
   }
 }

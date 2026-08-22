@@ -418,6 +418,10 @@ void main() {
     expect(find.text('节点 1'), findsOneWidget);
     expect(find.text('普通战斗'), findsOneWidget);
     expect(find.textContaining('1-1'), findsNothing);
+    expect(find.byKey(const Key('navigation-friendly-fleets')), findsOneWidget);
+    expect(find.text('我方舰队'), findsOneWidget);
+    expect(find.text('夕張'), findsOneWidget);
+    expect(find.text('28 / 30'), findsOneWidget);
   });
 
   testWidgets('forecast omits the point suffix from mapped node labels', (
@@ -1409,5 +1413,6 @@ void main() {
     expect(find.text('节点 1'), findsOneWidget);
     expect(find.text('普通战斗'), findsOneWidget);
     expect(find.textContaining('1-1'), findsNothing);
+    expect(find.byKey(const Key('navigation-friendly-fleets')), findsOneWidget);
   });
 }

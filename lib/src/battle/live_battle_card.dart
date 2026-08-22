@@ -228,12 +228,6 @@ class _CompactBattlePanel extends StatelessWidget {
       final raid = battle.landBaseRaid;
       final previewShips =
           battle.enemyPreviewShips ?? const <EnemyPreviewShip>[];
-      if (raid == null && previewShips.isEmpty) {
-        return KeyedSubtree(
-          key: const Key('compact-battle-panel'),
-          child: navigationHeader,
-        );
-      }
       return Column(
         key: const Key('compact-battle-panel'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -250,6 +244,11 @@ class _CompactBattlePanel extends StatelessWidget {
             const SizedBox(height: 7),
             LandBaseRaidPanel(result: raid, compact: true),
           ],
+          const SizedBox(height: 9),
+          NavigationFriendlyFleets(
+            battle: battle,
+            damagePulseMode: damagePulseMode,
+          ),
         ],
       );
     }
