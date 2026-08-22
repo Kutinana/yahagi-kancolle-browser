@@ -9,6 +9,8 @@ double shipCardPortraitWidth(BuildContext context) {
   return (MediaQuery.sizeOf(context).width * 0.16).clamp(100.0, 180.0);
 }
 
+enum ShipPortraitResourceType { remodel, banner }
+
 abstract final class ShipPortraitUriBuilder {
   static const List<int> _resource = <int>[
     6657,
@@ -113,7 +115,11 @@ abstract final class ShipPortraitUriBuilder {
     3243,
   ];
 
-  static Uri? build({required MasterShip ship, required String serverOrigin}) {
+  static Uri? build({
+    required MasterShip ship,
+    required String serverOrigin,
+    ShipPortraitResourceType resourceType = ShipPortraitResourceType.remodel,
+  }) {
     if (ship.portraitVersion == null) {
       return null;
     }
@@ -129,10 +135,11 @@ abstract final class ShipPortraitUriBuilder {
       port: origin.hasPort ? origin.port : null,
     );
     final paddedId = ship.id.toString().padLeft(4, '0');
-    final cipher = _createCipher(ship.id, 'ship_remodel');
+    final resourceName = resourceType.name;
+    final cipher = _createCipher(ship.id, 'ship_$resourceName');
     final version = int.tryParse(ship.portraitVersion!);
     return server.replace(
-      path: '/kcs2/resources/ship/remodel/${paddedId}_$cipher.png',
+      path: '/kcs2/resources/ship/$resourceName/${paddedId}_$cipher.png',
       queryParameters: version != null && version > 1
           ? <String, String>{'version': ship.portraitVersion!}
           : null,
@@ -157,6 +164,7 @@ class ShipPortrait extends StatelessWidget {
     this.width = 96,
     this.height = 56,
     this.decodeHeight,
+    this.resourceType = ShipPortraitResourceType.remodel,
   });
 
   final MasterShip? ship;
@@ -164,12 +172,17 @@ class ShipPortrait extends StatelessWidget {
   final double width;
   final double height;
   final int? decodeHeight;
+  final ShipPortraitResourceType resourceType;
 
   @override
   Widget build(BuildContext context) {
     final uri = ship == null
         ? null
-        : ShipPortraitUriBuilder.build(ship: ship!, serverOrigin: serverOrigin);
+        : ShipPortraitUriBuilder.build(
+            ship: ship!,
+            serverOrigin: serverOrigin,
+            resourceType: resourceType,
+          );
     final placeholder = ColoredBox(
       color: const Color(0xff1b3240),
       child: SizedBox(
@@ -187,8 +200,9 @@ class ShipPortrait extends StatelessWidget {
         child: placeholder,
       );
     }
+    final enemyBanner = resourceType == ShipPortraitResourceType.banner;
     final imageHeight = (height / 176) * 182;
-    final horizontalOffset = height * 0.555;
+    final horizontalOffset = height * (enemyBanner ? 1.5 : 0.555);
     final verticalOffset = (height / 176) * 3;
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),

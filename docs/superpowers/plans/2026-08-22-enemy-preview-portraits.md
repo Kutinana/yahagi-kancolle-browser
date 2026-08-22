@@ -211,7 +211,7 @@ git commit -m "style(未卜先知): 格式化敌方立绘改动（任务 5/5）"
 - 修改：`lib/src/fleet/ship_portrait.dart`
 - 修改：`lib/src/battle/official_enemy_preview.dart`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```dart
 expect(
@@ -226,7 +226,7 @@ expect(
 
 Widget 测试同时断言 `official-enemy-preview-portrait-0` 内的 `NetworkImage.url` 包含 `/ship/banner/`。
 
-- [ ] **步骤 2：运行红灯**
+- [x] **步骤 2：运行红灯**
 
 ```powershell
 flutter test test/ship_portrait_test.dart test/live_battle_card_node_test.dart --plain-name "enemy portrait uses POI banner resources"
@@ -234,11 +234,11 @@ flutter test test/ship_portrait_test.dart test/live_battle_card_node_test.dart -
 
 预期：FAIL，缺少 `ShipPortraitResourceType.banner`，敌舰预览仍生成 `ship/remodel`。
 
-- [ ] **步骤 3：最小实现**
+- [x] **步骤 3：最小实现**
 
 为 `ShipPortraitUriBuilder.build` 增加默认值为 `remodel` 的资源类型；banner 使用 `ship_banner` 密钥。`ShipPortrait` 增加资源类型和横向裁切系数参数，敌舰预览传入 `banner` 与 `1.5`。单舰队及联合舰队胶囊尺寸不变。
 
-- [ ] **步骤 4：运行绿灯和回归验证**
+- [x] **步骤 4：运行绿灯和回归验证**
 
 ```powershell
 flutter test test/ship_portrait_test.dart test/live_battle_card_node_test.dart
@@ -247,7 +247,7 @@ flutter analyze lib/src/fleet/ship_portrait.dart lib/src/battle/official_enemy_p
 
 预期：全部 PASS，静态分析退出码为 0。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```powershell
 git add lib/src/fleet/ship_portrait.dart lib/src/battle/official_enemy_preview.dart test/ship_portrait_test.dart test/live_battle_card_node_test.dart docs/superpowers

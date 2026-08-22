@@ -520,6 +520,29 @@ void main() {
       find.byKey(const Key('official-enemy-preview-portrait-0')),
       findsOneWidget,
     );
+    final portraitImage = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('official-enemy-preview-portrait-0')),
+        matching: find.byType(Image),
+      ),
+    );
+    final imageProvider = portraitImage.image;
+    final networkImage = imageProvider is ResizeImage
+        ? imageProvider.imageProvider as NetworkImage
+        : imageProvider as NetworkImage;
+    expect(
+      networkImage.url,
+      contains('/kcs2/resources/ship/banner/1501_2115.png'),
+    );
+    final portraitPosition = tester.widget<Positioned>(
+      find.descendant(
+        of: find.byKey(const Key('official-enemy-preview-portrait-0')),
+        matching: find.byType(Positioned),
+      ),
+    );
+    expect(portraitPosition.left, -34 * 1.5);
+    expect(portraitPosition.top, closeTo(-(34 / 176) * 3, 0.001));
+    expect(portraitImage.height, closeTo((34 / 176) * 182, 0.001));
 
     await tester.tap(find.byKey(const Key('battle-mode-compact')));
     await tester.pump();
@@ -571,6 +594,44 @@ void main() {
       find.byKey(const Key('official-enemy-preview-portrait-0')),
       findsNothing,
     );
+  });
+
+  testWidgets('preview IDs below POI enemy threshold keep remodel resources', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: OfficialEnemyPreview(
+            ships: <EnemyPreviewShip>[
+              EnemyPreviewShip(masterId: 101, name: '测试舰'),
+            ],
+            showPortraits: true,
+            masterShips: <int, MasterShip>{
+              101: MasterShip(
+                id: 101,
+                name: '测试舰',
+                shipTypeId: 2,
+                portraitVersion: '7',
+              ),
+            },
+            serverOrigin: 'https://example.com',
+          ),
+        ),
+      ),
+    );
+
+    final image = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('official-enemy-preview-portrait-0')),
+        matching: find.byType(Image),
+      ),
+    );
+    final imageProvider = image.image;
+    final networkImage = imageProvider is ResizeImage
+        ? imageProvider.imageProvider as NetworkImage
+        : imageProvider as NetworkImage;
+    expect(networkImage.url, contains('/kcs2/resources/ship/remodel/'));
   });
 
   testWidgets('combined enemy preview renders escort and main in three rows', (

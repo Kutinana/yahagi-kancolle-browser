@@ -23,6 +23,26 @@ void main() {
       );
     });
 
+    test('enemy portrait uses POI banner resources', () {
+      const enemy = MasterShip(
+        id: 1501,
+        name: '敌舰',
+        shipTypeId: 13,
+        portraitVersion: '7',
+      );
+
+      final uri = ShipPortraitUriBuilder.build(
+        ship: enemy,
+        serverOrigin: 'https://w01y.kancolle-server.com',
+        resourceType: ShipPortraitResourceType.banner,
+      );
+
+      expect(
+        uri.toString(),
+        'https://w01y.kancolle-server.com/kcs2/resources/ship/banner/1501_2115.png?version=7',
+      );
+    });
+
     test('rejects non-http origins and missing versions', () {
       const ship = MasterShip(id: 101, name: '测试舰', shipTypeId: 2);
 

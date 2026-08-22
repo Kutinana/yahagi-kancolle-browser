@@ -111,11 +111,15 @@ class OfficialEnemyPreview extends StatelessWidget {
   }) {
     final name = preview?.name ?? '';
     final masterShip = preview == null ? null : masterShips[preview.masterId];
+    final resourceType = (masterShip?.id ?? 0) >= 1500
+        ? ShipPortraitResourceType.banner
+        : ShipPortraitResourceType.remodel;
     final portraitUri = masterShip == null
         ? null
         : ShipPortraitUriBuilder.build(
             ship: masterShip,
             serverOrigin: serverOrigin,
+            resourceType: resourceType,
           );
     return Padding(
       key: key,
@@ -130,6 +134,7 @@ class OfficialEnemyPreview extends StatelessWidget {
               width: portraitWidth,
               height: portraitHeight,
               decodeHeight: (portraitHeight * 2).round(),
+              resourceType: resourceType,
             ),
             const SizedBox(width: 7),
           ],
