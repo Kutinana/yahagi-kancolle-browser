@@ -128,7 +128,7 @@ class GameResourceCacheEngine(
             stored.state == GameResourceStoredState.DAMAGED -> GameResourceInspectionState.DAMAGED
             entry != null && expectedLength != null && entry.byteLength != expectedLength ->
                 GameResourceInspectionState.OUTDATED
-            entry != null && entry.version == null &&
+            entry != null && expectedLength == null && entry.version == null &&
                 clock() - entry.lastValidatedAt >= UNVERSIONED_TTL_MS ->
                 GameResourceInspectionState.OUTDATED
             else -> GameResourceInspectionState.VALID

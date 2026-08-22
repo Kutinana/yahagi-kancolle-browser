@@ -119,6 +119,22 @@ class GameResourceCacheEngineTest {
     }
 
     @Test
+    fun `manifest length keeps unversioned resource valid after ttl`() {
+        var now = 1L
+        val fetcher = QueueFetcher(result(byteArrayOf(1)))
+        val engine = engine(fetcher, clock = { now })
+        val url = official("/kcs2/resources/a.png")
+
+        engine.fetch(url, expectedLength = 1)
+        now += GameResourceCacheEngine.UNVERSIONED_TTL_MS
+
+        assertEquals(
+            GameResourceInspectionState.VALID,
+            engine.inspectMetadata(url, expectedLength = 1).state,
+        )
+    }
+
+    @Test
     fun `critical entry does not fall back to stale cache when validation fails`() {
         val fetcher = QueueFetcher(result(byteArrayOf(1)), null)
         val engine = engine(fetcher)
