@@ -62,6 +62,10 @@ class EnemyPreviewShip {
 
 如果任一条件不满足，则该行退回当前纯文字布局。网络图片加载失败时也保持舰名可见，不让图片错误影响战前预测。
 
+### POI 敌舰资源规则修订
+
+敌舰不能复用舰娘的 `ship/remodel` 资源。按照 poi 的实现，master ID 不小于 1500 的敌舰使用 `ship/banner`，资源密钥种子为 `ship_banner`，横向裁切系数为 1.5。现有胶囊尺寸保持不变：单舰队 56 × 34 dp，联合舰队 48 × 30 dp；图片在胶囊内按高度缩放和裁切，舰名继续占据剩余空间。舰娘现有 `ship/remodel` 逻辑不变。
+
 ## 设置持久化
 
 扩展 `BattlePredictionSettingsStore` 和 `BattlePredictionSettingsController`，增加 `enemyPortraitsEnabled` 布尔值：
