@@ -24,6 +24,7 @@ class GameNotificationCoordinator {
     NotificationTimerAnchors initialTimerAnchors =
         NotificationTimerAnchors.empty,
     NotificationTimerAnchorStore? timerAnchorStore,
+    Future<void> Function(Duration delay)? retryDelay,
     void Function(Object error, StackTrace stackTrace)? onError,
   }) : _gameStateProvider =
            gameStateProvider ?? (() => gameStateController.state),
@@ -39,6 +40,7 @@ class GameNotificationCoordinator {
            (() => gameStateController.lastUpdatedPath),
        _timerAnchors = initialTimerAnchors,
        _timerAnchorStore = timerAnchorStore,
+       _retryDelay = retryDelay ?? ((delay) => Future<void>.delayed(delay)),
        _onError = onError ?? _reportFlutterError;
 
   final GameStateController gameStateController;
@@ -50,6 +52,7 @@ class GameNotificationCoordinator {
   final DateTime? Function() _nosakiStartedAt;
   final String? Function() _lastUpdatedPath;
   final NotificationTimerAnchorStore? _timerAnchorStore;
+  final Future<void> Function(Duration delay) _retryDelay;
   final void Function(Object error, StackTrace stackTrace) _onError;
 
   bool _disposed = false;
@@ -57,6 +60,16 @@ class GameNotificationCoordinator {
   final Map<String, OngoingTaskItem> _completedTombstones = {};
   NotificationTimerAnchors _timerAnchors;
   Future<void> _timerAnchorSaveQueue = Future<void>.value();
+  final Map<String, ImmediateNotificationItem> _pendingImmediateAlerts = {};
+  NotificationSnapshot? _pendingSnapshot;
+  Completer<void>? _retryWake;
+  bool _drainingSnapshots = false;
+
+  static const _snapshotRetryBackoff = <Duration>[
+    Duration(seconds: 1),
+    Duration(seconds: 3),
+    Duration(seconds: 10),
+  ];
 
   void start() {
     final state = _gameStateProvider();
@@ -70,6 +83,9 @@ class GameNotificationCoordinator {
 
   void dispose() {
     _disposed = true;
+    _pendingSnapshot = null;
+    final retryWake = _retryWake;
+    if (retryWake != null && !retryWake.isCompleted) retryWake.complete();
     gameStateController.removeListener(_onGameStateChanged);
     settingsController.removeListener(_syncSnapshot);
   }
@@ -90,9 +106,16 @@ class GameNotificationCoordinator {
   }) {
     if (_disposed) return;
     final settings = settingsController.settings;
+    if (!settings.master) {
+      _pendingImmediateAlerts.clear();
+    } else {
+      for (final alert in immediateAlerts) {
+        _pendingImmediateAlerts[alert.key] = alert;
+      }
+    }
     final snapshot = NotificationSnapshot(
       updatedAt: _now(),
-      immediateAlerts: immediateAlerts,
+      immediateAlerts: _pendingImmediateAlerts.values.toList(growable: false),
       alarms: settings.master ? _buildScheduledAlarms() : const [],
       ongoingItems: settings.master && settings.ongoingLive
           ? _buildOngoingItems()
@@ -107,7 +130,7 @@ class GameNotificationCoordinator {
         ongoingLive: settings.ongoingLive,
       ),
     );
-    unawaited(_applySnapshot(snapshot));
+    _enqueueSnapshot(snapshot);
   }
 
   Map<String, _ManualCompletionTask> _captureManualCompletionTasks(
@@ -235,19 +258,76 @@ class GameNotificationCoordinator {
     }
   }
 
-  Future<void> _applySnapshot(NotificationSnapshot snapshot) async {
+  void _enqueueSnapshot(NotificationSnapshot snapshot) {
+    _pendingSnapshot = snapshot;
+    final retryWake = _retryWake;
+    if (retryWake != null && !retryWake.isCompleted) retryWake.complete();
+    if (!_drainingSnapshots) unawaited(_drainSnapshots());
+  }
+
+  Future<void> _drainSnapshots() async {
+    if (_drainingSnapshots) return;
+    _drainingSnapshots = true;
     try {
-      final result = await notificationPort.applySnapshot(snapshot);
-      if (result.failures.isNotEmpty) {
-        _onError(
-          StateError(
-            'Native notification failures: ${result.failures.join(', ')}',
-          ),
-          StackTrace.current,
-        );
+      while (!_disposed) {
+        final snapshot = _pendingSnapshot;
+        if (snapshot == null) break;
+        _pendingSnapshot = null;
+        var retryIndex = 0;
+        while (!_disposed) {
+          Object? lastError;
+          StackTrace? lastStackTrace;
+          try {
+            final result = await notificationPort.applySnapshot(snapshot);
+            if (result.failures.isNotEmpty) {
+              throw StateError(
+                'Native notification failures: ${result.failures.join(', ')}',
+              );
+            }
+            final deliveredKeys = snapshot.immediateAlerts
+                .map((alert) => alert.key)
+                .toSet();
+            _pendingImmediateAlerts.removeWhere(
+              (key, _) => deliveredKeys.contains(key),
+            );
+            final pending = _pendingSnapshot;
+            if (pending != null && deliveredKeys.isNotEmpty) {
+              _pendingSnapshot = NotificationSnapshot(
+                schemaVersion: pending.schemaVersion,
+                updatedAt: pending.updatedAt,
+                immediateAlerts: pending.immediateAlerts
+                    .where((alert) => !deliveredKeys.contains(alert.key))
+                    .toList(growable: false),
+                alarms: pending.alarms,
+                ongoingItems: pending.ongoingItems,
+                presentation: pending.presentation,
+              );
+            }
+            break;
+          } catch (error, stackTrace) {
+            lastError = error;
+            lastStackTrace = stackTrace;
+          }
+
+          if (_pendingSnapshot != null) break;
+          if (retryIndex >= _snapshotRetryBackoff.length) {
+            _onError(lastError!, lastStackTrace!);
+            break;
+          }
+          final wake = Completer<void>();
+          _retryWake = wake;
+          await Future.any<void>([
+            _retryDelay(_snapshotRetryBackoff[retryIndex]),
+            wake.future,
+          ]);
+          if (identical(_retryWake, wake)) _retryWake = null;
+          retryIndex++;
+          if (_pendingSnapshot != null) break;
+        }
       }
-    } catch (error, stackTrace) {
-      _onError(error, stackTrace);
+    } finally {
+      _retryWake = null;
+      _drainingSnapshots = false;
     }
   }
 

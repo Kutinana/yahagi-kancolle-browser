@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
@@ -14,12 +16,27 @@ class FakeNotificationPort implements NotificationPort {
   final List<ImmediateNotificationItem> deliveredImmediateAlerts = [];
   NotificationSnapshot? latestSnapshot;
   bool failApply = false;
+  int failuresRemaining = 0;
+  int applyCount = 0;
+  int activeApplies = 0;
+  int maxActiveApplies = 0;
+  Completer<void>? applyGate;
+  final List<NotificationSnapshot> appliedSnapshots = [];
 
   @override
   Future<NotificationApplyResult> applySnapshot(
     NotificationSnapshot snapshot,
   ) async {
-    if (failApply) throw StateError('native apply failed');
+    applyCount++;
+    activeApplies++;
+    if (activeApplies > maxActiveApplies) maxActiveApplies = activeApplies;
+    appliedSnapshots.add(snapshot);
+    final gate = applyGate;
+    if (gate != null) await gate.future;
+    activeApplies--;
+    if (failApply || failuresRemaining-- > 0) {
+      throw StateError('native apply failed');
+    }
     latestSnapshot = snapshot;
     deliveredImmediateAlerts.addAll(snapshot.immediateAlerts);
     scheduledAlarms
@@ -171,7 +188,7 @@ void main() {
       coordinator.dispose();
     });
 
-    test('uses the game expedition display number in ongoing titles', () {
+    test('uses the game expedition display number in ongoing titles', () async {
       final returnTime = testNow.add(const Duration(minutes: 30));
       testState = testState.copyWith(
         masterMissions: const {
@@ -220,6 +237,7 @@ void main() {
         },
       );
       gameStateController.notifyListeners();
+      await Future<void>.delayed(Duration.zero);
       expect(
         fakePort.latestSnapshot!.ongoingItems.single.title,
         '⚓ 远征 第4舰队 B-自定义 · 南西方面航空侦察作战',
@@ -227,7 +245,7 @@ void main() {
       coordinator.dispose();
     });
 
-    test('schedules repair dock alarm and cancels when repaired', () {
+    test('schedules repair dock alarm and cancels when repaired', () async {
       final completeTime = testNow.add(const Duration(hours: 1));
       testState = testState.copyWith(
         masterShips: {
@@ -272,6 +290,7 @@ void main() {
       );
       // Trigger setting change or notification sync
       settingsController.notifyListeners();
+      await Future<void>.delayed(Duration.zero);
 
       expect(
         fakePort.scheduledAlarms.containsKey('repair_1_complete'),
@@ -529,7 +548,7 @@ void main() {
       },
     );
 
-    test('drops anchorage task when Akashi is moved out of flagship', () {
+    test('drops anchorage task when Akashi is moved out of flagship', () async {
       final ancStarted = testNow.subtract(const Duration(minutes: 5));
       testState = _anchorageState();
       final coordinator = GameNotificationCoordinator(
@@ -549,6 +568,7 @@ void main() {
 
       testState = _anchorageState(akashiFlagship: false);
       gameStateController.notifyListeners();
+      await Future<void>.delayed(Duration.zero);
 
       expect(
         fakePort.latestSnapshot?.ongoingItems.map((item) => item.id),
@@ -593,7 +613,7 @@ void main() {
 
     test(
       'fast build alerts immediately and keeps completed ongoing progress',
-      () {
+      () async {
         final completeTime = testNow.add(const Duration(hours: 1));
         testState = testState.copyWith(
           masterShips: {
@@ -636,6 +656,7 @@ void main() {
           ],
         );
         gameStateController.notifyListeners();
+        await Future<void>.delayed(Duration.zero);
 
         expect(
           fakePort.scheduledAlarms.containsKey('construction_1_complete'),
@@ -652,12 +673,14 @@ void main() {
         expect(fakePort.deliveredImmediateAlerts.single.body, contains('大凤'));
 
         gameStateController.notifyListeners();
+        await Future<void>.delayed(Duration.zero);
         expect(fakePort.deliveredImmediateAlerts, hasLength(1));
 
         testState = testState.copyWith(
           constructionDocks: const [ConstructionDock(id: 1)],
         );
         gameStateController.notifyListeners();
+        await Future<void>.delayed(Duration.zero);
         expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
         expect(fakePort.deliveredImmediateAlerts, hasLength(1));
 
@@ -667,7 +690,7 @@ void main() {
 
     test(
       'fast repair alerts immediately and retains completion until authoritative refresh',
-      () {
+      () async {
         final completeTime = testNow.add(const Duration(hours: 1));
         String? lastUpdatedPath;
         testState = testState.copyWith(
@@ -709,6 +732,7 @@ void main() {
         lastUpdatedPath = '/kcsapi/api_req_nyukyo/speedchange';
         testState = testState.copyWith(repairDocks: const [RepairDock(id: 1)]);
         gameStateController.notifyListeners();
+        await Future<void>.delayed(Duration.zero);
 
         final completed = fakePort.latestSnapshot!.ongoingItems.single;
         expect(completed.id, 'repair:1');
@@ -724,11 +748,13 @@ void main() {
 
         lastUpdatedPath = '/kcsapi/api_get_member/material';
         gameStateController.notifyListeners();
+        await Future<void>.delayed(Duration.zero);
         expect(fakePort.latestSnapshot?.ongoingItems.single.id, 'repair:1');
         expect(fakePort.deliveredImmediateAlerts, hasLength(1));
 
         lastUpdatedPath = '/kcsapi/api_get_member/ndock';
         gameStateController.notifyListeners();
+        await Future<void>.delayed(Duration.zero);
         expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
         expect(fakePort.deliveredImmediateAlerts, hasLength(1));
 
@@ -777,15 +803,119 @@ void main() {
         notificationPort: fakePort,
         gameStateProvider: () => testState,
         nowProvider: () => testNow,
+        retryDelay: (_) async {},
         onError: (error, _) => errors.add(error),
       );
 
       coordinator.start();
       await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       expect(errors.single, isA<StateError>());
+      expect(fakePort.applyCount, 4);
       coordinator.dispose();
     });
+
+    test(
+      'serializes native snapshot calls and applies the newest state last',
+      () async {
+        final firstGate = Completer<void>();
+        fakePort.applyGate = firstGate;
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+        );
+        coordinator.start();
+
+        final completeTime = testNow.add(const Duration(minutes: 30));
+        testState = testState.copyWith(
+          constructionDocks: [
+            ConstructionDock(
+              id: 1,
+              state: 1,
+              createdShipMasterId: 1,
+              completionTime: completeTime,
+            ),
+          ],
+        );
+        gameStateController.notifyListeners();
+        testState = testState.copyWith(
+          constructionDocks: const [ConstructionDock(id: 1)],
+        );
+        gameStateController.notifyListeners();
+
+        fakePort.applyGate = null;
+        firstGate.complete();
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(fakePort.maxActiveApplies, 1);
+        expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
+        expect(fakePort.applyCount, 2);
+        coordinator.dispose();
+      },
+    );
+
+    test(
+      'retries failed snapshots with bounded backoff and keeps immediate alerts',
+      () async {
+        fakePort.failuresRemaining = 2;
+        final delays = <Duration>[];
+        final completeTime = testNow.add(const Duration(hours: 1));
+        testState = testState.copyWith(
+          masterShips: const {
+            153: MasterShip(id: 153, name: '大凤', shipTypeId: 11),
+          },
+          constructionDocks: [
+            ConstructionDock(
+              id: 1,
+              state: 1,
+              createdShipMasterId: 153,
+              completionTime: completeTime,
+            ),
+          ],
+        );
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+          retryDelay: (delay) async => delays.add(delay),
+        );
+        coordinator.start();
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(delays, const [Duration(seconds: 1), Duration(seconds: 3)]);
+        expect(fakePort.applyCount, 3);
+
+        testState = testState.copyWith(
+          constructionDocks: [
+            ConstructionDock(
+              id: 1,
+              state: 3,
+              createdShipMasterId: 153,
+              completionTime: testNow,
+            ),
+          ],
+        );
+        fakePort.failuresRemaining = 1;
+        gameStateController.notifyListeners();
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(fakePort.deliveredImmediateAlerts, hasLength(1));
+        expect(
+          fakePort.deliveredImmediateAlerts.single.taskId,
+          'construction:1',
+        );
+        coordinator.dispose();
+      },
+    );
 
     test('natural morale deadline stays anchored to the game snapshot', () {
       testState = GameState.empty.copyWith(
