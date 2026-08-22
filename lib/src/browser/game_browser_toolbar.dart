@@ -72,43 +72,45 @@ class GameBrowserToolbar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(width: 4),
-          if (isRealWeb) ...[
-            _ToolbarButton(
-              key: const Key('browser-back'),
-              icon: Icons.arrow_back,
-              tooltip: l10n.back,
-              onPressed: interactionEnabled ? onBack : null,
-              size: navigationActionSize,
+          SizedBox.square(
+            dimension: persistentActionSize,
+            child: IconButton(
+              key: const Key('game-audio-toggle'),
+              padding: EdgeInsets.zero,
+              tooltip: isMuted ? l10n.enableGameAudio : l10n.disableGameAudio,
+              onPressed: interactionEnabled && audioEnabled
+                  ? onToggleMuted
+                  : null,
+              icon: Icon(
+                isMuted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
+                size: persistent ? 19 : 16,
+              ),
             ),
-            _ToolbarButton(
-              key: const Key('browser-reload'),
-              icon: Icons.refresh,
-              tooltip: l10n.reload,
-              onPressed: interactionEnabled ? onReload : null,
-              size: navigationActionSize,
+          ),
+          SizedBox.square(
+            dimension: persistentActionSize,
+            child: IconButton(
+              key: const Key('browser-screenshot'),
+              padding: EdgeInsets.zero,
+              tooltip: l10n.takeScreenshot,
+              onPressed: interactionEnabled ? onScreenshot : null,
+              icon: Icon(
+                Icons.camera_alt_outlined,
+                size: persistent ? 19 : 16,
+                color: const Color(0xffd4a85f),
+              ),
             ),
-            _ToolbarButton(
-              key: const Key('browser-home'),
-              icon: Icons.home_outlined,
-              tooltip: l10n.home,
-              onPressed: interactionEnabled ? onHome : null,
-              size: navigationActionSize,
+          ),
+          SizedBox.square(
+            dimension: persistentActionSize,
+            child: IconButton(
+              key: const Key('browser-fit-screen'),
+              padding: EdgeInsets.zero,
+              tooltip: l10n.fitGameScreen,
+              onPressed: interactionEnabled ? onFitScreen : null,
+              icon: Icon(Icons.crop_free, size: persistent ? 18 : 16),
             ),
-          ] else ...[
-            _ToolbarButton(
-              key: const Key('browser-reload'),
-              icon: Icons.refresh,
-              tooltip: l10n.reload,
-              onPressed: interactionEnabled ? onReload : null,
-              size: navigationActionSize,
-            ),
-            TextButton.icon(
-              key: const Key('browser-enter-dmm'),
-              onPressed: interactionEnabled ? onEnterDmm : null,
-              icon: const Icon(Icons.login, size: 15),
-              label: Text(l10n.enterDmm, style: const TextStyle(fontSize: 12)),
-            ),
-          ],
+          ),
           if (!persistent && displayAddress.isNotEmpty) ...<Widget>[
             const SizedBox(width: 4),
             ConstrainedBox(
@@ -157,45 +159,43 @@ class GameBrowserToolbar extends StatelessWidget {
               ),
             ),
           const SizedBox(width: 2),
-          SizedBox.square(
-            dimension: persistentActionSize,
-            child: IconButton(
-              key: const Key('game-audio-toggle'),
-              padding: EdgeInsets.zero,
-              tooltip: isMuted ? l10n.enableGameAudio : l10n.disableGameAudio,
-              onPressed: interactionEnabled && audioEnabled
-                  ? onToggleMuted
-                  : null,
-              icon: Icon(
-                isMuted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
-                size: persistent ? 19 : 16,
-              ),
+          if (isRealWeb) ...[
+            _ToolbarButton(
+              key: const Key('browser-back'),
+              icon: Icons.arrow_back,
+              tooltip: l10n.back,
+              onPressed: interactionEnabled ? onBack : null,
+              size: navigationActionSize,
             ),
-          ),
-          SizedBox.square(
-            dimension: persistentActionSize,
-            child: IconButton(
-              key: const Key('browser-screenshot'),
-              padding: EdgeInsets.zero,
-              tooltip: l10n.takeScreenshot,
-              onPressed: interactionEnabled ? onScreenshot : null,
-              icon: Icon(
-                Icons.camera_alt_outlined,
-                size: persistent ? 19 : 16,
-                color: const Color(0xffd4a85f),
-              ),
+            _ToolbarButton(
+              key: const Key('browser-reload'),
+              icon: Icons.refresh,
+              tooltip: l10n.reload,
+              onPressed: interactionEnabled ? onReload : null,
+              size: navigationActionSize,
             ),
-          ),
-          SizedBox.square(
-            dimension: persistentActionSize,
-            child: IconButton(
-              key: const Key('browser-fit-screen'),
-              padding: EdgeInsets.zero,
-              tooltip: l10n.fitGameScreen,
-              onPressed: interactionEnabled ? onFitScreen : null,
-              icon: Icon(Icons.crop_free, size: persistent ? 18 : 16),
+            _ToolbarButton(
+              key: const Key('browser-home'),
+              icon: Icons.home_outlined,
+              tooltip: l10n.home,
+              onPressed: interactionEnabled ? onHome : null,
+              size: navigationActionSize,
             ),
-          ),
+          ] else ...[
+            _ToolbarButton(
+              key: const Key('browser-reload'),
+              icon: Icons.refresh,
+              tooltip: l10n.reload,
+              onPressed: interactionEnabled ? onReload : null,
+              size: navigationActionSize,
+            ),
+            TextButton.icon(
+              key: const Key('browser-enter-dmm'),
+              onPressed: interactionEnabled ? onEnterDmm : null,
+              icon: const Icon(Icons.login, size: 15),
+              label: Text(l10n.enterDmm, style: const TextStyle(fontSize: 12)),
+            ),
+          ],
           if (!persistent)
             SizedBox.square(
               dimension: persistentActionSize,

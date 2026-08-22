@@ -151,12 +151,12 @@ void main() {
       );
 
       final actions = <Finder>[
-        find.byKey(const Key('browser-back')),
-        find.byKey(const Key('browser-reload')),
-        find.byKey(const Key('browser-home')),
         find.byKey(const Key('game-audio-toggle')),
         find.byKey(const Key('browser-screenshot')),
         find.byKey(const Key('browser-fit-screen')),
+        find.byKey(const Key('browser-back')),
+        find.byKey(const Key('browser-reload')),
+        find.byKey(const Key('browser-home')),
       ];
       for (var index = 1; index < actions.length; index++) {
         expect(
@@ -169,6 +169,50 @@ void main() {
       await tester.tap(find.byKey(const Key('browser-screenshot')));
       expect(screenshots, 1);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'overlay toolbar places utility actions before navigation buttons to prevent mis-clicks',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GameBrowserToolbar(
+              persistent: false,
+              mode: GameBrowserMode.realWeb,
+              loadState: GamePageLoadState.ready,
+              displayAddress: 'https://play.games.dmm.com/game/kancolle',
+              onBack: () async {},
+              onReload: () async {},
+              onHome: () async {},
+              onEnterDmm: () async {},
+              isMuted: false,
+              audioEnabled: true,
+              onToggleMuted: () async {},
+              onCollapse: () {},
+              onFitScreen: () {},
+              onScreenshot: () {},
+            ),
+          ),
+        ),
+      );
+
+      final overlayActions = <Finder>[
+        find.byKey(const Key('game-audio-toggle')),
+        find.byKey(const Key('browser-screenshot')),
+        find.byKey(const Key('browser-fit-screen')),
+        find.byKey(const Key('browser-back')),
+        find.byKey(const Key('browser-reload')),
+        find.byKey(const Key('browser-home')),
+        find.byKey(const Key('browser-toolbar-collapse')),
+      ];
+      for (var index = 1; index < overlayActions.length; index++) {
+        expect(
+          tester.getCenter(overlayActions[index]).dx,
+          greaterThan(tester.getCenter(overlayActions[index - 1]).dx),
+        );
+      }
     },
   );
 

@@ -95,6 +95,25 @@ void main() {
     );
   });
 
+  testWidgets('displays switch rendering mode hint on startup failure', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    fixture.port.createFailure = PlatformException(
+      code: 'native_webview_create_failed',
+      message: 'Native WebView creation failed.',
+    );
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+
+    expect(find.byKey(const Key('native-game-surface-error')), findsOneWidget);
+    expect(
+      find.text('当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('manual fit resends native bounds before fitting the page', (
     tester,
   ) async {
@@ -2307,6 +2326,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   final Completer<void> destroyed = Completer<void>();
   VoidCallback? beforeCancel;
   Completer<void>? cancelCompleter;
+  Object? createFailure;
   Object? cancelFailure;
   Object? disposeFailure;
   Completer<void>? disposeCompleter;
@@ -2330,6 +2350,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   @override
   Future<int> create() async {
     calls.add('create');
+    if (createFailure case final failure?) throw failure;
     for (final event in eventsDuringCreate) {
       _events.add(event);
     }

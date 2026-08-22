@@ -1201,6 +1201,16 @@ final class _NativeActivityGameSurfaceState
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.redAccent),
             ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.nativeGameSurfaceSwitchRenderingModeHint,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
             if (_renderProcessRecoveryAvailable) ...<Widget>[
               const SizedBox(height: 16),
               FilledButton.icon(
