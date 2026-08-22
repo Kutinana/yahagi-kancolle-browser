@@ -202,7 +202,7 @@ class ShipPortrait extends StatelessWidget {
     }
     final enemyBanner = resourceType == ShipPortraitResourceType.banner;
     final imageHeight = (height / 176) * 182;
-    final horizontalOffset = height * (enemyBanner ? 1.5 : 0.555);
+    final horizontalOffset = height * (enemyBanner ? 1.6 : 0.555);
     final verticalOffset = (height / 176) * 3;
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
