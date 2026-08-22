@@ -19,6 +19,7 @@ class GameNotificationCoordinator {
     DateTime Function()? nowProvider,
     DateTime? Function()? anchorageRepairStartedAtProvider,
     DateTime? Function()? nosakiSparkleStartedAtProvider,
+    String? Function()? lastUpdatedPathProvider,
     void Function(Object error, StackTrace stackTrace)? onError,
   }) : _gameStateProvider =
            gameStateProvider ?? (() => gameStateController.state),
@@ -29,6 +30,9 @@ class GameNotificationCoordinator {
        _nosakiStartedAt =
            nosakiSparkleStartedAtProvider ??
            (() => gameStateController.nosakiSparkleStartedAt),
+       _lastUpdatedPath =
+           lastUpdatedPathProvider ??
+           (() => gameStateController.lastUpdatedPath),
        _onError = onError ?? _reportFlutterError;
 
   final GameStateController gameStateController;
@@ -38,10 +42,12 @@ class GameNotificationCoordinator {
   final DateTime Function() _now;
   final DateTime? Function() _anchorageStartedAt;
   final DateTime? Function() _nosakiStartedAt;
+  final String? Function() _lastUpdatedPath;
   final void Function(Object error, StackTrace stackTrace) _onError;
 
   bool _disposed = false;
   Map<String, _ManualCompletionTask> _manualCompletionTasks = const {};
+  final Map<String, OngoingTaskItem> _completedTombstones = {};
 
   void start() {
     _manualCompletionTasks = _captureManualCompletionTasks(
@@ -64,6 +70,7 @@ class GameNotificationCoordinator {
     final now = _now();
     final state = _gameStateProvider();
     final alerts = _buildImmediateAlerts(state, now);
+    _updateCompletedTombstones(state);
     _manualCompletionTasks = _captureManualCompletionTasks(state, now);
     _syncSnapshot(immediateAlerts: alerts);
   }
@@ -116,6 +123,10 @@ class GameNotificationCoordinator {
         deadline: deadline,
         title: '建造完成 · 船坞 #${dock.id}',
         body: '$shipName 已在船坞建造完成！',
+        ongoingTitle: '🔨 建造 船坞 #${dock.id} · $shipName 建造完成',
+        totalSeconds: dock.startedAt == null
+            ? deadline.difference(now).inSeconds.clamp(1, 1 << 31)
+            : deadline.difference(dock.startedAt!).inSeconds.clamp(1, 1 << 31),
       );
     }
     for (final dock in state.repairDocks) {
@@ -134,6 +145,10 @@ class GameNotificationCoordinator {
         deadline: deadline,
         title: '舰船修复完成 · 船坞 #${dock.id}',
         body: '$shipName 已经在船坞修理完毕，HP 已完全修满！',
+        ongoingTitle: '🔧 入渠 船坞 #${dock.id} · $shipName 修复完成',
+        totalSeconds: ship != null && ship.repairDurationMilliseconds > 0
+            ? (ship.repairDurationMilliseconds / 1000).round()
+            : deadline.difference(now).inSeconds.clamp(1, 1 << 31),
       );
     }
     return tasks;
@@ -148,15 +163,7 @@ class GameNotificationCoordinator {
     final alerts = <ImmediateNotificationItem>[];
     for (final task in _manualCompletionTasks.values) {
       if (!task.deadline.isAfter(now)) continue;
-      final manuallyCompleted = switch (task.type) {
-        GameNotificationType.construction => state.constructionDocks.any(
-          (dock) => dock.id == task.dockId && dock.state == 3,
-        ),
-        GameNotificationType.repair => state.repairDocks.any(
-          (dock) => dock.id == task.dockId && !dock.isRepairing,
-        ),
-        _ => false,
-      };
+      final manuallyCompleted = _isManuallyCompleted(task, state);
       final typeEnabled = switch (task.type) {
         GameNotificationType.construction => settings.construction,
         GameNotificationType.repair => settings.repair,
@@ -176,6 +183,46 @@ class GameNotificationCoordinator {
       );
     }
     return alerts;
+  }
+
+  bool _isManuallyCompleted(_ManualCompletionTask task, GameState state) =>
+      switch (task.type) {
+        GameNotificationType.construction => state.constructionDocks.any(
+          (dock) => dock.id == task.dockId && dock.state == 3,
+        ),
+        GameNotificationType.repair => state.repairDocks.any(
+          (dock) => dock.id == task.dockId && !dock.isRepairing,
+        ),
+        _ => false,
+      };
+
+  void _updateCompletedTombstones(GameState state) {
+    for (final task in _manualCompletionTasks.values) {
+      if (task.type != GameNotificationType.repair ||
+          !_isManuallyCompleted(task, state)) {
+        continue;
+      }
+      _completedTombstones[task.id] = OngoingTaskItem(
+        id: task.id,
+        type: task.type,
+        title: task.ongoingTitle,
+        state: OngoingTaskState.completed,
+        progress: 1,
+        remainingSeconds: 0,
+        targetEpochMs: task.deadline.millisecondsSinceEpoch,
+        totalDurationSec: task.totalSeconds,
+      );
+    }
+
+    final path = _lastUpdatedPath();
+    final authoritativeRepairRefresh =
+        path == '/kcsapi/api_get_member/ndock' ||
+        path == '/kcsapi/api_port/port';
+    if (authoritativeRepairRefresh) {
+      _completedTombstones.removeWhere(
+        (_, item) => item.type == GameNotificationType.repair,
+      );
+    }
   }
 
   Future<void> _applySnapshot(NotificationSnapshot snapshot) async {
@@ -803,6 +850,17 @@ class GameNotificationCoordinator {
       }
     }
 
+    for (final tombstone in _completedTombstones.values) {
+      final enabled = switch (tombstone.type) {
+        GameNotificationType.repair => settings.repair,
+        GameNotificationType.construction => settings.construction,
+        _ => true,
+      };
+      if (enabled && items.every((item) => item.id != tombstone.id)) {
+        items.add(tombstone);
+      }
+    }
+
     return items;
   }
 
@@ -847,6 +905,8 @@ class _ManualCompletionTask {
     required this.deadline,
     required this.title,
     required this.body,
+    required this.ongoingTitle,
+    required this.totalSeconds,
   });
 
   final String id;
@@ -855,4 +915,6 @@ class _ManualCompletionTask {
   final DateTime deadline;
   final String title;
   final String body;
+  final String ongoingTitle;
+  final int totalSeconds;
 }

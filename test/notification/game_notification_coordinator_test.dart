@@ -205,7 +205,7 @@ void main() {
 
       expect(
         fakePort.latestSnapshot!.ongoingItems.single.title,
-        '⚓ 第4舰队 · 远征 B1 · 南西方面航空侦察作战',
+        '⚓ 远征 第4舰队 B1 · 南西方面航空侦察作战',
       );
 
       testState = testState.copyWith(
@@ -221,7 +221,7 @@ void main() {
       gameStateController.notifyListeners();
       expect(
         fakePort.latestSnapshot!.ongoingItems.single.title,
-        '⚓ 第4舰队 · 远征 B-自定义 · 南西方面航空侦察作战',
+        '⚓ 远征 第4舰队 B-自定义 · 南西方面航空侦察作战',
       );
       coordinator.dispose();
     });
@@ -657,48 +657,76 @@ void main() {
       },
     );
 
-    test('fast repair alerts immediately without retaining handled task', () {
-      final completeTime = testNow.add(const Duration(hours: 1));
-      testState = testState.copyWith(
-        masterShips: const {
-          131: MasterShip(id: 131, name: '大和', shipTypeId: 9),
-        },
-        ships: const {
-          10: OwnedShip(
-            id: 10,
-            masterId: 131,
-            level: 99,
-            currentHp: 20,
-            maxHp: 96,
-            condition: 49,
-            currentFuel: 100,
-            currentAmmo: 100,
-            slotIds: [],
-          ),
-        },
-        repairDocks: [
-          RepairDock(id: 1, state: 1, shipId: 10, completionTime: completeTime),
-        ],
-      );
-      final coordinator = GameNotificationCoordinator(
-        gameStateController: gameStateController,
-        settingsController: settingsController,
-        notificationPort: fakePort,
-        gameStateProvider: () => testState,
-        nowProvider: () => testNow,
-      );
-      coordinator.start();
+    test(
+      'fast repair alerts immediately and retains completion until authoritative refresh',
+      () {
+        final completeTime = testNow.add(const Duration(hours: 1));
+        String? lastUpdatedPath;
+        testState = testState.copyWith(
+          masterShips: const {
+            131: MasterShip(id: 131, name: '大和', shipTypeId: 9),
+          },
+          ships: const {
+            10: OwnedShip(
+              id: 10,
+              masterId: 131,
+              level: 99,
+              currentHp: 20,
+              maxHp: 96,
+              condition: 49,
+              currentFuel: 100,
+              currentAmmo: 100,
+              slotIds: [],
+            ),
+          },
+          repairDocks: [
+            RepairDock(
+              id: 1,
+              state: 1,
+              shipId: 10,
+              completionTime: completeTime,
+            ),
+          ],
+        );
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+          lastUpdatedPathProvider: () => lastUpdatedPath,
+        );
+        coordinator.start();
 
-      testState = testState.copyWith(repairDocks: const [RepairDock(id: 1)]);
-      gameStateController.notifyListeners();
+        lastUpdatedPath = '/kcsapi/api_req_nyukyo/speedchange';
+        testState = testState.copyWith(repairDocks: const [RepairDock(id: 1)]);
+        gameStateController.notifyListeners();
 
-      expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
-      expect(fakePort.deliveredImmediateAlerts, hasLength(1));
-      expect(fakePort.deliveredImmediateAlerts.single.title, '舰船修复完成 · 船坞 #1');
-      expect(fakePort.deliveredImmediateAlerts.single.body, contains('大和'));
+        final completed = fakePort.latestSnapshot!.ongoingItems.single;
+        expect(completed.id, 'repair:1');
+        expect(completed.state, OngoingTaskState.completed);
+        expect(completed.progress, 1);
+        expect(completed.remainingSeconds, 0);
+        expect(fakePort.deliveredImmediateAlerts, hasLength(1));
+        expect(
+          fakePort.deliveredImmediateAlerts.single.title,
+          '舰船修复完成 · 船坞 #1',
+        );
+        expect(fakePort.deliveredImmediateAlerts.single.body, contains('大和'));
 
-      coordinator.dispose();
-    });
+        lastUpdatedPath = '/kcsapi/api_get_member/material';
+        gameStateController.notifyListeners();
+        expect(fakePort.latestSnapshot?.ongoingItems.single.id, 'repair:1');
+        expect(fakePort.deliveredImmediateAlerts, hasLength(1));
+
+        lastUpdatedPath = '/kcsapi/api_get_member/ndock';
+        gameStateController.notifyListeners();
+        expect(fakePort.latestSnapshot?.ongoingItems, isEmpty);
+        expect(fakePort.deliveredImmediateAlerts, hasLength(1));
+
+        coordinator.dispose();
+      },
+    );
 
     test('does not alert for an already completed dock on startup', () {
       testState = testState.copyWith(
@@ -792,5 +820,212 @@ void main() {
       expect(secondDeadline, firstDeadline);
       coordinator.dispose();
     });
+
+    test('schedules construction dock preempt alarm when configured', () async {
+      await settingsController.setConstructionPreemptSeconds(30);
+      final completeTime = testNow.add(const Duration(hours: 4));
+      testState = testState.copyWith(
+        masterShips: {
+          153: const MasterShip(id: 153, name: '大凤', shipTypeId: 11),
+        },
+        constructionDocks: [
+          ConstructionDock(
+            id: 1,
+            state: 2,
+            createdShipMasterId: 153,
+            completionTime: completeTime,
+          ),
+        ],
+      );
+
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+      coordinator.start();
+
+      expect(
+        fakePort.scheduledAlarms.containsKey('construction_1_complete'),
+        isTrue,
+      );
+      expect(
+        fakePort.scheduledAlarms.containsKey('construction_1_preempt'),
+        isTrue,
+      );
+      final preemptAlarm = fakePort.scheduledAlarms['construction_1_preempt']!;
+      expect(
+        preemptAlarm.triggerTime,
+        completeTime.subtract(const Duration(seconds: 30)),
+      );
+      expect(preemptAlarm.body, '大凤 还有 30 秒建造完成。');
+
+      coordinator.dispose();
+    });
+
+    test('schedules repair dock preempt alarm when set to 30s', () async {
+      await settingsController.setRepairPreemptSeconds(30);
+      final completeTime = testNow.add(const Duration(hours: 1));
+      testState = testState.copyWith(
+        masterShips: {
+          131: const MasterShip(id: 131, name: '大和', shipTypeId: 9),
+        },
+        ships: {
+          10: const OwnedShip(
+            id: 10,
+            masterId: 131,
+            level: 99,
+            currentHp: 20,
+            maxHp: 96,
+            condition: 49,
+            currentFuel: 100,
+            currentAmmo: 100,
+            slotIds: [],
+          ),
+        },
+        repairDocks: [
+          RepairDock(id: 1, state: 1, shipId: 10, completionTime: completeTime),
+        ],
+      );
+
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+      coordinator.start();
+
+      expect(fakePort.scheduledAlarms.containsKey('repair_1_preempt'), isTrue);
+      final preempt = fakePort.scheduledAlarms['repair_1_preempt']!;
+      expect(
+        preempt.triggerTime,
+        completeTime.subtract(const Duration(seconds: 30)),
+      );
+      expect(preempt.body, '大和 还有 30 秒修理完毕。');
+
+      coordinator.dispose();
+    });
+
+    test('schedules natural morale preempt alarm when configured', () async {
+      await settingsController.setMoralePreemptSeconds(60);
+      testState = GameState.empty.copyWith(
+        updatedAt: testNow,
+        ships: const {
+          1: OwnedShip(
+            id: 1,
+            masterId: 1,
+            level: 1,
+            currentHp: 10,
+            maxHp: 10,
+            condition: 40,
+            currentFuel: 10,
+            currentAmmo: 10,
+            slotIds: [],
+          ),
+        },
+        fleets: const [
+          Fleet(id: 1, name: '第1舰队', shipIds: [1]),
+        ],
+      );
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+      coordinator.start();
+
+      expect(
+        fakePort.scheduledAlarms.containsKey('morale_1_normal_preempt'),
+        isTrue,
+      );
+      final preempt = fakePort.scheduledAlarms['morale_1_normal_preempt']!;
+      final complete = fakePort.scheduledAlarms['morale_1_normal']!;
+      expect(
+        preempt.triggerTime,
+        complete.triggerTime.subtract(const Duration(seconds: 60)),
+      );
+      expect(preempt.body, '第1舰队 全队舰船士气还有 60 秒恢复至 49。');
+
+      coordinator.dispose();
+    });
+
+    test(
+      'uses user-defined custom fleet names in ongoing and alarm notifications',
+      () {
+        final returnTime = testNow.add(const Duration(minutes: 30));
+        testState = testState.copyWith(
+          masterMissions: const {
+            1: MasterMission(
+              id: 1,
+              name: '練習航海',
+              displayNumber: '01',
+              duration: Duration(minutes: 15),
+            ),
+          },
+          ships: const {
+            1: OwnedShip(
+              id: 1,
+              masterId: 1,
+              level: 1,
+              currentHp: 10,
+              maxHp: 10,
+              condition: 40,
+              currentFuel: 10,
+              currentAmmo: 10,
+              slotIds: [],
+            ),
+          },
+          fleets: [
+            Fleet(
+              id: 2,
+              name: '北方遠征隊',
+              shipIds: const [1],
+              mission: FleetMission(
+                state: 1,
+                missionId: 1,
+                completionTime: returnTime,
+              ),
+            ),
+          ],
+        );
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+        );
+        coordinator.start();
+
+        expect(
+          fakePort.latestSnapshot!.ongoingItems
+              .firstWhere((i) => i.id == 'expedition:2')
+              .title,
+          '⚓ 远征 北方遠征隊 01 · 練習航海',
+        );
+
+        expect(
+          fakePort.latestSnapshot!.ongoingItems
+              .firstWhere((i) => i.id == 'morale:2')
+              .title,
+          '✨ 疲劳 北方遠征隊 (Cond 40/49)',
+        );
+
+        final preemptAlarm = fakePort.scheduledAlarms['expedition_2_preempt']!;
+        expect(preemptAlarm.title, '远征即将归还 · 北方遠征隊');
+
+        final completeAlarm =
+            fakePort.scheduledAlarms['expedition_2_complete']!;
+        expect(completeAlarm.title, '远征完成 · 北方遠征隊');
+
+        coordinator.dispose();
+      },
+    );
   });
 }
