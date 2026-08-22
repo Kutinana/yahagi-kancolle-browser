@@ -55,8 +55,8 @@ class OfficialEnemyPreview extends StatelessWidget {
               _nameCell(
                 ships[index],
                 index: index,
-                portraitWidth: 48,
-                portraitHeight: 26,
+                portraitWidth: 52,
+                portraitHeight: 24,
                 key: Key('official-enemy-preview-row-$index'),
               ),
             ]
@@ -76,8 +76,8 @@ class OfficialEnemyPreview extends StatelessWidget {
                       child: _nameCell(
                         _shipAt(escortShips, index),
                         index: index,
-                        portraitWidth: 48,
-                        portraitHeight: 26,
+                        portraitWidth: 52,
+                        portraitHeight: 24,
                         key: Key('official-enemy-preview-escort-$index'),
                       ),
                     ),
@@ -86,8 +86,8 @@ class OfficialEnemyPreview extends StatelessWidget {
                     child: _nameCell(
                       _shipAt(mainShips, index),
                       index: index + 3,
-                      portraitWidth: 48,
-                      portraitHeight: 26,
+                      portraitWidth: 52,
+                      portraitHeight: 24,
                       key: Key('official-enemy-preview-main-$index'),
                     ),
                   ),

@@ -524,8 +524,8 @@ void main() {
     final portrait = tester.widget<ShipPortrait>(
       find.byKey(const Key('official-enemy-preview-portrait-0')),
     );
-    expect(portrait.width, 48);
-    expect(portrait.height, 26);
+    expect(portrait.width, 52);
+    expect(portrait.height, 24);
     final portraitImage = tester.widget<Image>(
       find.descendant(
         of: find.byKey(const Key('official-enemy-preview-portrait-0')),
@@ -546,9 +546,9 @@ void main() {
         matching: find.byType(Positioned),
       ),
     );
-    expect(portraitPosition.left, -26 * 1.6);
-    expect(portraitPosition.top, closeTo(-(26 / 176) * 3, 0.001));
-    expect(portraitImage.height, closeTo((26 / 176) * 182, 0.001));
+    expect(portraitPosition.left, -24 * 1.6);
+    expect(portraitPosition.top, closeTo(-(24 / 176) * 3, 0.001));
+    expect(portraitImage.height, closeTo((24 / 176) * 182, 0.001));
 
     await tester.tap(find.byKey(const Key('battle-mode-compact')));
     await tester.pump();
@@ -740,10 +740,10 @@ void main() {
     final mainPortrait = tester.widget<ShipPortrait>(
       find.byKey(const Key('official-enemy-preview-portrait-3')),
     );
-    expect(escortPortrait.width, 48);
-    expect(escortPortrait.height, 26);
-    expect(mainPortrait.width, 48);
-    expect(mainPortrait.height, 26);
+    expect(escortPortrait.width, 52);
+    expect(escortPortrait.height, 24);
+    expect(mainPortrait.width, 52);
+    expect(mainPortrait.height, 24);
   });
 
   testWidgets('combined enemy preview does not shift main ships into escort', (
