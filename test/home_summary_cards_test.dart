@@ -760,13 +760,27 @@ void main() {
           matching: find.byType(InkWell),
         )
         .first;
-    final expeditionTexts = tester.widgetList<Text>(
-      find.descendant(of: expeditionItem, matching: find.byType(Text)),
+    final expeditionTexts = tester
+        .widgetList<Text>(
+          find.descendant(of: expeditionItem, matching: find.byType(Text)),
+        )
+        .toList();
+    expect(expeditionTexts.length, greaterThanOrEqualTo(2));
+    expect(expeditionTexts.first.style?.fontSize, 10);
+    expect(expeditionTexts.first.style?.fontWeight, FontWeight.w700);
+    expect(
+      tester
+          .widget<Text>(
+            find.descendant(
+              of: expeditionItem,
+              matching: find.text('海上護衛任務'),
+            ),
+          )
+          .style
+          ?.fontSize,
+      12,
     );
-    expect(expeditionTexts, isNotEmpty);
     for (final text in expeditionTexts) {
-      expect(text.style?.fontSize, 10);
-      expect(text.style?.fontWeight, FontWeight.w700);
       expect(text.style?.fontFamily, isNot('monospace'));
     }
     await tester.tap(find.text('海上護衛任務'));

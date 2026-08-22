@@ -7,11 +7,6 @@ import 'operation_progress.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import '../expedition/expedition_check_card.dart';
 
-const _expeditionSummaryTextStyle = TextStyle(
-  fontSize: 10,
-  fontWeight: FontWeight.w700,
-);
-
 enum ExpeditionSummaryMode { summary, check }
 
 class ExpeditionSummaryCard extends StatefulWidget {
@@ -88,8 +83,9 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
             child: Center(
               child: Text(
                 strings.noActiveExpedition,
-                style: _expeditionSummaryTextStyle.copyWith(
-                  color: const Color(0xff8197a5),
+                style: const TextStyle(
+                  color: Color(0xff8197a5),
+                  fontSize: 13,
                 ),
               ),
             ),
@@ -99,20 +95,23 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
             final mission = state.masterMissions[fleet.mission.missionId];
             final missionName = mission?.name ?? '未知远征';
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
+              padding: const EdgeInsets.only(bottom: 6.0),
               child: _buildExpeditionItem(
                 fleet.name,
                 missionName,
                 OperationCountdownText(
                   completionTime: fleet.mission.completionTime,
                   completedText: '已返母港',
-                  style: _expeditionSummaryTextStyle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                   countingColor: const Color(0xffd4a85f),
                 ),
               ),
             );
           }),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
       ],
     );
   }
@@ -124,7 +123,7 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
         onTap: widget.onOpenExpedition,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: const Color(0xff0d1a26),
             borderRadius: BorderRadius.circular(6),
@@ -132,22 +131,30 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xff03a9f4).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   fleet,
-                  style: _expeditionSummaryTextStyle.copyWith(
-                    color: const Color(0xff03a9f4),
+                  style: const TextStyle(
+                    color: Color(0xff03a9f4),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(mission, style: _expeditionSummaryTextStyle),
+                child: Text(
+                  mission,
+                  style: const TextStyle(fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 6),
               time,
             ],
           ),
