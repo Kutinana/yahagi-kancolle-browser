@@ -524,7 +524,7 @@ void main() {
     final portrait = tester.widget<ShipPortrait>(
       find.byKey(const Key('official-enemy-preview-portrait-0')),
     );
-    expect(portrait.width, 56);
+    expect(portrait.width, 48);
     expect(portrait.height, 26);
     final portraitImage = tester.widget<Image>(
       find.descendant(

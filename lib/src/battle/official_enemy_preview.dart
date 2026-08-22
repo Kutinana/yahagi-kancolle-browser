@@ -55,7 +55,7 @@ class OfficialEnemyPreview extends StatelessWidget {
               _nameCell(
                 ships[index],
                 index: index,
-                portraitWidth: 56,
+                portraitWidth: 48,
                 portraitHeight: 26,
                 key: Key('official-enemy-preview-row-$index'),
               ),
