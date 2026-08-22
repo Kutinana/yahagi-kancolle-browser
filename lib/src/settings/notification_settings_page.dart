@@ -91,7 +91,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                           child: Column(
                             children: [
                               buildActionTile(
-                                title: capabilities?.notificationsGranted == true
+                                title:
+                                    capabilities?.notificationsGranted == true
                                     ? l10n.notificationPermissionGranted
                                     : l10n.notificationPermissionDenied,
                                 trailing: Icon(
@@ -99,13 +100,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                                       ? Icons.check_circle_outline
                                       : Icons.notifications_off_outlined,
                                 ),
-                                onTap: capabilities?.notificationsGranted == true
+                                onTap:
+                                    capabilities?.notificationsGranted == true
                                     ? widget
                                           .notificationPort
                                           .openSystemNotificationSettings
                                     : _requestNotificationPermission,
                               ),
-                              const Divider(color: Color(0xff294052), height: 1),
+                              const Divider(
+                                color: Color(0xff294052),
+                                height: 1,
+                              ),
                               buildActionTile(
                                 title: capabilities?.exactAlarmsGranted == true
                                     ? l10n.notificationExactAlarmGranted
@@ -117,7 +122,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                                 ),
                                 onTap: _requestExactAlarmPermission,
                               ),
-                              const Divider(color: Color(0xff294052), height: 1),
+                              const Divider(
+                                color: Color(0xff294052),
+                                height: 1,
+                              ),
                               buildActionTile(
                                 title: capabilities?.channelsEnabled == true
                                     ? l10n.notificationChannelsEnabled
@@ -135,7 +143,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+                          padding: const EdgeInsets.only(
+                            top: 8,
+                            left: 4,
+                            right: 4,
+                          ),
                           child: Text(
                             l10n.notificationSectionSystemDesc,
                             style: const TextStyle(
@@ -167,7 +179,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                         value: settings.sound,
                         onChanged: settings.master
                             ? (v) => controller.setSound(v)
-                            : (v) {},
+                            : null,
                       ),
                       const Divider(color: Color(0xff294052), height: 1),
                       buildSwitchTile(
@@ -175,7 +187,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                         value: settings.vibration,
                         onChanged: settings.master
                             ? (v) => controller.setVibration(v)
-                            : (v) {},
+                            : null,
                       ),
                     ],
                   ),
@@ -192,7 +204,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                         value: settings.ongoingLive,
                         onChanged: settings.master
                             ? (v) => controller.setOngoingLive(v)
-                            : (v) {},
+                            : null,
                       ),
                       const Divider(color: Color(0xff294052), height: 1),
                       Padding(
@@ -335,7 +347,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                       _buildNotificationTypeRow<int>(
                         rowKey: const Key('notification-construction-row'),
                         menuKey: const Key('notification-construction-menu'),
-                        switchKey: const Key('notification-construction-switch'),
+                        switchKey: const Key(
+                          'notification-construction-switch',
+                        ),
                         title: _notificationTypeTitle(
                           l10n.notificationConstruction,
                         ),
@@ -368,9 +382,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                         rowKey: const Key('notification-morale-row'),
                         menuKey: const Key('notification-morale-menu'),
                         switchKey: const Key('notification-morale-switch'),
-                        title: _notificationTypeTitle(
-                          l10n.notificationMorale,
-                        ),
+                        title: _notificationTypeTitle(l10n.notificationMorale),
                         selected: settings.moralePreemptSeconds,
                         items: [
                           DropdownMenuItem<int>(

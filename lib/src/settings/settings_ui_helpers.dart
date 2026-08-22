@@ -93,8 +93,9 @@ mixin SettingsUIHelpers {
     String? subtitle,
     Widget? trailingBeforeSwitch,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required ValueChanged<bool>? onChanged,
   }) {
+    final enabled = onChanged != null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -106,9 +107,10 @@ mixin SettingsUIHelpers {
                 Text(
                   title,
                   key: titleKey,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
+                    color: enabled ? null : const Color(0xff526776),
                   ),
                 ),
                 if (subtitle != null) ...<Widget>[

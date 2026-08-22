@@ -33,6 +33,32 @@ class _NotificationPortStub implements NotificationPort {
 }
 
 void main() {
+  testWidgets('master switch disables every dependent notification control', (
+    tester,
+  ) async {
+    final controller = NotificationSettingsController(
+      initialSettings: const NotificationSettings(master: false),
+    );
+    await _pumpPage(tester, controller);
+
+    final switches = tester.widgetList<Switch>(find.byType(Switch)).toList();
+    expect(switches, hasLength(9));
+    expect(switches.first.onChanged, isNotNull);
+    for (final dependentSwitch in switches.skip(1)) {
+      expect(dependentSwitch.onChanged, isNull);
+    }
+
+    for (final checkbox in tester.widgetList<Checkbox>(find.byType(Checkbox))) {
+      expect(checkbox.onChanged, isNull);
+    }
+    final menus = find.byWidgetPredicate((widget) => widget is DropdownButton);
+    expect(menus, findsNWidgets(5));
+    for (final element in menus.evaluate()) {
+      final menu = element.widget as dynamic;
+      expect(menu.onChanged, isNull);
+    }
+  });
+
   testWidgets('notification type choices use aligned menus before switches', (
     tester,
   ) async {
@@ -82,39 +108,40 @@ void main() {
     expect(menuWidths, hasLength(1));
   });
 
-  testWidgets('capability items and general settings titles share the same left alignment', (
-    tester,
-  ) async {
-    final controller = NotificationSettingsController(
-      initialSettings: const NotificationSettings(),
-    );
-    await _pumpPage(tester, controller);
+  testWidgets(
+    'capability items and general settings titles share the same left alignment',
+    (tester) async {
+      final controller = NotificationSettingsController(
+        initialSettings: const NotificationSettings(),
+      );
+      await _pumpPage(tester, controller);
 
-    final titleFinders = <Finder>[
-      find.text('通知权限已授予'),
-      find.text('精确提醒已授权'),
-      find.text('通知渠道可用'),
-      find.text('启用通知服务'),
-      find.text('通知提示音'),
-      find.text('振动提醒'),
-      find.text('常驻实时进度条卡片'),
-      find.text('远征'),
-      find.text('入渠'),
-      find.text('泊地'),
-      find.text('建造'),
-      find.text('疲劳 / 刷闪'),
-    ];
+      final titleFinders = <Finder>[
+        find.text('通知权限已授予'),
+        find.text('精确提醒已授权'),
+        find.text('通知渠道可用'),
+        find.text('启用通知服务'),
+        find.text('通知提示音'),
+        find.text('振动提醒'),
+        find.text('常驻实时进度条卡片'),
+        find.text('远征'),
+        find.text('入渠'),
+        find.text('泊地'),
+        find.text('建造'),
+        find.text('疲劳 / 刷闪'),
+      ];
 
-    for (final finder in titleFinders) {
-      expect(finder, findsOneWidget);
-    }
+      for (final finder in titleFinders) {
+        expect(finder, findsOneWidget);
+      }
 
-    final titleDx = <double>[
-      for (final finder in titleFinders) tester.getTopLeft(finder).dx,
-    ];
-    expect(titleDx.toSet(), hasLength(1));
-    expect(titleDx.first, 32.0);
-  });
+      final titleDx = <double>[
+        for (final finder in titleFinders) tester.getTopLeft(finder).dx,
+      ];
+      expect(titleDx.toSet(), hasLength(1));
+      expect(titleDx.first, 32.0);
+    },
+  );
 
   testWidgets('expedition menu updates the selected preempt time', (
     tester,
