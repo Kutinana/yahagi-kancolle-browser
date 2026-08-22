@@ -183,6 +183,7 @@ final class BattleController extends ChangeNotifier
         displayStage: BattleDisplayStage.navigation,
         landBaseRaid: landBaseRaid,
         enemyPreviewShips: _officialEnemyPreviewShips(map, state),
+        enemyPreviewCombined: _officialEnemyPreviewCombined(map),
       );
       _archiveSession();
       _predictionEngine = null;
@@ -351,22 +352,44 @@ final class BattleController extends ChangeNotifier
     }
     if (previews.isEmpty) return const <EnemyPreviewShip>[];
 
-    List<EnemyPreviewShip> shipsOf(Map<String, Object?> preview) {
+    List<EnemyPreviewShip> shipsOf(
+      Map<String, Object?> preview,
+      BattleFleetRole fleetRole,
+    ) {
       final ships = <EnemyPreviewShip>[];
       for (final value in _list(preview['api_ship_ids'])) {
         final masterId = _int(value);
         if (masterId <= 0) continue;
         final name = state.masterShips[masterId]?.name.trim() ?? '';
         if (name.isEmpty) continue;
-        ships.add(EnemyPreviewShip(masterId: masterId, name: name));
+        ships.add(
+          EnemyPreviewShip(
+            masterId: masterId,
+            name: name,
+            fleetRole: fleetRole,
+          ),
+        );
         if (ships.length == 3) break;
       }
       return ships;
     }
 
-    final ships = shipsOf(previews.last);
-    if (previews.length > 1) ships.addAll(shipsOf(previews.first));
+    final ships = shipsOf(
+      previews.last,
+      previews.length > 1 ? BattleFleetRole.escort : BattleFleetRole.main,
+    );
+    if (previews.length > 1) {
+      ships.addAll(shipsOf(previews.first, BattleFleetRole.main));
+    }
     return List<EnemyPreviewShip>.unmodifiable(ships);
+  }
+
+  bool _officialEnemyPreviewCombined(Map<String, Object?> data) {
+    var deckCount = 0;
+    for (final value in _list(data['api_e_deck_info'])) {
+      if (_optionalMap(value) != null) deckCount++;
+    }
+    return deckCount > 1;
   }
 
   Future<void> _applyBattlePhase(

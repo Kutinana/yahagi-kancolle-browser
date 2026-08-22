@@ -46,6 +46,7 @@ class DetailedBattlePanel extends StatelessWidget {
           const SizedBox(height: 7),
           OfficialEnemyPreview(
             ships: enemyPreviewShips,
+            combined: battle.enemyPreviewCombined,
             showPortraits: showEnemyPortraits,
             masterShips: gameState.masterShips,
             serverOrigin: gameState.serverOrigin,

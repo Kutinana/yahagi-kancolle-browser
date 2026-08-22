@@ -280,9 +280,75 @@ void main() {
       await controller.idle;
 
       expect(controller.current?.enemyPreviewShips, const <EnemyPreviewShip>[
-        EnemyPreviewShip(masterId: 1701, name: '伴随一'),
-        EnemyPreviewShip(masterId: 1702, name: '伴随二'),
-        EnemyPreviewShip(masterId: 1703, name: '伴随三'),
+        EnemyPreviewShip(
+          masterId: 1701,
+          name: '伴随一',
+          fleetRole: BattleFleetRole.escort,
+        ),
+        EnemyPreviewShip(
+          masterId: 1702,
+          name: '伴随二',
+          fleetRole: BattleFleetRole.escort,
+        ),
+        EnemyPreviewShip(
+          masterId: 1703,
+          name: '伴随三',
+          fleetRole: BattleFleetRole.escort,
+        ),
+        EnemyPreviewShip(masterId: 1601, name: '主力一'),
+        EnemyPreviewShip(masterId: 1602, name: '主力二'),
+        EnemyPreviewShip(masterId: 1603, name: '主力三'),
+      ]);
+      expect(controller.current?.enemyPreviewCombined, isTrue);
+    },
+  );
+
+  test(
+    'combined preview preserves fleet roles when enemy master data is missing',
+    () async {
+      const state = GameState(
+        masterShips: <int, MasterShip>{
+          1601: MasterShip(id: 1601, name: '主力一', shipTypeId: 9),
+          1602: MasterShip(id: 1602, name: '主力二', shipTypeId: 9),
+          1603: MasterShip(id: 1603, name: '主力三', shipTypeId: 9),
+          1702: MasterShip(id: 1702, name: '伴随二', shipTypeId: 2),
+          1703: MasterShip(id: 1703, name: '伴随三', shipTypeId: 2),
+        },
+      );
+      final controller = BattleController(gameState: () => state);
+      addTearDown(controller.dispose);
+
+      controller.accept(
+        kcsapiEvent('/kcsapi/api_req_map/next', <String, Object?>{
+          'api_maparea_id': 1,
+          'api_mapinfo_no': 1,
+          'api_no': 2,
+          'api_e_deck_info': <Object?>[
+            <String, Object?>{
+              'api_kind': 1,
+              'api_ship_ids': <int>[1601, 1602, 1603],
+            },
+            <String, Object?>{
+              'api_kind': 2,
+              'api_ship_ids': <int>[1701, 1702, 1703],
+            },
+          ],
+        }, sequence: 991),
+      );
+      await controller.idle;
+
+      expect(controller.current?.enemyPreviewCombined, isTrue);
+      expect(controller.current?.enemyPreviewShips, const <EnemyPreviewShip>[
+        EnemyPreviewShip(
+          masterId: 1702,
+          name: '伴随二',
+          fleetRole: BattleFleetRole.escort,
+        ),
+        EnemyPreviewShip(
+          masterId: 1703,
+          name: '伴随三',
+          fleetRole: BattleFleetRole.escort,
+        ),
         EnemyPreviewShip(masterId: 1601, name: '主力一'),
         EnemyPreviewShip(masterId: 1602, name: '主力二'),
         EnemyPreviewShip(masterId: 1603, name: '主力三'),

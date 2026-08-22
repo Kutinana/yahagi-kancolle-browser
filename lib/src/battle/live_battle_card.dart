@@ -241,7 +241,10 @@ class _CompactBattlePanel extends StatelessWidget {
           navigationHeader,
           if (previewShips.isNotEmpty) ...<Widget>[
             const SizedBox(height: 7),
-            OfficialEnemyPreview(ships: previewShips),
+            OfficialEnemyPreview(
+              ships: previewShips,
+              combined: battle.enemyPreviewCombined,
+            ),
           ],
           if (raid != null) ...<Widget>[
             const SizedBox(height: 7),

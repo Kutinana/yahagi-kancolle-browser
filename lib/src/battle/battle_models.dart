@@ -260,20 +260,26 @@ class LandBaseRaidResult {
 }
 
 class EnemyPreviewShip {
-  const EnemyPreviewShip({required this.masterId, required this.name});
+  const EnemyPreviewShip({
+    required this.masterId,
+    required this.name,
+    this.fleetRole = BattleFleetRole.main,
+  });
 
   final int masterId;
   final String name;
+  final BattleFleetRole fleetRole;
 
   @override
   bool operator ==(Object other) {
     return other is EnemyPreviewShip &&
         other.masterId == masterId &&
-        other.name == name;
+        other.name == name &&
+        other.fleetRole == fleetRole;
   }
 
   @override
-  int get hashCode => Object.hash(masterId, name);
+  int get hashCode => Object.hash(masterId, name, fleetRole);
 }
 
 class LiveBattle {
@@ -298,6 +304,7 @@ class LiveBattle {
     this.airSuperiority,
     this.landBaseRaid,
     this.enemyPreviewShips,
+    this.enemyPreviewCombined = false,
   });
 
   final BattleContext context;
@@ -320,6 +327,7 @@ class LiveBattle {
   final String? airSuperiority;
   final LandBaseRaidResult? landBaseRaid;
   final List<EnemyPreviewShip>? enemyPreviewShips;
+  final bool enemyPreviewCombined;
 
   List<BattleShipSnapshot> get friendShips =>
       List.unmodifiable(<BattleShipSnapshot>[...friendMain, ...friendEscort]);
@@ -358,6 +366,7 @@ class LiveBattle {
     String? airSuperiority,
     Object? landBaseRaid = _unsetLandBaseRaid,
     Object? enemyPreviewShips = _unsetEnemyPreviewShips,
+    bool? enemyPreviewCombined,
   }) {
     return LiveBattle(
       context: context ?? this.context,
@@ -384,6 +393,7 @@ class LiveBattle {
       enemyPreviewShips: identical(enemyPreviewShips, _unsetEnemyPreviewShips)
           ? this.enemyPreviewShips
           : enemyPreviewShips as List<EnemyPreviewShip>?,
+      enemyPreviewCombined: enemyPreviewCombined ?? this.enemyPreviewCombined,
     );
   }
 }

@@ -8,19 +8,26 @@ class OfficialEnemyPreview extends StatelessWidget {
   const OfficialEnemyPreview({
     super.key,
     required this.ships,
+    this.combined = false,
     this.showPortraits = false,
     this.masterShips = const <int, MasterShip>{},
     this.serverOrigin = '',
   });
 
   final List<EnemyPreviewShip> ships;
+  final bool combined;
   final bool showPortraits;
   final Map<int, MasterShip> masterShips;
   final String serverOrigin;
 
   @override
   Widget build(BuildContext context) {
-    final combined = ships.length > 3;
+    final escortShips = ships
+        .where((ship) => ship.fleetRole == BattleFleetRole.escort)
+        .toList();
+    final mainShips = ships
+        .where((ship) => ship.fleetRole == BattleFleetRole.main)
+        .toList();
     return Container(
       key: const Key('official-enemy-preview'),
       decoration: BoxDecoration(
@@ -67,7 +74,7 @@ class OfficialEnemyPreview extends StatelessWidget {
                         ),
                       ),
                       child: _nameCell(
-                        _shipAt(index),
+                        _shipAt(escortShips, index),
                         index: index,
                         portraitWidth: 48,
                         portraitHeight: 30,
@@ -77,7 +84,7 @@ class OfficialEnemyPreview extends StatelessWidget {
                   ),
                   Expanded(
                     child: _nameCell(
-                      _shipAt(index + 3),
+                      _shipAt(mainShips, index),
                       index: index + 3,
                       portraitWidth: 48,
                       portraitHeight: 30,
@@ -92,8 +99,8 @@ class OfficialEnemyPreview extends StatelessWidget {
     );
   }
 
-  EnemyPreviewShip? _shipAt(int index) =>
-      index < ships.length ? ships[index] : null;
+  EnemyPreviewShip? _shipAt(List<EnemyPreviewShip> fleet, int index) =>
+      index < fleet.length ? fleet[index] : null;
 
   Widget _nameCell(
     EnemyPreviewShip? preview, {

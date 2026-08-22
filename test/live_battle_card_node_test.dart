@@ -582,10 +582,23 @@ void main() {
           body: SizedBox(
             width: 360,
             child: OfficialEnemyPreview(
+              combined: true,
               ships: <EnemyPreviewShip>[
-                EnemyPreviewShip(masterId: 1701, name: '伴随一'),
-                EnemyPreviewShip(masterId: 1702, name: '伴随二'),
-                EnemyPreviewShip(masterId: 1703, name: '伴随三'),
+                EnemyPreviewShip(
+                  masterId: 1701,
+                  name: '伴随一',
+                  fleetRole: BattleFleetRole.escort,
+                ),
+                EnemyPreviewShip(
+                  masterId: 1702,
+                  name: '伴随二',
+                  fleetRole: BattleFleetRole.escort,
+                ),
+                EnemyPreviewShip(
+                  masterId: 1703,
+                  name: '伴随三',
+                  fleetRole: BattleFleetRole.escort,
+                ),
                 EnemyPreviewShip(masterId: 1601, name: '主力一'),
                 EnemyPreviewShip(masterId: 1602, name: '主力二'),
                 EnemyPreviewShip(masterId: 1603, name: '主力三'),
@@ -612,6 +625,36 @@ void main() {
     expect(name.style?.fontSize, 11);
     expect(name.style?.fontWeight, FontWeight.w700);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('combined enemy preview does not shift main ships into escort', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 360,
+            child: OfficialEnemyPreview(
+              combined: true,
+              ships: <EnemyPreviewShip>[
+                EnemyPreviewShip(
+                  masterId: 1702,
+                  name: '伴随二',
+                  fleetRole: BattleFleetRole.escort,
+                ),
+                EnemyPreviewShip(masterId: 1601, name: '主力一'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getCenter(find.text('伴随二')).dx,
+      lessThan(tester.getCenter(find.text('主力一')).dx),
+    );
   });
 
   testWidgets('land-base raid is visible in detailed and compact forecast', (
