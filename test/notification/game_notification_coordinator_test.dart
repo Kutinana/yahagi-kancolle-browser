@@ -5,6 +5,7 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dar
 import 'package:yahagi_kancolle_browser/src/notification/game_notification_coordinator.dart';
 import 'package:yahagi_kancolle_browser/src/notification/notification_models.dart';
 import 'package:yahagi_kancolle_browser/src/notification/notification_port.dart';
+import 'package:yahagi_kancolle_browser/src/notification/notification_timer_anchor_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/notification_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/notification_settings_store.dart';
 
@@ -500,6 +501,12 @@ void main() {
       () {
         final cachedAt = testNow.subtract(const Duration(minutes: 5));
         testState = _anchorageState().copyWith(updatedAt: cachedAt);
+        final anchors = NotificationTimerAnchors(
+          akashi: GlobalNotificationTimerAnchor(
+            anchorAt: cachedAt,
+            signature: NotificationTimerSignature.anchorage(testState)!,
+          ),
+        );
         final coordinator = GameNotificationCoordinator(
           gameStateController: gameStateController,
           settingsController: settingsController,
@@ -507,6 +514,7 @@ void main() {
           gameStateProvider: () => testState,
           nowProvider: () => testNow,
           anchorageRepairStartedAtProvider: () => null,
+          initialTimerAnchors: anchors,
         );
         coordinator.start();
 
@@ -812,7 +820,8 @@ void main() {
           .triggerTime;
 
       testNow = testNow.add(const Duration(minutes: 1));
-      settingsController.notifyListeners();
+      testState = testState.copyWith(updatedAt: testNow);
+      gameStateController.notifyListeners();
       final secondDeadline = fakePort.latestSnapshot!.alarms
           .singleWhere((alarm) => alarm.key == 'morale_1_normal')
           .triggerTime;

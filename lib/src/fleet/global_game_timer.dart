@@ -1,8 +1,4 @@
-enum TimerKnowledge {
-  known,
-  estimated,
-  unknown,
-}
+enum TimerKnowledge { known, estimated, unknown }
 
 typedef TimerConfidence = TimerKnowledge;
 
@@ -30,10 +26,10 @@ class GlobalGameTimer {
     TimerKnowledge knowledge = TimerKnowledge.unknown,
     String? lastResetReason,
     DateTime? lastObservedAt,
-  })  : _anchorAt = anchorAt?.toUtc(),
-        _knowledge = knowledge,
-        _lastResetReason = lastResetReason,
-        _lastObservedAt = lastObservedAt?.toUtc();
+  }) : _anchorAt = anchorAt?.toUtc(),
+       _knowledge = knowledge,
+       _lastResetReason = lastResetReason,
+       _lastObservedAt = lastObservedAt?.toUtc();
 
   DateTime? _anchorAt;
   TimerKnowledge _knowledge;
@@ -62,6 +58,17 @@ class GlobalGameTimer {
 
   void observe(DateTime now) {
     _lastObservedAt = now.toUtc();
+  }
+
+  void restore(
+    DateTime anchorAt, {
+    TimerKnowledge knowledge = TimerKnowledge.estimated,
+    String? reason,
+  }) {
+    _anchorAt = anchorAt.toUtc();
+    _knowledge = knowledge;
+    _lastResetReason = reason;
+    _lastObservedAt = anchorAt.toUtc();
   }
 
   void clear() {

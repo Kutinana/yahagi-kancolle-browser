@@ -106,6 +106,7 @@ import 'src/settings/notification_settings_controller.dart';
 import 'src/settings/notification_settings_store.dart';
 import 'src/notification/game_notification_coordinator.dart';
 import 'src/notification/method_channel_notification_port.dart';
+import 'src/notification/notification_timer_anchor_store.dart';
 import 'src/senka/senka_controller.dart';
 import 'src/senka/senka_page.dart';
 import 'src/senka/senka_store.dart';
@@ -381,10 +382,15 @@ Future<void> main() async {
     },
   );
   await diagnosticController.initialize();
+  const notificationTimerAnchorStore =
+      SharedPreferencesNotificationTimerAnchorStore();
+  final notificationTimerAnchors = await notificationTimerAnchorStore.load();
   final notificationCoordinator = GameNotificationCoordinator(
     gameStateController: gameStateController,
     settingsController: notificationSettingsController,
     notificationPort: const MethodChannelNotificationPort(),
+    initialTimerAnchors: notificationTimerAnchors,
+    timerAnchorStore: notificationTimerAnchorStore,
   );
   notificationCoordinator.start();
   runApp(

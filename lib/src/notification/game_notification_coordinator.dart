@@ -9,6 +9,7 @@ import '../settings/notification_settings_controller.dart';
 import '../settings/notification_settings_store.dart';
 import 'notification_models.dart';
 import 'notification_port.dart';
+import 'notification_timer_anchor_store.dart';
 
 class GameNotificationCoordinator {
   GameNotificationCoordinator({
@@ -20,6 +21,9 @@ class GameNotificationCoordinator {
     DateTime? Function()? anchorageRepairStartedAtProvider,
     DateTime? Function()? nosakiSparkleStartedAtProvider,
     String? Function()? lastUpdatedPathProvider,
+    NotificationTimerAnchors initialTimerAnchors =
+        NotificationTimerAnchors.empty,
+    NotificationTimerAnchorStore? timerAnchorStore,
     void Function(Object error, StackTrace stackTrace)? onError,
   }) : _gameStateProvider =
            gameStateProvider ?? (() => gameStateController.state),
@@ -33,6 +37,8 @@ class GameNotificationCoordinator {
        _lastUpdatedPath =
            lastUpdatedPathProvider ??
            (() => gameStateController.lastUpdatedPath),
+       _timerAnchors = initialTimerAnchors,
+       _timerAnchorStore = timerAnchorStore,
        _onError = onError ?? _reportFlutterError;
 
   final GameStateController gameStateController;
@@ -43,17 +49,20 @@ class GameNotificationCoordinator {
   final DateTime? Function() _anchorageStartedAt;
   final DateTime? Function() _nosakiStartedAt;
   final String? Function() _lastUpdatedPath;
+  final NotificationTimerAnchorStore? _timerAnchorStore;
   final void Function(Object error, StackTrace stackTrace) _onError;
 
   bool _disposed = false;
   Map<String, _ManualCompletionTask> _manualCompletionTasks = const {};
   final Map<String, OngoingTaskItem> _completedTombstones = {};
+  NotificationTimerAnchors _timerAnchors;
+  Future<void> _timerAnchorSaveQueue = Future<void>.value();
 
   void start() {
-    _manualCompletionTasks = _captureManualCompletionTasks(
-      _gameStateProvider(),
-      _now(),
-    );
+    final state = _gameStateProvider();
+    _restoreGlobalTimerAnchors(state);
+    _recordGlobalTimerAnchors(state);
+    _manualCompletionTasks = _captureManualCompletionTasks(state, _now());
     gameStateController.addListener(_onGameStateChanged);
     settingsController.addListener(_syncSnapshot);
     _syncSnapshot();
@@ -69,6 +78,7 @@ class GameNotificationCoordinator {
     if (_disposed) return;
     final now = _now();
     final state = _gameStateProvider();
+    _recordGlobalTimerAnchors(state);
     final alerts = _buildImmediateAlerts(state, now);
     _updateCompletedTombstones(state);
     _manualCompletionTasks = _captureManualCompletionTasks(state, now);
@@ -483,8 +493,9 @@ class GameNotificationCoordinator {
         final fleetName = fleet.displayName;
 
         // Check if Nosaki sparkle mode is active for this fleet
-        final nosakiElapsed = _nosakiStartedAt() != null
-            ? now.difference(_nosakiStartedAt()!)
+        final nosakiStart = _nosakiStartFor(state);
+        final nosakiElapsed = nosakiStart != null
+            ? now.difference(nosakiStart)
             : Duration.zero;
         final nosakiProjection = NosakiSparkleCalculator.project(
           state: state,
@@ -549,9 +560,12 @@ class GameNotificationCoordinator {
           }
 
           if (minCond < 49) {
-            final neededTicks = ((49 - minCond) / 3).ceil();
-            final neededDuration = Duration(minutes: neededTicks * 3);
-            final completeTime = (state.updatedAt ?? now).add(neededDuration);
+            final completeTime = _normalMoraleTarget(
+              fleet: fleet,
+              state: state,
+              now: now,
+              minCond: minCond,
+            );
             if (!completeTime.isAfter(now)) continue;
 
             if (settings.moralePreemptSeconds > 0) {
@@ -779,8 +793,9 @@ class GameNotificationCoordinator {
       for (final fleet in state.fleets) {
         if (fleet.shipIds.isEmpty) continue;
         final fleetName = fleet.displayName;
-        final nosakiElapsed = _nosakiStartedAt() != null
-            ? now.difference(_nosakiStartedAt()!)
+        final nosakiStart = _nosakiStartFor(state);
+        final nosakiElapsed = nosakiStart != null
+            ? now.difference(nosakiStart)
             : Duration.zero;
         final nosakiProjection = NosakiSparkleCalculator.project(
           state: state,
@@ -832,8 +847,11 @@ class GameNotificationCoordinator {
           if (minCond < 49) {
             final neededTicks = ((49 - minCond) / 3).ceil();
             final totalDurationSec = neededTicks * 180;
-            final target = (state.updatedAt ?? now).add(
-              Duration(seconds: totalDurationSec),
+            final target = _normalMoraleTarget(
+              fleet: fleet,
+              state: state,
+              now: now,
+              minCond: minCond,
             );
             items.add(
               _deadlineItem(
@@ -892,8 +910,105 @@ class GameNotificationCoordinator {
   DateTime? _anchorageStartFor(GameState state) {
     final liveAnchor = _anchorageStartedAt();
     if (liveAnchor != null) return liveAnchor;
-    if (!AnchorageRepairCalculator.hasReadyFleet(state)) return null;
-    return state.updatedAt;
+    final signature = NotificationTimerSignature.anchorage(state);
+    final persisted = _timerAnchors.akashi;
+    if (signature == null || persisted?.signature != signature) return null;
+    return persisted!.anchorAt;
+  }
+
+  DateTime? _nosakiStartFor(GameState state) {
+    final liveAnchor = _nosakiStartedAt();
+    if (liveAnchor != null) return liveAnchor;
+    final persisted = _timerAnchors.nozaki;
+    final signature = NotificationTimerSignature.nozaki(state);
+    return persisted?.signature == signature ? persisted!.anchorAt : null;
+  }
+
+  DateTime _normalMoraleTarget({
+    required Fleet fleet,
+    required GameState state,
+    required DateTime now,
+    required int minCond,
+  }) {
+    final signature = NotificationTimerSignature.morale(fleet);
+    final existing = _timerAnchors.moraleByFleet[fleet.id];
+    if (existing != null &&
+        existing.fleetSignature == signature &&
+        existing.observedCondition == minCond) {
+      return existing.targetAt;
+    }
+
+    final observedAt = (state.updatedAt ?? now).toUtc();
+    final neededTicks = ((49 - minCond) / 3).ceil();
+    final anchor = MoraleNotificationTimerAnchor(
+      fleetSignature: signature,
+      observedAt: observedAt,
+      observedCondition: minCond,
+      targetAt: observedAt.add(Duration(minutes: neededTicks * 3)),
+    );
+    _replaceTimerAnchors(
+      _timerAnchors.copyWith(
+        moraleByFleet: {..._timerAnchors.moraleByFleet, fleet.id: anchor},
+      ),
+    );
+    return anchor.targetAt;
+  }
+
+  void _restoreGlobalTimerAnchors(GameState state) {
+    final akashi = _timerAnchors.akashi;
+    if (gameStateController.akashiTimer.anchorAt == null &&
+        akashi != null &&
+        akashi.signature == NotificationTimerSignature.anchorage(state)) {
+      gameStateController.akashiTimer.restore(akashi.anchorAt);
+    }
+    final nozaki = _timerAnchors.nozaki;
+    if (gameStateController.nozakiTimer.anchorAt == null &&
+        nozaki != null &&
+        nozaki.signature == NotificationTimerSignature.nozaki(state)) {
+      gameStateController.nozakiTimer.restore(nozaki.anchorAt);
+    }
+  }
+
+  void _recordGlobalTimerAnchors(GameState state) {
+    final liveAkashi = _anchorageStartedAt();
+    final akashiSignature = NotificationTimerSignature.anchorage(state);
+    final liveNozaki = _nosakiStartedAt();
+    final recordedAkashi = liveAkashi != null && akashiSignature != null
+        ? GlobalNotificationTimerAnchor(
+            anchorAt: liveAkashi,
+            signature: akashiSignature,
+          )
+        : _timerAnchors.akashi?.signature == akashiSignature
+        ? _timerAnchors.akashi
+        : null;
+    final nozakiSignature = NotificationTimerSignature.nozaki(state);
+    final recordedNozaki = liveNozaki != null
+        ? GlobalNotificationTimerAnchor(
+            anchorAt: liveNozaki,
+            signature: nozakiSignature,
+          )
+        : _timerAnchors.nozaki?.signature == nozakiSignature
+        ? _timerAnchors.nozaki
+        : null;
+    final next = _timerAnchors.copyWith(
+      akashi: recordedAkashi,
+      clearAkashi: recordedAkashi == null,
+      nozaki: recordedNozaki,
+      clearNozaki: recordedNozaki == null,
+    );
+    _replaceTimerAnchors(next);
+  }
+
+  void _replaceTimerAnchors(NotificationTimerAnchors next) {
+    if (next == _timerAnchors) return;
+    _timerAnchors = next;
+    final store = _timerAnchorStore;
+    if (store == null) return;
+    _timerAnchorSaveQueue = _timerAnchorSaveQueue
+        .then((_) => store.save(next))
+        .catchError((Object error, StackTrace stackTrace) {
+          _onError(error, stackTrace);
+        });
   }
 }
 
