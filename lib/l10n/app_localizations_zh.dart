@@ -1555,6 +1555,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get battlePredictionNextBattle => '切换从下一场战斗开始生效。';
 
   @override
+  String get battleEnemyPreviewPortraits => '战前敌方立绘';
+
+  @override
+  String get battleEnemyPreviewPortraitsDesc => '仅在未卜先知完整模式显示。';
+
+  @override
   String get improvementDatasetTitle => '改修规划资料';
 
   @override
@@ -3482,6 +3488,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get battlePredictionNextBattle => '切換將從下一場戰鬥開始生效。';
+
+  @override
+  String get battleEnemyPreviewPortraits => '戰前敵方立繪';
+
+  @override
+  String get battleEnemyPreviewPortraitsDesc => '僅在未卜先知完整模式顯示。';
 
   @override
   String get improvementDatasetTitle => '改修規劃資料';

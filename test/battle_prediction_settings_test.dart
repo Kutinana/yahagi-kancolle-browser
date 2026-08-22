@@ -24,6 +24,21 @@ void main() {
     expect(await store.load(), BattlePredictionMethod.poi);
   });
 
+  test('missing enemy portrait setting defaults to enabled', () async {
+    final store = SharedPreferencesBattlePredictionSettingsStore();
+
+    expect(await store.loadEnemyPortraitsEnabled(), isTrue);
+  });
+
+  test('enemy portrait setting loads a saved disabled value', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'battle.enemyPreviewPortraitsEnabled': false,
+    });
+    final store = SharedPreferencesBattlePredictionSettingsStore();
+
+    expect(await store.loadEnemyPortraitsEnabled(), isFalse);
+  });
+
   test('controller persists both prediction methods', () async {
     final store = MemoryBattlePredictionSettingsStore();
     final controller = await BattlePredictionSettingsController.load(store);
@@ -38,5 +53,21 @@ void main() {
     await controller.setMethod(BattlePredictionMethod.poi);
     expect(controller.method, BattlePredictionMethod.poi);
     expect(await store.load(), BattlePredictionMethod.poi);
+  });
+
+  test('controller persists enemy portrait visibility', () async {
+    final store = MemoryBattlePredictionSettingsStore();
+    final controller = await BattlePredictionSettingsController.load(store);
+    addTearDown(controller.dispose);
+
+    expect(controller.enemyPortraitsEnabled, isTrue);
+
+    await controller.setEnemyPortraitsEnabled(false);
+    expect(controller.enemyPortraitsEnabled, isFalse);
+    expect(await store.loadEnemyPortraitsEnabled(), isFalse);
+
+    await controller.setEnemyPortraitsEnabled(true);
+    expect(controller.enemyPortraitsEnabled, isTrue);
+    expect(await store.loadEnemyPortraitsEnabled(), isTrue);
   });
 }

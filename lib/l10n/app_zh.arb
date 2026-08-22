@@ -543,6 +543,8 @@
   "battlePredictionHighAccuracyDesc": "按战斗模拟规则完整复演，预测更精确，但性能开销更高。",
   "battlePredictionLightweightDesc": "使用轻量化预测逻辑，性能开销更低。",
   "battlePredictionNextBattle": "切换从下一场战斗开始生效。",
+  "battleEnemyPreviewPortraits": "战前敌方立绘",
+  "battleEnemyPreviewPortraitsDesc": "仅在未卜先知完整模式显示。",
   "improvementDatasetTitle": "改修规划资料",
   "improvementDatasetVersion": "资料版本 {version}",
   "@improvementDatasetVersion": {"placeholders": {"version": {"type": "String"}}},

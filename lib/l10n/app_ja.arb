@@ -543,6 +543,8 @@
   "battlePredictionHighAccuracyDesc": "戦闘シミュレーションの規則に沿って再現するため高精度ですが、処理負荷が高くなります。",
   "battlePredictionLightweightDesc": "簡易予測ロジックを使用し、処理負荷を抑えます。",
   "battlePredictionNextBattle": "変更は次の戦闘から反映されます。",
+  "battleEnemyPreviewPortraits": "戦闘前の敵艦画像",
+  "battleEnemyPreviewPortraitsDesc": "戦闘予測の詳細モードでのみ表示します。",
   "improvementDatasetTitle": "改修計画データ",
   "improvementDatasetVersion": "データバージョン {version}",
   "@improvementDatasetVersion": {"placeholders": {"version": {"type": "String"}}},

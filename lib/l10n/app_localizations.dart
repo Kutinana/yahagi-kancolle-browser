@@ -3026,6 +3026,18 @@ abstract class AppLocalizations {
   /// **'切换从下一场战斗开始生效。'**
   String get battlePredictionNextBattle;
 
+  /// No description provided for @battleEnemyPreviewPortraits.
+  ///
+  /// In zh, this message translates to:
+  /// **'战前敌方立绘'**
+  String get battleEnemyPreviewPortraits;
+
+  /// No description provided for @battleEnemyPreviewPortraitsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅在未卜先知完整模式显示。'**
+  String get battleEnemyPreviewPortraitsDesc;
+
   /// No description provided for @improvementDatasetTitle.
   ///
   /// In zh, this message translates to:

@@ -29,11 +29,25 @@ void main() {
     expect(segmented.selected, <BattlePredictionMethod>{
       BattlePredictionMethod.poi,
     });
+    expect(
+      tester
+          .widget<SwitchListTile>(
+            find.byKey(const Key('battle-enemy-preview-portraits')),
+          )
+          .value,
+      isTrue,
+    );
 
     await tester.tap(find.text('轻量模式'));
     await tester.pump();
 
     expect(controller.method, BattlePredictionMethod.yahagi);
     expect(await store.load(), BattlePredictionMethod.yahagi);
+
+    await tester.tap(find.byKey(const Key('battle-enemy-preview-portraits')));
+    await tester.pump();
+
+    expect(controller.enemyPortraitsEnabled, isFalse);
+    expect(await store.loadEnemyPortraitsEnabled(), isFalse);
   });
 }

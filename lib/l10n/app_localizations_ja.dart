@@ -1565,6 +1565,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get battlePredictionNextBattle => '変更は次の戦闘から反映されます。';
 
   @override
+  String get battleEnemyPreviewPortraits => '戦闘前の敵艦画像';
+
+  @override
+  String get battleEnemyPreviewPortraitsDesc => '戦闘予測の詳細モードでのみ表示します。';
+
+  @override
   String get improvementDatasetTitle => '改修計画データ';
 
   @override
