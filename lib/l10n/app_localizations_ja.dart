@@ -1891,10 +1891,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String get gameResourceCacheDamaged => '破損';
 
   @override
-  String get gameResourceCacheOutdated => '期限切れ';
+  String get gameResourceCacheOutdated => '確認待ち';
 
   @override
   String get gameResourceCacheItems => '件';
+
+  @override
+  String gameResourceCacheStoredSize(String size) {
+    return 'キャッシュ済み $size';
+  }
+
+  @override
+  String gameResourceCacheIntegritySummary(
+    int missing,
+    int damaged,
+    int pending,
+  ) {
+    return '不足 $missing 件・破損 $damaged 件・確認待ち $pending 件';
+  }
+
+  @override
+  String get gameResourceCachePendingRetained =>
+      '確認待ちのリソースは端末内に保持され、自動的には削除されません。';
 
   @override
   String get gameResourceCacheDownloadConfirmTitle => 'キャッシュをダウンロードしますか？';

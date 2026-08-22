@@ -3647,7 +3647,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheOutdated.
   ///
   /// In zh, this message translates to:
-  /// **'过期'**
+  /// **'待校验'**
   String get gameResourceCacheOutdated;
 
   /// No description provided for @gameResourceCacheItems.
@@ -3655,6 +3655,28 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'项'**
   String get gameResourceCacheItems;
+
+  /// No description provided for @gameResourceCacheStoredSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'已缓存 {size}'**
+  String gameResourceCacheStoredSize(String size);
+
+  /// No description provided for @gameResourceCacheIntegritySummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺失 {missing} 项 · 损坏 {damaged} 项 · 待校验 {pending} 项'**
+  String gameResourceCacheIntegritySummary(
+    int missing,
+    int damaged,
+    int pending,
+  );
+
+  /// No description provided for @gameResourceCachePendingRetained.
+  ///
+  /// In zh, this message translates to:
+  /// **'待校验资源仍保留在本地，不会自动删除。'**
+  String get gameResourceCachePendingRetained;
 
   /// No description provided for @gameResourceCacheDownloadConfirmTitle.
   ///

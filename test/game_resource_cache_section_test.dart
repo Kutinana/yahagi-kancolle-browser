@@ -13,9 +13,7 @@ void main() {
     ),
   );
 
-  testWidgets('shows two modes and the single GB completeness line', (
-    tester,
-  ) async {
+  testWidgets('shows two modes and labels the cached size', (tester) async {
     final port = _FakePort();
     final controller = GameResourceCacheController(
       store: _MemoryStore(GameResourceCacheMode.full),
@@ -32,7 +30,7 @@ void main() {
     expect(find.text('本地缓存'), findsOneWidget);
     expect(find.textContaining('固定基础资源清单（约 5.49 GB）'), findsOneWidget);
     expect(find.textContaining('游玩时自动缓存'), findsOneWidget);
-    expect(find.text('6.84 GB'), findsOneWidget);
+    expect(find.text('已缓存 6.84 GB'), findsOneWidget);
     expect(find.textContaining('/ 8.12 GB'), findsNothing);
     expect(find.textContaining('1,284'), findsNothing);
 
@@ -53,7 +51,7 @@ void main() {
     expect(completenessLeft, noneLeft);
   });
 
-  testWidgets('integrity check hides diagnostics but keeps repair action', (
+  testWidgets('integrity check distinguishes retained pending resources', (
     tester,
   ) async {
     final port = _FakePort();
@@ -69,10 +67,11 @@ void main() {
     await tester.pump();
 
     expect(port.integrityCalls, 1);
-    expect(find.byKey(const Key('cache-integrity-result')), findsNothing);
-    expect(find.textContaining('缺失 3'), findsNothing);
-    expect(find.textContaining('损坏 1'), findsNothing);
-    expect(find.textContaining('过期 0'), findsNothing);
+    expect(find.byKey(const Key('cache-integrity-result')), findsOneWidget);
+    expect(find.textContaining('缺失 3'), findsOneWidget);
+    expect(find.textContaining('损坏 1'), findsOneWidget);
+    expect(find.textContaining('待校验 2'), findsOneWidget);
+    expect(find.textContaining('仍保留在本地'), findsOneWidget);
     expect(find.byKey(const Key('cache-repair')), findsOneWidget);
   });
 
@@ -175,6 +174,7 @@ final class _FakePort implements GameResourceCachePort {
     remainingSeconds: null,
     missingCount: 3,
     damagedCount: 1,
+    outdatedCount: 2,
     fileCount: 1284,
     capacityBlocked: false,
     isMetered: metered,

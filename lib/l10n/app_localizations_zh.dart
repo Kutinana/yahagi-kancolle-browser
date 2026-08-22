@@ -1879,10 +1879,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameResourceCacheDamaged => '损坏';
 
   @override
-  String get gameResourceCacheOutdated => '过期';
+  String get gameResourceCacheOutdated => '待校验';
 
   @override
   String get gameResourceCacheItems => '项';
+
+  @override
+  String gameResourceCacheStoredSize(String size) {
+    return '已缓存 $size';
+  }
+
+  @override
+  String gameResourceCacheIntegritySummary(
+    int missing,
+    int damaged,
+    int pending,
+  ) {
+    return '缺失 $missing 项 · 损坏 $damaged 项 · 待校验 $pending 项';
+  }
+
+  @override
+  String get gameResourceCachePendingRetained => '待校验资源仍保留在本地，不会自动删除。';
 
   @override
   String get gameResourceCacheDownloadConfirmTitle => '确认下载缓存？';
@@ -3814,10 +3831,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameResourceCacheDamaged => '損壞';
 
   @override
-  String get gameResourceCacheOutdated => '過期';
+  String get gameResourceCacheOutdated => '待驗證';
 
   @override
   String get gameResourceCacheItems => '項';
+
+  @override
+  String gameResourceCacheStoredSize(String size) {
+    return '已快取 $size';
+  }
+
+  @override
+  String gameResourceCacheIntegritySummary(
+    int missing,
+    int damaged,
+    int pending,
+  ) {
+    return '缺少 $missing 項 · 損壞 $damaged 項 · 待驗證 $pending 項';
+  }
+
+  @override
+  String get gameResourceCachePendingRetained => '待驗證資源仍保留在本機，不會自動刪除。';
 
   @override
   String get gameResourceCacheDownloadConfirmTitle => '確認下載快取？';

@@ -49,6 +49,10 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
       builder: (context, _) {
         final controller = widget.controller;
         final status = controller.status;
+        final hasIntegrityIssues =
+            status.missingCount > 0 ||
+            status.damagedCount > 0 ||
+            status.outdatedCount > 0;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
@@ -88,7 +92,9 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
                   Text(
-                    controller.completenessLine,
+                    l10n.gameResourceCacheStoredSize(
+                      controller.completenessLine,
+                    ),
                     key: const Key('cache-completeness-line'),
                     style: const TextStyle(
                       fontSize: 16,
@@ -147,6 +153,36 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                 ],
               ),
             ),
+            if (_integrityChecked && hasIntegrityIssues)
+              Container(
+                key: const Key('cache-integrity-result'),
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xff152d3b),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xff294f63)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l10n.gameResourceCacheIntegritySummary(
+                        status.missingCount,
+                        status.damagedCount,
+                        status.outdatedCount,
+                      ),
+                    ),
+                    if (status.outdatedCount > 0) ...<Widget>[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.gameResourceCachePendingRetained,
+                        style: const TextStyle(color: Color(0xff9bc7e4)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
           ],
         );
       },
