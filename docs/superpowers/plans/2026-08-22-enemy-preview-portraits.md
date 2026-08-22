@@ -35,7 +35,7 @@
 - 修改：`lib/l10n/app_zh.arb`、`app_zh_Hant.arb`、`app_ja.arb`
 - 生成：`lib/l10n/app_localizations*.dart`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```dart
 expect(await store.loadEnemyPortraitsEnabled(), isTrue);
@@ -45,7 +45,7 @@ expect(await store.loadEnemyPortraitsEnabled(), isFalse);
 expect(find.byKey(const Key('battle-enemy-preview-portraits')), findsOneWidget);
 ```
 
-- [ ] **步骤 2：运行红灯**
+- [x] **步骤 2：运行红灯**
 
 ```powershell
 flutter test test/battle_prediction_settings_test.dart test/battle_prediction_settings_section_test.dart
@@ -53,11 +53,11 @@ flutter test test/battle_prediction_settings_test.dart test/battle_prediction_se
 
 预期：FAIL，缺少立绘设置 API 和开关 Widget。
 
-- [ ] **步骤 3：最小实现**
+- [x] **步骤 3：最小实现**
 
 Store 增加 `loadEnemyPortraitsEnabled()` 和 `saveEnemyPortraitsEnabled(bool)`，使用键 `battle.enemyPreviewPortraitsEnabled`。Controller 增加默认值为 `true` 的 getter 和保存后通知的 setter。先加入三语文案并生成本地化代码，再在设置区增加 Key 为 `battle-enemy-preview-portraits` 的 `SwitchListTile`。
 
-- [ ] **步骤 4：运行绿灯并提交**
+- [x] **步骤 4：运行绿灯并提交**
 
 ```powershell
 flutter test test/battle_prediction_settings_test.dart test/battle_prediction_settings_section_test.dart
@@ -73,7 +73,7 @@ git commit -m "feat(战斗设置): 添加敌方立绘开关（任务 1/5）"
 - 修改：`lib/src/battle/battle_models.dart`
 - 修改：`lib/src/battle/battle_controller.dart`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```dart
 expect(controller.current?.enemyPreviewShips, const <EnemyPreviewShip>[
@@ -85,7 +85,7 @@ expect(controller.current?.enemyPreviewShips, const <EnemyPreviewShip>[
 
 联合舰队测试继续断言随伴 3 艘在前、主力 3 艘在后。
 
-- [ ] **步骤 2：运行红灯**
+- [x] **步骤 2：运行红灯**
 
 ```powershell
 flutter test test/battle_controller_test.dart --plain-name "map response exposes at most three official enemy preview ships"
@@ -93,11 +93,11 @@ flutter test test/battle_controller_test.dart --plain-name "map response exposes
 
 预期：FAIL，缺少 `EnemyPreviewShip` 和 `enemyPreviewShips`。
 
-- [ ] **步骤 3：最小实现**
+- [x] **步骤 3：最小实现**
 
 增加不可变值对象和 `LiveBattle.enemyPreviewShips`。控制器从 `api_ship_ids` 构造 `EnemyPreviewShip(masterId: id, name: name)`，跳过无效 ID 和空名称，每支舰队最多 3 艘，结果不可修改。
 
-- [ ] **步骤 4：运行绿灯并提交**
+- [x] **步骤 4：运行绿灯并提交**
 
 ```powershell
 flutter test test/battle_controller_test.dart
@@ -114,11 +114,11 @@ git commit -m "feat(未卜先知): 保留战前敌舰标识（任务 2/5）"
 - 修改：`lib/src/battle/detailed_battle_panel.dart`
 - 修改：`lib/src/battle/live_battle_card.dart`
 
-- [ ] **步骤 1：编写失败的 Widget 测试**
+- [x] **步骤 1：编写失败的 Widget 测试**
 
 使用带敌舰立绘元数据的 `GameState`，断言完整模式存在 Key `official-enemy-preview-portrait-0`。切到简洁模式后断言该 Key 不存在。另一个完整模式用例传入 `showEnemyPortraits: false`，断言没有立绘但舰名仍存在；缺少版本号时同样只显示舰名。
 
-- [ ] **步骤 2：运行红灯**
+- [x] **步骤 2：运行红灯**
 
 ```powershell
 flutter test test/live_battle_card_node_test.dart --plain-name "enemy preview portraits"
@@ -126,11 +126,11 @@ flutter test test/live_battle_card_node_test.dart --plain-name "enemy preview po
 
 预期：FAIL，预览组件仍只接收纯舰名。
 
-- [ ] **步骤 3：最小实现**
+- [x] **步骤 3：最小实现**
 
 `LiveBattleCard` 增加默认开启的 `showEnemyPortraits` 参数。完整模式把设置、`GameState.masterShips` 和 `serverOrigin` 传入预览组件；简洁模式显式禁用。普通列表使用 56 × 34 dp，双栏使用 48 × 30 dp；缺少 master 数据或有效 URI 时只显示舰名。
 
-- [ ] **步骤 4：运行绿灯并提交**
+- [x] **步骤 4：运行绿灯并提交**
 
 ```powershell
 flutter test test/live_battle_card_node_test.dart
@@ -145,11 +145,11 @@ git commit -m "feat(未卜先知): 显示战前敌方立绘（任务 3/5）"
 - 修改：`lib/main.dart`
 - 修改：`test/localization_resource_audit_test.dart`
 
-- [ ] **步骤 1：编写失败的本地化审计**
+- [x] **步骤 1：编写失败的本地化审计**
 
 要求 3 个 ARB 文件都包含 `battleEnemyPreviewPortraits` 和 `battleEnemyPreviewPortraitsDesc`。
 
-- [ ] **步骤 2：运行红灯**
+- [x] **步骤 2：运行红灯**
 
 ```powershell
 flutter test test/localization_resource_audit_test.dart
@@ -157,11 +157,11 @@ flutter test test/localization_resource_audit_test.dart
 
 预期：若任务 1 尚未加入资源则 FAIL；正常执行顺序下用于确认三个 ARB 资源均已覆盖新键。
 
-- [ ] **步骤 3：最小实现**
+- [x] **步骤 3：最小实现**
 
 把 `BattlePredictionSettingsController` 传给 `_InformationPanel`，加入 `Listenable.merge`，并向 `LiveBattleCard` 传递 `enemyPortraitsEnabled`；本地化审计固定任务 1 已加入的两个资源键。
 
-- [ ] **步骤 4：运行绿灯并提交**
+- [x] **步骤 4：运行绿灯并提交**
 
 ```powershell
 flutter test test/localization_resource_audit_test.dart test/settings_localization_test.dart
@@ -171,13 +171,13 @@ git commit -m "feat(未卜先知): 接入立绘设置与三语文案（任务 4/
 
 ### 任务 5：完整验证
 
-- [ ] **步骤 1：格式化**
+- [x] **步骤 1：格式化**
 
 ```powershell
 dart format lib/src/battle lib/src/settings/battle_prediction_settings.dart lib/src/settings/battle_prediction_settings_section.dart lib/main.dart test/battle_controller_test.dart test/live_battle_card_node_test.dart test/battle_prediction_settings_test.dart test/battle_prediction_settings_section_test.dart test/localization_resource_audit_test.dart
 ```
 
-- [ ] **步骤 2：运行相关测试**
+- [x] **步骤 2：运行相关测试**
 
 ```powershell
 flutter test test/battle_controller_test.dart test/live_battle_card_node_test.dart test/battle_prediction_settings_test.dart test/battle_prediction_settings_section_test.dart test/localization_resource_audit_test.dart test/settings_localization_test.dart
@@ -185,7 +185,7 @@ flutter test test/battle_controller_test.dart test/live_battle_card_node_test.da
 
 预期：全部 PASS。
 
-- [ ] **步骤 3：运行静态分析**
+- [x] **步骤 3：运行静态分析**
 
 ```powershell
 flutter analyze lib/main.dart lib/src/battle lib/src/settings/battle_prediction_settings.dart lib/src/settings/battle_prediction_settings_section.dart
@@ -193,7 +193,7 @@ flutter analyze lib/main.dart lib/src/battle lib/src/settings/battle_prediction_
 
 预期：退出码为 0，无分析错误。
 
-- [ ] **步骤 4：检查差异并提交格式化结果**
+- [x] **步骤 4：检查差异并提交格式化结果**
 
 ```powershell
 git diff --check
