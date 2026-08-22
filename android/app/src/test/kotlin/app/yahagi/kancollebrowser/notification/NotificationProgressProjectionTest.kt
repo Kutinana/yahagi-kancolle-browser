@@ -98,6 +98,55 @@ class NotificationProgressProjectionTest {
         )
     }
 
+    @Test
+    fun `display projection prioritizes completed and nearest tasks`() {
+        val items = listOf(
+            ongoing("late", progress = 0.2, targetEpochMs = 900_000L),
+            ongoing("completed-b", progress = 1.0, targetEpochMs = 300_000L).copy(state = "completed"),
+            ongoing("near", progress = 0.3, targetEpochMs = 200_000L),
+            ongoing("completed-a", progress = 1.0, targetEpochMs = 250_000L).copy(state = "completed"),
+        )
+
+        val displayed = NotificationProgressProjection.displayItems(items)
+
+        assertEquals(
+            listOf("completed-a", "completed-b", "near", "late"),
+            displayed.map { it.id },
+        )
+    }
+
+    @Test
+    fun `more than five tasks use four rows plus an overflow summary`() {
+        val items = (1..7).map { index ->
+            ongoing(
+                id = "task:$index",
+                progress = index / 10.0,
+                targetEpochMs = 100_000L + index * 10_000L,
+            )
+        }
+
+        val displayed = NotificationProgressProjection.displayItems(items)
+
+        assertEquals(5, displayed.size)
+        assertEquals(listOf("task:1", "task:2", "task:3", "task:4"), displayed.take(4).map { it.id })
+        assertEquals("overflow", displayed.last().type)
+        assertEquals("另有 3 项进行中或已完成任务", displayed.last().title)
+        assertEquals(150_000L, displayed.last().targetEpochMs)
+        assertTrue(displayed.last().remainingSeconds >= 0)
+    }
+
+    @Test
+    fun `exactly five tasks remain five concrete rows`() {
+        val items = (1..5).map { index ->
+            ongoing("task:$index", progress = 0.2, targetEpochMs = 200_000L + index)
+        }
+
+        val displayed = NotificationProgressProjection.displayItems(items)
+
+        assertEquals(5, displayed.size)
+        assertFalse(displayed.any { it.type == "overflow" })
+    }
+
     private fun snapshot(targetEpochMs: Long) = NativeNotificationSnapshot(
         schemaVersion = 1,
         updatedAtEpochMs = 100_000L,
@@ -117,11 +166,12 @@ class NotificationProgressProjectionTest {
     )
 
     private fun ongoing(
+        id: String = "expedition:2",
         progress: Double,
         targetEpochMs: Long,
         clockMode: String = "countdown",
     ) = OngoingNotificationItem(
-        id = "expedition:2",
+        id = id,
         type = if (clockMode == "elapsed") "anchorage" else "expedition",
         title = "task",
         state = "running",

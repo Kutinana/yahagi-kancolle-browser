@@ -321,7 +321,8 @@ object AppNotificationManager {
         snapshot: NativeNotificationSnapshot,
     ): Notification {
         val projected = NotificationProgressProjection.project(snapshot, System.currentTimeMillis())
-        val items = projected.ongoingItems
+        val totalItemCount = projected.ongoingItems.size
+        val items = NotificationProgressProjection.displayItems(projected.ongoingItems)
         val presentation = projected.presentation
         val launchIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -359,7 +360,7 @@ object AppNotificationManager {
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setCustomContentView(collapsed)
             .setCustomBigContentView(expanded)
-            .setContentTitle("矢矧 · 母港实时进行中 (${items.size} 项)")
+            .setContentTitle("矢矧 · 母港实时进行中 ($totalItemCount 项)")
             .setContentText(items.first().title)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -381,6 +382,24 @@ object AppNotificationManager {
     ) {
         val percent = (item.progress * 100).toInt().coerceIn(0, 100)
         views.setTextViewText(titleId, item.title)
+        if (item.type == "overflow") {
+            views.setViewVisibility(progressId, View.GONE)
+            if (item.state == "completed") {
+                views.setViewVisibility(statsId, View.VISIBLE)
+                views.setChronometer(statsId, SystemClock.elapsedRealtime(), "已完成", false)
+            } else if (presentation.showCountdown && item.targetEpochMs != null) {
+                val base = SystemClock.elapsedRealtime() +
+                    (item.targetEpochMs - System.currentTimeMillis()).coerceAtLeast(0L)
+                views.setViewVisibility(statsId, View.VISIBLE)
+                views.setChronometer(statsId, base, "%s", true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    views.setChronometerCountDown(statsId, true)
+                }
+            } else {
+                views.setViewVisibility(statsId, View.GONE)
+            }
+            return
+        }
         if (item.clockMode == "elapsed" && item.anchorEpochMs != null) {
             if (presentation.showCountdown) {
                 val base = NotificationChronometer.elapsedRealtimeBase(

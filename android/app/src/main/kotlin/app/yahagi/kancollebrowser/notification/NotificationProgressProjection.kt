@@ -4,6 +4,7 @@ import kotlin.math.ceil
 
 object NotificationProgressProjection {
     const val REFRESH_INTERVAL_MS = 30_000L
+    private const val MAX_DISPLAY_ROWS = 5
 
     fun project(
         item: OngoingNotificationItem,
@@ -79,4 +80,39 @@ object NotificationProgressProjection {
             project(item, snapshot.updatedAtEpochMs, nowEpochMs)
         },
     )
+
+    fun displayItems(
+        items: List<OngoingNotificationItem>,
+    ): List<OngoingNotificationItem> {
+        val sorted = items.sortedWith(
+            compareBy<OngoingNotificationItem>(
+                { if (it.state == "completed") 0 else 1 },
+                { it.targetEpochMs ?: Long.MAX_VALUE },
+                { it.id },
+            ),
+        )
+        if (sorted.size <= MAX_DISPLAY_ROWS) return sorted
+
+        val visible = sorted.take(MAX_DISPLAY_ROWS - 1)
+        val hidden = sorted.drop(MAX_DISPLAY_ROWS - 1)
+        val nearest = hidden.minWithOrNull(
+            compareBy<OngoingNotificationItem>(
+                { it.targetEpochMs ?: Long.MAX_VALUE },
+                { it.id },
+            ),
+        ) ?: hidden.first()
+        val summary = OngoingNotificationItem(
+            id = "overflow:${hidden.size}",
+            type = "overflow",
+            title = "另有 ${hidden.size} 项进行中或已完成任务",
+            state = nearest.state,
+            clockMode = "countdown",
+            anchorEpochMs = null,
+            progress = nearest.progress,
+            remainingSeconds = nearest.remainingSeconds.coerceAtLeast(0),
+            targetEpochMs = nearest.targetEpochMs,
+            totalDurationSec = nearest.totalDurationSec,
+        )
+        return visible + summary
+    }
 }
