@@ -15,11 +15,13 @@ class DetailedBattlePanel extends StatelessWidget {
     required this.battle,
     required this.gameState,
     this.damagePulseMode = DamagePulseMode.enhanced,
+    this.showEnemyPortraits = true,
   });
 
   final LiveBattle battle;
   final GameState gameState;
   final DamagePulseMode damagePulseMode;
+  final bool showEnemyPortraits;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +45,10 @@ class DetailedBattlePanel extends StatelessWidget {
         if (navigation && enemyPreviewShips.isNotEmpty) ...[
           const SizedBox(height: 7),
           OfficialEnemyPreview(
-            names: enemyPreviewShips.map((ship) => ship.name).toList(),
+            ships: enemyPreviewShips,
+            showPortraits: showEnemyPortraits,
+            masterShips: gameState.masterShips,
+            serverOrigin: gameState.serverOrigin,
           ),
         ],
         if (navigation && battle.landBaseRaid != null) ...[

@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 
-class OfficialEnemyPreview extends StatelessWidget {
-  const OfficialEnemyPreview({super.key, required this.names});
+import '../fleet/ship_portrait.dart';
+import '../game_state/game_state.dart';
+import 'battle_models.dart';
 
-  final List<String> names;
+class OfficialEnemyPreview extends StatelessWidget {
+  const OfficialEnemyPreview({
+    super.key,
+    required this.ships,
+    this.showPortraits = false,
+    this.masterShips = const <int, MasterShip>{},
+    this.serverOrigin = '',
+  });
+
+  final List<EnemyPreviewShip> ships;
+  final bool showPortraits;
+  final Map<int, MasterShip> masterShips;
+  final String serverOrigin;
 
   @override
   Widget build(BuildContext context) {
-    final combined = names.length > 3;
+    final combined = ships.length > 3;
     return Container(
       key: const Key('official-enemy-preview'),
       decoration: BoxDecoration(
@@ -30,10 +43,13 @@ class OfficialEnemyPreview extends StatelessWidget {
             ),
           ),
           if (!combined)
-            for (var index = 0; index < names.length; index++) ...<Widget>[
+            for (var index = 0; index < ships.length; index++) ...<Widget>[
               if (index > 0) const Divider(height: 1, color: Color(0xff203746)),
               _nameCell(
-                names[index],
+                ships[index],
+                index: index,
+                portraitWidth: 56,
+                portraitHeight: 34,
                 key: Key('official-enemy-preview-row-$index'),
               ),
             ]
@@ -51,14 +67,20 @@ class OfficialEnemyPreview extends StatelessWidget {
                         ),
                       ),
                       child: _nameCell(
-                        _nameAt(index),
+                        _shipAt(index),
+                        index: index,
+                        portraitWidth: 48,
+                        portraitHeight: 30,
                         key: Key('official-enemy-preview-escort-$index'),
                       ),
                     ),
                   ),
                   Expanded(
                     child: _nameCell(
-                      _nameAt(index + 3),
+                      _shipAt(index + 3),
+                      index: index + 3,
+                      portraitWidth: 48,
+                      portraitHeight: 30,
                       key: Key('official-enemy-preview-main-$index'),
                     ),
                   ),
@@ -70,19 +92,56 @@ class OfficialEnemyPreview extends StatelessWidget {
     );
   }
 
-  String _nameAt(int index) => index < names.length ? names[index] : '';
+  EnemyPreviewShip? _shipAt(int index) =>
+      index < ships.length ? ships[index] : null;
 
-  Widget _nameCell(String name, {required Key key}) => Padding(
-    key: key,
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-    child: Tooltip(
-      message: name,
-      child: Text(
-        name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+  Widget _nameCell(
+    EnemyPreviewShip? preview, {
+    required int index,
+    required double portraitWidth,
+    required double portraitHeight,
+    required Key key,
+  }) {
+    final name = preview?.name ?? '';
+    final masterShip = preview == null ? null : masterShips[preview.masterId];
+    final portraitUri = masterShip == null
+        ? null
+        : ShipPortraitUriBuilder.build(
+            ship: masterShip,
+            serverOrigin: serverOrigin,
+          );
+    return Padding(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      child: Row(
+        children: <Widget>[
+          if (showPortraits && portraitUri != null) ...<Widget>[
+            ShipPortrait(
+              key: Key('official-enemy-preview-portrait-$index'),
+              ship: masterShip,
+              serverOrigin: serverOrigin,
+              width: portraitWidth,
+              height: portraitHeight,
+              decodeHeight: (portraitHeight * 2).round(),
+            ),
+            const SizedBox(width: 7),
+          ],
+          Expanded(
+            child: Tooltip(
+              message: name,
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-    ),
-  );
+    );
+  }
 }

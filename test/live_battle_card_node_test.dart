@@ -97,6 +97,7 @@ Future<void> _pumpCard(
   BattleController controller, {
   bool compact = false,
   double? width,
+  bool showEnemyPortraits = true,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -107,6 +108,7 @@ Future<void> _pumpCard(
             controller: controller,
             collapsed: false,
             onToggleCollapse: () {},
+            showEnemyPortraits: showEnemyPortraits,
           ),
         ),
       ),
@@ -445,74 +447,131 @@ void main() {
     expect(find.text('A3点'), findsNothing);
   });
 
-  testWidgets(
-    'official enemy preview uses the battle ship name row style in both modes',
-    (tester) async {
-      final reducer = GameStateReducer();
-      var state = reducer.reduce(GameState.empty, start2Event);
-      state = reducer
-          .reduce(state, portEvent)
-          .copyWith(
+  testWidgets('enemy preview portraits appear only in enabled detailed mode', (
+    tester,
+  ) async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer
+        .reduce(state, portEvent)
+        .copyWith(
+          serverOrigin: 'https://example.com',
+          masterShips: <int, MasterShip>{
+            ...state.masterShips,
+            1501: const MasterShip(
+              id: 1501,
+              name: '潜水ヨ級',
+              shipTypeId: 13,
+              portraitVersion: '7',
+            ),
+            1502: const MasterShip(
+              id: 1502,
+              name: '潜水カ級',
+              shipTypeId: 13,
+              portraitVersion: '7',
+            ),
+            1503: const MasterShip(
+              id: 1503,
+              name: '潜水ソ級',
+              shipTypeId: 13,
+              portraitVersion: '7',
+            ),
+          },
+        );
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_req_map/next', <String, Object?>{
+        'api_maparea_id': 1,
+        'api_mapinfo_no': 1,
+        'api_no': 2,
+        'api_e_deck_info': <Object?>[
+          <String, Object?>{
+            'api_kind': 1,
+            'api_ship_ids': <int>[1501, 1502, 1503],
+          },
+        ],
+      }, sequence: 988),
+    );
+    await controller.idle;
+
+    await _pumpCard(tester, controller, width: 360);
+
+    expect(find.byKey(const Key('official-enemy-preview')), findsOneWidget);
+    expect(find.text('敌方部队（战前预测）'), findsOneWidget);
+    final previewTitle = tester.widget<Text>(
+      find.byKey(const Key('official-enemy-preview-title')),
+    );
+    expect(previewTitle.style?.fontSize, 11);
+    expect(previewTitle.style?.fontWeight, FontWeight.w800);
+    expect(previewTitle.style?.color, const Color(0xffff8c78));
+    expect(find.text('潜水ヨ級'), findsOneWidget);
+    expect(find.text('潜水カ級'), findsOneWidget);
+    expect(find.text('潜水ソ級'), findsOneWidget);
+    final name = tester.widget<Text>(find.text('潜水ヨ級'));
+    expect(name.style?.fontSize, 11);
+    expect(name.style?.fontWeight, FontWeight.w700);
+    final row = tester.widget<Padding>(
+      find.byKey(const Key('official-enemy-preview-row-0')),
+    );
+    expect(row.padding, const EdgeInsets.symmetric(horizontal: 9, vertical: 4));
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const Key('official-enemy-preview-portrait-0')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('battle-mode-compact')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('official-enemy-preview')), findsOneWidget);
+    expect(find.text('敌方部队（战前预测）'), findsOneWidget);
+    expect(find.text('潜水ヨ級'), findsOneWidget);
+    expect(find.text('潜水カ級'), findsOneWidget);
+    expect(find.text('潜水ソ級'), findsOneWidget);
+    expect(
+      find.byKey(const Key('official-enemy-preview-portrait-0')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('battle-mode-detailed')));
+    await tester.pump();
+    await _pumpCard(tester, controller, width: 360, showEnemyPortraits: false);
+
+    expect(find.text('潜水ヨ級'), findsOneWidget);
+    expect(
+      find.byKey(const Key('official-enemy-preview-portrait-0')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('enemy preview falls back to text without portrait metadata', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: OfficialEnemyPreview(
+            ships: <EnemyPreviewShip>[
+              EnemyPreviewShip(masterId: 1501, name: '潜水ヨ級'),
+            ],
+            showPortraits: true,
             masterShips: <int, MasterShip>{
-              ...state.masterShips,
-              1501: const MasterShip(id: 1501, name: '潜水ヨ級', shipTypeId: 13),
-              1502: const MasterShip(id: 1502, name: '潜水カ級', shipTypeId: 13),
-              1503: const MasterShip(id: 1503, name: '潜水ソ級', shipTypeId: 13),
+              1501: MasterShip(id: 1501, name: '潜水ヨ級', shipTypeId: 13),
             },
-          );
-      final controller = BattleController(gameState: () => state);
-      addTearDown(controller.dispose);
-      controller.accept(
-        kcsapiEvent('/kcsapi/api_req_map/next', <String, Object?>{
-          'api_maparea_id': 1,
-          'api_mapinfo_no': 1,
-          'api_no': 2,
-          'api_e_deck_info': <Object?>[
-            <String, Object?>{
-              'api_kind': 1,
-              'api_ship_ids': <int>[1501, 1502, 1503],
-            },
-          ],
-        }, sequence: 988),
-      );
-      await controller.idle;
+            serverOrigin: 'https://example.com',
+          ),
+        ),
+      ),
+    );
 
-      await _pumpCard(tester, controller, width: 360);
-
-      expect(find.byKey(const Key('official-enemy-preview')), findsOneWidget);
-      expect(find.text('敌方部队（战前预测）'), findsOneWidget);
-      final previewTitle = tester.widget<Text>(
-        find.byKey(const Key('official-enemy-preview-title')),
-      );
-      expect(previewTitle.style?.fontSize, 11);
-      expect(previewTitle.style?.fontWeight, FontWeight.w800);
-      expect(previewTitle.style?.color, const Color(0xffff8c78));
-      expect(find.text('潜水ヨ級'), findsOneWidget);
-      expect(find.text('潜水カ級'), findsOneWidget);
-      expect(find.text('潜水ソ級'), findsOneWidget);
-      final name = tester.widget<Text>(find.text('潜水ヨ級'));
-      expect(name.style?.fontSize, 11);
-      expect(name.style?.fontWeight, FontWeight.w700);
-      final row = tester.widget<Padding>(
-        find.byKey(const Key('official-enemy-preview-row-0')),
-      );
-      expect(
-        row.padding,
-        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      );
-      expect(tester.takeException(), isNull);
-
-      await tester.tap(find.byKey(const Key('battle-mode-compact')));
-      await tester.pump();
-
-      expect(find.byKey(const Key('official-enemy-preview')), findsOneWidget);
-      expect(find.text('敌方部队（战前预测）'), findsOneWidget);
-      expect(find.text('潜水ヨ級'), findsOneWidget);
-      expect(find.text('潜水カ級'), findsOneWidget);
-      expect(find.text('潜水ソ級'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(find.text('潜水ヨ級'), findsOneWidget);
+    expect(
+      find.byKey(const Key('official-enemy-preview-portrait-0')),
+      findsNothing,
+    );
+  });
 
   testWidgets('combined enemy preview renders escort and main in three rows', (
     tester,
@@ -523,7 +582,14 @@ void main() {
           body: SizedBox(
             width: 360,
             child: OfficialEnemyPreview(
-              names: <String>['伴随一', '伴随二', '伴随三', '主力一', '主力二', '主力三'],
+              ships: <EnemyPreviewShip>[
+                EnemyPreviewShip(masterId: 1701, name: '伴随一'),
+                EnemyPreviewShip(masterId: 1702, name: '伴随二'),
+                EnemyPreviewShip(masterId: 1703, name: '伴随三'),
+                EnemyPreviewShip(masterId: 1601, name: '主力一'),
+                EnemyPreviewShip(masterId: 1602, name: '主力二'),
+                EnemyPreviewShip(masterId: 1603, name: '主力三'),
+              ],
             ),
           ),
         ),

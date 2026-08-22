@@ -22,12 +22,14 @@ class LiveBattleCard extends StatefulWidget {
     required this.collapsed,
     required this.onToggleCollapse,
     this.damagePulseMode = DamagePulseMode.enhanced,
+    this.showEnemyPortraits = true,
   });
 
   final BattleController controller;
   final bool collapsed;
   final VoidCallback onToggleCollapse;
   final DamagePulseMode damagePulseMode;
+  final bool showEnemyPortraits;
 
   @override
   State<LiveBattleCard> createState() => _LiveBattleCardState();
@@ -89,6 +91,7 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
                   battle: battle,
                   gameState: widget.controller.gameStateSnapshot,
                   damagePulseMode: widget.damagePulseMode,
+                  showEnemyPortraits: widget.showEnemyPortraits,
                 )
               else
                 _CompactBattlePanel(
@@ -225,8 +228,7 @@ class _CompactBattlePanel extends StatelessWidget {
       final raid = battle.landBaseRaid;
       final previewShips =
           battle.enemyPreviewShips ?? const <EnemyPreviewShip>[];
-      final previewNames = previewShips.map((ship) => ship.name).toList();
-      if (raid == null && previewNames.isEmpty) {
+      if (raid == null && previewShips.isEmpty) {
         return KeyedSubtree(
           key: const Key('compact-battle-panel'),
           child: navigationHeader,
@@ -237,9 +239,9 @@ class _CompactBattlePanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           navigationHeader,
-          if (previewNames.isNotEmpty) ...<Widget>[
+          if (previewShips.isNotEmpty) ...<Widget>[
             const SizedBox(height: 7),
-            OfficialEnemyPreview(names: previewNames),
+            OfficialEnemyPreview(ships: previewShips),
           ],
           if (raid != null) ...<Widget>[
             const SizedBox(height: 7),
