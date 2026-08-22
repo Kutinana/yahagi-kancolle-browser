@@ -7,6 +7,7 @@ import 'battle_pills.dart';
 import '../fleet/dashboard_card.dart';
 import '../fleet/ship_status_style.dart';
 import '../fleet/ship_status_visuals.dart';
+import '../fleet/status_density.dart';
 import '../game_state/game_state.dart';
 import 'detailed_battle_panel.dart';
 import 'land_base_raid_panel.dart';
@@ -191,6 +192,7 @@ class _CompactBattlePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final phone = isPhoneDensity(context);
     final navigation = battle.displayStage == BattleDisplayStage.navigation;
     if (navigation) {
       final navigationHeader = Container(
@@ -275,7 +277,7 @@ class _CompactBattlePanel extends StatelessWidget {
         Row(
           children: [
             if (battle.rank != BattleRank.unknown) ...<Widget>[
-              _RankBadge(rank: battle.rank),
+              _RankBadge(rank: battle.rank, phone: phone),
               const SizedBox(width: 11),
             ],
             Expanded(
@@ -286,7 +288,7 @@ class _CompactBattlePanel extends StatelessWidget {
                     nodeLabel: battle.context.forecastNodeLabel,
                     enemyName: enemyName,
                     enemyStyle: TextStyle(
-                      fontSize: 13,
+                      fontSize: phone ? 13 : 14,
                       fontWeight: FontWeight.w600,
                       color: enemyCombined ? const Color(0xffff8c78) : null,
                     ),
@@ -460,7 +462,7 @@ class _CompactFleetSideTitle extends StatelessWidget {
           softWrap: false,
           style: TextStyle(
             color: color,
-            fontSize: 9,
+            fontSize: 11,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -545,7 +547,7 @@ class _CompactBarRow extends StatelessWidget {
             '退避',
             style: TextStyle(
               color: Color(0xff8197a5),
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -558,7 +560,7 @@ class _CompactBarRow extends StatelessWidget {
           hpText,
           style: TextStyle(
             color: hpValueColor,
-            fontSize: 9,
+            fontSize: 10,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -747,12 +749,17 @@ class _StatusBadge extends StatelessWidget {
 }
 
 class _RankBadge extends StatelessWidget {
-  const _RankBadge({required this.rank});
+  const _RankBadge({required this.rank, required this.phone});
 
   final BattleRank rank;
+  final bool phone;
 
   @override
   Widget build(BuildContext context) {
-    return BattleRankBadge(rank: rank);
+    return BattleRankBadge(
+      rank: rank,
+      size: phone ? 50 : 48,
+      fontSize: phone ? 21 : 20,
+    );
   }
 }

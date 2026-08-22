@@ -895,6 +895,34 @@ void main() {
     );
   });
 
+  testWidgets('compact tablet battle uses detailed typography sizes', (
+    tester,
+  ) async {
+    final controller = _createController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(mapStartEvent)
+      ..accept(dayBattleEvent)
+      ..accept(battleResultEvent);
+    await controller.idle;
+
+    await _pumpCard(tester, controller, compact: true);
+
+    final friendTitle = find.descendant(
+      of: find.byKey(const Key('compact-fleet-side-title-friend')),
+      matching: find.textContaining('我方舰队'),
+    );
+    final friendHp = find.descendant(
+      of: find.byKey(const Key('compact-bar-friend-0')),
+      matching: find.text('18 / 30 (-12)'),
+    );
+
+    expect(tester.widget<Text>(friendTitle).style?.fontSize, 11);
+    expect(tester.widget<Text>(friendHp).style?.fontSize, 10);
+    expect(tester.widget<Text>(find.text('Test Enemy Fleet')).style?.fontSize, 14);
+    expect(tester.widget<Text>(find.text('S')).style?.fontSize, 20);
+  });
+
   testWidgets('air superiority pill renders with the status color', (
     tester,
   ) async {
