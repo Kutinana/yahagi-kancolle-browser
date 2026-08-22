@@ -90,6 +90,7 @@ object AppNotificationManager {
         val diff = NotificationSnapshotDiff.between(previous, next)
         val failures = mutableListOf<String>()
         val failedScheduleKeys = mutableSetOf<String>()
+        val failedImmediateKeys = mutableSetOf<String>()
         diff.cancelKeys.forEach { key ->
             runCatching { cancelAlarm(context, key) }
                 .onFailure { failures += "$key:cancel" }
@@ -108,13 +109,17 @@ object AppNotificationManager {
         if (next.presentation.enabled) {
             next.immediateAlerts.forEach { alert ->
                 runCatching { showImmediateAlert(context, alert, next.presentation) }
-                    .onFailure { failures += "${alert.key}:notify" }
+                    .onFailure {
+                        failures += "${alert.key}:notify"
+                        failedImmediateKeys += alert.key
+                    }
             }
         }
-        val persisted = NotificationSnapshotRecovery.afterScheduleFailures(
-            next,
-            failedScheduleKeys,
-        ).copy(immediateAlerts = emptyList())
+        val persisted = NotificationSnapshotRecovery.afterDeliveryResults(
+            desired = next,
+            failedScheduleKeys = failedScheduleKeys,
+            failedImmediateKeys = failedImmediateKeys,
+        )
         saveSnapshot(context, persisted)
         runCatching { updateOngoingProgress(context, persisted) }
             .onFailure { failures += "ongoing" }
@@ -160,6 +165,27 @@ object AppNotificationManager {
         runCatching { NotificationProgressService.sync(context, next) }
     }
 
+    fun onAlarmDeliveryFailed(context: Context, key: String) {
+        val previous = loadSnapshot(context)
+        val alarm = previous.alarms.firstOrNull { it.key == key } ?: return
+        val failed = NotificationSnapshotTransitions.onAlarmDeliveryFailed(alarm)
+        val next = previous.copy(
+            alarms = previous.alarms.map { if (it.key == key) failed else it },
+        )
+        saveSnapshot(context, next)
+        val delayMs = NotificationDeliveryRetry.delayAfterFailure(failed.deliveryAttempts) ?: return
+        val nowEpochMs = System.currentTimeMillis()
+        if (nowEpochMs - failed.triggerTimeEpochMs > NotificationDeliveryRetry.RETENTION_MS) return
+        runCatching {
+            scheduleAlarm(
+                context = context,
+                alarm = failed,
+                presentation = next.presentation,
+                scheduledAtEpochMs = nowEpochMs + delayMs,
+            )
+        }
+    }
+
     fun canScheduleExactAlarms(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
         val manager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return false
@@ -191,6 +217,7 @@ object AppNotificationManager {
         context: Context,
         alarm: NotificationAlarm,
         presentation: NotificationPresentation,
+        scheduledAtEpochMs: Long = alarm.triggerTimeEpochMs,
     ): Boolean {
         val manager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
             ?: error("AlarmManager unavailable")
@@ -215,10 +242,10 @@ object AppNotificationManager {
         val exactAllowed = canScheduleExactAlarms(context)
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && exactAllowed ->
-                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerTimeEpochMs, pendingIntent)
+                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, scheduledAtEpochMs, pendingIntent)
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ->
-                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarm.triggerTimeEpochMs, pendingIntent)
-            else -> manager.setExact(AlarmManager.RTC_WAKEUP, alarm.triggerTimeEpochMs, pendingIntent)
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, scheduledAtEpochMs, pendingIntent)
+            else -> manager.setExact(AlarmManager.RTC_WAKEUP, scheduledAtEpochMs, pendingIntent)
         }
         return exactAllowed
     }
@@ -263,7 +290,7 @@ object AppNotificationManager {
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setOnlyAlertOnce(true)
+            .setOnlyAlertOnce(false)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             builder.setVibrate(if (presentation.vibration) VIBRATION_PATTERN else null)

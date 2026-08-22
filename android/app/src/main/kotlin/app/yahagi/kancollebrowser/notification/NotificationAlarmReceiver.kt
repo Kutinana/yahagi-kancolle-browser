@@ -61,7 +61,12 @@ class NotificationAlarmReceiver : BroadcastReceiver() {
         val notificationId = currentAlarm?.let {
             NotificationDelivery.notificationIdForAlarm(snapshot, it)
         } ?: NotificationDelivery.notificationId(key, triggerTimeEpochMs)
-        notificationManager.notify(notificationId, notification)
-        AppNotificationManager.onAlarmFired(context, key, taskId, stage)
+        runCatching { notificationManager.notify(notificationId, notification) }
+            .onSuccess {
+                AppNotificationManager.onAlarmFired(context, key, taskId, stage)
+            }
+            .onFailure {
+                AppNotificationManager.onAlarmDeliveryFailed(context, key)
+            }
     }
 }

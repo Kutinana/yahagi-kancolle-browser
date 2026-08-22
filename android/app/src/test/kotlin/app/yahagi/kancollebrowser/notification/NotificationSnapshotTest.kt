@@ -141,6 +141,23 @@ class NotificationSnapshotTest {
     }
 
     @Test
+    fun `failed immediate alerts remain pending while successful alerts are consumed`() {
+        val failed = immediate("failed", deadline = 200L)
+        val successful = immediate("successful", deadline = 300L)
+        val desired = snapshot(alarm("alarm", 400L), sound = true, vibration = true).copy(
+            immediateAlerts = listOf(failed, successful),
+        )
+
+        val persisted = NotificationSnapshotRecovery.afterDeliveryResults(
+            desired = desired,
+            failedScheduleKeys = emptySet(),
+            failedImmediateKeys = setOf("failed"),
+        )
+
+        assertEquals(listOf(failed.copy(deliveryAttempts = 1)), persisted.immediateAlerts)
+    }
+
+    @Test
     fun `due completion alarm remains armed while its task is still visible`() {
         val dueAlarm = alarm("expedition_2_complete", 200L).copy(
             taskId = "expedition:2",
@@ -174,7 +191,7 @@ class NotificationSnapshotTest {
     }
 
     @Test
-    fun `due completion alarm is canceled after game removes its task`() {
+    fun `due completion alarm remains pending after game removes its task`() {
         val dueAlarm = alarm("expedition_2_complete", 200L).copy(
             taskId = "expedition:2",
         )
@@ -196,8 +213,44 @@ class NotificationSnapshotTest {
             nowEpochMs = 201L,
         )
 
+        assertEquals(listOf(dueAlarm), reconciled.alarms)
+        assertEquals(emptySet<String>(), NotificationSnapshotDiff.between(previous, reconciled).cancelKeys)
+    }
+
+    @Test
+    fun `completion alarm expires after the delivery safety window`() {
+        val dueAlarm = alarm("expedition_2_complete", 200L).copy(
+            taskId = "expedition:2",
+        )
+        val previous = snapshot(dueAlarm, sound = true, vibration = true)
+        val desired = previous.copy(
+            updatedAtEpochMs = 201L,
+            alarms = emptyList(),
+            ongoingItems = emptyList(),
+        )
+
+        val reconciled = NotificationSnapshotReconciliation.beforeApply(
+            previous = previous,
+            desired = desired,
+            nowEpochMs = 200L + NotificationDeliveryRetry.RETENTION_MS + 1L,
+        )
+
         assertEquals(emptyList<NotificationAlarm>(), reconciled.alarms)
-        assertEquals(setOf(dueAlarm.key), NotificationSnapshotDiff.between(previous, reconciled).cancelKeys)
+    }
+
+    @Test
+    fun `alarm delivery failures advance through finite retry delays`() {
+        val original = alarm("repair_1_complete", 200L)
+
+        val first = NotificationSnapshotTransitions.onAlarmDeliveryFailed(original)
+        val second = NotificationSnapshotTransitions.onAlarmDeliveryFailed(first)
+        val third = NotificationSnapshotTransitions.onAlarmDeliveryFailed(second)
+
+        assertEquals(1, first.deliveryAttempts)
+        assertEquals(1_000L, NotificationDeliveryRetry.delayAfterFailure(first.deliveryAttempts))
+        assertEquals(3_000L, NotificationDeliveryRetry.delayAfterFailure(second.deliveryAttempts))
+        assertEquals(10_000L, NotificationDeliveryRetry.delayAfterFailure(third.deliveryAttempts))
+        assertEquals(null, NotificationDeliveryRetry.delayAfterFailure(4))
     }
 
     @Test
@@ -415,6 +468,16 @@ class NotificationSnapshotTest {
         stage = "complete",
         removeTaskOnFire = true,
         triggerTimeEpochMs = triggerAt,
+        title = key,
+        body = "body",
+    )
+
+    private fun immediate(key: String, deadline: Long) = ImmediateNotificationAlert(
+        key = key,
+        taskId = "task:$key",
+        type = "expedition",
+        occurredAtEpochMs = deadline - 50L,
+        deadlineEpochMs = deadline,
         title = key,
         body = "body",
     )

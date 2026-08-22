@@ -12,6 +12,7 @@ data class NotificationAlarm(
     val triggerTimeEpochMs: Long,
     val title: String,
     val body: String,
+    val deliveryAttempts: Int = 0,
 )
 
 data class ImmediateNotificationAlert(
@@ -22,6 +23,7 @@ data class ImmediateNotificationAlert(
     val deadlineEpochMs: Long = occurredAtEpochMs,
     val title: String,
     val body: String,
+    val deliveryAttempts: Int = 0,
 )
 
 data class OngoingNotificationItem(
@@ -116,6 +118,17 @@ object NotificationSnapshotRecovery {
     ): NativeNotificationSnapshot = desired.copy(
         alarms = desired.alarms.filterNot { it.key in failedKeys },
     )
+
+    fun afterDeliveryResults(
+        desired: NativeNotificationSnapshot,
+        failedScheduleKeys: Set<String>,
+        failedImmediateKeys: Set<String>,
+    ): NativeNotificationSnapshot = desired.copy(
+        alarms = desired.alarms.filterNot { it.key in failedScheduleKeys },
+        immediateAlerts = desired.immediateAlerts
+            .filter { it.key in failedImmediateKeys }
+            .map { it.copy(deliveryAttempts = it.deliveryAttempts + 1) },
+    )
 }
 
 object NotificationSnapshotReconciliation {
@@ -126,21 +139,46 @@ object NotificationSnapshotReconciliation {
     ): NativeNotificationSnapshot {
         if (!desired.presentation.enabled) return desired
 
-        val desiredAlarmKeys = desired.alarms.mapTo(mutableSetOf(), NotificationAlarm::key)
-        val visibleTaskIds = desired.ongoingItems.mapTo(mutableSetOf(), OngoingNotificationItem::id)
+        val previousAlarmsByKey = previous.alarms.associateBy(NotificationAlarm::key)
+        val desiredAlarms = desired.alarms.map { alarm ->
+            val previousAlarm = previousAlarmsByKey[alarm.key]
+            if (previousAlarm != null &&
+                previousAlarm.taskId == alarm.taskId &&
+                previousAlarm.triggerTimeEpochMs == alarm.triggerTimeEpochMs
+            ) {
+                alarm.copy(deliveryAttempts = previousAlarm.deliveryAttempts)
+            } else {
+                alarm
+            }
+        }
+        val desiredAlarmKeys = desiredAlarms.mapTo(mutableSetOf(), NotificationAlarm::key)
         val dueCompletionAlarms = previous.alarms.filter { alarm ->
             alarm.key !in desiredAlarmKeys &&
                 alarm.stage == "complete" &&
                 alarm.triggerTimeEpochMs <= nowEpochMs &&
-                alarm.taskId in visibleTaskIds
+                nowEpochMs - alarm.triggerTimeEpochMs <= NotificationDeliveryRetry.RETENTION_MS
         }
-        if (dueCompletionAlarms.isEmpty()) return desired
+        val desiredImmediateKeys = desired.immediateAlerts.mapTo(
+            mutableSetOf(),
+            ImmediateNotificationAlert::key,
+        )
+        val pendingImmediateAlerts = previous.immediateAlerts.filter { alert ->
+            alert.key !in desiredImmediateKeys &&
+                alert.deliveryAttempts > 0 &&
+                nowEpochMs - alert.deadlineEpochMs <= NotificationDeliveryRetry.RETENTION_MS
+        }
 
-        return desired.copy(alarms = desired.alarms + dueCompletionAlarms)
+        return desired.copy(
+            immediateAlerts = desired.immediateAlerts + pendingImmediateAlerts,
+            alarms = desiredAlarms + dueCompletionAlarms,
+        )
     }
 }
 
 object NotificationSnapshotTransitions {
+    fun onAlarmDeliveryFailed(alarm: NotificationAlarm): NotificationAlarm =
+        alarm.copy(deliveryAttempts = alarm.deliveryAttempts + 1)
+
     fun onAlarmFired(
         previous: NativeNotificationSnapshot,
         key: String,
@@ -164,6 +202,17 @@ object NotificationSnapshotTransitions {
                 }
             },
         )
+    }
+}
+
+object NotificationDeliveryRetry {
+    const val RETENTION_MS = 24L * 60L * 60L * 1_000L
+
+    fun delayAfterFailure(deliveryAttempts: Int): Long? = when (deliveryAttempts) {
+        1 -> 1_000L
+        2 -> 3_000L
+        3 -> 10_000L
+        else -> null
     }
 }
 
@@ -224,6 +273,7 @@ object NotificationSnapshotCodec {
                     ?: alert.long("occurredAtEpochMs"),
                 title = alert.string("title"),
                 body = alert.string("body"),
+                deliveryAttempts = alert.optionalNumber("deliveryAttempts")?.toInt() ?: 0,
             )
         }
         val alarms = raw.list("alarms").map { alarmRaw ->
@@ -237,6 +287,7 @@ object NotificationSnapshotCodec {
                 triggerTimeEpochMs = alarm.long("triggerTimeEpochMs"),
                 title = alarm.string("title"),
                 body = alarm.string("body"),
+                deliveryAttempts = alarm.optionalNumber("deliveryAttempts")?.toInt() ?: 0,
             )
         }
         val ongoingItems = raw.list("ongoingItems").map { itemRaw ->
@@ -286,6 +337,7 @@ object NotificationSnapshotCodec {
                     put("deadlineEpochMs", alert.deadlineEpochMs)
                     put("title", alert.title)
                     put("body", alert.body)
+                    put("deliveryAttempts", alert.deliveryAttempts)
                 })
             }
         })
@@ -300,6 +352,7 @@ object NotificationSnapshotCodec {
                     put("triggerTimeEpochMs", alarm.triggerTimeEpochMs)
                     put("title", alarm.title)
                     put("body", alarm.body)
+                    put("deliveryAttempts", alarm.deliveryAttempts)
                 })
             }
         })
