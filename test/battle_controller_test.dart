@@ -208,7 +208,7 @@ void main() {
   });
 
   test(
-    'map response exposes at most three official enemy preview names',
+    'map response exposes at most three official enemy preview ships',
     () async {
       final state = GameState(
         masterShips: const <int, MasterShip>{
@@ -236,16 +236,16 @@ void main() {
       );
       await controller.idle;
 
-      expect(controller.current?.enemyPreviewNames, <String>[
-        '潜水ヨ級',
-        '潜水カ級',
-        '潜水ソ級',
+      expect(controller.current?.enemyPreviewShips, const <EnemyPreviewShip>[
+        EnemyPreviewShip(masterId: 1501, name: '潜水ヨ級'),
+        EnemyPreviewShip(masterId: 1502, name: '潜水カ級'),
+        EnemyPreviewShip(masterId: 1503, name: '潜水ソ級'),
       ]);
     },
   );
 
   test(
-    'map response exposes escort then main names for an enemy combined fleet',
+    'map response exposes escort then main ships for an enemy combined fleet',
     () async {
       const state = GameState(
         masterShips: <int, MasterShip>{
@@ -279,13 +279,13 @@ void main() {
       );
       await controller.idle;
 
-      expect(controller.current?.enemyPreviewNames, <String>[
-        '伴随一',
-        '伴随二',
-        '伴随三',
-        '主力一',
-        '主力二',
-        '主力三',
+      expect(controller.current?.enemyPreviewShips, const <EnemyPreviewShip>[
+        EnemyPreviewShip(masterId: 1701, name: '伴随一'),
+        EnemyPreviewShip(masterId: 1702, name: '伴随二'),
+        EnemyPreviewShip(masterId: 1703, name: '伴随三'),
+        EnemyPreviewShip(masterId: 1601, name: '主力一'),
+        EnemyPreviewShip(masterId: 1602, name: '主力二'),
+        EnemyPreviewShip(masterId: 1603, name: '主力三'),
       ]);
     },
   );

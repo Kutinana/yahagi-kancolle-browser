@@ -182,7 +182,7 @@ final class BattleController extends ChangeNotifier
         phaseLabel: landBaseRaid == null ? '航行中' : '基地空袭',
         displayStage: BattleDisplayStage.navigation,
         landBaseRaid: landBaseRaid,
-        enemyPreviewNames: _officialEnemyPreviewNames(map, state),
+        enemyPreviewShips: _officialEnemyPreviewShips(map, state),
       );
       _archiveSession();
       _predictionEngine = null;
@@ -340,7 +340,7 @@ final class BattleController extends ChangeNotifier
     return kAirSuperiorityLabels[code] ?? '未知';
   }
 
-  List<String> _officialEnemyPreviewNames(
+  List<EnemyPreviewShip> _officialEnemyPreviewShips(
     Map<String, Object?> data,
     GameState state,
   ) {
@@ -349,22 +349,24 @@ final class BattleController extends ChangeNotifier
       final candidate = _optionalMap(value);
       if (candidate != null) previews.add(candidate);
     }
-    if (previews.isEmpty) return const <String>[];
+    if (previews.isEmpty) return const <EnemyPreviewShip>[];
 
-    List<String> namesOf(Map<String, Object?> preview) {
-      final names = <String>[];
+    List<EnemyPreviewShip> shipsOf(Map<String, Object?> preview) {
+      final ships = <EnemyPreviewShip>[];
       for (final value in _list(preview['api_ship_ids'])) {
-        final name = state.masterShips[_int(value)]?.name.trim() ?? '';
+        final masterId = _int(value);
+        if (masterId <= 0) continue;
+        final name = state.masterShips[masterId]?.name.trim() ?? '';
         if (name.isEmpty) continue;
-        names.add(name);
-        if (names.length == 3) break;
+        ships.add(EnemyPreviewShip(masterId: masterId, name: name));
+        if (ships.length == 3) break;
       }
-      return names;
+      return ships;
     }
 
-    final names = namesOf(previews.last);
-    if (previews.length > 1) names.addAll(namesOf(previews.first));
-    return List<String>.unmodifiable(names);
+    final ships = shipsOf(previews.last);
+    if (previews.length > 1) ships.addAll(shipsOf(previews.first));
+    return List<EnemyPreviewShip>.unmodifiable(ships);
   }
 
   Future<void> _applyBattlePhase(

@@ -24,7 +24,8 @@ class DetailedBattlePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final navigation = battle.displayStage == BattleDisplayStage.navigation;
-    final enemyPreviewNames = battle.enemyPreviewNames ?? const <String>[];
+    final enemyPreviewShips =
+        battle.enemyPreviewShips ?? const <EnemyPreviewShip>[];
     final friendMainTitle = battle.friendFormation > 0
         ? '我方主力（${formationLabel(battle.friendFormation)}）'
         : '我方主力';
@@ -39,9 +40,11 @@ class DetailedBattlePanel extends StatelessWidget {
           _NavigationOverview(context: battle.context)
         else
           _BattleOverview(battle: battle, gameState: gameState),
-        if (navigation && enemyPreviewNames.isNotEmpty) ...[
+        if (navigation && enemyPreviewShips.isNotEmpty) ...[
           const SizedBox(height: 7),
-          OfficialEnemyPreview(names: enemyPreviewNames),
+          OfficialEnemyPreview(
+            names: enemyPreviewShips.map((ship) => ship.name).toList(),
+          ),
         ],
         if (navigation && battle.landBaseRaid != null) ...[
           const SizedBox(height: 7),

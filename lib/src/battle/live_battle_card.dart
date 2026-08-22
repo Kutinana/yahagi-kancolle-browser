@@ -223,7 +223,9 @@ class _CompactBattlePanel extends StatelessWidget {
         ),
       );
       final raid = battle.landBaseRaid;
-      final previewNames = battle.enemyPreviewNames ?? const <String>[];
+      final previewShips =
+          battle.enemyPreviewShips ?? const <EnemyPreviewShip>[];
+      final previewNames = previewShips.map((ship) => ship.name).toList();
       if (raid == null && previewNames.isEmpty) {
         return KeyedSubtree(
           key: const Key('compact-battle-panel'),

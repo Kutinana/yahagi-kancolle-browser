@@ -15,7 +15,7 @@ enum BattleDisplayStage { navigation, battle, result }
 
 const _unsetNodeDisplayLabel = Object();
 const _unsetLandBaseRaid = Object();
-const _unsetEnemyPreviewNames = Object();
+const _unsetEnemyPreviewShips = Object();
 
 enum BattleRank {
   ss('SS'),
@@ -259,6 +259,23 @@ class LandBaseRaidResult {
   final String airSuperiority;
 }
 
+class EnemyPreviewShip {
+  const EnemyPreviewShip({required this.masterId, required this.name});
+
+  final int masterId;
+  final String name;
+
+  @override
+  bool operator ==(Object other) {
+    return other is EnemyPreviewShip &&
+        other.masterId == masterId &&
+        other.name == name;
+  }
+
+  @override
+  int get hashCode => Object.hash(masterId, name);
+}
+
 class LiveBattle {
   const LiveBattle({
     required this.context,
@@ -280,7 +297,7 @@ class LiveBattle {
     this.dropItemName,
     this.airSuperiority,
     this.landBaseRaid,
-    this.enemyPreviewNames,
+    this.enemyPreviewShips,
   });
 
   final BattleContext context;
@@ -302,7 +319,7 @@ class LiveBattle {
   final String? dropItemName;
   final String? airSuperiority;
   final LandBaseRaidResult? landBaseRaid;
-  final List<String>? enemyPreviewNames;
+  final List<EnemyPreviewShip>? enemyPreviewShips;
 
   List<BattleShipSnapshot> get friendShips =>
       List.unmodifiable(<BattleShipSnapshot>[...friendMain, ...friendEscort]);
@@ -340,7 +357,7 @@ class LiveBattle {
     String? dropItemName,
     String? airSuperiority,
     Object? landBaseRaid = _unsetLandBaseRaid,
-    Object? enemyPreviewNames = _unsetEnemyPreviewNames,
+    Object? enemyPreviewShips = _unsetEnemyPreviewShips,
   }) {
     return LiveBattle(
       context: context ?? this.context,
@@ -364,9 +381,9 @@ class LiveBattle {
       landBaseRaid: identical(landBaseRaid, _unsetLandBaseRaid)
           ? this.landBaseRaid
           : landBaseRaid as LandBaseRaidResult?,
-      enemyPreviewNames: identical(enemyPreviewNames, _unsetEnemyPreviewNames)
-          ? this.enemyPreviewNames
-          : enemyPreviewNames as List<String>?,
+      enemyPreviewShips: identical(enemyPreviewShips, _unsetEnemyPreviewShips)
+          ? this.enemyPreviewShips
+          : enemyPreviewShips as List<EnemyPreviewShip>?,
     );
   }
 }
