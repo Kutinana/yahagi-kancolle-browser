@@ -17,22 +17,28 @@ enum OngoingClockMode { countdown, elapsed }
 class ImmediateNotificationItem {
   const ImmediateNotificationItem({
     required this.key,
+    this.taskId = '',
     required this.type,
     required this.occurredAt,
+    DateTime? deadline,
     required this.title,
     required this.body,
-  });
+  }) : deadline = deadline ?? occurredAt;
 
   final String key;
+  final String taskId;
   final GameNotificationType type;
   final DateTime occurredAt;
+  final DateTime deadline;
   final String title;
   final String body;
 
   Map<String, Object?> toMap() => {
     'key': key,
+    'taskId': taskId,
     'type': type.name,
     'occurredAtEpochMs': occurredAt.millisecondsSinceEpoch,
+    'deadlineEpochMs': deadline.millisecondsSinceEpoch,
     'title': title,
     'body': body,
   };

@@ -16,8 +16,10 @@ data class NotificationAlarm(
 
 data class ImmediateNotificationAlert(
     val key: String,
+    val taskId: String = "",
     val type: String,
     val occurredAtEpochMs: Long,
+    val deadlineEpochMs: Long = occurredAtEpochMs,
     val title: String,
     val body: String,
 )
@@ -193,8 +195,12 @@ object NotificationDelivery {
         } else {
             alarm
         }
-        return notificationId(deliveryAlarm.key, deliveryAlarm.triggerTimeEpochMs)
+        val stableKey = deliveryAlarm.taskId.ifBlank { deliveryAlarm.key }
+        return notificationId(stableKey, deliveryAlarm.triggerTimeEpochMs)
     }
+
+    fun notificationIdForImmediate(alert: ImmediateNotificationAlert): Int =
+        notificationId(alert.taskId.ifBlank { alert.key }, alert.deadlineEpochMs)
 
     fun onlyAlertOnce(stage: String): Boolean = stage != "complete"
 
@@ -211,8 +217,11 @@ object NotificationSnapshotCodec {
             val alert = alertRaw.asMap()
             ImmediateNotificationAlert(
                 key = alert.string("key"),
+                taskId = alert.optionalString("taskId") ?: "",
                 type = alert.string("type"),
                 occurredAtEpochMs = alert.long("occurredAtEpochMs"),
+                deadlineEpochMs = alert.optionalNumber("deadlineEpochMs")?.toLong()
+                    ?: alert.long("occurredAtEpochMs"),
                 title = alert.string("title"),
                 body = alert.string("body"),
             )
@@ -271,8 +280,10 @@ object NotificationSnapshotCodec {
             snapshot.immediateAlerts.forEach { alert ->
                 put(JSONObject().apply {
                     put("key", alert.key)
+                    put("taskId", alert.taskId)
                     put("type", alert.type)
                     put("occurredAtEpochMs", alert.occurredAtEpochMs)
+                    put("deadlineEpochMs", alert.deadlineEpochMs)
                     put("title", alert.title)
                     put("body", alert.body)
                 })

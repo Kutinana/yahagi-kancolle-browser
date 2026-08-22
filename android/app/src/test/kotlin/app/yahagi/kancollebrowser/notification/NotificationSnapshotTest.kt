@@ -14,8 +14,10 @@ class NotificationSnapshotTest {
                 "immediateAlerts" to listOf(
                     mapOf(
                         "key" to "construction:1:manual:1700000000000",
+                        "taskId" to "construction:1",
                         "type" to "construction",
                         "occurredAtEpochMs" to 1_700_000_000_000L,
+                        "deadlineEpochMs" to 1_700_000_600_000L,
                         "title" to "done now",
                         "body" to "dock ready",
                     ),
@@ -60,6 +62,8 @@ class NotificationSnapshotTest {
 
         assertEquals("expedition:2", snapshot.alarms.single().taskId)
         assertEquals("construction", snapshot.immediateAlerts.single().type)
+        assertEquals("construction:1", snapshot.immediateAlerts.single().taskId)
+        assertEquals(1_700_000_600_000L, snapshot.immediateAlerts.single().deadlineEpochMs)
         assertTrue(snapshot.alarms.single().removeTaskOnFire)
         assertEquals(1_700_000_600_000L, snapshot.ongoingItems.single().targetEpochMs)
         assertEquals("completed", snapshot.ongoingItems.single().state)
@@ -310,6 +314,63 @@ class NotificationSnapshotTest {
         )
 
         assertEquals(completeId, preemptId)
+    }
+
+    @Test
+    fun `immediate completion replaces scheduled alerts for the same task round`() {
+        val preempt = alarm("repair_1_preempt", 140L).copy(
+            taskId = "repair:1",
+            type = "repair",
+            stage = "preempt",
+        )
+        val complete = alarm("repair_1_complete", 200L).copy(
+            taskId = "repair:1",
+            type = "repair",
+            stage = "complete",
+        )
+        val immediate = ImmediateNotificationAlert(
+            key = "repair:1:manual:200",
+            taskId = "repair:1",
+            type = "repair",
+            occurredAtEpochMs = 150L,
+            deadlineEpochMs = 200L,
+            title = "done now",
+            body = "dock ready",
+        )
+        val current = snapshot(preempt, sound = true, vibration = true).copy(
+            alarms = listOf(preempt, complete),
+            immediateAlerts = listOf(immediate),
+        )
+
+        val preemptId = NotificationDelivery.notificationIdForAlarm(current, preempt)
+        val completeId = NotificationDelivery.notificationIdForAlarm(current, complete)
+        val immediateId = NotificationDelivery.notificationIdForImmediate(immediate)
+
+        assertEquals(completeId, preemptId)
+        assertEquals(completeId, immediateId)
+    }
+
+    @Test
+    fun `new task round receives a different completion notification id`() {
+        val first = ImmediateNotificationAlert(
+            key = "construction:1:manual:200",
+            taskId = "construction:1",
+            type = "construction",
+            occurredAtEpochMs = 150L,
+            deadlineEpochMs = 200L,
+            title = "first",
+            body = "ready",
+        )
+        val next = first.copy(
+            key = "construction:1:manual:400",
+            occurredAtEpochMs = 350L,
+            deadlineEpochMs = 400L,
+        )
+
+        assertTrue(
+            NotificationDelivery.notificationIdForImmediate(first) !=
+                NotificationDelivery.notificationIdForImmediate(next),
+        )
     }
 
     @Test

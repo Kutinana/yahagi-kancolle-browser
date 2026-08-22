@@ -272,7 +272,7 @@ object AppNotificationManager {
             )
         }
         manager.notify(
-            NotificationDelivery.notificationId(alert.key, alert.occurredAtEpochMs),
+            NotificationDelivery.notificationIdForImmediate(alert),
             builder.build(),
         )
     }
@@ -355,20 +355,28 @@ object AppNotificationManager {
         val percent = (item.progress * 100).toInt().coerceIn(0, 100)
         views.setTextViewText(titleId, item.title)
         if (item.clockMode == "elapsed" && item.anchorEpochMs != null) {
-            val base = NotificationChronometer.elapsedRealtimeBase(
-                nowEpochMs = System.currentTimeMillis(),
-                elapsedRealtimeMs = SystemClock.elapsedRealtime(),
-                anchorEpochMs = item.anchorEpochMs,
-            )
-            val format = when (item.state) {
-                "completed" -> "预计修理完成 · 已修理 %s"
-                "settlementReady" -> "首轮结算就绪 · 已修理 %s"
-                else -> "已修理 %s"
-            }
-            views.setViewVisibility(statsId, View.VISIBLE)
-            views.setChronometer(statsId, base, format, true)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                views.setChronometerCountDown(statsId, false)
+            if (presentation.showCountdown) {
+                val base = NotificationChronometer.elapsedRealtimeBase(
+                    nowEpochMs = System.currentTimeMillis(),
+                    elapsedRealtimeMs = SystemClock.elapsedRealtime(),
+                    anchorEpochMs = item.anchorEpochMs,
+                )
+                val format = NotificationChronometer.countdownFormat(percent, presentation.showPercent)
+                views.setViewVisibility(statsId, View.VISIBLE)
+                views.setChronometer(statsId, base, format, true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    views.setChronometerCountDown(statsId, false)
+                }
+            } else if (presentation.showPercent) {
+                views.setViewVisibility(statsId, View.VISIBLE)
+                views.setChronometer(
+                    statsId,
+                    SystemClock.elapsedRealtime(),
+                    NotificationChronometer.percentOnlyFormat(percent),
+                    false,
+                )
+            } else {
+                views.setViewVisibility(statsId, View.GONE)
             }
         } else if (item.state == "completed") {
             views.setViewVisibility(statsId, View.VISIBLE)

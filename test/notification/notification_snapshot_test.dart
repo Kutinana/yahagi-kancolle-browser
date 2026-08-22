@@ -10,8 +10,10 @@ void main() {
       immediateAlerts: [
         ImmediateNotificationItem(
           key: 'construction:1:manual:1700000000000',
+          taskId: 'construction:1',
           type: GameNotificationType.construction,
           occurredAt: updatedAt,
+          deadline: target,
           title: 'Construction complete',
           body: 'Dock 1 is ready',
         ),
@@ -58,8 +60,10 @@ void main() {
       'immediateAlerts': [
         {
           'key': 'construction:1:manual:1700000000000',
+          'taskId': 'construction:1',
           'type': 'construction',
           'occurredAtEpochMs': updatedAt.millisecondsSinceEpoch,
+          'deadlineEpochMs': target.millisecondsSinceEpoch,
           'title': 'Construction complete',
           'body': 'Dock 1 is ready',
         },

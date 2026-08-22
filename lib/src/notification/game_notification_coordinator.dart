@@ -166,8 +166,10 @@ class GameNotificationCoordinator {
       alerts.add(
         ImmediateNotificationItem(
           key: '${task.id}:manual:${task.deadline.millisecondsSinceEpoch}',
+          taskId: task.id,
           type: task.type,
           occurredAt: now,
+          deadline: task.deadline,
           title: task.title,
           body: task.body,
         ),
@@ -217,7 +219,7 @@ class GameNotificationCoordinator {
             mission.completionTime != null &&
             mission.completionTime!.isAfter(now)) {
           final retTime = mission.completionTime!;
-          final fleetName = '第${fleet.id}舰队';
+          final fleetName = fleet.displayName;
           final masterMission = state.masterMissions[mission.missionId];
           final missionName = masterMission?.name.isNotEmpty == true
               ? masterMission!.name
@@ -326,6 +328,26 @@ class GameNotificationCoordinator {
             }
           }
 
+          if (settings.constructionPreemptSeconds > 0) {
+            final preemptTime = compTime.subtract(
+              Duration(seconds: settings.constructionPreemptSeconds),
+            );
+            if (preemptTime.isAfter(now)) {
+              final key = 'construction_${dock.id}_preempt';
+              desiredAlarms[key] = ScheduledNotificationItem(
+                key: key,
+                taskId: 'construction:${dock.id}',
+                type: GameNotificationType.construction,
+                stage: NotificationAlarmStage.preempt,
+                removeTaskOnFire: false,
+                triggerTime: preemptTime,
+                title: '建造即将完成 · 船坞 #${dock.id}',
+                body:
+                    '$shipName 还有 ${settings.constructionPreemptSeconds} 秒建造完成。',
+              );
+            }
+          }
+
           final key = 'construction_${dock.id}_complete';
           desiredAlarms[key] = ScheduledNotificationItem(
             key: key,
@@ -357,6 +379,11 @@ class GameNotificationCoordinator {
             (row) => row.status == AnchorageRepairShipStatus.repairing,
           );
       if (ancStart != null && hasRepairTarget) {
+        final fleet1 = state.fleets.cast<Fleet?>().firstWhere(
+          (f) => f?.id == 1,
+          orElse: () => null,
+        );
+        final fleet1Name = fleet1?.displayName ?? '第1舰队';
         final twentyMinTime = ancStart.add(const Duration(minutes: 20));
         if (twentyMinTime.isAfter(now) &&
             (settings.anchorageMode ==
@@ -370,7 +397,7 @@ class GameNotificationCoordinator {
             stage: NotificationAlarmStage.milestone,
             removeTaskOnFire: false,
             triggerTime: twentyMinTime,
-            title: '泊地修理结算就绪 · 第1舰队',
+            title: '泊地修理结算就绪 · $fleet1Name',
             body: '明石泊地修理已满 20 分钟！可返回母港刷新以结算首轮回血。',
           );
         }
@@ -394,8 +421,8 @@ class GameNotificationCoordinator {
               stage: NotificationAlarmStage.complete,
               removeTaskOnFire: true,
               triggerTime: now.add(remaining),
-              title: 'Anchorage repair complete · Fleet 1',
-              body: 'All eligible ships in Fleet 1 should now be repaired.',
+              title: 'Anchorage repair complete · $fleet1Name',
+              body: 'All eligible ships in $fleet1Name should now be repaired.',
             );
           }
         }
@@ -406,7 +433,7 @@ class GameNotificationCoordinator {
     if (settings.morale) {
       for (final fleet in state.fleets) {
         if (fleet.shipIds.isEmpty) continue;
-        final fleetName = '第${fleet.id}舰队';
+        final fleetName = fleet.displayName;
 
         // Check if Nosaki sparkle mode is active for this fleet
         final nosakiElapsed = _nosakiStartedAt() != null
@@ -432,6 +459,26 @@ class GameNotificationCoordinator {
 
           if (maxTimeTo54 > Duration.zero) {
             final completeTime = now.add(maxTimeTo54);
+            if (settings.moralePreemptSeconds > 0) {
+              final preemptTime = completeTime.subtract(
+                Duration(seconds: settings.moralePreemptSeconds),
+              );
+              if (preemptTime.isAfter(now)) {
+                final key = 'morale_${fleet.id}_nosaki_preempt';
+                desiredAlarms[key] = ScheduledNotificationItem(
+                  key: key,
+                  taskId: 'morale:${fleet.id}',
+                  type: GameNotificationType.morale,
+                  stage: NotificationAlarmStage.preempt,
+                  removeTaskOnFire: false,
+                  triggerTime: preemptTime,
+                  title: '野崎刷闪即将完成 · $fleetName',
+                  body:
+                      '$fleetName 随伴舰还有 ${settings.moralePreemptSeconds} 秒达到 54 闪。',
+                );
+              }
+            }
+
             final key = 'morale_${fleet.id}_nosaki';
             desiredAlarms[key] = ScheduledNotificationItem(
               key: key,
@@ -459,6 +506,27 @@ class GameNotificationCoordinator {
             final neededDuration = Duration(minutes: neededTicks * 3);
             final completeTime = (state.updatedAt ?? now).add(neededDuration);
             if (!completeTime.isAfter(now)) continue;
+
+            if (settings.moralePreemptSeconds > 0) {
+              final preemptTime = completeTime.subtract(
+                Duration(seconds: settings.moralePreemptSeconds),
+              );
+              if (preemptTime.isAfter(now)) {
+                final key = 'morale_${fleet.id}_normal_preempt';
+                desiredAlarms[key] = ScheduledNotificationItem(
+                  key: key,
+                  taskId: 'morale:${fleet.id}',
+                  type: GameNotificationType.morale,
+                  stage: NotificationAlarmStage.preempt,
+                  removeTaskOnFire: false,
+                  triggerTime: preemptTime,
+                  title: '疲劳即将恢复 · $fleetName',
+                  body:
+                      '$fleetName 全队舰船士气还有 ${settings.moralePreemptSeconds} 秒恢复至 49。',
+                );
+              }
+            }
+
             final key = 'morale_${fleet.id}_normal';
             desiredAlarms[key] = ScheduledNotificationItem(
               key: key,
@@ -499,14 +567,17 @@ class GameNotificationCoordinator {
               masterMission != null && masterMission.duration.inSeconds > 0
               ? masterMission.duration.inSeconds
               : 1800;
+          final fleetName = fleet.displayName;
           final formattedMission = masterMission?.name.isNotEmpty == true
-              ? '远征 $displayId · ${masterMission!.name}'
-              : (mission.missionId > 0 ? '远征 $displayId' : '远征');
+              ? '远征 $fleetName $displayId · ${masterMission!.name}'
+              : (mission.missionId > 0
+                    ? '远征 $fleetName $displayId'
+                    : '远征 $fleetName');
           items.add(
             _deadlineItem(
               id: 'expedition:${fleet.id}',
               type: GameNotificationType.expedition,
-              title: '⚓ 第${fleet.id}舰队 · $formattedMission',
+              title: '⚓ $formattedMission',
               deadline: mission.completionTime!,
               totalSeconds: totalSec,
               now: now,
@@ -537,7 +608,7 @@ class GameNotificationCoordinator {
             _deadlineItem(
               id: 'repair:${dock.id}',
               type: GameNotificationType.repair,
-              title: '🔧 船坞 #${dock.id} · $shipName',
+              title: '🔧 入渠 船坞 #${dock.id} · $shipName',
               deadline: dock.completionTime!,
               totalSeconds: totalSec,
               now: now,
@@ -565,6 +636,11 @@ class GameNotificationCoordinator {
                 .toList(growable: false)
           : const <AnchorageRepairShipProjection>[];
       if (ancStart != null && repairingRows.isNotEmpty) {
+        final fleet1 = state.fleets.cast<Fleet?>().firstWhere(
+          (f) => f?.id == 1,
+          orElse: () => null,
+        );
+        final fleet1Name = fleet1?.displayName ?? '第1舰队';
         final elapsed = now.difference(ancStart);
         final includesMilestone =
             settings.anchorageMode == AnchorageNotificationMode.twentyMinutes ||
@@ -586,7 +662,7 @@ class GameNotificationCoordinator {
           totalSeconds = (elapsed + remaining).inSeconds;
         }
         if (remaining < Duration.zero) remaining = Duration.zero;
-        final state = completed
+        final taskState = completed
             ? OngoingTaskState.completed
             : includesMilestone &&
                   elapsed >= AnchorageRepairCalculator.minimumRepairTime
@@ -600,8 +676,8 @@ class GameNotificationCoordinator {
           OngoingTaskItem(
             id: 'anchorage:1',
             type: GameNotificationType.anchorage,
-            title: '⚓ 泊地修理 · 明石 (第1舰队)',
-            state: state,
+            title: '⚓ 泊地 ($fleet1Name)',
+            state: taskState,
             clockMode: OngoingClockMode.elapsed,
             anchorEpochMs: ancStart.millisecondsSinceEpoch,
             progress: progress,
@@ -635,8 +711,8 @@ class GameNotificationCoordinator {
             totalSec = master.buildTimeMinutes * 60;
           }
           final title = dock.isCompletedAt(now)
-              ? '🔨 船坞 #${dock.id} · $shipName 建造完成'
-              : '🔨 船坞 #${dock.id} · $shipName 建造中';
+              ? '🔨 建造 船坞 #${dock.id} · $shipName 建造完成'
+              : '🔨 建造 船坞 #${dock.id} · $shipName';
           items.add(
             _deadlineItem(
               id: 'construction:${dock.id}',
@@ -655,6 +731,7 @@ class GameNotificationCoordinator {
     if (settings.morale) {
       for (final fleet in state.fleets) {
         if (fleet.shipIds.isEmpty) continue;
+        final fleetName = fleet.displayName;
         final nosakiElapsed = _nosakiStartedAt() != null
             ? now.difference(_nosakiStartedAt()!)
             : Duration.zero;
@@ -689,7 +766,7 @@ class GameNotificationCoordinator {
               OngoingTaskItem(
                 id: 'morale:${fleet.id}',
                 type: GameNotificationType.morale,
-                title: '✨ 第${fleet.id}舰队 · 野崎刷闪 (→ 54闪)',
+                title: '✨ 野崎刷闪 $fleetName (→ 54闪)',
                 progress: progress,
                 remainingSeconds: remainingSec,
                 targetEpochMs: now.add(maxTimeTo54).millisecondsSinceEpoch,
@@ -715,7 +792,7 @@ class GameNotificationCoordinator {
               _deadlineItem(
                 id: 'morale:${fleet.id}',
                 type: GameNotificationType.morale,
-                title: '✨ 第${fleet.id}舰队 · 疲劳恢复 (Cond $minCond/49)',
+                title: '✨ 疲劳 $fleetName (Cond $minCond/49)',
                 deadline: target,
                 totalSeconds: totalDurationSec,
                 now: now,
