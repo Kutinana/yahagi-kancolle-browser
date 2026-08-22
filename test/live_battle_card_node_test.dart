@@ -12,6 +12,7 @@ import 'package:yahagi_kancolle_browser/src/battle/official_enemy_preview.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/ship_portrait.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
 
@@ -520,6 +521,11 @@ void main() {
       find.byKey(const Key('official-enemy-preview-portrait-0')),
       findsOneWidget,
     );
+    final portrait = tester.widget<ShipPortrait>(
+      find.byKey(const Key('official-enemy-preview-portrait-0')),
+    );
+    expect(portrait.width, 56);
+    expect(portrait.height, 30);
     final portraitImage = tester.widget<Image>(
       find.descendant(
         of: find.byKey(const Key('official-enemy-preview-portrait-0')),
@@ -540,9 +546,9 @@ void main() {
         matching: find.byType(Positioned),
       ),
     );
-    expect(portraitPosition.left, -34 * 1.5);
-    expect(portraitPosition.top, closeTo(-(34 / 176) * 3, 0.001));
-    expect(portraitImage.height, closeTo((34 / 176) * 182, 0.001));
+    expect(portraitPosition.left, -30 * 1.5);
+    expect(portraitPosition.top, closeTo(-(30 / 176) * 3, 0.001));
+    expect(portraitImage.height, closeTo((30 / 176) * 182, 0.001));
 
     await tester.tap(find.byKey(const Key('battle-mode-compact')));
     await tester.pump();
@@ -686,6 +692,58 @@ void main() {
     expect(name.style?.fontSize, 11);
     expect(name.style?.fontWeight, FontWeight.w700);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('combined enemy portraits use the reduced proportional size', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 360,
+            child: OfficialEnemyPreview(
+              combined: true,
+              showPortraits: true,
+              serverOrigin: 'https://example.com',
+              masterShips: <int, MasterShip>{
+                1701: MasterShip(
+                  id: 1701,
+                  name: '伴随一',
+                  shipTypeId: 13,
+                  portraitVersion: '7',
+                ),
+                1601: MasterShip(
+                  id: 1601,
+                  name: '主力一',
+                  shipTypeId: 13,
+                  portraitVersion: '7',
+                ),
+              },
+              ships: <EnemyPreviewShip>[
+                EnemyPreviewShip(
+                  masterId: 1701,
+                  name: '伴随一',
+                  fleetRole: BattleFleetRole.escort,
+                ),
+                EnemyPreviewShip(masterId: 1601, name: '主力一'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final escortPortrait = tester.widget<ShipPortrait>(
+      find.byKey(const Key('official-enemy-preview-portrait-0')),
+    );
+    final mainPortrait = tester.widget<ShipPortrait>(
+      find.byKey(const Key('official-enemy-preview-portrait-3')),
+    );
+    expect(escortPortrait.width, 48);
+    expect(escortPortrait.height, 28);
+    expect(mainPortrait.width, 48);
+    expect(mainPortrait.height, 28);
   });
 
   testWidgets('combined enemy preview does not shift main ships into escort', (
