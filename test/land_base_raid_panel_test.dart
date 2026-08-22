@@ -41,6 +41,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('compact raid keeps detailed hp font size', (tester) async {
+    const result = LandBaseRaidResult(
+      areaId: 47,
+      airSuperiority: '丧失',
+      bases: <LandBaseRaidSnapshot>[
+        LandBaseRaidSnapshot(
+          baseId: 1,
+          name: '第一基地航空队',
+          currentHp: 200,
+          maxHp: 200,
+          damage: 0,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: LandBaseRaidPanel(result: result, compact: true),
+        ),
+      ),
+    );
+
+    final hp = tester.widget<Text>(find.text('200/200（-0）'));
+    expect(hp.style?.fontSize, 11);
+  });
+
   testWidgets('shows every base hp and raid loss without narrow overflow', (
     tester,
   ) async {

@@ -122,7 +122,7 @@ class _LandBaseRaidTile extends StatelessWidget {
                     softWrap: false,
                     style: TextStyle(
                       color: valueColor,
-                      fontSize: compact ? 10 : 11,
+                      fontSize: 11,
                       fontWeight: FontWeight.w800,
                       height: 1,
                     ),
