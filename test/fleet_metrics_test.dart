@@ -62,7 +62,46 @@ void main() {
       },
     );
 
-    expect(FleetMetrics.fromState(state, fleet).airPower, isNull);
+    final metrics = FleetMetrics.fromState(state, fleet);
+
+    expect(metrics.airPower, isNull);
+    expect(metrics.airPowerMaximum, isNull);
+    expect(metrics.airPowerWithoutProficiency, isNull);
+  });
+
+  test('air power without proficiency keeps equipment improvement', () {
+    const fleet = Fleet(id: 1, name: '第一舰队', shipIds: <int>[9001]);
+    const state = GameState(
+      masterShips: <int, MasterShip>{
+        101: MasterShip(id: 101, name: '甲', shipTypeId: 11),
+      },
+      masterSlotItems: <int, MasterSlotItem>{
+        201: MasterSlotItem(
+          id: 201,
+          name: '烈风改修型',
+          antiAir: 10,
+          type: <int>[0, 0, 6, 6, 0],
+        ),
+      },
+      slotItems: <int, OwnedSlotItem>{
+        7001: OwnedSlotItem(id: 7001, masterId: 201, level: 10, proficiency: 6),
+      },
+      ships: <int, OwnedShip>{
+        9001: OwnedShip(
+          id: 9001,
+          masterId: 101,
+          level: 1,
+          slotIds: <int>[7001],
+          onSlot: <int>[4],
+        ),
+      },
+    );
+
+    final metrics = FleetMetrics.fromState(state, fleet);
+
+    expect(metrics.airPower, 40);
+    expect(metrics.airPowerMaximum, 41);
+    expect(metrics.airPowerWithoutProficiency, 24);
   });
 
   test('includes carrier fighter proficiency in fleet air power', () {

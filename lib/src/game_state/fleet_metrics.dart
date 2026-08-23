@@ -34,6 +34,7 @@ class FleetMetrics {
     required this.speedLabel,
     required this.airPower,
     required this.airPowerMaximum,
+    required this.airPowerWithoutProficiency,
   });
 
   final int shipCount;
@@ -48,6 +49,7 @@ class FleetMetrics {
   final String speedLabel;
   final int? airPower;
   final int? airPowerMaximum;
+  final int? airPowerWithoutProficiency;
 
   factory FleetMetrics.fromState(GameState state, Fleet fleet) {
     final ships = <OwnedShip>[for (final id in fleet.shipIds) ?state.ships[id]];
@@ -64,6 +66,7 @@ class FleetMetrics {
     int? slowestSpeed;
     var calculatedAirPower = 0;
     var calculatedAirPowerMaximum = 0;
+    var calculatedAirPowerWithoutProficiency = 0;
     var airPowerKnown = true;
 
     for (final ship in ships) {
@@ -123,6 +126,8 @@ class FleetMetrics {
           final slotAirPower = _airPowerForSlot(master, owned!, count);
           calculatedAirPower += slotAirPower.minimum;
           calculatedAirPowerMaximum += slotAirPower.maximum;
+          calculatedAirPowerWithoutProficiency +=
+              slotAirPower.withoutProficiency;
         }
       }
     }
@@ -156,6 +161,9 @@ class FleetMetrics {
       speedLabel: _speedLabel(slowestSpeed),
       airPower: airPowerKnown ? calculatedAirPower : null,
       airPowerMaximum: airPowerKnown ? calculatedAirPowerMaximum : null,
+      airPowerWithoutProficiency: airPowerKnown
+          ? calculatedAirPowerWithoutProficiency
+          : null,
     );
   }
 
@@ -180,7 +188,7 @@ class FleetMetrics {
     };
   }
 
-  static ({int minimum, int maximum}) _airPowerForSlot(
+  static ({int minimum, int maximum, int withoutProficiency}) _airPowerForSlot(
     MasterSlotItem master,
     OwnedSlotItem owned,
     int count,
@@ -214,9 +222,11 @@ class FleetMetrics {
     );
     final effectiveAntiAir = master.antiAir + owned.level * improvementFactor;
     final base = math.sqrt(count) * effectiveAntiAir + typeBonus;
+    final withoutProficiency = math.sqrt(count) * effectiveAntiAir;
     return (
       minimum: (base + internalBonusMinimum).floor(),
       maximum: (base + internalBonusMaximum).floor(),
+      withoutProficiency: withoutProficiency.floor(),
     );
   }
 }
