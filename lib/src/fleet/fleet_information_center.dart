@@ -22,8 +22,11 @@ import '../expedition/expedition_check_page.dart';
 import '../improvement/improvement_planner_controller.dart';
 import '../improvement/improvement_planner_view.dart';
 import '../performance/second_tick_scope.dart';
+import '../settings/layout_settings_store.dart';
 import 'expedition_summary_card.dart'
     show ExpeditionSummaryMode, ExpeditionModeSelector;
+import 'morale_recovery_display.dart';
+import 'morale_recovery_timer_controller.dart';
 
 export 'fleet_switcher_bar.dart';
 
@@ -49,6 +52,9 @@ class FleetInformationCenter extends StatefulWidget {
     this.clock,
     this.constructionMode = ConstructionCenterMode.construction,
     this.improvementController,
+    this.moraleRecoveryTimerController,
+    this.moraleMetricMode = FleetMoraleMetricMode.minimumCondition,
+    this.onToggleMoraleMetricMode,
   });
 
   final GameStateController controller;
@@ -65,6 +71,9 @@ class FleetInformationCenter extends StatefulWidget {
   final DateTime Function()? clock;
   final ConstructionCenterMode constructionMode;
   final ImprovementPlannerController? improvementController;
+  final MoraleRecoveryTimerController? moraleRecoveryTimerController;
+  final FleetMoraleMetricMode moraleMetricMode;
+  final VoidCallback? onToggleMoraleMetricMode;
 
   @override
   State<FleetInformationCenter> createState() => _FleetInformationCenterState();
@@ -89,7 +98,11 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
       builder: (context, now, _) => ColoredBox(
         color: const Color(0xff081521),
         child: AnimatedBuilder(
-          animation: widget.controller,
+          animation: Listenable.merge([
+            widget.controller,
+            if (widget.moraleRecoveryTimerController != null)
+              widget.moraleRecoveryTimerController!,
+          ]),
           builder: (context, _) {
             final state = widget.controller.state;
             return Column(
@@ -121,6 +134,11 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
                           setState(() => _selectedFleetId = id);
                         },
                         showContextHeader: widget.showContextHeader,
+                        moraleRecoveryTimerController:
+                            widget.moraleRecoveryTimerController,
+                        moraleMetricMode: widget.moraleMetricMode,
+                        onToggleMoraleMetricMode:
+                            widget.onToggleMoraleMetricMode,
                       ),
                       FleetInformationPage.expedition =>
                         widget.expeditionMode == ExpeditionSummaryMode.check
@@ -251,6 +269,9 @@ class _FleetView extends StatefulWidget {
     required this.damagePulseMode,
     required this.onFleetSelected,
     required this.showContextHeader,
+    required this.moraleRecoveryTimerController,
+    required this.moraleMetricMode,
+    required this.onToggleMoraleMetricMode,
   });
 
   final GameState state;
@@ -261,6 +282,9 @@ class _FleetView extends StatefulWidget {
   final DamagePulseMode damagePulseMode;
   final ValueChanged<int> onFleetSelected;
   final bool showContextHeader;
+  final MoraleRecoveryTimerController? moraleRecoveryTimerController;
+  final FleetMoraleMetricMode moraleMetricMode;
+  final VoidCallback? onToggleMoraleMetricMode;
 
   @override
   State<_FleetView> createState() => _FleetViewState();
@@ -375,7 +399,15 @@ class _FleetViewState extends State<_FleetView> {
             ),
             const SizedBox(height: 10),
           ],
-          _MetricsBar(metrics: metrics),
+          _MetricsBar(
+            state: state,
+            fleetId: fleet.id,
+            metrics: metrics,
+            now: widget.now,
+            moraleRecoveryTimerController: widget.moraleRecoveryTimerController,
+            moraleMetricMode: widget.moraleMetricMode,
+            onToggleMoraleMetricMode: widget.onToggleMoraleMetricMode,
+          ),
           const SizedBox(height: 10),
           Expanded(
             child: ships.isEmpty
@@ -959,7 +991,8 @@ class _FleetFocusPanel extends StatelessWidget {
                                         if (specialAttack != null) ...[
                                           const SizedBox(width: 4),
                                           _MiniBadge(
-                                            text: specialAttack!.effectiveShortLabel,
+                                            text: specialAttack!
+                                                .effectiveShortLabel,
                                             color: const Color(0xffff8b88),
                                           ),
                                         ],
@@ -1434,10 +1467,7 @@ class _ShipParameterDetails extends StatelessWidget {
         backgroundColor: const Color(0xff142735),
         title: Text(
           mechanism.label,
-          style: TextStyle(
-            color: foregroundColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: foregroundColor, fontWeight: FontWeight.bold),
         ),
         content: Text(
           mechanism.description,
@@ -1625,14 +1655,45 @@ class _SelectedEquipmentDetails extends StatelessWidget {
 }
 
 class _MetricsBar extends StatelessWidget {
-  const _MetricsBar({required this.metrics});
+  const _MetricsBar({
+    required this.state,
+    required this.fleetId,
+    required this.metrics,
+    required this.now,
+    required this.moraleRecoveryTimerController,
+    required this.moraleMetricMode,
+    required this.onToggleMoraleMetricMode,
+  });
 
+  final GameState state;
+  final int fleetId;
   final FleetMetrics metrics;
+  final DateTime now;
+  final MoraleRecoveryTimerController? moraleRecoveryTimerController;
+  final FleetMoraleMetricMode moraleMetricMode;
+  final VoidCallback? onToggleMoraleMetricMode;
 
   @override
   Widget build(BuildContext context) {
     final formula33 = metrics.formula33;
     final noValue = AppLocalizations.of(context)?.noValue ?? '无';
+    final l10n = AppLocalizations.of(context);
+    final showsCountdown =
+        moraleRecoveryTimerController != null &&
+        moraleMetricMode == FleetMoraleMetricMode.recoveryCountdown;
+    final moraleLabel = showsCountdown
+        ? (l10n?.moraleRecoveryCountdown ?? '恢复倒计时')
+        : (l10n?.averageCondition ?? '最低疲劳');
+    final moraleValue = showsCountdown
+        ? fleetMoraleRecoveryDisplay(
+            state: state,
+            fleetId: fleetId,
+            targetAt: moraleRecoveryTimerController?.targetForFleet(fleetId),
+            now: now,
+            recoveredLabel: l10n?.moraleRecovered ?? '已恢复',
+            noValueLabel: '—',
+          )
+        : '${metrics.minimumCondition}';
     final values = <(String, String)>[
       (AppLocalizations.of(context)?.speed ?? '速度', metrics.speedLabel),
       (
@@ -1656,10 +1717,7 @@ class _MetricsBar extends StatelessWidget {
         AppLocalizations.of(context)?.lineOfSight ?? '索敌',
         formula33.isEmpty ? noValue : formula33.first.total.toStringAsFixed(2),
       ),
-      (
-        AppLocalizations.of(context)?.averageCondition ?? '最低疲劳',
-        '${metrics.minimumCondition}',
-      ),
+      (moraleLabel, moraleValue),
     ];
     final phone = usesCompactFleetLayout(context);
     return Row(
@@ -1673,10 +1731,18 @@ class _MetricsBar extends StatelessWidget {
               key: switch (index) {
                 0 => const Key('fleet-speed-metric'),
                 7 => const Key('fleet-los-metric'),
+                8 => const Key('fleet-morale-metric'),
                 _ => null,
               },
-              onTap: index == 7 && formula33.isNotEmpty
-                  ? () => _showLineOfSightDetails(context)
+              onTap: switch (index) {
+                7 when formula33.isNotEmpty => () => _showLineOfSightDetails(
+                  context,
+                ),
+                8 => onToggleMoraleMetricMode,
+                _ => null,
+              },
+              semanticLabel: index == 8
+                  ? (l10n?.toggleMoraleMetric ?? '点击切换最低疲劳与恢复倒计时')
                   : null,
               compact: phone,
             ),
@@ -1693,50 +1759,55 @@ class _MetricsBar extends StatelessWidget {
     required String value,
     Key? key,
     VoidCallback? onTap,
+    String? semanticLabel,
     bool compact = false,
   }) {
     return Material(
       key: key,
       color: const Color(0xff102331),
       borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          height: compact ? 34 : 48,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: const Color(0xff8197a5),
-                    fontSize: compact ? 9 : 11,
-                    height: 1,
+      child: Semantics(
+        button: onTap != null,
+        label: semanticLabel,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            height: compact ? 34 : 48,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: const Color(0xff8197a5),
+                      fontSize: compact ? 9 : 11,
+                      height: 1,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: compact ? 3 : 5),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: const Color(0xffdce6eb),
-                    fontSize: compact ? 12 : 14,
-                    height: 1,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: const <FontFeature>[
-                      FontFeature.tabularFigures(),
-                    ],
+                SizedBox(height: compact ? 3 : 5),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: const Color(0xffdce6eb),
+                      fontSize: compact ? 12 : 14,
+                      height: 1,
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: const <FontFeature>[
+                        FontFeature.tabularFigures(),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -2639,8 +2710,9 @@ class _MechanismChip extends StatelessWidget {
       MechanismTone.neutral ||
       MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
     };
-    final label =
-        showRate ? mechanism.detailedShortLabel : mechanism.effectiveShortLabel;
+    final label = showRate
+        ? mechanism.detailedShortLabel
+        : mechanism.effectiveShortLabel;
     return Material(
       color: isSpecialAttack ? const Color(0xff5a2528) : backgroundColor,
       borderRadius: BorderRadius.circular(5),

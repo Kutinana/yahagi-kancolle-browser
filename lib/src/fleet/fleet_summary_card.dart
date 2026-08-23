@@ -12,6 +12,9 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'fleet_ship_status_capsule.dart';
 import 'fleet_line_of_sight_details.dart';
 import '../performance/second_tick_scope.dart';
+import '../settings/layout_settings_store.dart';
+import 'morale_recovery_display.dart';
+import 'morale_recovery_timer_controller.dart';
 
 class FleetSummaryCard extends StatefulWidget {
   const FleetSummaryCard({
@@ -21,6 +24,9 @@ class FleetSummaryCard extends StatefulWidget {
     required this.onToggleCollapse,
     required this.onOpenFleet,
     this.damagePulseMode = DamagePulseMode.enhanced,
+    this.moraleRecoveryTimerController,
+    this.moraleMetricMode = FleetMoraleMetricMode.minimumCondition,
+    this.onToggleMoraleMetricMode,
     this.clock,
   });
 
@@ -29,6 +35,9 @@ class FleetSummaryCard extends StatefulWidget {
   final VoidCallback onToggleCollapse;
   final ValueChanged<int> onOpenFleet;
   final DamagePulseMode damagePulseMode;
+  final MoraleRecoveryTimerController? moraleRecoveryTimerController;
+  final FleetMoraleMetricMode moraleMetricMode;
+  final VoidCallback? onToggleMoraleMetricMode;
   final DateTime Function()? clock;
 
   @override
@@ -43,7 +52,11 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
     return SecondTickBuilder(
       now: widget.clock,
       builder: (context, now, _) => AnimatedBuilder(
-        animation: widget.controller,
+        animation: Listenable.merge([
+          widget.controller,
+          if (widget.moraleRecoveryTimerController != null)
+            widget.moraleRecoveryTimerController!,
+        ]),
         builder: (context, _) {
           final state = widget.controller.state;
           final fleetIndex = state.fleets.indexWhere(
@@ -72,7 +85,16 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _FleetSummaryMetrics(metrics: metrics),
+                _FleetSummaryMetrics(
+                  state: state,
+                  fleetId: _selectedFleetId,
+                  metrics: metrics,
+                  now: now,
+                  moraleRecoveryTimerController:
+                      widget.moraleRecoveryTimerController,
+                  moraleMetricMode: widget.moraleMetricMode,
+                  onToggleMoraleMetricMode: widget.onToggleMoraleMetricMode,
+                ),
                 const SizedBox(height: 6),
                 if (ships.isEmpty)
                   Container(
@@ -172,9 +194,23 @@ class _FleetSegmentedSwitcher extends StatelessWidget {
 }
 
 class _FleetSummaryMetrics extends StatelessWidget {
-  const _FleetSummaryMetrics({required this.metrics});
+  const _FleetSummaryMetrics({
+    required this.state,
+    required this.fleetId,
+    required this.metrics,
+    required this.now,
+    required this.moraleRecoveryTimerController,
+    required this.moraleMetricMode,
+    required this.onToggleMoraleMetricMode,
+  });
 
+  final GameState state;
+  final int fleetId;
   final FleetMetrics? metrics;
+  final DateTime now;
+  final MoraleRecoveryTimerController? moraleRecoveryTimerController;
+  final FleetMoraleMetricMode moraleMetricMode;
+  final VoidCallback? onToggleMoraleMetricMode;
 
   @override
   Widget build(BuildContext context) {
@@ -183,6 +219,22 @@ class _FleetSummaryMetrics extends StatelessWidget {
     final current = metrics;
     final airPower = current?.airPower;
     final airPowerMaximum = current?.airPowerMaximum;
+    final showsCountdown =
+        moraleRecoveryTimerController != null &&
+        moraleMetricMode == FleetMoraleMetricMode.recoveryCountdown;
+    final moraleLabel = showsCountdown
+        ? (l10n?.moraleRecoveryCountdown ?? '恢复倒计时')
+        : (l10n?.averageCondition ?? '最低疲劳');
+    final moraleValue = showsCountdown
+        ? fleetMoraleRecoveryDisplay(
+            state: state,
+            fleetId: fleetId,
+            targetAt: moraleRecoveryTimerController?.targetForFleet(fleetId),
+            now: now,
+            recoveredLabel: l10n?.moraleRecovered ?? '已恢复',
+            noValueLabel: '—',
+          )
+        : (current == null ? noValue : '${current.minimumCondition}');
     final values = <(String, String, String)>[
       ('speed', l10n?.speed ?? '速度', current?.speedLabel ?? noValue),
       (
@@ -204,11 +256,7 @@ class _FleetSummaryMetrics extends StatelessWidget {
         l10n?.lineOfSight ?? '索敌',
         current == null ? noValue : '${current.lineOfSight}',
       ),
-      (
-        'minimum-condition',
-        l10n?.averageCondition ?? '最低疲劳',
-        current == null ? noValue : '${current.minimumCondition}',
-      ),
+      ('minimum-condition', moraleLabel, moraleValue),
     ];
     return Row(
       key: const Key('fleet-summary-metrics'),
@@ -219,11 +267,16 @@ class _FleetSummaryMetrics extends StatelessWidget {
               id: values[index].$1,
               label: values[index].$2,
               value: values[index].$3,
+              semanticLabel: values[index].$1 == 'minimum-condition'
+                  ? (l10n?.toggleMoraleMetric ?? '点击切换最低疲劳与恢复倒计时')
+                  : null,
               onTap:
                   values[index].$1 == 'line-of-sight' &&
                       current != null &&
                       current.formula33.isNotEmpty
                   ? () => showFleetLineOfSightDetails(context, current)
+                  : values[index].$1 == 'minimum-condition'
+                  ? onToggleMoraleMetricMode
                   : null,
             ),
           ),
@@ -240,12 +293,14 @@ class _FleetSummaryMetric extends StatelessWidget {
     required this.label,
     required this.value,
     this.onTap,
+    this.semanticLabel,
   });
 
   final String id;
   final String label;
   final String value;
   final VoidCallback? onTap;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -256,45 +311,49 @@ class _FleetSummaryMetric extends StatelessWidget {
       side: const BorderSide(color: Color(0xff294052)),
     ),
     clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        height: 28,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Color(0xff8197a5),
-                    fontSize: 8,
-                    height: 1,
-                    fontWeight: FontWeight.w700,
+    child: Semantics(
+      button: onTap != null,
+      label: semanticLabel,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 28,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Color(0xff8197a5),
+                      fontSize: 8,
+                      height: 1,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 3),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  value,
-                  key: Key('fleet-summary-metric-$id-value'),
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Color(0xffdce6eb),
-                    fontSize: 8,
-                    height: 1,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    key: Key('fleet-summary-metric-$id-value'),
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Color(0xffdce6eb),
+                      fontSize: 8,
+                      height: 1,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

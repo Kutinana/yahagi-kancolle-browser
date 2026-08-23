@@ -9,12 +9,12 @@ typedef MoraleRecoveryAnchorsChanged =
 class MoraleRecoveryTimerController extends ChangeNotifier {
   MoraleRecoveryTimerController({
     Map<int, MoraleNotificationTimerAnchor> initialAnchors = const {},
-    MoraleRecoveryAnchorsChanged? onAnchorsChanged,
+    this.onAnchorsChanged,
   }) : _anchors = Map<int, MoraleNotificationTimerAnchor>.from(initialAnchors),
-       _onAnchorsChanged = onAnchorsChanged;
+       super();
 
   Map<int, MoraleNotificationTimerAnchor> _anchors;
-  final MoraleRecoveryAnchorsChanged? _onAnchorsChanged;
+  final MoraleRecoveryAnchorsChanged? onAnchorsChanged;
 
   Map<int, MoraleNotificationTimerAnchor> get anchors =>
       Map<int, MoraleNotificationTimerAnchor>.unmodifiable(_anchors);
@@ -71,7 +71,7 @@ class MoraleRecoveryTimerController extends ChangeNotifier {
     if (_mapsEqual(_anchors, anchors)) return;
     _anchors = Map<int, MoraleNotificationTimerAnchor>.from(anchors);
     notifyListeners();
-    if (persist) _onAnchorsChanged?.call(this.anchors);
+    if (persist) onAnchorsChanged?.call(this.anchors);
   }
 
   static bool _mapsEqual(

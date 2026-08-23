@@ -853,6 +853,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get averageCondition => '最低疲労';
 
   @override
+  String get moraleRecoveryCountdown => '回復カウントダウン';
+
+  @override
+  String get moraleRecovered => '回復済み';
+
+  @override
+  String get toggleMoraleMetric => '最低疲労と回復カウントダウンを切り替える';
+
+  @override
   String get losDetails => '索敵詳細';
 
   @override

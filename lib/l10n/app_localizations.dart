@@ -1731,6 +1731,24 @@ abstract class AppLocalizations {
   /// **'最低疲劳'**
   String get averageCondition;
 
+  /// No description provided for @moraleRecoveryCountdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复倒计时'**
+  String get moraleRecoveryCountdown;
+
+  /// No description provided for @moraleRecovered.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复'**
+  String get moraleRecovered;
+
+  /// No description provided for @toggleMoraleMetric.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击切换最低疲劳与恢复倒计时'**
+  String get toggleMoraleMetric;
+
   /// No description provided for @losDetails.
   ///
   /// In zh, this message translates to:

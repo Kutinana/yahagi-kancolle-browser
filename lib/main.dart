@@ -60,6 +60,7 @@ import 'src/fleet/expedition_summary_card.dart';
 import 'src/fleet/repair_summary_card.dart';
 import 'src/fleet/construction_summary_card.dart';
 import 'src/fleet/nosaki_sparkle_calculator.dart';
+import 'src/fleet/morale_recovery_timer_controller.dart';
 import 'src/fleet/pre_sortie_check_summary.dart';
 
 import 'src/game_webview.dart';
@@ -414,6 +415,8 @@ Future<void> main() async {
       gameCaptureController: gameCaptureController,
       gameApiEventPipeline: gameApiEventPipeline,
       gameStateController: gameStateController,
+      moraleRecoveryTimerController:
+          notificationCoordinator.moraleRecoveryTimerController,
       gameResourceCacheController: gameResourceCacheController,
       senkaController: senkaController,
       battleController: battleController,
@@ -489,6 +492,7 @@ class YahagiApp extends StatelessWidget {
     required this.gameCaptureController,
     this.gameApiEventPipeline,
     required this.gameStateController,
+    this.moraleRecoveryTimerController,
     this.gameResourceCacheController,
     this.senkaController,
     required this.battleController,
@@ -524,6 +528,7 @@ class YahagiApp extends StatelessWidget {
   final GameCaptureController gameCaptureController;
   final GameApiEventPipeline? gameApiEventPipeline;
   final GameStateController gameStateController;
+  final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final GameResourceCacheController? gameResourceCacheController;
   final SenkaController? senkaController;
   final BattleController battleController;
@@ -610,6 +615,7 @@ class YahagiApp extends StatelessWidget {
                   toolbarController: toolbarController,
                   gameCaptureController: gameCaptureController,
                   gameStateController: gameStateController,
+                  moraleRecoveryTimerController: moraleRecoveryTimerController,
                   gameResourceCacheController: gameResourceCacheController,
                   senkaController: senkaController,
                   battleController: battleController,
@@ -747,6 +753,7 @@ class YahagiShell extends StatefulWidget {
     required this.gameSurface,
     required this.gameCaptureController,
     required this.gameStateController,
+    this.moraleRecoveryTimerController,
     this.gameResourceCacheController,
     this.senkaController,
     required this.battleController,
@@ -779,6 +786,7 @@ class YahagiShell extends StatefulWidget {
   final Widget gameSurface;
   final GameCaptureController gameCaptureController;
   final GameStateController gameStateController;
+  final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final GameResourceCacheController? gameResourceCacheController;
   final SenkaController? senkaController;
   final BattleController battleController;
@@ -1322,6 +1330,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                         widget.gameCaptureController,
                                     gameStateController:
                                         widget.gameStateController,
+                                    moraleRecoveryTimerController:
+                                        widget.moraleRecoveryTimerController,
                                     battleController: widget.battleController,
                                     battlePredictionSettingsController: widget
                                         .battlePredictionSettingsController,
@@ -1446,6 +1456,14 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                         if (_workspaceIndex == 1)
                           FleetInformationCenter(
                             controller: widget.gameStateController,
+                            moraleRecoveryTimerController:
+                                widget.moraleRecoveryTimerController,
+                            moraleMetricMode: widget
+                                .layoutSettingsController
+                                .fleetMoraleMetricMode,
+                            onToggleMoraleMetricMode: widget
+                                .layoutSettingsController
+                                .toggleFleetMoraleMetricMode,
                             damagePulseMode:
                                 widget
                                     .layoutSettingsController
@@ -1785,6 +1803,7 @@ class _InformationPanel extends StatefulWidget {
     required this.captureModeController,
     required this.gameCaptureController,
     required this.gameStateController,
+    required this.moraleRecoveryTimerController,
     required this.battleController,
     required this.battlePredictionSettingsController,
     required this.onOpenFleet,
@@ -1801,6 +1820,7 @@ class _InformationPanel extends StatefulWidget {
   final CaptureModeController captureModeController;
   final GameCaptureController gameCaptureController;
   final GameStateController gameStateController;
+  final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final BattleController battleController;
   final BattlePredictionSettingsController? battlePredictionSettingsController;
   final ValueChanged<int> onOpenFleet;
@@ -1864,6 +1884,12 @@ class _InformationPanelState extends State<_InformationPanel> {
             final child = switch (id) {
               'fleet' => FleetSummaryCard(
                 controller: widget.gameStateController,
+                moraleRecoveryTimerController:
+                    widget.moraleRecoveryTimerController,
+                moraleMetricMode:
+                    widget.layoutSettingsController.fleetMoraleMetricMode,
+                onToggleMoraleMetricMode:
+                    widget.layoutSettingsController.toggleFleetMoraleMetricMode,
                 damagePulseMode:
                     widget.layoutSettingsController.enhancedDamagePulse
                     ? DamagePulseMode.enhanced
