@@ -25,6 +25,7 @@ import '../performance/second_tick_scope.dart';
 import '../settings/layout_settings_store.dart';
 import 'expedition_summary_card.dart'
     show ExpeditionSummaryMode, ExpeditionModeSelector;
+import 'fleet_air_power_details.dart';
 import 'morale_recovery_display.dart';
 import 'morale_recovery_timer_controller.dart';
 
@@ -1731,20 +1732,32 @@ class _MetricsBar extends StatelessWidget {
               value: values[index].$2,
               key: switch (index) {
                 0 => const Key('fleet-speed-metric'),
+                6 => const Key('fleet-air-power-metric'),
                 7 => const Key('fleet-los-metric'),
                 8 => const Key('fleet-morale-metric'),
                 _ => null,
               },
               onTap: switch (index) {
+                6
+                    when metrics.airPower != null &&
+                        metrics.airPowerMaximum != null &&
+                        metrics.airPowerWithoutProficiency != null =>
+                  () => showFleetAirPowerDetails(context, metrics),
                 7 when formula33.isNotEmpty => () => _showLineOfSightDetails(
                   context,
                 ),
                 8 => onToggleMoraleMetricMode,
                 _ => null,
               },
-              semanticLabel: index == 8
-                  ? requiredL10n.toggleMoraleMetric
-                  : null,
+              semanticLabel: switch (index) {
+                6
+                    when metrics.airPower != null &&
+                        metrics.airPowerMaximum != null &&
+                        metrics.airPowerWithoutProficiency != null =>
+                  requiredL10n.showAirPowerDetails,
+                8 => requiredL10n.toggleMoraleMetric,
+                _ => null,
+              },
               compact: phone,
             ),
           ),

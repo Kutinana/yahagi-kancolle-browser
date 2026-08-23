@@ -351,6 +351,14 @@ void main() {
     );
 
     expect(find.text('42+'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('fleet-air-power-metric')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('制空详情'), findsOneWidget);
+    expect(find.text('最小'), findsOneWidget);
+    expect(find.text('最大'), findsOneWidget);
+    expect(find.text('无加成'), findsOneWidget);
   });
 
   testWidgets('编成预设换走当前舰娘后详情立即切换', (tester) async {

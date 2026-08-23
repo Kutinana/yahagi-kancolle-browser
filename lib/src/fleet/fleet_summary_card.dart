@@ -13,6 +13,7 @@ import 'fleet_ship_status_capsule.dart';
 import 'fleet_line_of_sight_details.dart';
 import '../performance/second_tick_scope.dart';
 import '../settings/layout_settings_store.dart';
+import 'fleet_air_power_details.dart';
 import 'morale_recovery_display.dart';
 import 'morale_recovery_timer_controller.dart';
 
@@ -215,12 +216,15 @@ class _FleetSummaryMetrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final requiredL10n =
-        l10n ?? lookupAppLocalizations(const Locale('zh'));
+    final requiredL10n = l10n ?? lookupAppLocalizations(const Locale('zh'));
     final noValue = l10n?.noValue ?? '—';
     final current = metrics;
     final airPower = current?.airPower;
     final airPowerMaximum = current?.airPowerMaximum;
+    final hasAirPowerDetails =
+        airPower != null &&
+        airPowerMaximum != null &&
+        current?.airPowerWithoutProficiency != null;
     final showsCountdown =
         moraleRecoveryTimerController != null &&
         moraleMetricMode == FleetMoraleMetricMode.recoveryCountdown;
@@ -269,13 +273,20 @@ class _FleetSummaryMetrics extends StatelessWidget {
               id: values[index].$1,
               label: values[index].$2,
               value: values[index].$3,
-              semanticLabel: values[index].$1 == 'minimum-condition'
-                  ? requiredL10n.toggleMoraleMetric
-                  : null,
+              semanticLabel: switch (values[index].$1) {
+                'air-power' when hasAirPowerDetails =>
+                  requiredL10n.showAirPowerDetails,
+                'minimum-condition' => requiredL10n.toggleMoraleMetric,
+                _ => null,
+              },
               onTap:
-                  values[index].$1 == 'line-of-sight' &&
-                      current != null &&
-                      current.formula33.isNotEmpty
+                  values[index].$1 == 'air-power' &&
+                      hasAirPowerDetails &&
+                      current != null
+                  ? () => showFleetAirPowerDetails(context, current)
+                  : values[index].$1 == 'line-of-sight' &&
+                        current != null &&
+                        current.formula33.isNotEmpty
                   ? () => showFleetLineOfSightDetails(context, current)
                   : values[index].$1 == 'minimum-condition'
                   ? onToggleMoraleMetricMode

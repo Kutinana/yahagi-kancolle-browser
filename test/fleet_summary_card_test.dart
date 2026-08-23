@@ -162,6 +162,24 @@ void main() {
     expect(find.text('× 4'), findsOneWidget);
   });
 
+  testWidgets('air power metric opens the shared air power details', (
+    tester,
+  ) async {
+    final controller = await _controllerWithPortData();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_card(controller: controller));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('fleet-summary-metric-air-power')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('制空详情'), findsOneWidget);
+    expect(find.text('最小'), findsOneWidget);
+    expect(find.text('最大'), findsOneWidget);
+    expect(find.text('无加成'), findsOneWidget);
+  });
+
   testWidgets('clicking minimum fatigue switches the shared display mode', (
     tester,
   ) async {
