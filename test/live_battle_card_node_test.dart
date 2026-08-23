@@ -987,6 +987,38 @@ void main() {
     },
   );
 
+  testWidgets('night battle node shows only one night battle status pill', (
+    tester,
+  ) async {
+    final nightNodeEvent = kcsapiEvent(
+      '/kcsapi/api_req_map/start',
+      <String, Object?>{
+        'api_maparea_id': 1,
+        'api_mapinfo_no': 1,
+        'api_no': 1,
+        'api_bosscell_no': 5,
+        'api_event_id': 4,
+        'api_event_kind': 2,
+      },
+      sequence: 200,
+      requestParams: <String, Object?>{'api_deck_id': '1'},
+    );
+
+    for (final compact in <bool>[false, true]) {
+      final controller = _createController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(nightNodeEvent)
+        ..accept(dayBattleEvent)
+        ..accept(nightBattleEvent);
+      await controller.idle;
+
+      await _pumpCard(tester, controller, compact: compact);
+
+      expect(find.text('夜战'), findsOneWidget);
+    }
+  });
+
   testWidgets('compact battle colors engagement like detailed mode', (
     tester,
   ) async {

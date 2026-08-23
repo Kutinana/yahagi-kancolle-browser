@@ -403,41 +403,70 @@ class _CompactFleetGrid extends StatelessWidget {
         ),
       );
     }
-    final columns = <Widget>[...friendColumns, ...enemyColumns];
-    return Column(
+    return Row(
       key: const Key('compact-fleet-grid'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              flex: friendColumns.length,
-              child: _CompactFleetSideTitle(
-                keyName: 'friend',
-                title: '我方舰队$friendFormation',
-                color: const Color(0xff70c7bc),
-              ),
+        Expanded(
+          flex: friendColumns.length,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              color: const Color(0xff10212e),
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(width: 7),
-            Expanded(
-              flex: enemyColumns.length,
-              child: _CompactFleetSideTitle(
-                keyName: 'enemy',
-                title: '敌方舰队$enemyFormation',
-                color: const Color(0xffff8c78),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _CompactFleetSideTitle(
+                  keyName: 'friend',
+                  title: '我方舰队$friendFormation',
+                  color: const Color(0xff70c7bc),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    for (var index = 0; index < friendColumns.length; index++) ...<Widget>[
+                      if (index > 0) const SizedBox(width: 7),
+                      Expanded(child: friendColumns[index]),
+                    ],
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 2),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            for (var index = 0; index < columns.length; index++) ...<Widget>[
-              if (index > 0) const SizedBox(width: 7),
-              Expanded(child: columns[index]),
-            ],
-          ],
+        const SizedBox(width: 7),
+        Expanded(
+          flex: enemyColumns.length,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              color: const Color(0xff10212e),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _CompactFleetSideTitle(
+                  keyName: 'enemy',
+                  title: '敌方舰队$enemyFormation',
+                  color: const Color(0xffff8c78),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    for (var index = 0; index < enemyColumns.length; index++) ...<Widget>[
+                      if (index > 0) const SizedBox(width: 7),
+                      Expanded(child: enemyColumns[index]),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -646,7 +675,8 @@ List<(String, Color)> _compactMetaChips(LiveBattle battle) {
   return <(String, Color)>[
     if (battle.context.combinedFleetType != CombinedFleetType.none)
       (battle.context.combinedFleetType.label, const Color(0xff70c7bc)),
-    (battle.phaseLabel, battlePhaseChipColor(battle.phaseLabel)),
+    if (battle.phaseLabel != battle.context.nodeTypeLabel)
+      (battle.phaseLabel, battlePhaseChipColor(battle.phaseLabel)),
     if (battle.engagement > 0)
       (
         engagementLabel(battle.engagement),

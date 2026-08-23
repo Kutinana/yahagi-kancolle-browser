@@ -213,7 +213,8 @@ class _BattleOverview extends StatelessWidget {
     final details = <(String, Color)>[
       if (battle.context.combinedFleetType != CombinedFleetType.none)
         (battle.context.combinedFleetType.label, const Color(0xff70c7bc)),
-      (battle.phaseLabel, battlePhaseChipColor(battle.phaseLabel)),
+      if (battle.phaseLabel != battle.context.nodeTypeLabel)
+        (battle.phaseLabel, battlePhaseChipColor(battle.phaseLabel)),
       if (battle.engagement > 0)
         (
           engagementLabel(battle.engagement),
