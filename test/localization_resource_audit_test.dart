@@ -158,6 +158,9 @@ void main() {
       'notificationAnchorage',
       'notificationRepair',
       'notificationConstruction',
+      // “最小/最大” are standard range labels shared by both Chinese scripts.
+      'minimumValue',
+      'maximumValue',
     };
     const reviewedJa = <String>{
       'appTitle',
@@ -194,6 +197,9 @@ void main() {
       'evasion',
       'highSpeedPlus',
       'questRemodeling',
+      // 「最小/最大」 are the standard Japanese range labels as well.
+      'minimumValue',
+      'maximumValue',
     };
 
     Set<String> identical(String locale) {
