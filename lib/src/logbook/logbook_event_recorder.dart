@@ -202,7 +202,7 @@ final class LogbookEventRecorder {
     final shipType = master == null
         ? null
         : state.masterShipTypes[master.shipTypeId]?.name;
-    final recordId = await _database.insertConstructionRecord(
+    final recordId = await _database.insertConstructionStartRecord(
       dockId: dockId,
       timestamp: pending.timestamp,
       constructionType: pending.constructionType,
@@ -255,6 +255,24 @@ final class LogbookEventRecorder {
         fallback: event.capturedAt,
       );
     }
+    if (recordId <= 0) {
+      final persisted = await _database.getPendingConstructionRecordForDock(
+        dockId,
+      );
+      if (_persistedConstructionMatches(
+        persisted,
+        currentDock: currentDock,
+        master: master,
+        shipId: shipId,
+      )) {
+        recordId = _int(persisted?['id']);
+      } else if (persisted != null) {
+        await _database.clearPendingConstructionRecordForDock(
+          dockId: dockId,
+          recordId: _int(persisted['id']),
+        );
+      }
+    }
     if (recordId <= 0 && construction != null) {
       final latest = await _database.getLatestConstructionRecordForDock(dockId);
       if (_matchesConstruction(latest, construction, shipId)) {
@@ -269,6 +287,7 @@ final class LogbookEventRecorder {
           shipId: shipId,
           shipName: master?.name ?? '舰娘 ID $shipId',
           shipType: shipType ?? '未知舰种',
+          markCollected: true,
         );
     if (!updated && construction != null) {
       await _database.insertConstructionRecord(
@@ -303,21 +322,54 @@ final class LogbookEventRecorder {
       if (dockId <= 0) continue;
       if (shipId <= 0) {
         _pendingConstructions.remove(dockId);
+        if (_int(dock['api_state']) == 0) {
+          final persisted = await _database.getPendingConstructionRecordForDock(
+            dockId,
+          );
+          if (persisted != null) {
+            await _database.clearPendingConstructionRecordForDock(
+              dockId: dockId,
+              recordId: _int(persisted['id']),
+            );
+          }
+        }
         continue;
       }
       final master = state.masterShips[shipId];
       final shipType = master == null
           ? null
           : state.masterShipTypes[master.shipTypeId]?.name;
-      final pending = _pendingConstructions[dockId];
-      if (pending == null || pending.recordId <= 0) continue;
       final currentDock = _constructionDockFromApi(dock);
-      if (!_pendingMatchesDock(pending, currentDock, master)) {
-        _pendingConstructions.remove(dockId);
-        continue;
+      final pending = _pendingConstructions[dockId];
+      var recordId = 0;
+      if (pending != null && pending.recordId > 0) {
+        if (_pendingMatchesDock(pending, currentDock, master)) {
+          recordId = pending.recordId;
+        } else {
+          _pendingConstructions.remove(dockId);
+        }
       }
+      if (recordId <= 0) {
+        final persisted = await _database.getPendingConstructionRecordForDock(
+          dockId,
+        );
+        if (_persistedConstructionMatches(
+          persisted,
+          currentDock: currentDock,
+          master: master,
+          shipId: shipId,
+        )) {
+          recordId = _int(persisted?['id']);
+        } else if (persisted != null) {
+          await _database.clearPendingConstructionRecordForDock(
+            dockId: dockId,
+            recordId: _int(persisted['id']),
+          );
+        }
+      }
+      if (recordId <= 0) continue;
       await _database.updateConstructionResult(
-        recordId: pending.recordId,
+        recordId: recordId,
         dockId: dockId,
         shipId: shipId,
         shipName: master?.name ?? '舰娘 ID $shipId',
@@ -424,6 +476,37 @@ final class LogbookEventRecorder {
     final timestampDelta = (_int(row['timestamp']) - construction.timestamp)
         .abs();
     return timestampDelta <= const Duration(seconds: 5).inMilliseconds;
+  }
+
+  bool _persistedConstructionMatches(
+    Map<String, dynamic>? row, {
+    required ConstructionDock? currentDock,
+    required MasterShip? master,
+    required int shipId,
+  }) {
+    if (row == null || _int(row['dock_id']) <= 0) return false;
+    final recordedShipId = _int(row['ship_id']);
+    if (recordedShipId > 0 && recordedShipId != shipId) return false;
+    if (currentDock == null) return true;
+
+    final construction = _constructionFromDock(
+      currentDock,
+      master,
+      fallback: DateTime.fromMillisecondsSinceEpoch(_int(row['timestamp'])),
+    );
+    if (row['construction_type'] != construction.constructionType ||
+        _int(row['fuel']) != construction.fuel ||
+        _int(row['ammo']) != construction.ammo ||
+        _int(row['steel']) != construction.steel ||
+        _int(row['bauxite']) != construction.bauxite ||
+        _int(row['development_material']) != construction.developmentMaterial) {
+      return false;
+    }
+
+    final startedAt = _constructionStartedAt(currentDock, master);
+    if (startedAt == null) return true;
+    return (_int(row['timestamp']) - startedAt.millisecondsSinceEpoch).abs() <=
+        const Duration(seconds: 5).inMilliseconds;
   }
 
   Future<void> _recordRetiredShips(
