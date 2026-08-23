@@ -1678,11 +1678,12 @@ class _MetricsBar extends StatelessWidget {
     final formula33 = metrics.formula33;
     final noValue = AppLocalizations.of(context)?.noValue ?? '无';
     final l10n = AppLocalizations.of(context);
+    final requiredL10n = _fleetL10n(context);
     final showsCountdown =
         moraleRecoveryTimerController != null &&
         moraleMetricMode == FleetMoraleMetricMode.recoveryCountdown;
     final moraleLabel = showsCountdown
-        ? (l10n?.moraleRecoveryCountdown ?? '恢复倒计时')
+        ? requiredL10n.moraleRecoveryCountdown
         : (l10n?.averageCondition ?? '最低疲劳');
     final moraleValue = showsCountdown
         ? fleetMoraleRecoveryDisplay(
@@ -1690,7 +1691,7 @@ class _MetricsBar extends StatelessWidget {
             fleetId: fleetId,
             targetAt: moraleRecoveryTimerController?.targetForFleet(fleetId),
             now: now,
-            recoveredLabel: l10n?.moraleRecovered ?? '已恢复',
+            recoveredLabel: requiredL10n.moraleRecovered,
             noValueLabel: '—',
           )
         : '${metrics.minimumCondition}';
@@ -1742,7 +1743,7 @@ class _MetricsBar extends StatelessWidget {
                 _ => null,
               },
               semanticLabel: index == 8
-                  ? (l10n?.toggleMoraleMetric ?? '点击切换最低疲劳与恢复倒计时')
+                  ? requiredL10n.toggleMoraleMetric
                   : null,
               compact: phone,
             ),

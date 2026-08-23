@@ -215,6 +215,8 @@ class _FleetSummaryMetrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final requiredL10n =
+        l10n ?? lookupAppLocalizations(const Locale('zh'));
     final noValue = l10n?.noValue ?? '—';
     final current = metrics;
     final airPower = current?.airPower;
@@ -223,7 +225,7 @@ class _FleetSummaryMetrics extends StatelessWidget {
         moraleRecoveryTimerController != null &&
         moraleMetricMode == FleetMoraleMetricMode.recoveryCountdown;
     final moraleLabel = showsCountdown
-        ? (l10n?.moraleRecoveryCountdown ?? '恢复倒计时')
+        ? requiredL10n.moraleRecoveryCountdown
         : (l10n?.averageCondition ?? '最低疲劳');
     final moraleValue = showsCountdown
         ? fleetMoraleRecoveryDisplay(
@@ -231,7 +233,7 @@ class _FleetSummaryMetrics extends StatelessWidget {
             fleetId: fleetId,
             targetAt: moraleRecoveryTimerController?.targetForFleet(fleetId),
             now: now,
-            recoveredLabel: l10n?.moraleRecovered ?? '已恢复',
+            recoveredLabel: requiredL10n.moraleRecovered,
             noValueLabel: '—',
           )
         : (current == null ? noValue : '${current.minimumCondition}');
@@ -268,7 +270,7 @@ class _FleetSummaryMetrics extends StatelessWidget {
               label: values[index].$2,
               value: values[index].$3,
               semanticLabel: values[index].$1 == 'minimum-condition'
-                  ? (l10n?.toggleMoraleMetric ?? '点击切换最低疲劳与恢复倒计时')
+                  ? requiredL10n.toggleMoraleMetric
                   : null,
               onTap:
                   values[index].$1 == 'line-of-sight' &&
