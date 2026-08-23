@@ -846,6 +846,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get averageCondition => '最低疲劳';
 
   @override
+  String get moraleRecoveryCountdown => '恢复倒计时';
+
+  @override
+  String get moraleRecovered => '已恢复';
+
+  @override
+  String get toggleMoraleMetric => '点击切换最低疲劳与恢复倒计时';
+
+  @override
   String get losDetails => '索敌详情';
 
   @override
@@ -2796,6 +2805,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get averageCondition => '最低疲勞';
+
+  @override
+  String get moraleRecoveryCountdown => '恢復倒計時';
+
+  @override
+  String get moraleRecovered => '已恢復';
+
+  @override
+  String get toggleMoraleMetric => '點擊切換最低疲勞與恢復倒計時';
 
   @override
   String get losDetails => '索敵詳情';

@@ -5,6 +5,38 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
 void main() {
+  test(
+    'fleet morale metric mode defaults and persists across reloads',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      var controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      expect(
+        controller.fleetMoraleMetricMode,
+        FleetMoraleMetricMode.minimumCondition,
+      );
+
+      await controller.toggleFleetMoraleMetricMode();
+      expect(
+        controller.fleetMoraleMetricMode,
+        FleetMoraleMetricMode.recoveryCountdown,
+      );
+      expect(notifications, 1);
+
+      controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(
+        controller.fleetMoraleMetricMode,
+        FleetMoraleMetricMode.recoveryCountdown,
+      );
+    },
+  );
+
   test('workspace menu defaults left and persists moving right', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     var controller = await LayoutSettingsController.load(

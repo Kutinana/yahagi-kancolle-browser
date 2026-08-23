@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_ship_status_capsule.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_summary_card.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/morale_recovery_timer_controller.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
+import 'package:yahagi_kancolle_browser/src/notification/notification_timer_anchor_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
@@ -159,6 +162,45 @@ void main() {
     expect(find.text('× 4'), findsOneWidget);
   });
 
+  testWidgets('clicking minimum fatigue switches the shared display mode', (
+    tester,
+  ) async {
+    final controller = await _controllerWithPortData();
+    addTearDown(controller.dispose);
+    final now = DateTime.utc(2026, 8, 23, 12);
+    final fleet = controller.state.fleets.first;
+    final timerController = MoraleRecoveryTimerController(
+      initialAnchors: {
+        fleet.id: MoraleNotificationTimerAnchor(
+          fleetSignature: NotificationTimerSignature.morale(fleet),
+          observedAt: now,
+          observedCondition: 32,
+          targetAt: now.add(const Duration(minutes: 8, seconds: 42)),
+        ),
+      },
+    );
+    addTearDown(timerController.dispose);
+    var taps = 0;
+
+    await tester.pumpWidget(
+      _card(
+        controller: controller,
+        moraleRecoveryTimerController: timerController,
+        moraleMetricMode: FleetMoraleMetricMode.recoveryCountdown,
+        onToggleMoraleMetricMode: () => taps++,
+        clock: () => now,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('恢复倒计时'), findsOneWidget);
+    expect(find.text('08:42'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const Key('fleet-summary-metric-minimum-condition')),
+    );
+    expect(taps, 1);
+  });
+
   testWidgets('home portraits show repair badges without fatigue text badges', (
     tester,
   ) async {
@@ -189,6 +231,11 @@ Future<GameStateController> _controllerWithPortData() async {
 Widget _card({
   required GameStateController controller,
   ValueChanged<int>? onOpenFleet,
+  MoraleRecoveryTimerController? moraleRecoveryTimerController,
+  FleetMoraleMetricMode moraleMetricMode =
+      FleetMoraleMetricMode.minimumCondition,
+  VoidCallback? onToggleMoraleMetricMode,
+  DateTime Function()? clock,
 }) => MaterialApp(
   home: Scaffold(
     body: FleetSummaryCard(
@@ -196,6 +243,10 @@ Widget _card({
       collapsed: false,
       onToggleCollapse: () {},
       onOpenFleet: onOpenFleet ?? (_) {},
+      moraleRecoveryTimerController: moraleRecoveryTimerController,
+      moraleMetricMode: moraleMetricMode,
+      onToggleMoraleMetricMode: onToggleMoraleMetricMode,
+      clock: clock,
     ),
   ),
 );

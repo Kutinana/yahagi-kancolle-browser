@@ -4,15 +4,64 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_information_center.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/morale_recovery_timer_controller.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/operation_status_views.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_portrait.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_status_style.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
+import 'package:yahagi_kancolle_browser/src/notification/notification_timer_anchor_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  testWidgets('fleet center fatigue metric is clickable in countdown mode', (
+    tester,
+  ) async {
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+    final now = DateTime.utc(2026, 8, 23, 12);
+    final fleet = controller.state.fleets.first;
+    final timerController = MoraleRecoveryTimerController(
+      initialAnchors: {
+        fleet.id: MoraleNotificationTimerAnchor(
+          fleetSignature: NotificationTimerSignature.morale(fleet),
+          observedAt: now,
+          observedCondition: 32,
+          targetAt: now.add(const Duration(minutes: 8, seconds: 42)),
+        ),
+      },
+    );
+    addTearDown(timerController.dispose);
+    var taps = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FleetInformationCenter(
+            controller: controller,
+            moraleRecoveryTimerController: timerController,
+            moraleMetricMode: FleetMoraleMetricMode.recoveryCountdown,
+            onToggleMoraleMetricMode: () => taps++,
+            clock: () => now,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('恢复倒计时'), findsOneWidget);
+    expect(find.text('08:42'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('fleet-morale-metric')));
+    expect(taps, 1);
+  });
+
   testWidgets('renders the approved compact three-column fleet workspace', (
     tester,
   ) async {
@@ -2201,43 +2250,40 @@ void main() {
         },
       );
 
-      final portEvt = kcsapiEvent(
-        '/kcsapi/api_port/port',
-        <String, Object?>{
-          'api_ship': <Object?>[
-            <String, Object?>{
-              'api_id': 1001,
-              'api_ship_id': 553,
-              'api_lv': 99,
-              'api_nowhp': 77,
-              'api_maxhp': 77,
-              'api_karyoku': <int>[88, 88],
-              'api_soukou': <int>[80, 80],
-              'api_raisou': <int>[0, 0],
-              'api_taiku': <int>[95, 95],
-              'api_kaihi': <int>[70, 70],
-              'api_taisen': <int>[0, 0],
-              'api_sakuteki': <int>[50, 50],
-              'api_lucky': <int>[40, 40],
-              'api_soku': 10,
-              'api_leng': 3,
-              'api_slot': <int>[2001, -1, -1, -1, -1],
-              'api_slot_ex': 0,
-              'api_onslot': <int>[0, 0, 0, 0, 0],
-              'api_fuel': 100,
-              'api_bull': 100,
-              'api_cond': 49,
-            },
-          ],
-          'api_deck_port': <Object?>[
-            <String, Object?>{
-              'api_id': 1,
-              'api_name': '第1舰队',
-              'api_ship': <int>[1001, -1, -1, -1, -1, -1],
-            },
-          ],
-        },
-      );
+      final portEvt = kcsapiEvent('/kcsapi/api_port/port', <String, Object?>{
+        'api_ship': <Object?>[
+          <String, Object?>{
+            'api_id': 1001,
+            'api_ship_id': 553,
+            'api_lv': 99,
+            'api_nowhp': 77,
+            'api_maxhp': 77,
+            'api_karyoku': <int>[88, 88],
+            'api_soukou': <int>[80, 80],
+            'api_raisou': <int>[0, 0],
+            'api_taiku': <int>[95, 95],
+            'api_kaihi': <int>[70, 70],
+            'api_taisen': <int>[0, 0],
+            'api_sakuteki': <int>[50, 50],
+            'api_lucky': <int>[40, 40],
+            'api_soku': 10,
+            'api_leng': 3,
+            'api_slot': <int>[2001, -1, -1, -1, -1],
+            'api_slot_ex': 0,
+            'api_onslot': <int>[0, 0, 0, 0, 0],
+            'api_fuel': 100,
+            'api_bull': 100,
+            'api_cond': 49,
+          },
+        ],
+        'api_deck_port': <Object?>[
+          <String, Object?>{
+            'api_id': 1,
+            'api_name': '第1舰队',
+            'api_ship': <int>[1001, -1, -1, -1, -1, -1],
+          },
+        ],
+      });
 
       final slotItemEvt = kcsapiEvent(
         '/kcsapi/api_get_member/slot_item',

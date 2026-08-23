@@ -962,6 +962,38 @@ void main() {
       coordinator.dispose();
     });
 
+    test('disabling notifications keeps the shared morale target', () async {
+      testState = GameState.empty.copyWith(
+        updatedAt: testNow,
+        ships: const {
+          1: OwnedShip(id: 1, masterId: 1, level: 1, condition: 40),
+        },
+        fleets: const [
+          Fleet(id: 1, name: 'Fleet 1', shipIds: [1]),
+        ],
+      );
+      final coordinator = GameNotificationCoordinator(
+        gameStateController: gameStateController,
+        settingsController: settingsController,
+        notificationPort: fakePort,
+        gameStateProvider: () => testState,
+        nowProvider: () => testNow,
+      );
+      coordinator.start();
+      final target = coordinator.moraleRecoveryTimerController.targetForFleet(
+        1,
+      );
+
+      await settingsController.setMaster(false);
+
+      expect(
+        coordinator.moraleRecoveryTimerController.targetForFleet(1),
+        target,
+      );
+      expect(fakePort.latestSnapshot?.alarms, isEmpty);
+      coordinator.dispose();
+    });
+
     test(
       'recovered morale clears its anchor before the same fleet becomes tired again',
       () async {
