@@ -865,6 +865,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get losDetails => '索敵詳細';
 
   @override
+  String get airPowerDetails => '制空詳細';
+
+  @override
+  String get minimumValue => '最小';
+
+  @override
+  String get maximumValue => '最大';
+
+  @override
+  String get withoutBonus => '熟練度補正なし';
+
+  @override
+  String get showAirPowerDetails => '制空詳細を表示';
+
+  @override
   String get unknownShipType => '未知の艦種';
 
   @override

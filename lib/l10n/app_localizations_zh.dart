@@ -858,6 +858,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get losDetails => '索敌详情';
 
   @override
+  String get airPowerDetails => '制空详情';
+
+  @override
+  String get minimumValue => '最小';
+
+  @override
+  String get maximumValue => '最大';
+
+  @override
+  String get withoutBonus => '无加成';
+
+  @override
+  String get showAirPowerDetails => '点击查看制空详情';
+
+  @override
   String get unknownShipType => '未知舰种';
 
   @override
@@ -2817,6 +2832,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get losDetails => '索敵詳情';
+
+  @override
+  String get airPowerDetails => '制空詳情';
+
+  @override
+  String get minimumValue => '最小';
+
+  @override
+  String get maximumValue => '最大';
+
+  @override
+  String get withoutBonus => '無加成';
+
+  @override
+  String get showAirPowerDetails => '點擊查看制空詳情';
 
   @override
   String get unknownShipType => '未知艦種';

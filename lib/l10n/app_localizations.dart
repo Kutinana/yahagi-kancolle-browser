@@ -1755,6 +1755,36 @@ abstract class AppLocalizations {
   /// **'索敌详情'**
   String get losDetails;
 
+  /// No description provided for @airPowerDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'制空详情'**
+  String get airPowerDetails;
+
+  /// No description provided for @minimumValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'最小'**
+  String get minimumValue;
+
+  /// No description provided for @maximumValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'最大'**
+  String get maximumValue;
+
+  /// No description provided for @withoutBonus.
+  ///
+  /// In zh, this message translates to:
+  /// **'无加成'**
+  String get withoutBonus;
+
+  /// No description provided for @showAirPowerDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击查看制空详情'**
+  String get showAirPowerDetails;
+
   /// No description provided for @unknownShipType.
   ///
   /// In zh, this message translates to:
