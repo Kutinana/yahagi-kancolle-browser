@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../fleet/anchorage_repair_calculator.dart';
+import '../fleet/morale_recovery_timer_controller.dart';
 import '../fleet/nosaki_sparkle_calculator.dart';
 import '../expedition/expedition_mission_picker.dart';
 import '../game_state/game_state.dart';
@@ -41,7 +42,12 @@ class GameNotificationCoordinator {
        _timerAnchors = initialTimerAnchors,
        _timerAnchorStore = timerAnchorStore,
        _retryDelay = retryDelay ?? ((delay) => Future<void>.delayed(delay)),
-       _onError = onError ?? _reportFlutterError;
+       _onError = onError ?? _reportFlutterError {
+    moraleRecoveryTimerController = MoraleRecoveryTimerController(
+      initialAnchors: initialTimerAnchors.moraleByFleet,
+      onAnchorsChanged: _onMoraleRecoveryAnchorsChanged,
+    );
+  }
 
   final GameStateController gameStateController;
   final NotificationSettingsController settingsController;
@@ -54,6 +60,7 @@ class GameNotificationCoordinator {
   final NotificationTimerAnchorStore? _timerAnchorStore;
   final Future<void> Function(Duration delay) _retryDelay;
   final void Function(Object error, StackTrace stackTrace) _onError;
+  late final MoraleRecoveryTimerController moraleRecoveryTimerController;
 
   bool _disposed = false;
   Map<String, _ManualCompletionTask> _manualCompletionTasks = const {};
@@ -75,6 +82,7 @@ class GameNotificationCoordinator {
     final state = _gameStateProvider();
     _restoreGlobalTimerAnchors(state);
     _recordGlobalTimerAnchors(state);
+    moraleRecoveryTimerController.reconcile(state, now: _now());
     _manualCompletionTasks = _captureManualCompletionTasks(state, _now());
     gameStateController.addListener(_onGameStateChanged);
     settingsController.addListener(_syncSnapshot);
@@ -88,6 +96,7 @@ class GameNotificationCoordinator {
     if (retryWake != null && !retryWake.isCompleted) retryWake.complete();
     gameStateController.removeListener(_onGameStateChanged);
     settingsController.removeListener(_syncSnapshot);
+    moraleRecoveryTimerController.dispose();
   }
 
   void _onGameStateChanged() {
@@ -95,6 +104,7 @@ class GameNotificationCoordinator {
     final now = _now();
     final state = _gameStateProvider();
     _recordGlobalTimerAnchors(state);
+    moraleRecoveryTimerController.reconcile(state, now: now);
     final alerts = _buildImmediateAlerts(state, now);
     _updateCompletedTombstones(state);
     _manualCompletionTasks = _captureManualCompletionTasks(state, now);
@@ -106,10 +116,6 @@ class GameNotificationCoordinator {
   }) {
     if (_disposed) return;
     final settings = settingsController.settings;
-    _reconcileMoraleTimerAnchors(
-      _gameStateProvider(),
-      enabled: settings.master && settings.morale,
-    );
     if (!settings.master) {
       _pendingImmediateAlerts.clear();
     } else {
@@ -644,13 +650,10 @@ class GameNotificationCoordinator {
           }
 
           if (minCond < 49) {
-            final completeTime = _normalMoraleTarget(
-              fleet: fleet,
-              state: state,
-              now: now,
-              minCond: minCond,
+            final completeTime = moraleRecoveryTimerController.targetForFleet(
+              fleet.id,
             );
-            if (!completeTime.isAfter(now)) continue;
+            if (completeTime == null || !completeTime.isAfter(now)) continue;
 
             if (settings.moralePreemptSeconds > 0) {
               final preemptTime = completeTime.subtract(
@@ -931,12 +934,10 @@ class GameNotificationCoordinator {
           if (minCond < 49) {
             final neededTicks = ((49 - minCond) / 3).ceil();
             final totalDurationSec = neededTicks * 180;
-            final target = _normalMoraleTarget(
-              fleet: fleet,
-              state: state,
-              now: now,
-              minCond: minCond,
+            final target = moraleRecoveryTimerController.targetForFleet(
+              fleet.id,
             );
+            if (target == null) continue;
             items.add(
               _deadlineItem(
                 id: 'morale:${fleet.id}',
@@ -1008,68 +1009,10 @@ class GameNotificationCoordinator {
     return persisted?.signature == signature ? persisted!.anchorAt : null;
   }
 
-  DateTime _normalMoraleTarget({
-    required Fleet fleet,
-    required GameState state,
-    required DateTime now,
-    required int minCond,
-  }) {
-    final signature = NotificationTimerSignature.morale(fleet);
-    final existing = _timerAnchors.moraleByFleet[fleet.id];
-    if (existing != null &&
-        existing.fleetSignature == signature &&
-        existing.observedCondition == minCond) {
-      return existing.targetAt;
-    }
-
-    final observedAt = (state.updatedAt ?? now).toUtc();
-    final neededTicks = ((49 - minCond) / 3).ceil();
-    final anchor = MoraleNotificationTimerAnchor(
-      fleetSignature: signature,
-      observedAt: observedAt,
-      observedCondition: minCond,
-      targetAt: observedAt.add(Duration(minutes: neededTicks * 3)),
-    );
-    _replaceTimerAnchors(
-      _timerAnchors.copyWith(
-        moraleByFleet: {..._timerAnchors.moraleByFleet, fleet.id: anchor},
-      ),
-    );
-    return anchor.targetAt;
-  }
-
-  void _reconcileMoraleTimerAnchors(GameState state, {required bool enabled}) {
-    final existing = _timerAnchors.moraleByFleet;
-    if (existing.isEmpty) return;
-    if (!enabled) {
-      _replaceTimerAnchors(_timerAnchors.copyWith(moraleByFleet: const {}));
-      return;
-    }
-
-    final fleetsById = {for (final fleet in state.fleets) fleet.id: fleet};
-    final retained = <int, MoraleNotificationTimerAnchor>{};
-    for (final entry in existing.entries) {
-      final fleet = fleetsById[entry.key];
-      if (fleet == null || fleet.shipIds.isEmpty) continue;
-      if (entry.value.fleetSignature !=
-          NotificationTimerSignature.morale(fleet)) {
-        continue;
-      }
-
-      final conditions = fleet.shipIds
-          .map((shipId) => state.ships[shipId]?.condition)
-          .whereType<int>()
-          .toList(growable: false);
-      if (conditions.length != fleet.shipIds.length) continue;
-      final minCondition = conditions.reduce((a, b) => a < b ? a : b);
-      if (minCondition >= 49 || minCondition != entry.value.observedCondition) {
-        continue;
-      }
-      retained[entry.key] = entry.value;
-    }
-
-    if (retained.length == existing.length) return;
-    _replaceTimerAnchors(_timerAnchors.copyWith(moraleByFleet: retained));
+  void _onMoraleRecoveryAnchorsChanged(
+    Map<int, MoraleNotificationTimerAnchor> anchors,
+  ) {
+    _replaceTimerAnchors(_timerAnchors.copyWith(moraleByFleet: anchors));
   }
 
   void _restoreGlobalTimerAnchors(GameState state) {
