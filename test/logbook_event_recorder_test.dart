@@ -300,6 +300,91 @@ void main() {
     },
   );
 
+  test('reuses the persisted construction after recorder restart', () async {
+    await recorder.record(
+      _event(
+        '/kcsapi/api_req_kousyou/createship',
+        params: const {
+          'api_kdock_id': '2',
+          'api_item1': '30',
+          'api_item2': '30',
+          'api_item3': '30',
+          'api_item4': '30',
+          'api_item5': '1',
+          'api_large_flag': '0',
+        },
+        data: const {
+          'api_kdock': [
+            {'api_id': 2, 'api_created_ship_id': 1},
+          ],
+        },
+        capturedAt: DateTime.utc(2026, 8, 10, 14, 38),
+      ),
+      state,
+    );
+
+    recorder = LogbookEventRecorder(database: database);
+    final restoredState = state.copyWith(
+      constructionDocks: const <ConstructionDock>[
+        ConstructionDock(
+          id: 2,
+          state: 3,
+          createdShipMasterId: 1,
+          fuel: 30,
+          ammunition: 30,
+          steel: 30,
+          bauxite: 30,
+          developmentMaterial: 1,
+        ),
+      ],
+    );
+    await recorder.record(
+      _event(
+        '/kcsapi/api_req_kousyou/getship',
+        params: const {'api_kdock_id': '2'},
+        data: const {
+          'api_ship': {'api_ship_id': 1},
+        },
+        capturedAt: DateTime.utc(2026, 8, 11, 11, 37),
+      ),
+      restoredState,
+    );
+
+    final rows = await database.getConstructionRecords();
+    expect(rows, hasLength(1));
+    expect(rows.single['ship_name'], '雪风');
+    expect(
+      rows.single['timestamp'],
+      DateTime.utc(2026, 8, 10, 14, 38).millisecondsSinceEpoch,
+    );
+  });
+
+  test(
+    'ignores a replayed construction start across recorder restart',
+    () async {
+      final startEvent = _event(
+        '/kcsapi/api_req_kousyou/createship',
+        params: const {
+          'api_kdock_id': '2',
+          'api_item1': '30',
+          'api_item2': '30',
+          'api_item3': '30',
+          'api_item4': '30',
+          'api_item5': '1',
+          'api_large_flag': '0',
+        },
+        capturedAt: DateTime.utc(2026, 8, 10, 14, 38),
+      );
+
+      await recorder.record(startEvent, state);
+      await recorder.record(startEvent, state);
+      recorder = LogbookEventRecorder(database: database);
+      await recorder.record(startEvent, state);
+
+      expect(await database.getConstructionRecords(), hasLength(1));
+    },
+  );
+
   test(
     'updates a pending construction when the dock list reveals the ship',
     () async {
@@ -342,6 +427,101 @@ void main() {
       expect(rows, hasLength(1));
       expect(rows.single['ship_name'], '雪风');
       expect(rows.single['ship_type'], '驱逐舰');
+    },
+  );
+
+  test(
+    'updates a persisted construction from kdock after recorder restart',
+    () async {
+      await recorder.record(
+        _event(
+          '/kcsapi/api_req_kousyou/createship',
+          params: const {
+            'api_kdock_id': '2',
+            'api_item1': '30',
+            'api_item2': '30',
+            'api_item3': '30',
+            'api_item4': '30',
+            'api_item5': '1',
+            'api_large_flag': '0',
+          },
+          capturedAt: DateTime.utc(2026, 8, 11, 12),
+        ),
+        state,
+      );
+      recorder = LogbookEventRecorder(database: database);
+
+      await recorder.record(
+        _event(
+          '/kcsapi/api_get_member/kdock',
+          data: const <Object?>[
+            {
+              'api_id': 2,
+              'api_state': 3,
+              'api_created_ship_id': 1,
+              'api_complete_time': 1786451400000,
+              'api_item1': 30,
+              'api_item2': 30,
+              'api_item3': 30,
+              'api_item4': 30,
+              'api_item5': 1,
+            },
+          ],
+        ),
+        state,
+      );
+
+      final rows = await database.getConstructionRecords();
+      expect(rows, hasLength(1));
+      expect(rows.single['ship_name'], '雪风');
+      expect(await database.getPendingConstructionRecordForDock(2), isNotNull);
+
+      await recorder.record(
+        _event(
+          '/kcsapi/api_req_kousyou/getship',
+          params: const {'api_kdock_id': '2'},
+          data: const {
+            'api_ship': {'api_ship_id': 1},
+          },
+        ),
+        state,
+      );
+      expect(await database.getPendingConstructionRecordForDock(2), isNull);
+    },
+  );
+
+  test(
+    'clears a persisted construction when kdock is explicitly empty',
+    () async {
+      await recorder.record(
+        _event(
+          '/kcsapi/api_req_kousyou/createship',
+          params: const {
+            'api_kdock_id': '2',
+            'api_item1': '30',
+            'api_item2': '30',
+            'api_item3': '30',
+            'api_item4': '30',
+            'api_item5': '1',
+            'api_large_flag': '0',
+          },
+        ),
+        state,
+      );
+      recorder = LogbookEventRecorder(database: database);
+
+      await recorder.record(
+        _event(
+          '/kcsapi/api_get_member/kdock',
+          data: const <Object?>[
+            {'api_id': 2, 'api_state': 0, 'api_created_ship_id': 0},
+          ],
+        ),
+        state,
+      );
+
+      expect(await database.getPendingConstructionRecordForDock(2), isNull);
+      expect(await database.getConstructionRecords(), hasLength(1));
     },
   );
 
@@ -424,6 +604,19 @@ void main() {
       expect(rows.first['timestamp'], replacementStart.millisecondsSinceEpoch);
       expect(rows.first['ship_name'], '雪风');
       expect(rows.first['secretary_name'], '—');
+
+      expect(await database.getPendingConstructionRecordForDock(2), isNull);
+      await recorder.record(
+        _event(
+          '/kcsapi/api_req_kousyou/getship',
+          params: const {'api_kdock_id': '2'},
+          data: const {
+            'api_ship': {'api_ship_id': 1},
+          },
+        ),
+        state,
+      );
+      expect(await database.getConstructionRecords(), hasLength(2));
     },
   );
 
@@ -592,12 +785,13 @@ CapturedApiEvent _event(
   String path, {
   Map<String, Object?> params = const {},
   Object? data = const <String, Object?>{},
+  DateTime? capturedAt,
 }) => CapturedApiEvent(
   path: path,
   requestParams: params,
   responseBody: jsonEncode({'api_result': 1, 'api_data': data}),
   source: CaptureSource.manual,
-  capturedAt: DateTime.utc(2026, 8, 11, 12),
+  capturedAt: capturedAt ?? DateTime.utc(2026, 8, 11, 12),
 );
 
 CapturedApiEvent _eventWithoutData(

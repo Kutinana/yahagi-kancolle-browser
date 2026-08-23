@@ -109,7 +109,7 @@ class LogbookDatabase extends ChangeNotifier {
     final result = LogbookDatabase._init();
     result._database = await databaseFactoryFfiNoIsolate.openDatabase(
       inMemoryDatabasePath,
-      options: OpenDatabaseOptions(version: 7, onCreate: result._createDB),
+      options: OpenDatabaseOptions(version: 8, onCreate: result._createDB),
     );
     return result;
   }
@@ -206,7 +206,7 @@ class LogbookDatabase extends ChangeNotifier {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -329,6 +329,16 @@ class LogbookDatabase extends ChangeNotifier {
         level INTEGER NOT NULL
       )
     ''');
+    await _createPendingConstructionTable(db);
+  }
+
+  Future<void> _createPendingConstructionTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS pending_construction_logs (
+        dock_id INTEGER PRIMARY KEY,
+        record_id INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> _createOperationIndexes(Database db) async {
@@ -409,6 +419,9 @@ class LogbookDatabase extends ChangeNotifier {
       await db.execute(
         "ALTER TABLE expedition_logs ADD COLUMN reward_items_json TEXT NOT NULL DEFAULT '[]'",
       );
+    }
+    if (oldVersion < 8) {
+      await _createPendingConstructionTable(db);
     }
   }
 
@@ -582,23 +595,156 @@ class LogbookDatabase extends ChangeNotifier {
     required String secretaryName,
   }) async {
     final db = await database;
-    final id = await db.insert('construction_logs', {
-      'dock_id': dockId,
-      'timestamp': timestamp,
-      'construction_type': constructionType,
-      'ship_id': shipId,
-      'ship_name': shipName,
-      'ship_type': shipType,
-      'fuel': fuel,
-      'ammo': ammo,
-      'steel': steel,
-      'bauxite': bauxite,
-      'development_material': developmentMaterial,
-      'secretary_name': secretaryName,
-    });
+    final id = await db.insert(
+      'construction_logs',
+      _constructionRecordRow(
+        dockId: dockId,
+        timestamp: timestamp,
+        constructionType: constructionType,
+        shipId: shipId,
+        shipName: shipName,
+        shipType: shipType,
+        fuel: fuel,
+        ammo: ammo,
+        steel: steel,
+        bauxite: bauxite,
+        developmentMaterial: developmentMaterial,
+        secretaryName: secretaryName,
+      ),
+    );
     _notifyChange(LogbookChangeCategory.construction);
     return id;
   }
+
+  Future<int> insertConstructionStartRecord({
+    required int dockId,
+    required int timestamp,
+    required String constructionType,
+    required int? shipId,
+    required String shipName,
+    required String shipType,
+    required int fuel,
+    required int ammo,
+    required int steel,
+    required int bauxite,
+    required int developmentMaterial,
+    required String secretaryName,
+  }) async {
+    final db = await database;
+    var changed = false;
+    final id = await db.transaction((transaction) async {
+      final existingRows = await transaction.rawQuery(
+        '''
+          SELECT construction_logs.*
+          FROM pending_construction_logs
+          INNER JOIN construction_logs
+            ON construction_logs.id = pending_construction_logs.record_id
+          WHERE pending_construction_logs.dock_id = ?
+          LIMIT 1
+        ''',
+        <Object?>[dockId],
+      );
+      final existing = existingRows.isEmpty ? null : existingRows.single;
+      if (_sameConstructionStart(
+        existing,
+        dockId: dockId,
+        timestamp: timestamp,
+        constructionType: constructionType,
+        fuel: fuel,
+        ammo: ammo,
+        steel: steel,
+        bauxite: bauxite,
+        developmentMaterial: developmentMaterial,
+      )) {
+        final existingId = existing!['id'] as int;
+        if (shipId != null && shipId > 0 && existing['ship_id'] != shipId) {
+          await transaction.update(
+            'construction_logs',
+            {'ship_id': shipId, 'ship_name': shipName, 'ship_type': shipType},
+            where: 'id = ?',
+            whereArgs: <Object?>[existingId],
+          );
+          changed = true;
+        }
+        return existingId;
+      }
+
+      final recordId = await transaction.insert(
+        'construction_logs',
+        _constructionRecordRow(
+          dockId: dockId,
+          timestamp: timestamp,
+          constructionType: constructionType,
+          shipId: shipId,
+          shipName: shipName,
+          shipType: shipType,
+          fuel: fuel,
+          ammo: ammo,
+          steel: steel,
+          bauxite: bauxite,
+          developmentMaterial: developmentMaterial,
+          secretaryName: secretaryName,
+        ),
+      );
+      await transaction.insert('pending_construction_logs', {
+        'dock_id': dockId,
+        'record_id': recordId,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      changed = true;
+      return recordId;
+    });
+    if (changed) _notifyChange(LogbookChangeCategory.construction);
+    return id;
+  }
+
+  bool _sameConstructionStart(
+    Map<String, Object?>? row, {
+    required int dockId,
+    required int timestamp,
+    required String constructionType,
+    required int fuel,
+    required int ammo,
+    required int steel,
+    required int bauxite,
+    required int developmentMaterial,
+  }) =>
+      row != null &&
+      row['dock_id'] == dockId &&
+      row['timestamp'] == timestamp &&
+      row['construction_type'] == constructionType &&
+      row['fuel'] == fuel &&
+      row['ammo'] == ammo &&
+      row['steel'] == steel &&
+      row['bauxite'] == bauxite &&
+      row['development_material'] == developmentMaterial;
+
+  Map<String, Object?> _constructionRecordRow({
+    required int dockId,
+    required int timestamp,
+    required String constructionType,
+    required int? shipId,
+    required String shipName,
+    required String shipType,
+    required int fuel,
+    required int ammo,
+    required int steel,
+    required int bauxite,
+    required int developmentMaterial,
+    required String secretaryName,
+  }) => <String, Object?>{
+    'dock_id': dockId,
+    'timestamp': timestamp,
+    'construction_type': constructionType,
+    'ship_id': shipId,
+    'ship_name': shipName,
+    'ship_type': shipType,
+    'fuel': fuel,
+    'ammo': ammo,
+    'steel': steel,
+    'bauxite': bauxite,
+    'development_material': developmentMaterial,
+    'secretary_name': secretaryName,
+  };
 
   Future<bool> updateConstructionResult({
     required int recordId,
@@ -606,16 +752,61 @@ class LogbookDatabase extends ChangeNotifier {
     required int shipId,
     required String shipName,
     required String shipType,
+    bool markCollected = false,
   }) async {
     final db = await database;
-    final changed = await db.update(
+    Future<int> update(DatabaseExecutor executor) => executor.update(
       'construction_logs',
       {'ship_id': shipId, 'ship_name': shipName, 'ship_type': shipType},
       where: 'id = ? AND dock_id = ?',
       whereArgs: <Object?>[recordId, dockId],
     );
+    final changed = markCollected
+        ? await db.transaction((transaction) async {
+            final count = await update(transaction);
+            if (count > 0) {
+              await transaction.delete(
+                'pending_construction_logs',
+                where: 'dock_id = ? AND record_id = ?',
+                whereArgs: <Object?>[dockId, recordId],
+              );
+            }
+            return count;
+          })
+        : await update(db);
     if (changed > 0) _notifyChange(LogbookChangeCategory.construction);
     return changed > 0;
+  }
+
+  Future<Map<String, dynamic>?> getPendingConstructionRecordForDock(
+    int dockId,
+  ) async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      '''
+        SELECT construction_logs.*
+        FROM pending_construction_logs
+        INNER JOIN construction_logs
+          ON construction_logs.id = pending_construction_logs.record_id
+        WHERE pending_construction_logs.dock_id = ?
+        LIMIT 1
+      ''',
+      <Object?>[dockId],
+    );
+    return rows.isEmpty ? null : rows.single;
+  }
+
+  Future<bool> clearPendingConstructionRecordForDock({
+    required int dockId,
+    required int recordId,
+  }) async {
+    final db = await database;
+    final count = await db.delete(
+      'pending_construction_logs',
+      where: 'dock_id = ? AND record_id = ?',
+      whereArgs: <Object?>[dockId, recordId],
+    );
+    return count > 0;
   }
 
   Future<Map<String, dynamic>?> getLatestConstructionRecordForDock(
@@ -883,6 +1074,7 @@ class LogbookDatabase extends ChangeNotifier {
       await transaction.delete('battle_logs');
       await transaction.delete('resource_logs');
       await transaction.delete('expedition_logs');
+      await transaction.delete('pending_construction_logs');
       await transaction.delete('construction_logs');
       await transaction.delete('development_logs');
       await transaction.delete('retirement_logs');

@@ -87,6 +87,20 @@ void main() {
       final database = await LogbookDatabase.openForTesting();
       addTearDown(database.close);
       await database.insertResourceSnapshot(_resourceState(100));
+      await database.insertConstructionStartRecord(
+        dockId: 2,
+        timestamp: 1000,
+        constructionType: '普通建造',
+        shipId: null,
+        shipName: '建造中',
+        shipType: '—',
+        fuel: 30,
+        ammo: 30,
+        steel: 30,
+        bauxite: 30,
+        developmentMaterial: 1,
+        secretaryName: '测试秘书舰',
+      );
       final changes = <LogbookChangeCategory, int>{
         for (final category in LogbookChangeCategory.values) category: 0,
       };
@@ -99,6 +113,7 @@ void main() {
       await database.clearAll();
 
       expect(changes.values, everyElement(1));
+      expect(await database.getPendingConstructionRecordForDock(2), isNull);
       await database.insertResourceSnapshot(_resourceState(100));
       expect(await database.getAllResourceLogs(), hasLength(1));
     },
@@ -161,6 +176,48 @@ void main() {
       expect(await database.getRetirementRecords(), hasLength(1));
     },
   );
+
+  test('construction pending mapping survives until collection', () async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+
+    final id = await database.insertConstructionStartRecord(
+      dockId: 2,
+      timestamp: 1000,
+      constructionType: '普通建造',
+      shipId: 1,
+      shipName: '雪风',
+      shipType: '驱逐舰',
+      fuel: 30,
+      ammo: 30,
+      steel: 30,
+      bauxite: 30,
+      developmentMaterial: 1,
+      secretaryName: '矢矧改二乙',
+    );
+
+    expect((await database.getPendingConstructionRecordForDock(2))?['id'], id);
+
+    await database.updateConstructionResult(
+      recordId: id,
+      dockId: 2,
+      shipId: 1,
+      shipName: '雪风',
+      shipType: '驱逐舰',
+    );
+    expect((await database.getPendingConstructionRecordForDock(2))?['id'], id);
+
+    await database.updateConstructionResult(
+      recordId: id,
+      dockId: 2,
+      shipId: 1,
+      shipName: '雪风',
+      shipType: '驱逐舰',
+      markCollected: true,
+    );
+
+    expect(await database.getPendingConstructionRecordForDock(2), isNull);
+  });
 
   test('expedition records retain two reward items', () async {
     final database = await LogbookDatabase.openForTesting();
