@@ -19,6 +19,7 @@ class LayoutSettingsController extends ChangeNotifier {
     this._fontFamily,
     this._localeCode,
     this._fontLocaleCode,
+    this._fleetMoraleMetricMode,
   );
 
   static Future<LayoutSettingsController> load(
@@ -41,6 +42,12 @@ class LayoutSettingsController extends ChangeNotifier {
     final dashboardCardHidden = await store.loadDashboardCardHidden();
     final fontFamily = await store.loadFontFamily();
     final localeCode = await store.loadLocaleCode();
+    final moraleMetricStore = store is FleetMoraleMetricSettingsStore
+        ? store as FleetMoraleMetricSettingsStore
+        : null;
+    final fleetMoraleMetricMode = moraleMetricStore == null
+        ? FleetMoraleMetricMode.minimumCondition
+        : await moraleMetricStore.loadFleetMoraleMetricMode();
     final fontLocaleCode = localeCode ?? systemLocaleCode ?? 'zh';
     final regionalFont = AppFonts.forLocale(fontLocaleCode);
     if (fontFamily != regionalFont) {
@@ -60,6 +67,7 @@ class LayoutSettingsController extends ChangeNotifier {
       regionalFont,
       localeCode,
       fontLocaleCode,
+      fleetMoraleMetricMode,
     );
     final headerStore = store is HeaderResourceSettingsStore
         ? store as HeaderResourceSettingsStore
@@ -161,6 +169,7 @@ class LayoutSettingsController extends ChangeNotifier {
   String _fontFamily;
   String? _localeCode;
   String _fontLocaleCode;
+  FleetMoraleMetricMode _fleetMoraleMetricMode;
   List<String>? _headerResourceOrder;
   List<String>? _visibleHeaderResourceIds;
 
@@ -179,6 +188,7 @@ class LayoutSettingsController extends ChangeNotifier {
   List<String> get dashboardCardHidden => _dashboardCardHidden;
   String get fontFamily => _fontFamily;
   String? get localeCode => _localeCode;
+  FleetMoraleMetricMode get fleetMoraleMetricMode => _fleetMoraleMetricMode;
   List<String> get headerResourceOrder =>
       List<String>.unmodifiable(_headerResourceOrder ?? allHeaderResourceIds);
   List<String> get visibleHeaderResourceIds => List<String>.unmodifiable(
@@ -221,6 +231,20 @@ class LayoutSettingsController extends ChangeNotifier {
     _enhancedDamagePulse = enabled;
     notifyListeners();
     await _store.saveEnhancedDamagePulse(enabled);
+  }
+
+  Future<void> toggleFleetMoraleMetricMode() async {
+    _fleetMoraleMetricMode =
+        _fleetMoraleMetricMode == FleetMoraleMetricMode.minimumCondition
+        ? FleetMoraleMetricMode.recoveryCountdown
+        : FleetMoraleMetricMode.minimumCondition;
+    notifyListeners();
+    final store = _store is FleetMoraleMetricSettingsStore
+        ? _store as FleetMoraleMetricSettingsStore
+        : null;
+    if (store != null) {
+      await store.saveFleetMoraleMetricMode(_fleetMoraleMetricMode);
+    }
   }
 
   Future<void> setWorkspaceMenuOnRight(bool onRight) async {

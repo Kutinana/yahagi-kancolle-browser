@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_fonts.dart';
 import 'header_resource_settings.dart';
 
+enum FleetMoraleMetricMode { minimumCondition, recoveryCountdown }
+
 abstract class LayoutSettingsStore {
   Future<double> loadGameAreaRatio();
   Future<void> saveGameAreaRatio(double ratio);
@@ -70,9 +72,15 @@ abstract interface class HeaderResourceSettingsStore {
   Future<void> saveVisibleHeaderResourceIds(List<String> visibleIds);
 }
 
+abstract interface class FleetMoraleMetricSettingsStore {
+  Future<FleetMoraleMetricMode> loadFleetMoraleMetricMode();
+  Future<void> saveFleetMoraleMetricMode(FleetMoraleMetricMode mode);
+}
+
 class SharedPreferencesLayoutSettingsStore
     implements
         LayoutSettingsStore,
+        FleetMoraleMetricSettingsStore,
         HeaderResourceSettingsStore,
         WorkspaceMenuOrderSettingsStore {
   static const _keyGameAreaRatio = 'layout_game_area_ratio';
@@ -84,6 +92,23 @@ class SharedPreferencesLayoutSettingsStore
   static const _keyHeaderResourceOrder = 'layout_header_resource_order';
   static const _keyVisibleHeaderResourceIds =
       'layout_visible_header_resource_ids';
+  static const _keyFleetMoraleMetricMode = 'layout_fleet_morale_metric_mode';
+
+  @override
+  Future<FleetMoraleMetricMode> loadFleetMoraleMetricMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_keyFleetMoraleMetricMode);
+    return FleetMoraleMetricMode.values.firstWhere(
+      (mode) => mode.name == saved,
+      orElse: () => FleetMoraleMetricMode.minimumCondition,
+    );
+  }
+
+  @override
+  Future<void> saveFleetMoraleMetricMode(FleetMoraleMetricMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyFleetMoraleMetricMode, mode.name);
+  }
 
   @override
   Future<List<String>> loadHeaderResourceOrder() async {
