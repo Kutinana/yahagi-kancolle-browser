@@ -99,6 +99,7 @@ void main() {
               'api_name': '护卫空母',
               'api_stype': 7,
               'api_tais': <int>[8, 40],
+              'api_maxeq': <int>[12, 8, 4, 0],
             },
             <String, Object?>{
               'api_id': 702,
@@ -111,6 +112,11 @@ void main() {
       );
 
       expect(state.masterShips[701]?.baseAntiSub, 8);
+      expect(state.masterShips[701]?.slotCapacities, <int>[12, 8, 4, 0]);
+      expect(
+        state.masterShips[701]?.copyWith(portraitVersion: '8').slotCapacities,
+        <int>[12, 8, 4, 0],
+      );
       expect(state.masterShips[701]?.equipTypeIds, contains(24));
       expect(state.masterShips[702]?.baseAntiSub, 0);
       expect(state.masterShips[702]?.equipTypeIds, isNot(contains(24)));

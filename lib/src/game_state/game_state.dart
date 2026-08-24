@@ -51,6 +51,7 @@ class MasterShip {
     this.maxFuel = 0,
     this.maxAmmo = 0,
     this.slotCount = 0,
+    this.slotCapacities = const <int>[],
     this.buildTimeMinutes = 0,
     this.baseAntiSub = 0,
     this.equipTypeIds = const <int>{},
@@ -68,6 +69,7 @@ class MasterShip {
   final int maxFuel;
   final int maxAmmo;
   final int slotCount;
+  final List<int> slotCapacities;
   final int buildTimeMinutes;
   final int baseAntiSub;
   final Set<int> equipTypeIds;
@@ -86,6 +88,7 @@ class MasterShip {
       maxFuel: maxFuel,
       maxAmmo: maxAmmo,
       slotCount: slotCount,
+      slotCapacities: slotCapacities,
       buildTimeMinutes: buildTimeMinutes,
       baseAntiSub: baseAntiSub,
       equipTypeIds: equipTypeIds,

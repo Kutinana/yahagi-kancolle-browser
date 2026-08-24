@@ -1084,6 +1084,7 @@ class GameStateReducer {
         maxFuel: _asInt(item['api_fuel_max']),
         maxAmmo: _asInt(item['api_bull_max']),
         slotCount: _asInt(item['api_slot_num']),
+        slotCapacities: _intList(item['api_maxeq'], includeNonPositive: true),
         buildTimeMinutes: _asInt(item['api_buildtime']),
         baseAntiSub: antiSubRange.isEmpty ? 0 : _asInt(antiSubRange.first),
         equipTypeIds: equipTypeIds,
