@@ -86,8 +86,9 @@ EquipmentMechanismDisplay? detectFleetSpecialAttack(
     String summary, {
     double? rate,
   }) {
-    final percentText =
-        rate != null ? '当前配装预估发动概率约为 ${(rate * 100).round()}%。' : '';
+    final percentText = rate != null
+        ? '当前配装预估发动概率约为 ${(rate * 100).round()}%。'
+        : '';
     return EquipmentMechanismDisplay(
       label: label,
       shortLabel: '特攻',
@@ -202,7 +203,11 @@ EquipmentMechanismDisplay? detectFleetSpecialAttack(
       masters,
       'Queen Elizabeth级特殊攻击',
     );
-    return mechanism('Queen Elizabeth级特殊攻击', 'Warspite改与Valiant改组成的特殊攻击编成。', rate: rate);
+    return mechanism(
+      'Queen Elizabeth级特殊攻击',
+      'Warspite改与Valiant改组成的特殊攻击编成。',
+      rate: rate,
+    );
   }
   if (fullFleet &&
       const <int>{392, 969, 724}.contains(flagship.id) &&
@@ -217,7 +222,11 @@ EquipmentMechanismDisplay? detectFleetSpecialAttack(
       masters,
       'Richelieu级特殊攻击',
     );
-    return mechanism('Richelieu级特殊攻击', 'Richelieu改／Deux与Jean Bart改组成的特殊攻击编成。', rate: rate);
+    return mechanism(
+      'Richelieu级特殊攻击',
+      'Richelieu改／Deux与Jean Bart改组成的特殊攻击编成。',
+      rate: rate,
+    );
   }
   if (ships.length >= 4 &&
       flagship.shipTypeId == 20 &&
@@ -234,7 +243,7 @@ bool _canOpeningAsw(
   OwnedShip ship,
   List<ShipEquipment> equipment,
 ) {
-  const unconditional = <int>{
+  const unconditionalShips = <int>{
     141,
     394,
     478,
@@ -253,30 +262,115 @@ bool _canOpeningAsw(
     941,
     1040,
   };
-  if (unconditional.contains(master.id)) {
+  if (unconditionalShips.contains(master.id)) {
     return true;
   }
-  final hasSonar = equipment.any((item) => _icon(item.master) == 18);
-  final equipmentAsw = equipment.fold<int>(
-    0,
-    (sum, item) => sum + (item.master?.antiSub ?? 0),
-  );
+
+  final hasSonar = equipment.any((item) => _isSonar(item.master));
+  final hasOriginalAircraftCapacity =
+      master.slotCapacities.fold<int>(0, (sum, capacity) => sum + capacity) > 0;
+
+  if (master.id == 554) {
+    final hasS51J = equipment.any(
+      (item) => const <int>{326, 327}.contains(item.master?.id),
+    );
+    final autogyroCount = equipment
+        .where((item) => _type(item.master) == 25)
+        .length;
+    return hasS51J || autogyroCount >= 2;
+  }
+
+  if (const <int>{411, 412}.contains(master.id)) {
+    final hasRequiredEquipment = equipment.any(
+      (item) => const <int>{11, 15, 25}.contains(_type(item.master)),
+    );
+    return ship.antiSub >= 100 &&
+        equipment.any((item) => item.master?.id == 132) &&
+        hasOriginalAircraftCapacity &&
+        hasRequiredEquipment;
+  }
+
+  if (const <int>{943, 948}.contains(master.id)) {
+    return ship.antiSub >= 100 &&
+        hasSonar &&
+        hasOriginalAircraftCapacity &&
+        _hasAswAircraft(equipment, const <int>{7, 25, 26}, minimumAsw: 1);
+  }
+
+  if (const <int>{626, 916}.contains(master.id)) {
+    return ship.antiSub >= 100 &&
+        hasSonar &&
+        hasOriginalAircraftCapacity &&
+        _hasAswAircraft(equipment, const <int>{11, 25}, minimumAsw: 0);
+  }
+
+  const escortCarriers = <int>{380, 529, 381, 536, 382, 889, 646};
+  if (escortCarriers.contains(master.id)) {
+    return hasOriginalAircraftCapacity &&
+        _hasAswAircraft(equipment, const <int>{7, 8, 25, 26}, minimumAsw: 1);
+  }
+
+  const excludedOrdinaryLightCarriers = <int>{
+    508,
+    509,
+    521,
+    522,
+    526,
+    380,
+    529,
+    534,
+    381,
+    536,
+    884,
+    382,
+    889,
+  };
+  if (master.shipTypeId == 7 &&
+      !excludedOrdinaryLightCarriers.contains(master.id)) {
+    if (!hasOriginalAircraftCapacity) {
+      return false;
+    }
+    final hasAsw7Aircraft = _hasAswAircraft(equipment, const <int>{
+      8,
+      25,
+      26,
+    }, minimumAsw: 7);
+    return (ship.antiSub >= 50 && hasSonar && hasAsw7Aircraft) ||
+        (ship.antiSub >= 65 && hasAsw7Aircraft) ||
+        (ship.antiSub >= 100 &&
+            hasSonar &&
+            _hasAswAircraft(equipment, const <int>{7, 8}, minimumAsw: 1));
+  }
+
   if (master.shipTypeId == 1) {
+    if (master.name.startsWith('Norge') || master.name.startsWith('Eidsvold')) {
+      return false;
+    }
+    final equipmentAsw = equipment.fold<int>(
+      0,
+      (sum, item) => sum + (item.master?.antiSub ?? 0),
+    );
     return (ship.antiSub >= 60 && hasSonar) ||
         (ship.antiSub >= 75 && equipmentAsw >= 4);
   }
   if (const <int>{2, 3, 4, 21, 22}.contains(master.shipTypeId)) {
     return ship.antiSub >= 100 && hasSonar;
   }
-  if (const <int>{380, 381, 529, 536, 646}.contains(master.id)) {
-    return equipment.any((item) {
-      final type = _type(item.master);
-      return const <int>{7, 8, 11, 25, 26}.contains(type) &&
-          (item.master?.antiSub ?? 0) > 0;
-    });
-  }
   return false;
 }
+
+bool _isSonar(MasterSlotItem? item) =>
+    const <int>{17, 18}.contains(_icon(item));
+
+bool _hasAswAircraft(
+  List<ShipEquipment> equipment,
+  Set<int> types, {
+  required int minimumAsw,
+}) => equipment.any(
+  (item) =>
+      types.contains(_type(item.master)) &&
+      (item.master?.antiSub ?? 0) >= minimumAsw,
+);
 
 bool _canAntiAirCutIn(MasterShip master, List<ShipEquipment> equipment) {
   if (const <int>{13, 14}.contains(master.shipTypeId)) {
@@ -338,10 +432,7 @@ bool _canAntiAirRocketBarrage(
       equipment.any((item) => item.master?.id == 274);
 }
 
-bool _canNightCarrierAttack(
-  MasterShip master,
-  List<ShipEquipment> equipment,
-) {
+bool _canNightCarrierAttack(MasterShip master, List<ShipEquipment> equipment) {
   if (!_isCarrier(master)) {
     return false;
   }
@@ -568,7 +659,8 @@ double? _calculateFleetSpecialAttackRate(
       if (ships.length < 5) return null;
       final ship3 = ships[2];
       final ship5 = ships[4];
-      final raw = 1.1 * math.sqrt(flagship.level) +
+      final raw =
+          1.1 * math.sqrt(flagship.level) +
           math.sqrt(ship3.level) +
           math.sqrt(ship5.level) +
           1.4 * math.sqrt(flagship.luck) +
@@ -578,7 +670,8 @@ double? _calculateFleetSpecialAttackRate(
     case '一齐射击（长门）':
     case '一齐射击（陆奥）':
       if (second == null) return null;
-      final raw = math.sqrt(flagship.level) +
+      final raw =
+          math.sqrt(flagship.level) +
           1.5 * math.sqrt(flagship.luck) +
           math.sqrt(second.level) +
           1.5 * math.sqrt(second.luck) +
@@ -587,7 +680,8 @@ double? _calculateFleetSpecialAttackRate(
 
     case '大和型特殊攻击':
       if (second == null) return null;
-      var raw = math.sqrt(flagship.level) +
+      var raw =
+          math.sqrt(flagship.level) +
           math.sqrt(second.level) +
           1.25 * math.sqrt(flagship.luck) +
           1.25 * math.sqrt(second.luck) +
@@ -616,7 +710,8 @@ double? _calculateFleetSpecialAttackRate(
       if (flagshipMaster != null && flagshipMaster.id == 954) {
         return null;
       }
-      var raw = 3.5 * math.sqrt(flagship.level) +
+      var raw =
+          3.5 * math.sqrt(flagship.level) +
           3.5 * math.sqrt(second.level) +
           1.1 * math.sqrt(flagship.luck) +
           1.1 * math.sqrt(second.luck) -
@@ -625,16 +720,22 @@ double? _calculateFleetSpecialAttackRate(
       final flagshipEq = state.equipmentForShip(flagship);
       if (flagshipEq.any((e) => _isSurfaceRadarWithLos8(e.master))) {
         if (flagshipMaster != null) {
-          if (flagshipMaster.id == 591) raw += 30.0;
-          else if (flagshipMaster.id == 592) raw += 10.0;
-          else if (flagshipMaster.id == 593) raw += 15.0;
-          else if (flagshipMaster.id == 694) raw += 20.0;
+          if (flagshipMaster.id == 591)
+            raw += 30.0;
+          else if (flagshipMaster.id == 592)
+            raw += 10.0;
+          else if (flagshipMaster.id == 593)
+            raw += 15.0;
+          else if (flagshipMaster.id == 694)
+            raw += 20.0;
         }
       }
       if (flagshipEq.any((e) => e.master?.id == 140)) {
         if (flagshipMaster != null) {
-          if (flagshipMaster.id == 591) raw += 10.0;
-          else if (flagshipMaster.id == 592) raw += 30.0;
+          if (flagshipMaster.id == 591)
+            raw += 10.0;
+          else if (flagshipMaster.id == 592)
+            raw += 30.0;
         }
       }
       return (math.max(0.0, raw) / 100.0).clamp(0.0, 1.0);
@@ -642,7 +743,8 @@ double? _calculateFleetSpecialAttackRate(
     case 'Queen Elizabeth级特殊攻击':
     case 'Richelieu级特殊攻击':
       if (second == null) return null;
-      final raw = math.sqrt(flagship.level) +
+      final raw =
+          math.sqrt(flagship.level) +
           math.sqrt(second.level) +
           1.2 * (math.sqrt(flagship.luck) + math.sqrt(second.luck)) +
           30.0;

@@ -131,30 +131,48 @@ void main() {
     });
 
     test('applies ordinary light carrier 50 and 65 ASW rules', () {
-      final aswAircraft = const MasterSlotItem(
-        id: 10,
-        name: 'ASW torpedo bomber',
-        antiSub: 7,
-        type: <int>[0, 0, 8, 0, 0],
-      );
-      final at50 = _state(
-        shipTypeId: 7,
-        antiSub: 50,
-        equipment: <MasterSlotItem>[_sonar(icon: 17), aswAircraft],
-      );
-      final at65 = _state(
-        shipTypeId: 7,
-        antiSub: 65,
-        equipment: <MasterSlotItem>[aswAircraft],
-      );
+      for (final aircraftType in const <int>[8, 25, 26]) {
+        final aswAircraft = MasterSlotItem(
+          id: 10 + aircraftType,
+          name: 'ASW aircraft',
+          antiSub: 7,
+          type: <int>[0, 0, aircraftType, 0, 0],
+        );
+        final at50 = _state(
+          shipTypeId: 7,
+          antiSub: 50,
+          equipment: <MasterSlotItem>[_sonar(icon: 17), aswAircraft],
+        );
+        final at65 = _state(
+          shipTypeId: 7,
+          antiSub: 65,
+          equipment: <MasterSlotItem>[aswAircraft],
+        );
+
+        expect(
+          _hasOpeningAsw(at50),
+          isTrue,
+          reason: '50 ASW type $aircraftType',
+        );
+        expect(
+          _hasOpeningAsw(at65),
+          isTrue,
+          reason: '65 ASW type $aircraftType',
+        );
+      }
       final below65WithoutSonar = _state(
         shipTypeId: 7,
         antiSub: 64,
-        equipment: <MasterSlotItem>[aswAircraft],
+        equipment: const <MasterSlotItem>[
+          MasterSlotItem(
+            id: 18,
+            name: 'ASW torpedo bomber',
+            antiSub: 7,
+            type: <int>[0, 0, 8, 0, 0],
+          ),
+        ],
       );
 
-      expect(_hasOpeningAsw(at50), isTrue);
-      expect(_hasOpeningAsw(at65), isTrue);
       expect(_hasOpeningAsw(below65WithoutSonar), isFalse);
     });
 
@@ -229,24 +247,68 @@ void main() {
       }
     });
 
-    test('detects escort carrier rule for Taiyou Kai and Kaga Kai Ni Go', () {
-      for (final ship in const <(int, int)>[(380, 7), (646, 11)]) {
-        final state = _state(
-          masterId: ship.$1,
-          shipTypeId: ship.$2,
-          equipment: const <MasterSlotItem>[
-            MasterSlotItem(
-              id: 11,
-              name: 'ASW patrol aircraft',
-              antiSub: 1,
-              type: <int>[0, 0, 26, 0, 0],
-            ),
-          ],
-          slotCapacities: const <int>[1],
-        );
+    test('detects all escort carrier equipment alternatives', () {
+      for (final ship in const <(int, int)>[
+        (380, 7),
+        (529, 7),
+        (381, 7),
+        (536, 7),
+        (382, 7),
+        (889, 7),
+        (646, 11),
+      ]) {
+        for (final aircraftType in const <int>[7, 8, 25, 26]) {
+          final state = _state(
+            masterId: ship.$1,
+            shipTypeId: ship.$2,
+            equipment: <MasterSlotItem>[
+              MasterSlotItem(
+                id: 100 + aircraftType,
+                name: 'ASW escort carrier aircraft',
+                antiSub: 1,
+                type: <int>[0, 0, aircraftType, 0, 0],
+              ),
+            ],
+            slotCapacities: const <int>[1],
+          );
 
-        expect(_hasOpeningAsw(state), isTrue, reason: 'ship ${ship.$1}');
+          expect(
+            _hasOpeningAsw(state),
+            isTrue,
+            reason: 'ship ${ship.$1}, aircraft type $aircraftType',
+          );
+        }
       }
+    });
+
+    test('escort carrier rule requires ASW aircraft and original capacity', () {
+      final noAsw = _state(
+        masterId: 380,
+        shipTypeId: 7,
+        equipment: const <MasterSlotItem>[
+          MasterSlotItem(
+            id: 107,
+            name: 'Dive bomber without ASW',
+            type: <int>[0, 0, 7, 0, 0],
+          ),
+        ],
+      );
+      final noCapacity = _state(
+        masterId: 646,
+        shipTypeId: 11,
+        equipment: const <MasterSlotItem>[
+          MasterSlotItem(
+            id: 108,
+            name: 'ASW torpedo bomber',
+            antiSub: 1,
+            type: <int>[0, 0, 8, 0, 0],
+          ),
+        ],
+        slotCapacities: const <int>[0],
+      );
+
+      expect(_hasOpeningAsw(noAsw), isFalse);
+      expect(_hasOpeningAsw(noCapacity), isFalse);
     });
 
     test('applies Fusou-class Kai Ni special rule', () {
@@ -358,6 +420,65 @@ void main() {
 
       expect(_hasOpeningAsw(one), isFalse);
       expect(_hasOpeningAsw(two), isTrue);
+    });
+
+    test('does not leak special ship rules to similar invalid loadouts', () {
+      final fusouWithoutType0Sonar = _state(
+        masterId: 411,
+        shipTypeId: 10,
+        antiSub: 100,
+        equipment: <MasterSlotItem>[
+          _sonar(icon: 18),
+          const MasterSlotItem(
+            id: 30,
+            name: 'Depth charge',
+            type: <int>[0, 0, 15, 0, 0],
+          ),
+        ],
+      );
+      final kumanoWithoutSonar = _state(
+        masterId: 943,
+        shipTypeId: 17,
+        antiSub: 100,
+        equipment: const <MasterSlotItem>[
+          MasterSlotItem(
+            id: 31,
+            name: 'ASW dive bomber',
+            antiSub: 1,
+            type: <int>[0, 0, 7, 0, 0],
+          ),
+        ],
+      );
+      final yamatoBelowThreshold = _state(
+        masterId: 916,
+        shipTypeId: 10,
+        antiSub: 99,
+        equipment: <MasterSlotItem>[
+          _sonar(icon: 18),
+          const MasterSlotItem(
+            id: 32,
+            name: 'Autogyro',
+            type: <int>[0, 0, 25, 0, 0],
+          ),
+        ],
+      );
+      final iseWithS51J = _state(
+        masterId: 553,
+        shipTypeId: 10,
+        equipment: const <MasterSlotItem>[
+          MasterSlotItem(
+            id: 326,
+            name: 'S-51J',
+            antiSub: 12,
+            type: <int>[0, 0, 25, 0, 0],
+          ),
+        ],
+      );
+
+      expect(_hasOpeningAsw(fusouWithoutType0Sonar), isFalse);
+      expect(_hasOpeningAsw(kumanoWithoutSonar), isFalse);
+      expect(_hasOpeningAsw(yamatoBelowThreshold), isFalse);
+      expect(_hasOpeningAsw(iseWithS51J), isFalse);
     });
 
     test('detects common anti-air cut-in equipment pattern', () {
