@@ -21,6 +21,10 @@ String _buildNativeGameCaptureScript() {
   const targetPaths = newTargetPaths;
   const sensitiveKeys = new Set(['api_token', 'api_starttime']);
   const questListPath = '/kcsapi/api_get_member/questlist';
+  const questMutationPaths = new Set([
+    '/kcsapi/api_req_quest/clearitemget',
+    '/kcsapi/api_req_quest/stop',
+  ]);
   const questSnapshotCooldownMs = 15000;
   const xhrUrl = Symbol('yahagiCaptureUrl');
   const xhrMethod = Symbol('yahagiCaptureMethod');
@@ -33,6 +37,7 @@ String _buildNativeGameCaptureScript() {
     : null;
   let questSnapshotInFlight = false;
   let lastQuestSnapshotStartedAt = 0;
+  let questMutationGeneration = 0;
 
   const targetPath = (value) => {
     try {
@@ -104,6 +109,15 @@ String _buildNativeGameCaptureScript() {
         typeof YahagiNativeCapture !== 'object' ||
         typeof YahagiNativeCapture.postMessage !== 'function'
       ) return;
+
+      const responseEnvelope = decodeKcsapiEnvelope(responseBody);
+      if (
+        questMutationPaths.has(path) &&
+        responseEnvelope !== null &&
+        Number(responseEnvelope.api_result) === 1
+      ) {
+        questMutationGeneration += 1;
+      }
 
       const event = {
         version: 1,
@@ -211,6 +225,7 @@ String _buildNativeGameCaptureScript() {
     const baseParams = requestBodyParams(requestBody);
     if (baseParams === null || !baseParams.has('api_token')) return;
 
+    const snapshotGeneration = questMutationGeneration;
     questSnapshotInFlight = true;
     lastQuestSnapshotStartedAt = now;
     try {
@@ -246,6 +261,7 @@ String _buildNativeGameCaptureScript() {
 
       const activeCount = Math.max(0, Number(firstData.api_exec_count) || 0);
       if (activeById.size !== activeCount) return;
+      if (snapshotGeneration !== questMutationGeneration) return;
       const snapshotParams = new URLSearchParams(baseParams.toString());
       snapshotParams.set('api_tab_id', '0');
       snapshotParams.set('api_page_no', '1');
