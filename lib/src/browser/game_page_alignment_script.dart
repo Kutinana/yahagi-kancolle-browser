@@ -1,6 +1,11 @@
 const String gamePageAlignmentScript = r'''
 (() => {
   const styleId = '__yahagi_mobile_fixed_canvas__';
+  const ooiBrowserStyleId = '__yahagi_mobile_ooi_browser__';
+  const ooiBrowserFrameWidth = 1280;
+  const ooiBrowserFrameHeight = 800;
+  const ooiBrowserGameWidth = 1200;
+  const ooiBrowserGameHeight = 720;
   const fixedCanvasCss = `
     html, body {
       margin: 0 !important;
@@ -51,6 +56,69 @@ const String gamePageAlignmentScript = r'''
     }
   `;
 
+  const ooiBrowserCss = `
+    html,
+    body,
+    #ooi-page,
+    #ooi-content,
+    #ooi-game {
+      width: 100vw !important;
+      height: 100vh !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+
+    #ooi-content,
+    #ooi-game {
+      display: block !important;
+      position: fixed !important;
+      inset: 0 !important;
+    }
+
+    #ooi-header,
+    #ooi-footer,
+    #ooi-game > :not(iframe#externalswf) {
+      display: none !important;
+    }
+
+    #ooi-game > iframe#externalswf {
+      display: block !important;
+      position: fixed !important;
+      left: var(--yahagi-ooi-left, 0px) !important;
+      top: var(--yahagi-ooi-top, 0px) !important;
+      width: var(--yahagi-ooi-frame-width, 1280px) !important;
+      height: var(--yahagi-ooi-frame-height, 800px) !important;
+      transform: scale(var(--yahagi-ooi-scale, 1)) !important;
+      transform-origin: top left !important;
+      margin: 0 !important;
+    }
+  `;
+
+  const cleanupOoiBrowserPresentation = () => {
+    document.getElementById(ooiBrowserStyleId)?.remove();
+    const game = document.getElementById('ooi-game');
+    game?.style.removeProperty('--yahagi-ooi-frame-width');
+    game?.style.removeProperty('--yahagi-ooi-frame-height');
+    game?.style.removeProperty('--yahagi-ooi-scale');
+    game?.style.removeProperty('--yahagi-ooi-left');
+    game?.style.removeProperty('--yahagi-ooi-top');
+
+    if (window.__yahagiMobileOoiResize) {
+      window.removeEventListener('resize', window.__yahagiMobileOoiResize);
+    }
+    if (
+      window.__yahagiMobileAlignGame ===
+      window.__yahagiMobileOoiAlignGame
+    ) {
+      delete window.__yahagiMobileAlignGame;
+    }
+    delete window.__yahagiMobileOoiResize;
+    delete window.__yahagiMobileOoiAlignGame;
+  };
+
   const cleanupGamePresentation = () => {
     document.getElementById(styleId)?.remove();
 
@@ -74,6 +142,8 @@ const String gamePageAlignmentScript = r'''
   const isAccountPage =
     location.hostname === 'accounts.dmm.com' ||
     location.hostname === 'accounts.dmm.co.jp';
+  const isOoiBrowserPage =
+    location.hostname === 'ooi.moe' && location.pathname === '/kancolle';
 
   const hasAuthenticationControls = () =>
     Boolean(
@@ -147,7 +217,81 @@ const String gamePageAlignmentScript = r'''
     }
   };
 
+  const applyOoiBrowserPresentation = () => {
+    let style = document.getElementById(ooiBrowserStyleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = ooiBrowserStyleId;
+      document.head.appendChild(style);
+    }
+    if (style.textContent !== ooiBrowserCss) {
+      style.textContent = ooiBrowserCss;
+    }
+
+    window.__yahagiMobileOoiAlignGame = () => {
+      const game = document.getElementById('ooi-game');
+      const frame = game?.querySelector('iframe#externalswf');
+      if (!game || !frame) return;
+
+      const viewportWidth = Math.max(
+        1,
+        window.visualViewport?.width || document.documentElement.clientWidth,
+      );
+      const viewportHeight = Math.max(
+        1,
+        window.visualViewport?.height || document.documentElement.clientHeight,
+      );
+      const scale = Math.min(
+        1,
+        viewportWidth / ooiBrowserGameWidth,
+        viewportHeight / ooiBrowserGameHeight,
+      );
+      const left = Math.max(
+        0,
+        (viewportWidth - ooiBrowserGameWidth * scale) / 2,
+      );
+      const top = Math.max(
+        0,
+        (viewportHeight - ooiBrowserGameHeight * scale) / 2,
+      );
+      game.style.setProperty(
+        '--yahagi-ooi-frame-width',
+        `${ooiBrowserFrameWidth}px`,
+      );
+      game.style.setProperty(
+        '--yahagi-ooi-frame-height',
+        `${ooiBrowserFrameHeight}px`,
+      );
+      game.style.setProperty('--yahagi-ooi-scale', String(scale));
+      game.style.setProperty('--yahagi-ooi-left', `${left}px`);
+      game.style.setProperty('--yahagi-ooi-top', `${top}px`);
+    };
+    window.__yahagiMobileAlignGame = window.__yahagiMobileOoiAlignGame;
+
+    if (window.__yahagiMobileOoiResize) {
+      window.removeEventListener('resize', window.__yahagiMobileOoiResize);
+    }
+    window.__yahagiMobileOoiResize = () => {
+      window.__yahagiMobileOoiAlignGame?.();
+    };
+    window.addEventListener('resize', window.__yahagiMobileOoiResize, {
+      passive: true,
+    });
+    window.__yahagiMobileOoiAlignGame();
+  };
+
   window.__yahagiMobileSyncPresentation = () => {
+    const hasOoiBrowserSurface = Boolean(
+      document.querySelector('#ooi-page #ooi-game > iframe#externalswf'),
+    );
+    if (isOoiBrowserPage && hasOoiBrowserSurface) {
+      cleanupGamePresentation();
+      applyOoiBrowserPresentation();
+      notifyPresentationState(false);
+      return false;
+    }
+
+    cleanupOoiBrowserPresentation();
     const hasGameSurface = Boolean(
       document.querySelector('#game_frame, #game-container'),
     ) || hasStandaloneGameCanvas();

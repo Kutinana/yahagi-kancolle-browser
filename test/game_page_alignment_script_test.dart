@@ -55,6 +55,54 @@ void main() {
     expect(gamePageAlignmentScript, contains('canvas.height === 720'));
   });
 
+  test('OOI mode 1 keeps its outer frame while fitting the visible game', () {
+    expect(
+      gamePageAlignmentScript,
+      contains("location.hostname === 'ooi.moe'"),
+    );
+    expect(
+      gamePageAlignmentScript,
+      contains("location.pathname === '/kancolle'"),
+    );
+    expect(gamePageAlignmentScript, contains("iframe#externalswf"));
+    expect(gamePageAlignmentScript, contains('ooiBrowserFrameWidth = 1280'));
+    expect(gamePageAlignmentScript, contains('ooiBrowserFrameHeight = 800'));
+    expect(gamePageAlignmentScript, contains('ooiBrowserGameWidth = 1200'));
+    expect(gamePageAlignmentScript, contains('ooiBrowserGameHeight = 720'));
+    expect(
+      gamePageAlignmentScript,
+      contains('viewportWidth / ooiBrowserGameWidth'),
+    );
+    expect(
+      gamePageAlignmentScript,
+      contains('viewportHeight / ooiBrowserGameHeight'),
+    );
+  });
+
+  test('OOI mode 1 isolates the game after login from native fixed canvas', () {
+    expect(gamePageAlignmentScript, contains('applyOoiBrowserPresentation'));
+    expect(gamePageAlignmentScript, contains('cleanupOoiBrowserPresentation'));
+    expect(gamePageAlignmentScript, contains('#ooi-header'));
+    expect(gamePageAlignmentScript, contains('#ooi-footer'));
+    expect(
+      gamePageAlignmentScript,
+      contains('#ooi-game > :not(iframe#externalswf)'),
+    );
+    expect(
+      gamePageAlignmentScript,
+      contains("style.setProperty('--yahagi-ooi-scale'"),
+    );
+    expect(
+      gamePageAlignmentScript,
+      contains("style.setProperty('--yahagi-ooi-left'"),
+    );
+    expect(
+      gamePageAlignmentScript,
+      contains("window.addEventListener('resize'"),
+    );
+    expect(gamePageAlignmentScript, contains('notifyPresentationState(false)'));
+  });
+
   test('alignment yields to an open DMM purchase dialog', () {
     expect(gamePageAlignmentScript, contains("dialog[open]"));
     expect(gamePageAlignmentScript, contains('hasBlockingPageDialog'));
