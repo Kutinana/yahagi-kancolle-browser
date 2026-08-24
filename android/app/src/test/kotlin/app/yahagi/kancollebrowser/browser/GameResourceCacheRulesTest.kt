@@ -123,6 +123,21 @@ class GameResourceCacheRulesTest {
     }
 
     @Test
+    fun `OOI modes never enter Yahagi local resource cache`() {
+        assertFalse(GameResourceCacheRules.shouldCache("https://ooi.moe/", "GET"))
+        assertFalse(GameResourceCacheRules.shouldCache("https://ooi.moe/browser", "GET"))
+        assertFalse(GameResourceCacheRules.shouldCache("https://ooi.moe/poi", "GET"))
+        assertFalse(GameResourceCacheRules.shouldCache("https://ooi.moe/connector", "POST"))
+        assertFalse(GameResourceCacheRules.shouldCache("https://ooi.moe/kcsapi/api_port/port", "POST"))
+        assertTrue(
+            GameResourceCacheRules.shouldCache(
+                "https://w17k.kancolle-server.com/kcs2/resources/ship/full/a.png",
+                "GET",
+            ),
+        )
+    }
+
+    @Test
     fun `cache key ignores official server host but preserves query`() {
         val first = GameResourceCacheKey.from(
             "https://w01k.kancolle-server.com/kcs2/resources/a.png?version=1&x=2",

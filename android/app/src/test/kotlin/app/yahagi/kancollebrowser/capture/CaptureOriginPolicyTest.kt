@@ -38,4 +38,12 @@ class CaptureOriginPolicyTest {
         )
         assertFalse(policy.allowedOriginRules.contains("*"))
     }
+
+    @Test
+    fun ooiIsALoginOriginNotATrustedCaptureOrigin() {
+        assertFalse(policy.isAllowed("https://ooi.moe"))
+        assertFalse(policy.isAllowed("https://ooi.moe/browser"))
+        assertFalse(policy.allowedOriginRules.contains("https://ooi.moe"))
+        assertTrue(policy.isAllowed("https://w01y.kancolle-server.com"))
+    }
 }

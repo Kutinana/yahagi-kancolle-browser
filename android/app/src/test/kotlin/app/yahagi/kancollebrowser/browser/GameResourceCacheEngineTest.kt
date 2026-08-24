@@ -98,6 +98,22 @@ class GameResourceCacheEngineTest {
     }
 
     @Test
+    fun `OOI request bypasses disk and official asset still warms cache`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(1, 2, 3)))
+        val engine = engine(fetcher)
+
+        assertNull(engine.fetch("https://ooi.moe/browser"))
+        assertEquals(0, fetcher.calls.get())
+        assertTrue(engine.entries().isEmpty())
+
+        val official = official("/kcs2/resources/a.png?version=21")
+        assertEquals(GameResourceResponseSource.NETWORK, engine.fetch(official)?.source)
+        assertEquals(GameResourceResponseSource.CACHE, engine.fetch(official)?.source)
+        assertEquals(1, fetcher.calls.get())
+        assertEquals(1, engine.entries().size)
+    }
+
+    @Test
     fun `unversioned resource revalidates after ttl and keeps 304 cache`() {
         var now = 1L
         val fetcher = QueueFetcher(
