@@ -683,5 +683,16 @@
   "gameFrameNotFound": "尚未找到游戏框架，请进入游戏后重试。",
   "gameHtmlWrapNotFound": "尚未找到游戏本体，请等待页面载入后重试。",
   "gameFrameReloadBlocked": "游戏框架未能重新载入，请稍后重试。",
-  "gameFrameReloadUnsupported": "当前设备的 Android WebView 太旧，不支持对子框架注入。"
+  "gameFrameReloadUnsupported": "当前设备的 Android WebView 太旧，不支持对子框架注入。",
+  "gameConnectorTitle": "游戏连接",
+  "gameConnectorYahagi": "Yahagi 连接",
+  "gameConnectorYahagiDesc": "使用当前 DMM 官方登录入口。",
+  "gameConnectorOoi": "OOI 连接（实验性）",
+  "gameConnectorOoiDesc": "原样打开 ooi.moe 登录页，由你选择模式 1、3 或 4。",
+  "gameConnectorConfirmTitle": "切换游戏连接？",
+  "gameConnectorOoiRisk": "账号凭据将提交给第三方站点 ooi.moe；Yahagi 不读取、不保存、不自动填写账号或密码。",
+  "gameConnectorActiveWarning": "切换会中断当前游戏页面并返回目标登录入口。",
+  "gameConnectorApplied": "游戏连接已切换。",
+  "gameConnectorSaveFailed": "连接选择保存失败，当前连接未改变。",
+  "gameConnectorNavigationFailed": "连接已保存，但登录页面打开失败，请重试。"
 }

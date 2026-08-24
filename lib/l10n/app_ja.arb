@@ -683,5 +683,16 @@
   "gameFrameNotFound": "ゲームフレームが見つかりません。ゲームに入ってから再試行してください。",
   "gameHtmlWrapNotFound": "ゲーム本体が見つかりません。読み込みを待ってから再試行してください。",
   "gameFrameReloadBlocked": "ゲームフレームを再読み込みできませんでした。しばらくしてから再試行してください。",
-  "gameFrameReloadUnsupported": "現在の端末の Android WebView は古いため、子フレームへのスクリプト注入に対応していません。"
+  "gameFrameReloadUnsupported": "現在の端末の Android WebView は古いため、子フレームへのスクリプト注入に対応していません。",
+  "gameConnectorTitle": "ゲーム接続",
+  "gameConnectorYahagi": "Yahagi 接続",
+  "gameConnectorYahagiDesc": "現在の DMM 公式ログイン入口を使用します。",
+  "gameConnectorOoi": "OOI 接続（実験的）",
+  "gameConnectorOoiDesc": "ooi.moe のログイン画面をそのまま開き、モード 1・3・4 を選択できます。",
+  "gameConnectorConfirmTitle": "ゲーム接続を切り替えますか？",
+  "gameConnectorOoiRisk": "アカウント情報は第三者サイト ooi.moe に送信されます。Yahagi はアカウント名やパスワードを読み取り、保存、自動入力しません。",
+  "gameConnectorActiveWarning": "切り替えると現在のゲーム画面が中断され、対象のログイン入口へ戻ります。",
+  "gameConnectorApplied": "ゲーム接続を切り替えました。",
+  "gameConnectorSaveFailed": "接続設定を保存できなかったため、現在の接続を維持します。",
+  "gameConnectorNavigationFailed": "接続設定は保存されましたが、ログイン画面を開けませんでした。もう一度お試しください。"
 }

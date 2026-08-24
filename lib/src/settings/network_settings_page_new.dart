@@ -6,6 +6,7 @@ import '../browser/game_browser_controller.dart';
 import 'gadget_bypass_section.dart';
 import 'network_settings_controller.dart';
 import 'game_connector_controller.dart';
+import 'game_connector_section.dart';
 import 'network_settings_section.dart';
 import 'settings_ui_helpers.dart';
 
@@ -36,6 +37,16 @@ class NetworkSettingsPageNew extends StatelessWidget with SettingsUIHelpers {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (gameConnectorController case final connector?) ...<Widget>[
+              buildSectionTitle(l10n.gameConnectorTitle),
+              buildCard(
+                child: GameConnectorSection(
+                  controller: connector,
+                  browserController: browserController,
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
             buildSectionTitle(l10n.networkSettings),
             buildCard(
               child: NetworkSettingsSection(

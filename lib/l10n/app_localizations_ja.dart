@@ -1993,4 +1993,41 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get gameFrameReloadUnsupported =>
       '現在の端末の Android WebView は古いため、子フレームへのスクリプト注入に対応していません。';
+
+  @override
+  String get gameConnectorTitle => 'ゲーム接続';
+
+  @override
+  String get gameConnectorYahagi => 'Yahagi 接続';
+
+  @override
+  String get gameConnectorYahagiDesc => '現在の DMM 公式ログイン入口を使用します。';
+
+  @override
+  String get gameConnectorOoi => 'OOI 接続（実験的）';
+
+  @override
+  String get gameConnectorOoiDesc =>
+      'ooi.moe のログイン画面をそのまま開き、モード 1・3・4 を選択できます。';
+
+  @override
+  String get gameConnectorConfirmTitle => 'ゲーム接続を切り替えますか？';
+
+  @override
+  String get gameConnectorOoiRisk =>
+      'アカウント情報は第三者サイト ooi.moe に送信されます。Yahagi はアカウント名やパスワードを読み取り、保存、自動入力しません。';
+
+  @override
+  String get gameConnectorActiveWarning =>
+      '切り替えると現在のゲーム画面が中断され、対象のログイン入口へ戻ります。';
+
+  @override
+  String get gameConnectorApplied => 'ゲーム接続を切り替えました。';
+
+  @override
+  String get gameConnectorSaveFailed => '接続設定を保存できなかったため、現在の接続を維持します。';
+
+  @override
+  String get gameConnectorNavigationFailed =>
+      '接続設定は保存されましたが、ログイン画面を開けませんでした。もう一度お試しください。';
 }
