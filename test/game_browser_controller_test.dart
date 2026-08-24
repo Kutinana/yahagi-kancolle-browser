@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
 import 'dart:async';
 import 'package:yahagi_kancolle_browser/src/browser/game_launch_config.dart';
+import 'package:yahagi_kancolle_browser/src/settings/game_connector.dart';
 
 void main() {
   test(
@@ -31,6 +32,49 @@ void main() {
       expect(port.loadedUris.single, GameLaunchConfig.dmmGameEntry);
     },
   );
+
+  test('switchHome navigates immediately and home uses the target', () async {
+    final port = FakeGameBrowserPort();
+    final controller = GameBrowserController(
+      homeUri: GameConnector.yahagi.entryUri,
+      port: port,
+    );
+
+    await controller.switchHome(GameConnector.ooi.entryUri);
+    await controller.goHome();
+
+    expect(controller.homeUri, GameConnector.ooi.entryUri);
+    expect(port.loadedUris, <Uri>[
+      GameConnector.ooi.entryUri,
+      GameConnector.ooi.entryUri,
+    ]);
+  });
+
+  test('logout returns to the selected connector home', () async {
+    final port = FakeGameBrowserPort();
+    final controller = GameBrowserController(
+      homeUri: GameConnector.ooi.entryUri,
+      port: port,
+    );
+
+    await controller.logoutAndClearSession();
+
+    expect(port.clearSessionCalls, 1);
+    expect(port.loadedUris, <Uri>[GameConnector.ooi.entryUri]);
+  });
+
+  test('detects only official game pages as active games', () {
+    final controller = GameBrowserController();
+    expect(controller.isOfficialGamePage, isFalse);
+
+    controller.onPageFinished(
+      'https://w17k.kancolle-server.com/kcs2/index.html?token=secret',
+    );
+    expect(controller.isOfficialGamePage, isTrue);
+
+    controller.onPageFinished('https://ooi.moe/');
+    expect(controller.isOfficialGamePage, isFalse);
+  });
 
   test('back refresh and home commands are delegated to the port', () async {
     final port = FakeGameBrowserPort(canGoBackResult: true);

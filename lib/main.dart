@@ -101,6 +101,8 @@ import 'src/settings/startup_update_notice.dart';
 import 'src/settings/screen_awake_controller.dart';
 import 'src/settings/battle_prediction_settings.dart';
 import 'src/settings/game_frame_rate_settings.dart';
+import 'src/settings/game_connector_controller.dart';
+import 'src/settings/game_connector.dart';
 import 'src/settings/game_rendering_mode_controller.dart';
 import 'src/settings/game_rendering_mode.dart';
 import 'src/settings/notification_settings_controller.dart';
@@ -151,6 +153,9 @@ Future<void> main() async {
   final gameRenderingModeController = await GameRenderingModeController.load(
     SharedPreferencesGameRenderingModeStore(),
   );
+  final gameConnectorController = await GameConnectorController.load(
+    SharedPreferencesGameConnectorStore(),
+  );
   applyOrientationPolicy(
     currentWindowSize(),
     displayModeController.displayMode,
@@ -161,7 +166,9 @@ Future<void> main() async {
   final controller = PrototypeStatusController(
     captureEnabled: () => captureModeController.captureEnabled,
   );
-  final browserController = GameBrowserController();
+  final browserController = GameBrowserController(
+    homeUri: gameConnectorController.connector.entryUri,
+  );
   final audioController = await GameAudioController.load(
     SharedPreferencesGameAudioStore(),
   );
@@ -404,6 +411,7 @@ Future<void> main() async {
       battlePredictionSettingsController: battlePredictionSettingsController,
       gameFrameRateSettingsController: gameFrameRateSettingsController,
       gameRenderingModeController: gameRenderingModeController,
+      gameConnectorController: gameConnectorController,
       displayModeController: displayModeController,
       controller: controller,
       browserController: browserController,
@@ -483,6 +491,7 @@ class YahagiApp extends StatelessWidget {
     this.battlePredictionSettingsController,
     this.gameFrameRateSettingsController,
     this.gameRenderingModeController,
+    this.gameConnectorController,
     required this.displayModeController,
     required this.controller,
     required this.browserController,
@@ -519,6 +528,7 @@ class YahagiApp extends StatelessWidget {
   final BattlePredictionSettingsController? battlePredictionSettingsController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final GameRenderingModeController? gameRenderingModeController;
+  final GameConnectorController? gameConnectorController;
   final DisplayModeController displayModeController;
   final PrototypeStatusController controller;
   final GameBrowserController browserController;
@@ -607,6 +617,7 @@ class YahagiApp extends StatelessWidget {
                   gameFrameRateSettingsController:
                       gameFrameRateSettingsController,
                   gameRenderingModeController: gameRenderingModeController,
+                  gameConnectorController: gameConnectorController,
                   displayModeController: displayModeController,
                   controller: controller,
                   browserController: browserController,
@@ -744,6 +755,7 @@ class YahagiShell extends StatefulWidget {
     this.battlePredictionSettingsController,
     this.gameFrameRateSettingsController,
     this.gameRenderingModeController,
+    this.gameConnectorController,
     required this.displayModeController,
     required this.controller,
     required this.browserController,
@@ -777,6 +789,7 @@ class YahagiShell extends StatefulWidget {
   final BattlePredictionSettingsController? battlePredictionSettingsController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final GameRenderingModeController? gameRenderingModeController;
+  final GameConnectorController? gameConnectorController;
   final DisplayModeController displayModeController;
   final PrototypeStatusController controller;
   final GameBrowserController browserController;
@@ -1573,6 +1586,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                 widget.gameFrameRateSettingsController,
                             gameRenderingModeController:
                                 widget.gameRenderingModeController,
+                            gameConnectorController:
+                                widget.gameConnectorController,
                             isBattleActive:
                                 widget.battleController.session != null &&
                                 !widget.battleController.session!.completed,

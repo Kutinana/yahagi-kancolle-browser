@@ -1986,6 +1986,40 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get logbookResourceNode => '资源节点';
+
+  @override
+  String get gameConnectorTitle => '游戏连接';
+
+  @override
+  String get gameConnectorYahagi => 'Yahagi 连接';
+
+  @override
+  String get gameConnectorYahagiDesc => '使用当前 DMM 官方登录入口。';
+
+  @override
+  String get gameConnectorOoi => 'OOI 连接（实验性）';
+
+  @override
+  String get gameConnectorOoiDesc => '原样打开 ooi.moe 登录页，由你选择模式 1、3 或 4。';
+
+  @override
+  String get gameConnectorConfirmTitle => '切换游戏连接？';
+
+  @override
+  String get gameConnectorOoiRisk =>
+      '账号凭据将提交给第三方站点 ooi.moe；Yahagi 不读取、不保存、不自动填写账号或密码。';
+
+  @override
+  String get gameConnectorActiveWarning => '切换会中断当前游戏页面并返回目标登录入口。';
+
+  @override
+  String get gameConnectorApplied => '游戏连接已切换。';
+
+  @override
+  String get gameConnectorSaveFailed => '连接选择保存失败，当前连接未改变。';
+
+  @override
+  String get gameConnectorNavigationFailed => '连接已保存，但登录页面打开失败，请重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3971,4 +4005,38 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get logbookResourceNode => '資源節點';
+
+  @override
+  String get gameConnectorTitle => '遊戲連線';
+
+  @override
+  String get gameConnectorYahagi => 'Yahagi 連線';
+
+  @override
+  String get gameConnectorYahagiDesc => '使用目前 DMM 官方登入入口。';
+
+  @override
+  String get gameConnectorOoi => 'OOI 連線（實驗性）';
+
+  @override
+  String get gameConnectorOoiDesc => '原樣開啟 ooi.moe 登入頁，由你選擇模式 1、3 或 4。';
+
+  @override
+  String get gameConnectorConfirmTitle => '切換遊戲連線？';
+
+  @override
+  String get gameConnectorOoiRisk =>
+      '帳號憑據將提交給第三方網站 ooi.moe；Yahagi 不讀取、不儲存、不自動填寫帳號或密碼。';
+
+  @override
+  String get gameConnectorActiveWarning => '切換會中斷目前遊戲頁面並返回目標登入入口。';
+
+  @override
+  String get gameConnectorApplied => '遊戲連線已切換。';
+
+  @override
+  String get gameConnectorSaveFailed => '連線選擇儲存失敗，目前連線未變更。';
+
+  @override
+  String get gameConnectorNavigationFailed => '連線已儲存，但登入頁面開啟失敗，請重試。';
 }

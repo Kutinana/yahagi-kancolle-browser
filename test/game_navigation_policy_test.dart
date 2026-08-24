@@ -77,4 +77,17 @@ void main() {
       isFalse,
     );
   });
+
+  test('allows only the exact OOI HTTPS origin', () {
+    final policy = GameNavigationPolicy();
+
+    expect(policy.canNavigate(Uri.parse('https://ooi.moe/')), isTrue);
+    expect(policy.canNavigate(Uri.parse('http://ooi.moe/')), isFalse);
+    expect(policy.canNavigate(Uri.parse('https://login.ooi.moe/')), isFalse);
+    expect(
+      policy.canNavigate(Uri.parse('https://ooi.moe.evil.test/')),
+      isFalse,
+    );
+    expect(policy.canNavigate(Uri.parse('https://ooi.moe:444/')), isFalse);
+  });
 }

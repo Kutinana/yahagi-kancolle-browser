@@ -686,5 +686,16 @@
   "gameFrameReloadUnsupported": "目前裝置的 Android WebView 過舊，不支援向子框架注入指令碼。",
   "logbookResourceDrop": "資源掉落",
   "logbookItemDrop": "道具掉落項",
-  "logbookResourceNode": "資源節點"
+  "logbookResourceNode": "資源節點",
+  "gameConnectorTitle": "遊戲連線",
+  "gameConnectorYahagi": "Yahagi 連線",
+  "gameConnectorYahagiDesc": "使用目前 DMM 官方登入入口。",
+  "gameConnectorOoi": "OOI 連線（實驗性）",
+  "gameConnectorOoiDesc": "原樣開啟 ooi.moe 登入頁，由你選擇模式 1、3 或 4。",
+  "gameConnectorConfirmTitle": "切換遊戲連線？",
+  "gameConnectorOoiRisk": "帳號憑據將提交給第三方網站 ooi.moe；Yahagi 不讀取、不儲存、不自動填寫帳號或密碼。",
+  "gameConnectorActiveWarning": "切換會中斷目前遊戲頁面並返回目標登入入口。",
+  "gameConnectorApplied": "遊戲連線已切換。",
+  "gameConnectorSaveFailed": "連線選擇儲存失敗，目前連線未變更。",
+  "gameConnectorNavigationFailed": "連線已儲存，但登入頁面開啟失敗，請重試。"
 }

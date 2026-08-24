@@ -3839,6 +3839,72 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'资源节点'**
   String get logbookResourceNode;
+
+  /// No description provided for @gameConnectorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'游戏连接'**
+  String get gameConnectorTitle;
+
+  /// No description provided for @gameConnectorYahagi.
+  ///
+  /// In zh, this message translates to:
+  /// **'Yahagi 连接'**
+  String get gameConnectorYahagi;
+
+  /// No description provided for @gameConnectorYahagiDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用当前 DMM 官方登录入口。'**
+  String get gameConnectorYahagiDesc;
+
+  /// No description provided for @gameConnectorOoi.
+  ///
+  /// In zh, this message translates to:
+  /// **'OOI 连接（实验性）'**
+  String get gameConnectorOoi;
+
+  /// No description provided for @gameConnectorOoiDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'原样打开 ooi.moe 登录页，由你选择模式 1、3 或 4。'**
+  String get gameConnectorOoiDesc;
+
+  /// No description provided for @gameConnectorConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换游戏连接？'**
+  String get gameConnectorConfirmTitle;
+
+  /// No description provided for @gameConnectorOoiRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'账号凭据将提交给第三方站点 ooi.moe；Yahagi 不读取、不保存、不自动填写账号或密码。'**
+  String get gameConnectorOoiRisk;
+
+  /// No description provided for @gameConnectorActiveWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换会中断当前游戏页面并返回目标登录入口。'**
+  String get gameConnectorActiveWarning;
+
+  /// No description provided for @gameConnectorApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'游戏连接已切换。'**
+  String get gameConnectorApplied;
+
+  /// No description provided for @gameConnectorSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接选择保存失败，当前连接未改变。'**
+  String get gameConnectorSaveFailed;
+
+  /// No description provided for @gameConnectorNavigationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接已保存，但登录页面打开失败，请重试。'**
+  String get gameConnectorNavigationFailed;
 }
 
 class _AppLocalizationsDelegate

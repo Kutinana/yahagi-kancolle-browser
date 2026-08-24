@@ -108,10 +108,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('native-game-surface-error')), findsOneWidget);
-    expect(
-      find.text('当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式'),
-      findsOneWidget,
-    );
+    expect(find.text('当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式'), findsOneWidget);
   });
 
   testWidgets('manual fit resends native bounds before fitting the page', (
@@ -346,6 +343,46 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(frameRatePort.appliedTargets.last, GameFrameRateTarget.fps60);
+  });
+
+  testWidgets('native surface leaves the OOI mode choices untouched', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://ooi.moe/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://ooi.moe/'),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(fixture.port.executedScripts, isEmpty);
+
+    fixture.port.addEvent(
+      _event(
+        'pageStarted',
+        generationId: 7,
+        url: 'https://w17k.kancolle-server.com/kcs2/index.html',
+      ),
+    );
+    fixture.port.addEvent(
+      _event(
+        'pageFinished',
+        generationId: 7,
+        url: 'https://w17k.kancolle-server.com/kcs2/index.html',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(fixture.port.executedScripts, isEmpty);
+    fixture.toolbarController.collapse();
   });
 
   testWidgets('native visibility follows readiness instead of slot desire', (
@@ -2323,6 +2360,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
 
   late final StreamController<NativeGameWebViewEvent> _events;
   final List<String> calls = <String>[];
+  final List<String> executedScripts = <String>[];
   final Completer<void> destroyed = Completer<void>();
   VoidCallback? beforeCancel;
   Completer<void>? cancelCompleter;
@@ -2429,7 +2467,9 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   }
 
   @override
-  Future<void> runJavaScript(String javascript) async {}
+  Future<void> runJavaScript(String javascript) async {
+    executedScripts.add(javascript);
+  }
 
   @override
   Future<void> showLocalHome() async {}

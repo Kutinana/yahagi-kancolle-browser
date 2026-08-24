@@ -14,13 +14,12 @@ import 'browser/game_frame_rate_port.dart';
 import 'browser/game_frame_reload_port.dart';
 import 'browser/game_frame_rate_policy.dart';
 import 'browser/game_frame_rate_runtime_controller.dart';
+import 'browser/game_initial_address.dart';
 import 'browser/game_local_home.dart';
 import 'browser/game_page_alignment_script.dart';
 import 'browser/game_surface_detection_result.dart';
 import 'browser/game_toolbar_controller.dart';
 import 'browser/game_webview_compatibility.dart';
-import 'browser/safe_page_address.dart';
-import 'browser/game_launch_config.dart';
 import 'browser/game_navigation_policy.dart';
 import 'browser/network_proxy_channel.dart';
 import 'capture/capture_mode.dart';
@@ -1000,13 +999,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
 
       setState(() => _startupState = GameStartupState.networkReady);
 
-      final address = Uri.tryParse(browserController.displayAddress);
-      final initialAddress =
-          address != null &&
-              SafePageAddress.canNavigate(address) &&
-              browserController.mode != GameBrowserMode.localPrototype
-          ? address
-          : GameLaunchConfig.dmmGameEntry;
+      final initialAddress = resolveInitialGameAddress(browserController);
 
       await _startupCoordinator.waitForStage(
         orchestrator.runCaptureStartup(
