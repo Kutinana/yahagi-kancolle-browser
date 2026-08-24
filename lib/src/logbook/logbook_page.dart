@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../battle/battle_controller.dart';
 import '../fleet/equipment_type_icon.dart';
 import '../fleet/header_resource_catalog.dart';
@@ -319,9 +320,9 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
 
   Future<List<Map<String, dynamic>>> _queryRecords({int? beforeId}) =>
       switch (widget.category) {
-        _LogbookCategory.sortie => widget.database.getBattleRecords(
+        _LogbookCategory.sortie => widget.database.getSortieRecords(
           limit: _batchSize,
-          beforeId: beforeId,
+          offset: beforeId == null ? 0 : _records.length,
         ),
         _LogbookCategory.expedition => widget.database.getExpeditionRecords(
           limit: _batchSize,
@@ -348,6 +349,15 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
     return _records.where(_matchesFilter).toList(growable: false);
   }
 
+  String _sortieStatus(Map<String, dynamic> record) =>
+      record['record_type'] == 'resource'
+      ? _l10n.logbookResourceNode
+      : sortieStatusLabel(record['node_type']);
+
+  AppLocalizations get _l10n =>
+      AppLocalizations.of(context) ??
+      lookupAppLocalizations(const Locale('zh'));
+
   bool _matchesFilter(Map<String, dynamic> record) {
     final date = _filters['date'] ?? '全部日期';
     final timestamp = record['timestamp'] as int? ?? 0;
@@ -367,11 +377,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
     return switch (widget.category) {
       _LogbookCategory.sortie =>
         selected('map', '全部海域', _fullMapLabel(record)) &&
-            selected(
-              'status',
-              '全部状态',
-              sortieStatusLabel(record['node_type']),
-            ) &&
+            selected('status', '全部状态', _sortieStatus(record)) &&
             selected('rank', '全部评价', '${record['rank']}'.toUpperCase()),
       _LogbookCategory.expedition =>
         selected('mission', '全部远征', _expeditionName(record)) &&
@@ -457,10 +463,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
         LogbookFilterField(
           keyName: 'status',
           label: '状态',
-          options: _distinct(
-            '全部状态',
-            _records.map((row) => sortieStatusLabel(row['node_type'])),
-          ),
+          options: _distinct('全部状态', _records.map(_sortieStatus)),
         ),
         const LogbookFilterField(
           keyName: 'rank',
@@ -780,18 +783,20 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
 
   _TableSpec get _tableSpec => switch (widget.category) {
     _LogbookCategory.sortie => _TableSpec(
-      widths: const [112, 90, 85, 68, 180, 120, 135, 135, 135, 135],
-      headers: const [
-        _HeaderCell('时间'),
-        _HeaderCell('节点'),
-        _HeaderCell('状态'),
-        _HeaderCell('评价'),
-        _HeaderCell('敌舰队'),
-        _HeaderCell('掉落'),
-        _HeaderCell('旗舰'),
-        _HeaderCell('MVP'),
-        _HeaderCell('二队旗舰'),
-        _HeaderCell('二队 MVP'),
+      widths: const [112, 90, 85, 68, 180, 120, 145, 220, 135, 135, 135, 135],
+      headers: [
+        const _HeaderCell('时间'),
+        const _HeaderCell('节点'),
+        const _HeaderCell('状态'),
+        const _HeaderCell('评价'),
+        const _HeaderCell('敌舰队'),
+        const _HeaderCell('掉落'),
+        _HeaderCell(_l10n.logbookResourceDrop),
+        _HeaderCell(_l10n.logbookItemDrop),
+        const _HeaderCell('旗舰'),
+        const _HeaderCell('MVP'),
+        const _HeaderCell('二队旗舰'),
+        const _HeaderCell('二队 MVP'),
       ],
       cells: (row) => [
         _TextCell(_formatTime(row['timestamp'])),
@@ -806,7 +811,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
                   resolvedLabel: row['node_label'],
                 ),
         ),
-        _TextCell(sortieStatusLabel(row['node_type']), strong: true),
+        _TextCell(_sortieStatus(row), strong: true),
         _RankCell('${row['rank']}'),
         _TextCell(
           ((row['map_area'] as int? ?? 0) == 0 &&
@@ -816,10 +821,9 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
               ? '-'
               : '${row['enemy_fleet_name']}',
         ),
-        _TextCell(
-          _dropName(row['drop_ship_id']),
-          color: const Color(0xff67bce9),
-        ),
+        _TextCell(_dropNames(row), color: const Color(0xff67bce9)),
+        _SortieResourceCell(row),
+        _SortieRewardItemsCell(row),
         _TextCell(_formatShipName(row['flagship_name']), strong: true),
         _TextCell(_formatShipName(row['mvp_name']), strong: true),
         _TextCell(_formatShipName(row['escort_flagship_name']), strong: true),
@@ -918,6 +922,25 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
     if (id <= 0) return '-';
     return widget.battleController.gameState().masterShips[id]?.name ??
         'ID: $id';
+  }
+
+  String _dropNames(Map<String, dynamic> row) {
+    final encoded = row['drop_ship_ids_json']?.toString() ?? '';
+    if (encoded.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(encoded);
+        if (decoded is List) {
+          final names = <String>[
+            for (final value in decoded)
+              if (_rowInt(value) > 0) _dropName(_rowInt(value)),
+          ];
+          if (names.isNotEmpty) return names.join('、');
+        }
+      } on FormatException {
+        // Older rows continue through the legacy single-drop column.
+      }
+    }
+    return _dropName(row['drop_ship_id']);
   }
 
   String _formatShipName(Object? raw) {
@@ -1170,6 +1193,73 @@ class _EquipmentCell extends StatelessWidget {
   );
 }
 
+class _SortieResourceCell extends StatelessWidget {
+  const _SortieResourceCell(this.row);
+
+  final Map<String, dynamic> row;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = <(GameResourceType, int)>[
+      (GameResourceType.fuel, _rowInt(row['fuel_delta'])),
+      (GameResourceType.ammunition, _rowInt(row['ammo_delta'])),
+      (GameResourceType.steel, _rowInt(row['steel_delta'])),
+      (GameResourceType.bauxite, _rowInt(row['bauxite_delta'])),
+    ].where((entry) => entry.$2 != 0).toList(growable: false);
+    if (values.isEmpty) return const _TextCell('-');
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Row(
+        children: <Widget>[
+          for (var index = 0; index < values.length; index++) ...<Widget>[
+            if (index > 0) const SizedBox(width: 8),
+            Image.asset(
+              'assets/images/material/${values[index].$1.apiId.toString().padLeft(2, '0')}.png',
+              key: Key('logbook-resource-icon-${values[index].$1.apiId}'),
+              width: 17,
+              height: 17,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 2),
+            Text(
+              values[index].$2 > 0
+                  ? '+${values[index].$2}'
+                  : '${values[index].$2}',
+              style: TextStyle(
+                color: values[index].$2 > 0
+                    ? const Color(0xff83d5c8)
+                    : const Color(0xffff8c78),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SortieRewardItemsCell extends StatelessWidget {
+  const _SortieRewardItemsCell(this.row);
+
+  final Map<String, dynamic> row;
+
+  @override
+  Widget build(BuildContext context) {
+    final rewards = _expeditionRewards(row);
+    return _TextCell(
+      rewards.isEmpty
+          ? '-'
+          : rewards
+                .map((reward) => '${reward.name} ×${reward.count}')
+                .join('　'),
+      color: const Color(0xff83d5c8),
+      strong: rewards.isNotEmpty,
+    );
+  }
+}
+
 class _RewardItemsCell extends StatelessWidget {
   const _RewardItemsCell(this.row);
   final Map<String, dynamic> row;
@@ -1284,6 +1374,13 @@ List<_ExpeditionRewardData> _expeditionRewards(Map<String, dynamic> row) {
   add(row['item2_id'], row['item2_name'], row['item2_count']);
   return rewards;
 }
+
+int _rowInt(Object? value) => switch (value) {
+  int number => number,
+  num number => number.toInt(),
+  String text => int.tryParse(text) ?? 0,
+  _ => 0,
+};
 
 String _formatTime(Object? raw) {
   final timestamp = raw as int? ?? 0;

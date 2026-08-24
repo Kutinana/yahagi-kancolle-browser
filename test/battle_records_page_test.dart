@@ -316,7 +316,7 @@ void main() {
     expect(find.text('已确认'), findsOneWidget);
     expect(find.text('Test Enemy Fleet'), findsOneWidget);
     expect(find.text('掉落：吹雪'), findsOneWidget);
-    expect(find.text('掉落：家具コイン'), findsOneWidget);
+    expect(find.text('家具コイン ×1'), findsOneWidget);
     expect(find.textContaining('44'), findsNothing);
     expect(find.byKey(const Key('battle-mvp-friend-0')), findsOneWidget);
   });
@@ -347,6 +347,7 @@ void main() {
     expect(find.text('S'), findsOneWidget);
     final dropName = controller.gameStateSnapshot.masterShips[102]!.name;
     expect(find.text('掉落：$dropName'), findsOneWidget);
+    expect(find.text('掉落：家具コイン ×1'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('battle-record-0')));
     await tester.pump();

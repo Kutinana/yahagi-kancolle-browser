@@ -1993,4 +1993,13 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get gameFrameReloadUnsupported =>
       '現在の端末の Android WebView は古いため、子フレームへのスクリプト注入に対応していません。';
+
+  @override
+  String get logbookResourceDrop => '資源ドロップ';
+
+  @override
+  String get logbookItemDrop => 'アイテムドロップ';
+
+  @override
+  String get logbookResourceNode => '資源マス';
 }

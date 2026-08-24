@@ -779,6 +779,73 @@ void main() {
       DateTime.utc(2026, 8, 11, 12).millisecondsSinceEpoch,
     );
   });
+
+  test('records map resource gains, losses and map items once', () async {
+    final event = _event(
+      '/kcsapi/api_req_map/next',
+      sequence: 8101,
+      data: const {
+        'api_maparea_id': 2,
+        'api_mapinfo_no': 2,
+        'api_no': 6,
+        'api_event_id': 2,
+        'api_itemget': [
+          {'api_usemst': 4, 'api_id': 1, 'api_getcount': 80},
+          {
+            'api_usemst': 11,
+            'api_id': 11,
+            'api_getcount': 1,
+            'api_name': '家具箱（中）',
+          },
+        ],
+        'api_itemget_eo_comment': {
+          'api_usemst': 4,
+          'api_id': 4,
+          'api_getcount': 12,
+        },
+        'api_happening': {'api_icon_id': 2, 'api_count': 24, 'api_dentan': 1},
+      },
+    );
+
+    await recorder.record(event, state);
+    await recorder.record(event, state);
+
+    final rows = await database.getSortieRecords();
+    expect(rows, hasLength(1));
+    expect(rows.single['fuel_delta'], 80);
+    expect(rows.single['ammo_delta'], -24);
+    expect(rows.single['bauxite_delta'], 12);
+    expect(rows.single['radar_reduced'], 1);
+    expect(rows.single['reward_items_json'], contains('家具箱（中）'));
+  });
+
+  test(
+    'does not treat a reused capture sequence as the same map event',
+    () async {
+      CapturedApiEvent resourceEvent(DateTime capturedAt) => _event(
+        '/kcsapi/api_req_map/next',
+        sequence: 1,
+        capturedAt: capturedAt,
+        data: const {
+          'api_maparea_id': 2,
+          'api_mapinfo_no': 2,
+          'api_no': 3,
+          'api_itemget': {'api_usemst': 4, 'api_id': 1, 'api_getcount': 10},
+        },
+      );
+
+      await recorder.record(
+        resourceEvent(DateTime.utc(2026, 8, 11, 12)),
+        state,
+      );
+      await recorder.record(
+        resourceEvent(DateTime.utc(2026, 8, 12, 12)),
+        state,
+      );
+
+      expect(await database.getSortieRecords(), hasLength(2));
+    },
+  );
 }
 
 CapturedApiEvent _event(
@@ -786,12 +853,14 @@ CapturedApiEvent _event(
   Map<String, Object?> params = const {},
   Object? data = const <String, Object?>{},
   DateTime? capturedAt,
+  int sequence = 0,
 }) => CapturedApiEvent(
   path: path,
   requestParams: params,
   responseBody: jsonEncode({'api_result': 1, 'api_data': data}),
   source: CaptureSource.manual,
   capturedAt: capturedAt ?? DateTime.utc(2026, 8, 11, 12),
+  sequence: sequence,
 );
 
 CapturedApiEvent _eventWithoutData(

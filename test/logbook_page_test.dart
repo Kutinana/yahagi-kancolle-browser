@@ -102,6 +102,73 @@ void main() {
     expect(find.byKey(const Key('logbook-table-sortie')), findsOneWidget);
   });
 
+  testWidgets('sortie table shows resource and item drop columns', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1500, 620);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(mapAreaId: 2, mapInfoNo: 2, node: 5),
+          rank: BattleRank.s,
+          dropShipMasterId: 101,
+          dropShipMasterIds: <int>[101, 102],
+          rewardItems: <BattleRewardItem>[
+            BattleRewardItem(
+              kind: BattleRewardKind.item,
+              id: 68,
+              count: 1,
+              name: '秋刀鱼',
+            ),
+          ],
+        ),
+        completedAt: DateTime.utc(2026, 8, 24, 12),
+      ),
+      mapName: '巴士岛近海',
+      nodeLabel: 'E',
+    );
+    await database.insertMapResourceRecord(
+      MapResourceLogEntry(
+        eventKey: 'sequence:9901',
+        timestamp: DateTime.utc(2026, 8, 24, 12, 1),
+        mapArea: 2,
+        mapNo: 2,
+        mapName: '巴士岛近海',
+        node: 6,
+        nodeLabel: 'F',
+        fuelDelta: 80,
+        ammoDelta: -30,
+      ),
+    );
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('资源掉落'), findsOneWidget);
+    expect(find.text('道具掉落'), findsOneWidget);
+    expect(find.byKey(const Key('logbook-resource-icon-1')), findsOneWidget);
+    expect(find.byKey(const Key('logbook-resource-icon-2')), findsOneWidget);
+    expect(find.text('+80'), findsOneWidget);
+    expect(find.text('-30'), findsOneWidget);
+    expect(find.text('秋刀鱼 ×1'), findsOneWidget);
+    expect(find.text('ID: 101、ID: 102'), findsOneWidget);
+    expect(find.text('资源获得'), findsNothing);
+    expect(find.text('资源损失'), findsNothing);
+  });
+
   testWidgets('empty categories keep the Poi table headers visible', (
     tester,
   ) async {
@@ -544,7 +611,7 @@ void main() {
       find.byKey(const Key('logbook-table-sortie')),
     );
     expect(table.frozenColumnWidths, hasLength(1));
-    expect(table.scrollableColumnWidths, hasLength(10));
+    expect(table.scrollableColumnWidths, hasLength(12));
     expect(
       table.frozenColumnWidths.reduce((a, b) => a + b) +
           table.scrollableColumnWidths.reduce((a, b) => a + b),

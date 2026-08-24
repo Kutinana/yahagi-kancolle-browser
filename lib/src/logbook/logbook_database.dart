@@ -17,6 +17,40 @@ enum LogbookChangeCategory {
   retirement,
 }
 
+final class MapResourceLogEntry {
+  const MapResourceLogEntry({
+    required this.eventKey,
+    required this.timestamp,
+    required this.mapArea,
+    required this.mapNo,
+    required this.mapName,
+    required this.node,
+    this.nodeLabel = '',
+    this.mapDifficulty = 0,
+    this.fuelDelta = 0,
+    this.ammoDelta = 0,
+    this.steelDelta = 0,
+    this.bauxiteDelta = 0,
+    this.rewardItems = const <BattleRewardItem>[],
+    this.radarReduced = false,
+  });
+
+  final String eventKey;
+  final DateTime timestamp;
+  final int mapArea;
+  final int mapNo;
+  final String mapName;
+  final int node;
+  final String nodeLabel;
+  final int mapDifficulty;
+  final int fuelDelta;
+  final int ammoDelta;
+  final int steelDelta;
+  final int bauxiteDelta;
+  final List<BattleRewardItem> rewardItems;
+  final bool radarReduced;
+}
+
 final class DevelopmentLogEntry {
   const DevelopmentLogEntry({
     required this.timestamp,
@@ -84,6 +118,7 @@ final class RetirementLogEntry {
 }
 
 class LogbookDatabase extends ChangeNotifier {
+  static const int schemaVersion = 9;
   static final LogbookDatabase instance = LogbookDatabase._init();
 
   final Future<Database> Function()? _databaseOpener;
@@ -104,12 +139,18 @@ class LogbookDatabase extends ChangeNotifier {
     Future<Database> Function() databaseOpener,
   ) => LogbookDatabase._init(databaseOpener: databaseOpener);
 
-  static Future<LogbookDatabase> openForTesting() async {
+  static Future<LogbookDatabase> openForTesting({
+    String path = inMemoryDatabasePath,
+  }) async {
     sqfliteFfiInit();
     final result = LogbookDatabase._init();
     result._database = await databaseFactoryFfiNoIsolate.openDatabase(
-      inMemoryDatabasePath,
-      options: OpenDatabaseOptions(version: 8, onCreate: result._createDB),
+      path,
+      options: OpenDatabaseOptions(
+        version: schemaVersion,
+        onCreate: result._createDB,
+        onUpgrade: result._onUpgrade,
+      ),
     );
     return result;
   }
@@ -206,7 +247,7 @@ class LogbookDatabase extends ChangeNotifier {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: schemaVersion,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -227,6 +268,7 @@ class LogbookDatabase extends ChangeNotifier {
         map_difficulty INTEGER NOT NULL DEFAULT 0,
         rank TEXT NOT NULL,
         drop_ship_id INTEGER,
+        drop_ship_ids_json TEXT NOT NULL DEFAULT '[]',
         enemy_fleet_name TEXT NOT NULL,
         friend_fleet_state TEXT NOT NULL,
         enemy_fleet_state TEXT NOT NULL,
@@ -234,8 +276,11 @@ class LogbookDatabase extends ChangeNotifier {
         escort_flagship_name TEXT NOT NULL DEFAULT '—',
         mvp_name TEXT NOT NULL DEFAULT '—',
         escort_mvp_name TEXT NOT NULL DEFAULT '—'
+        ,reward_items_json TEXT NOT NULL DEFAULT '[]'
       )
     ''');
+
+    await _createMapResourceTable(db);
 
     // Resource Logs
     await db.execute('''
@@ -341,6 +386,32 @@ class LogbookDatabase extends ChangeNotifier {
     ''');
   }
 
+  Future<void> _createMapResourceTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS map_resource_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_key TEXT NOT NULL UNIQUE,
+        timestamp INTEGER NOT NULL,
+        map_area INTEGER NOT NULL,
+        map_no INTEGER NOT NULL,
+        map_name TEXT NOT NULL DEFAULT '',
+        node INTEGER NOT NULL,
+        node_label TEXT NOT NULL DEFAULT '',
+        map_difficulty INTEGER NOT NULL DEFAULT 0,
+        fuel_delta INTEGER NOT NULL DEFAULT 0,
+        ammo_delta INTEGER NOT NULL DEFAULT 0,
+        steel_delta INTEGER NOT NULL DEFAULT 0,
+        bauxite_delta INTEGER NOT NULL DEFAULT 0,
+        reward_items_json TEXT NOT NULL DEFAULT '[]',
+        radar_reduced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_map_resource_logs_timestamp
+      ON map_resource_logs(timestamp DESC)
+    ''');
+  }
+
   Future<void> _createOperationIndexes(Database db) async {
     for (final table in <String>[
       'battle_logs',
@@ -423,6 +494,15 @@ class LogbookDatabase extends ChangeNotifier {
     if (oldVersion < 8) {
       await _createPendingConstructionTable(db);
     }
+    if (oldVersion < 9) {
+      await db.execute(
+        "ALTER TABLE battle_logs ADD COLUMN reward_items_json TEXT NOT NULL DEFAULT '[]'",
+      );
+      await db.execute(
+        "ALTER TABLE battle_logs ADD COLUMN drop_ship_ids_json TEXT NOT NULL DEFAULT '[]'",
+      );
+      await _createMapResourceTable(db);
+    }
   }
 
   /// Add a battle record to the log
@@ -462,6 +542,7 @@ class LogbookDatabase extends ChangeNotifier {
       'map_difficulty': isPractice ? 0 : mapDifficulty,
       'rank': battle.rank.name,
       'drop_ship_id': battle.dropShipMasterId,
+      'drop_ship_ids_json': jsonEncode(battle.dropShipMasterIds),
       'enemy_fleet_name': isPractice ? '-' : battle.enemyFleetName,
       // We can store a brief snapshot of ships or just ignore it for the DB to save space,
       // but for now let's just store the count of alive ships as a simple string or JSON.
@@ -478,6 +559,7 @@ class LogbookDatabase extends ChangeNotifier {
           : battle.friendEscort.first.name,
       'mvp_name': mainMvp,
       'escort_mvp_name': escortMvp,
+      'reward_items_json': jsonEncode(_rewardItemRows(battle.rewardItems)),
     });
     _notifyChange(LogbookChangeCategory.battle);
   }
@@ -496,6 +578,69 @@ class LogbookDatabase extends ChangeNotifier {
       orderBy: 'id DESC',
       limit: limit,
       offset: offset,
+    );
+  }
+
+  Future<void> insertMapResourceRecord(MapResourceLogEntry entry) async {
+    final db = await database;
+    await db.insert('map_resource_logs', <String, Object?>{
+      'event_key': entry.eventKey,
+      'timestamp': entry.timestamp.millisecondsSinceEpoch,
+      'map_area': entry.mapArea,
+      'map_no': entry.mapNo,
+      'map_name': entry.mapName,
+      'node': entry.node,
+      'node_label': entry.nodeLabel,
+      'map_difficulty': entry.mapDifficulty,
+      'fuel_delta': entry.fuelDelta,
+      'ammo_delta': entry.ammoDelta,
+      'steel_delta': entry.steelDelta,
+      'bauxite_delta': entry.bauxiteDelta,
+      'reward_items_json': jsonEncode(_rewardItemRows(entry.rewardItems)),
+      'radar_reduced': entry.radarReduced ? 1 : 0,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    _notifyChange(LogbookChangeCategory.battle);
+  }
+
+  Future<List<Map<String, dynamic>>> getSortieRecords({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final db = await database;
+    return db.rawQuery(
+      '''
+      SELECT * FROM (
+        SELECT
+          id * 2 AS id,
+          'battle' AS record_type,
+          timestamp, map_area, map_no, map_name, node, node_label, node_type,
+          map_difficulty, rank, drop_ship_id, drop_ship_ids_json,
+          enemy_fleet_name,
+          friend_fleet_state, enemy_fleet_state, flagship_name,
+          escort_flagship_name, mvp_name, escort_mvp_name,
+          reward_items_json,
+          0 AS fuel_delta, 0 AS ammo_delta, 0 AS steel_delta,
+          0 AS bauxite_delta, 0 AS radar_reduced
+        FROM battle_logs
+        UNION ALL
+        SELECT
+          id * 2 + 1 AS id,
+          'resource' AS record_type,
+          timestamp, map_area, map_no, map_name, node, node_label,
+          'resource' AS node_type,
+          map_difficulty, 'unknown' AS rank, NULL AS drop_ship_id,
+          '[]' AS drop_ship_ids_json,
+          '-' AS enemy_fleet_name, '-' AS friend_fleet_state,
+          '-' AS enemy_fleet_state, '-' AS flagship_name,
+          '-' AS escort_flagship_name, '-' AS mvp_name,
+          '-' AS escort_mvp_name, reward_items_json,
+          fuel_delta, ammo_delta, steel_delta, bauxite_delta, radar_reduced
+        FROM map_resource_logs
+      )
+      ORDER BY timestamp DESC, id DESC
+      LIMIT ? OFFSET ?
+      ''',
+      <Object>[limit, offset],
     );
   }
 
@@ -1072,6 +1217,7 @@ class LogbookDatabase extends ChangeNotifier {
     final db = await database;
     await db.transaction((transaction) async {
       await transaction.delete('battle_logs');
+      await transaction.delete('map_resource_logs');
       await transaction.delete('resource_logs');
       await transaction.delete('expedition_logs');
       await transaction.delete('pending_construction_logs');
@@ -1085,6 +1231,18 @@ class LogbookDatabase extends ChangeNotifier {
     _notifyAllChanges();
   }
 }
+
+List<Map<String, Object?>> _rewardItemRows(
+  Iterable<BattleRewardItem> rewards,
+) => <Map<String, Object?>>[
+  for (final reward in rewards)
+    <String, Object?>{
+      'kind': reward.kind.name,
+      'id': reward.id,
+      'count': reward.count,
+      'name': reward.name,
+    },
+];
 
 final class _ResourceSnapshotValues {
   const _ResourceSnapshotValues({

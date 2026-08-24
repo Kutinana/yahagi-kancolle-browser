@@ -3821,6 +3821,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'当前设备的 Android WebView 太旧，不支持对子框架注入。'**
   String get gameFrameReloadUnsupported;
+
+  /// No description provided for @logbookResourceDrop.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源掉落'**
+  String get logbookResourceDrop;
+
+  /// No description provided for @logbookItemDrop.
+  ///
+  /// In zh, this message translates to:
+  /// **'道具掉落'**
+  String get logbookItemDrop;
+
+  /// No description provided for @logbookResourceNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源节点'**
+  String get logbookResourceNode;
 }
 
 class _AppLocalizationsDelegate

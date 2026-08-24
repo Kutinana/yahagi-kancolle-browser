@@ -169,13 +169,11 @@ class _RecordCard extends StatelessWidget {
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
     final battle = record.battle;
-    final dropName = battle.dropShipMasterId == null
-        ? null
-        : stateController
-              .gameStateSnapshot
-              .masterShips[battle.dropShipMasterId]
-              ?.name;
-    final dropItemName = battle.dropItemName?.trim();
+    final dropNames = <String>[
+      for (final id in battle.effectiveDropShipMasterIds)
+        stateController.gameStateSnapshot.masterShips[id]?.name ?? 'ID: $id',
+    ];
+    final dropName = dropNames.isEmpty ? null : dropNames.join('、');
     final friendAlive = battle.friendShips.where((ship) => !ship.isSunk).length;
     final enemyAlive = battle.enemyShips.where((ship) => !ship.isSunk).length;
     return Material(
@@ -226,14 +224,8 @@ class _RecordCard extends StatelessWidget {
                 ),
               ),
               if (dropName != null) Text(l10n.dropLabel(dropName)),
-              if ((battle.dropItemId ?? 0) > 0)
-                Text(
-                  l10n.dropLabel(
-                    dropItemName?.isNotEmpty == true
-                        ? dropItemName!
-                        : l10n.item,
-                  ),
-                ),
+              for (final reward in battle.rewardItems)
+                Text(l10n.dropLabel('${reward.name} ×${reward.count}')),
             ],
           ),
         ),

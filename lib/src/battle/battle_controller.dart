@@ -19,6 +19,7 @@ import 'prediction/poi/poi_battle_prediction_engine.dart';
 import 'prediction/yahagi_battle_prediction_engine.dart';
 import '../settings/battle_prediction_settings.dart';
 import '../logbook/logbook_database.dart';
+import '../logbook/expedition_log_catalog.dart';
 import '../performance/frame_notification_coalescer.dart';
 import 'battle_damage_alert.dart';
 
@@ -184,6 +185,8 @@ final class BattleController extends ChangeNotifier
         landBaseRaid: landBaseRaid,
         enemyPreviewShips: _officialEnemyPreviewShips(map, state),
         enemyPreviewCombined: _officialEnemyPreviewCombined(map),
+        rewardItems: _mapRewardItems(map),
+        resourceChanges: _mapResourceChanges(map),
       );
       _archiveSession();
       _predictionEngine = null;
@@ -578,6 +581,27 @@ final class BattleController extends ChangeNotifier
     final enemyInfo = _optionalMap(data['api_enemy_info']);
     final getShip = _optionalMap(data['api_get_ship']);
     final getItem = _optionalMap(data['api_get_useitem']);
+    final eventRewards = _eventRewards(data['api_get_eventitem']);
+    final eventShipIds = eventRewards
+        .where((reward) => reward.$1 == 2)
+        .map((reward) => reward.$2)
+        .toList(growable: false);
+    final normalShipId = _positive(getShip?['api_ship_id'], 0);
+    final dropShipMasterIds = <int>[
+      if (normalShipId > 0) normalShipId,
+      ...eventShipIds,
+    ];
+    final rewardItems = <BattleRewardItem>[
+      if (_positive(getItem?['api_useitem_id'], 0) case final id when id > 0)
+        BattleRewardItem(
+          kind: BattleRewardKind.item,
+          id: id,
+          count: 1,
+          name: expeditionRewardName(id, _string(getItem?['api_useitem_name'])),
+        ),
+      for (final reward in eventRewards)
+        if (reward.$1 != 2) _eventRewardItem(reward, gameState()),
+    ];
     var rank = BattleRank.parse(data['api_win_rank']);
     if (rank == BattleRank.s) {
       final friendShips = _current!.friendShips;
@@ -604,9 +628,11 @@ final class BattleController extends ChangeNotifier
         if (mainMvp >= 0) mainMvp,
         if (escortMvp >= 0) escortMvp + 6,
       ],
-      dropShipMasterId: _positive(getShip?['api_ship_id'], 0),
+      dropShipMasterId: dropShipMasterIds.firstOrNull,
+      dropShipMasterIds: dropShipMasterIds,
       dropItemId: _positive(getItem?['api_useitem_id'], 0),
       dropItemName: _string(getItem?['api_useitem_name']),
+      rewardItems: rewardItems,
     );
     _current = confirmed;
     final record = BattleRecord(
@@ -888,6 +914,102 @@ final class BattleController extends ChangeNotifier
       return '航空战';
     }
     return '昼战';
+  }
+
+  List<BattleResourceChange> _mapResourceChanges(Map<String, Object?> data) {
+    final changes = <BattleResourceChange>[];
+    for (final item in _mapItemEntries(data)) {
+      if (_int(item['api_usemst']) != 4) continue;
+      final resourceId = _int(item['api_id']);
+      final type = GameResourceType.values
+          .where((candidate) => candidate.apiId == resourceId)
+          .firstOrNull;
+      final amount = _positive(item['api_getcount'], 0);
+      if (type != null && amount > 0) {
+        changes.add(BattleResourceChange(type: type, amount: amount));
+      }
+    }
+    final happening = _optionalMap(data['api_happening']);
+    if (happening != null) {
+      final resourceId = _positive(
+        happening['api_icon_id'],
+        _int(happening['api_mst_id']),
+      );
+      final type = GameResourceType.values
+          .where((candidate) => candidate.apiId == resourceId)
+          .firstOrNull;
+      final amount = _positive(happening['api_count'], 0);
+      if (type != null && amount > 0) {
+        changes.add(
+          BattleResourceChange(
+            type: type,
+            amount: -amount,
+            radarReduced: _int(happening['api_dentan']) != 0,
+          ),
+        );
+      }
+    }
+    return changes;
+  }
+
+  List<BattleRewardItem> _mapRewardItems(Map<String, Object?> data) {
+    final rewards = <BattleRewardItem>[];
+    for (final item in _mapItemEntries(data)) {
+      if (_int(item['api_usemst']) == 4) continue;
+      final id = _positive(item['api_id'], 0);
+      if (id <= 0) continue;
+      rewards.add(
+        BattleRewardItem(
+          kind: BattleRewardKind.item,
+          id: id,
+          count: _positive(item['api_getcount'], 1),
+          name: expeditionRewardName(id, _string(item['api_name'])),
+        ),
+      );
+    }
+    return rewards;
+  }
+
+  List<Map<String, Object?>> _mapItemEntries(Map<String, Object?> data) => [
+    ..._objectOrArrayMaps(data['api_itemget']),
+    ..._objectOrArrayMaps(data['api_itemget_eo_comment']),
+  ];
+
+  List<(int, int, int)> _eventRewards(Object? value) => [
+    for (final item in _objectOrArrayMaps(value))
+      if (_positive(item['api_id'], 0) case final id when id > 0)
+        (_positive(item['api_type'], 1), id, _positive(item['api_value'], 1)),
+  ];
+
+  BattleRewardItem _eventRewardItem((int, int, int) reward, GameState state) {
+    final (type, id, count) = reward;
+    return switch (type) {
+      3 => BattleRewardItem(
+        kind: BattleRewardKind.equipment,
+        id: id,
+        count: count,
+        name: state.masterSlotItems[id]?.name ?? 'Equipment $id',
+      ),
+      5 => BattleRewardItem(
+        kind: BattleRewardKind.furniture,
+        id: id,
+        count: count,
+        name: 'Furniture $id',
+      ),
+      _ => BattleRewardItem(
+        kind: BattleRewardKind.item,
+        id: id,
+        count: count,
+        name: expeditionRewardName(id),
+      ),
+    };
+  }
+
+  List<Map<String, Object?>> _objectOrArrayMaps(Object? value) {
+    if (value is Map) return <Map<String, Object?>>[_map(value)];
+    return <Map<String, Object?>>[
+      for (final item in _list(value)) ?_optionalMap(item),
+    ];
   }
 
   List<int> _predictedMvpPositions(

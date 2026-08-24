@@ -1,4 +1,5 @@
 import '../bridge/captured_api_event.dart';
+import '../battle/battle_models.dart';
 import '../capture/game_capture_path_catalog.dart';
 import '../game_state/game_api_decoder.dart';
 import '../game_state/game_state.dart';
@@ -19,6 +20,9 @@ final class LogbookEventRecorder {
   Future<void> record(CapturedApiEvent event, GameState state) async {
     if (!supports(event.path) || event.apiResult != 1) return;
     switch (event.path) {
+      case '/kcsapi/api_req_map/start':
+      case '/kcsapi/api_req_map/next':
+        await _recordMapResourceEvent(event, state);
       case '/kcsapi/api_req_mission/result':
         await _recordExpedition(event, state);
       case '/kcsapi/api_req_kousyou/createitem':
@@ -34,6 +38,82 @@ final class LogbookEventRecorder {
       case '/kcsapi/api_req_kaisou/powerup':
         await _recordRetiredShips(event, state, type: '改修');
     }
+  }
+
+  Future<void> _recordMapResourceEvent(
+    CapturedApiEvent event,
+    GameState state,
+  ) async {
+    final data = _data(event);
+    final deltas = <GameResourceType, int>{};
+    final rewards = <BattleRewardItem>[];
+    for (final item in <Map<String, Object?>>[
+      ..._maps(data['api_itemget']),
+      ..._maps(data['api_itemget_eo_comment']),
+    ]) {
+      final useMaster = _int(item['api_usemst']);
+      final id = _int(item['api_id']);
+      final count = _positive(item['api_getcount'], 0);
+      if (useMaster == 4) {
+        final type = GameResourceType.values
+            .where((candidate) => candidate.apiId == id)
+            .firstOrNull;
+        if (type != null && count > 0) {
+          deltas[type] = (deltas[type] ?? 0) + count;
+        }
+      } else if (id > 0) {
+        rewards.add(
+          BattleRewardItem(
+            kind: BattleRewardKind.item,
+            id: id,
+            count: count > 0 ? count : 1,
+            name: expeditionRewardName(id, item['api_name']?.toString()),
+          ),
+        );
+      }
+    }
+
+    var radarReduced = false;
+    final happening = _map(data['api_happening']);
+    if (happening != null) {
+      final id = _positive(
+        happening['api_icon_id'],
+        _int(happening['api_mst_id']),
+      );
+      final type = GameResourceType.values
+          .where((candidate) => candidate.apiId == id)
+          .firstOrNull;
+      final count = _positive(happening['api_count'], 0);
+      if (type != null && count > 0) {
+        deltas[type] = (deltas[type] ?? 0) - count;
+      }
+      radarReduced = _int(happening['api_dentan']) != 0;
+    }
+    if (deltas.isEmpty && rewards.isEmpty) return;
+
+    final mapArea = _positive(data['api_maparea_id'], 0);
+    final mapNo = _positive(data['api_mapinfo_no'], 0);
+    final node = _positive(data['api_no'], 0);
+    final eventKey =
+        '${event.path}:${event.capturedAt.microsecondsSinceEpoch}:'
+        'sequence:${event.sequence}:$mapArea-$mapNo-$node';
+    await _database.insertMapResourceRecord(
+      MapResourceLogEntry(
+        eventKey: eventKey,
+        timestamp: event.capturedAt,
+        mapArea: mapArea,
+        mapNo: mapNo,
+        mapName: state.mapName(mapArea, mapNo) ?? '',
+        node: node,
+        mapDifficulty: state.mapDifficulty(mapArea, mapNo),
+        fuelDelta: deltas[GameResourceType.fuel] ?? 0,
+        ammoDelta: deltas[GameResourceType.ammunition] ?? 0,
+        steelDelta: deltas[GameResourceType.steel] ?? 0,
+        bauxiteDelta: deltas[GameResourceType.bauxite] ?? 0,
+        rewardItems: rewards,
+        radarReduced: radarReduced,
+      ),
+    );
   }
 
   Future<void> _recordExpedition(
@@ -586,8 +666,19 @@ final class LogbookEventRecorder {
   Map<String, Object?>? _map(Object? value) =>
       value is Map ? Map<String, Object?>.from(value) : null;
 
+  List<Map<String, Object?>> _maps(Object? value) {
+    if (value is Map) return <Map<String, Object?>>[Map.from(value)];
+    if (value is! List) return const <Map<String, Object?>>[];
+    return <Map<String, Object?>>[for (final item in value) ?_map(item)];
+  }
+
   int _int(Object? value) =>
       value is int ? value : int.tryParse(value?.toString() ?? '') ?? 0;
+
+  int _positive(Object? value, int fallback) {
+    final parsed = _int(value);
+    return parsed > 0 ? parsed : fallback;
+  }
 
   List<int> _intList(Object? value) => value is List
       ? <int>[for (final item in value) _int(item)]

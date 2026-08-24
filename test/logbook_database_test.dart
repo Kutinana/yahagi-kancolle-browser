@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart' show Database;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/logbook/logbook_database.dart';
@@ -350,6 +351,160 @@ void main() {
     expect(rows.single['mvp_name'], '矢矧改二乙');
     expect(rows.single['escort_mvp_name'], '-');
     expect(rows.single['rank'], 's');
+  });
+
+  test(
+    'sortie records retain battle rewards and merge map resource events',
+    () async {
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+      final battleTime = DateTime.utc(2026, 8, 24, 12);
+      await database.insertBattleRecord(
+        BattleRecord(
+          battle: const LiveBattle(
+            context: BattleContext(mapAreaId: 2, mapInfoNo: 2, node: 5),
+            rank: BattleRank.s,
+            dropShipMasterId: 101,
+            dropShipMasterIds: <int>[101, 102],
+            rewardItems: <BattleRewardItem>[
+              BattleRewardItem(
+                kind: BattleRewardKind.item,
+                id: 68,
+                count: 1,
+                name: '秋刀鱼',
+              ),
+              BattleRewardItem(
+                kind: BattleRewardKind.item,
+                id: 57,
+                count: 2,
+                name: '勋章',
+              ),
+            ],
+          ),
+          completedAt: battleTime,
+        ),
+        mapName: '巴士岛近海',
+        nodeLabel: 'E',
+      );
+      await database.insertMapResourceRecord(
+        MapResourceLogEntry(
+          eventKey: 'sequence:9001',
+          timestamp: battleTime.add(const Duration(minutes: 1)),
+          mapArea: 2,
+          mapNo: 2,
+          mapName: '巴士岛近海',
+          node: 6,
+          nodeLabel: 'F',
+          fuelDelta: 80,
+          ammoDelta: -30,
+          rewardItems: const <BattleRewardItem>[
+            BattleRewardItem(
+              kind: BattleRewardKind.item,
+              id: 11,
+              count: 1,
+              name: '家具箱（中）',
+            ),
+          ],
+        ),
+      );
+
+      final rows = await database.getSortieRecords();
+      expect(rows, hasLength(2));
+      expect(rows.first['record_type'], 'resource');
+      expect(rows.first['fuel_delta'], 80);
+      expect(rows.first['ammo_delta'], -30);
+      expect(rows.first['node_label'], 'F');
+      expect(rows.first['reward_items_json'], contains('家具箱（中）'));
+      expect(rows.last['record_type'], 'battle');
+      expect(rows.last['drop_ship_ids_json'], '[101,102]');
+      expect(rows.last['reward_items_json'], contains('秋刀鱼'));
+      expect(rows.last['reward_items_json'], contains('勋章'));
+    },
+  );
+
+  test('map resource event keys are idempotent', () async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final entry = MapResourceLogEntry(
+      eventKey: 'sequence:9002',
+      timestamp: DateTime.utc(2026, 8, 24, 13),
+      mapArea: 3,
+      mapNo: 2,
+      mapName: '基斯岛沖',
+      node: 4,
+      ammoDelta: -24,
+      radarReduced: true,
+    );
+
+    await database.insertMapResourceRecord(entry);
+    await database.insertMapResourceRecord(entry);
+
+    final rows = await database.getSortieRecords();
+    expect(rows, hasLength(1));
+    expect(rows.single['radar_reduced'], 1);
+  });
+
+  test('upgrades v8 without losing existing battle records', () async {
+    sqfliteFfiInit();
+    final directory = await Directory.systemTemp.createTemp(
+      'yahagi-logbook-v8-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final path = '${directory.path}${Platform.pathSeparator}logbook.db';
+    final oldDatabase = await databaseFactoryFfiNoIsolate.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 8,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE battle_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp INTEGER NOT NULL,
+              map_area INTEGER NOT NULL,
+              map_no INTEGER NOT NULL,
+              map_name TEXT NOT NULL DEFAULT '',
+              node INTEGER NOT NULL,
+              node_label TEXT NOT NULL DEFAULT '',
+              node_type INTEGER NOT NULL,
+              map_difficulty INTEGER NOT NULL DEFAULT 0,
+              rank TEXT NOT NULL,
+              drop_ship_id INTEGER,
+              enemy_fleet_name TEXT NOT NULL,
+              friend_fleet_state TEXT NOT NULL,
+              enemy_fleet_state TEXT NOT NULL,
+              flagship_name TEXT NOT NULL DEFAULT '—',
+              escort_flagship_name TEXT NOT NULL DEFAULT '—',
+              mvp_name TEXT NOT NULL DEFAULT '—',
+              escort_mvp_name TEXT NOT NULL DEFAULT '—'
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDatabase.insert('battle_logs', <String, Object?>{
+      'timestamp': 1,
+      'map_area': 1,
+      'map_no': 1,
+      'node': 1,
+      'node_type': '普通战斗',
+      'rank': 's',
+      'enemy_fleet_name': '旧记录',
+      'friend_fleet_state': '6/6',
+      'enemy_fleet_state': '0/6',
+    });
+    await oldDatabase.close();
+
+    final upgraded = await LogbookDatabase.openForTesting(path: path);
+    addTearDown(upgraded.close);
+    final rows = await upgraded.getSortieRecords();
+    final raw = await upgraded.database;
+    final tables = await raw.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    );
+
+    expect(rows.single['enemy_fleet_name'], '旧记录');
+    expect(rows.single['reward_items_json'], '[]');
+    expect(tables.map((row) => row['name']), contains('map_resource_logs'));
   });
 }
 

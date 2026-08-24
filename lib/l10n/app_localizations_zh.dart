@@ -1977,6 +1977,15 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get gameFrameReloadUnsupported =>
       '当前设备的 Android WebView 太旧，不支持对子框架注入。';
+
+  @override
+  String get logbookResourceDrop => '资源掉落';
+
+  @override
+  String get logbookItemDrop => '道具掉落';
+
+  @override
+  String get logbookResourceNode => '资源节点';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3953,4 +3962,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get gameFrameReloadUnsupported =>
       '目前裝置的 Android WebView 過舊，不支援向子框架注入指令碼。';
+
+  @override
+  String get logbookResourceDrop => '資源掉落';
+
+  @override
+  String get logbookItemDrop => '道具掉落項';
+
+  @override
+  String get logbookResourceNode => '資源節點';
 }

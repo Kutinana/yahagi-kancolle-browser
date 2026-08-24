@@ -117,6 +117,7 @@ abstract final class GameCapturePathCatalog {
   };
 
   static const Set<String> logbook = <String>{
+    ...battleMap,
     '/kcsapi/api_req_mission/result',
     '/kcsapi/api_req_kousyou/createitem',
     '/kcsapi/api_req_kousyou/createship',

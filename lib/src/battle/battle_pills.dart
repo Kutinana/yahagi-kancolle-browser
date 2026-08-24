@@ -315,6 +315,104 @@ class DropPill extends StatelessWidget {
   }
 }
 
+class ResourceChangesPill extends StatelessWidget {
+  const ResourceChangesPill({super.key, required this.changes});
+
+  final List<BattleResourceChange> changes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('battle-resource-changes-pill'),
+      height: _battlePillHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xff183e38),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xff2f7469)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (var index = 0; index < changes.length; index++) ...<Widget>[
+            if (index > 0)
+              Container(
+                width: 1,
+                height: 10,
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                color: const Color(0x4d83d5c8),
+              ),
+            Image.asset(
+              'assets/images/material/${changes[index].type.apiId.toString().padLeft(2, '0')}.png',
+              key: Key('battle-resource-icon-${changes[index].type.apiId}'),
+              width: 15,
+              height: 15,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 2),
+            Text(
+              _signed(changes[index].amount),
+              style: _battlePillTextStyle.copyWith(
+                color: changes[index].amount < 0
+                    ? const Color(0xffff8c78)
+                    : const Color(0xff83d5c8),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class RewardItemsPill extends StatelessWidget {
+  const RewardItemsPill({super.key, required this.items});
+
+  final List<BattleRewardItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 280),
+      child: Container(
+        key: const Key('battle-reward-items-pill'),
+        constraints: const BoxConstraints(minHeight: _battlePillHeight),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xff183e38),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0xff2f7469)),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              for (var index = 0; index < items.length; index++) ...<Widget>[
+                if (index > 0)
+                  Container(
+                    width: 1,
+                    height: 10,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    color: const Color(0x4d83d5c8),
+                  ),
+                Text(
+                  '${items[index].name} ×${items[index].count}',
+                  style: _battlePillTextStyle.copyWith(
+                    color: const Color(0xff83d5c8),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _signed(int value) => value > 0 ? '+$value' : '$value';
+
 class MetaChip extends StatelessWidget {
   const MetaChip({super.key, required this.label, required this.color});
 

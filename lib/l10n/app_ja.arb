@@ -683,5 +683,8 @@
   "gameFrameNotFound": "ゲームフレームが見つかりません。ゲームに入ってから再試行してください。",
   "gameHtmlWrapNotFound": "ゲーム本体が見つかりません。読み込みを待ってから再試行してください。",
   "gameFrameReloadBlocked": "ゲームフレームを再読み込みできませんでした。しばらくしてから再試行してください。",
-  "gameFrameReloadUnsupported": "現在の端末の Android WebView は古いため、子フレームへのスクリプト注入に対応していません。"
+  "gameFrameReloadUnsupported": "現在の端末の Android WebView は古いため、子フレームへのスクリプト注入に対応していません。",
+  "logbookResourceDrop": "資源ドロップ",
+  "logbookItemDrop": "アイテムドロップ",
+  "logbookResourceNode": "資源マス"
 }

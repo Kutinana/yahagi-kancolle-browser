@@ -537,8 +537,153 @@ void main() {
     expect(controller.records.single.dropShipMasterId, 102);
     expect(controller.records.single.battle.dropItemId, 44);
     expect(controller.records.single.battle.dropItemName, '家具コイン');
+    expect(
+      controller.records.single.battle.rewardItems,
+      const <BattleRewardItem>[
+        BattleRewardItem(
+          kind: BattleRewardKind.item,
+          id: 44,
+          count: 1,
+          name: '家具コイン',
+        ),
+      ],
+    );
     expect(controller.records.single.battle.mvpPositions, <int>[0]);
   });
+
+  test(
+    'combines normal and multiple event rewards without overwriting',
+    () async {
+      final reducer = GameStateReducer();
+      var state = reducer.reduce(GameState.empty, start2Event);
+      state = reducer.reduce(state, portEvent);
+      final controller = BattleController(gameState: () => state);
+      addTearDown(controller.dispose);
+
+      controller
+        ..accept(mapStartEvent)
+        ..accept(dayBattleEvent)
+        ..accept(
+          kcsapiEvent('/kcsapi/api_req_sortie/battleresult', <String, Object?>{
+            'api_win_rank': 'S',
+            'api_get_useitem': <String, Object?>{
+              'api_useitem_id': 68,
+              'api_useitem_name': '秋刀魚',
+            },
+            'api_get_ship': <String, Object?>{'api_ship_id': 101},
+            'api_get_eventitem': <Object?>[
+              <String, Object?>{'api_type': 1, 'api_id': 57, 'api_value': 1},
+              <String, Object?>{'api_type': 3, 'api_id': 201, 'api_value': 2},
+              <String, Object?>{'api_type': 2, 'api_id': 102, 'api_value': 1},
+              <String, Object?>{'api_type': 2, 'api_id': 103, 'api_value': 1},
+            ],
+          }, sequence: 222),
+        );
+      await controller.idle;
+
+      final battle = controller.current!;
+      expect(battle.dropShipMasterId, 101);
+      expect(battle.dropShipMasterIds, const <int>[101, 102, 103]);
+      expect(battle.rewardItems, const <BattleRewardItem>[
+        BattleRewardItem(
+          kind: BattleRewardKind.item,
+          id: 68,
+          count: 1,
+          name: '秋刀鱼',
+        ),
+        BattleRewardItem(
+          kind: BattleRewardKind.item,
+          id: 57,
+          count: 1,
+          name: '勋章',
+        ),
+        BattleRewardItem(
+          kind: BattleRewardKind.equipment,
+          id: 201,
+          count: 2,
+          name: '12.7cm 连装炮',
+        ),
+      ]);
+    },
+  );
+
+  test('map itemget exposes one signed resource group and map items', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer.reduce(state, portEvent);
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_req_map/next', <String, Object?>{
+        'api_maparea_id': 2,
+        'api_mapinfo_no': 2,
+        'api_no': 3,
+        'api_event_id': 2,
+        'api_itemget': <Object?>[
+          <String, Object?>{'api_usemst': 4, 'api_id': 1, 'api_getcount': 80},
+          <String, Object?>{'api_usemst': 4, 'api_id': 2, 'api_getcount': 30},
+          <String, Object?>{
+            'api_usemst': 11,
+            'api_id': 11,
+            'api_getcount': 1,
+            'api_name': '家具箱（中）',
+          },
+        ],
+        'api_itemget_eo_comment': <String, Object?>{
+          'api_usemst': 4,
+          'api_id': 3,
+          'api_getcount': 15,
+        },
+      }, sequence: 223),
+    );
+    await controller.idle;
+
+    expect(controller.current!.resourceChanges, const <BattleResourceChange>[
+      BattleResourceChange(type: GameResourceType.fuel, amount: 80),
+      BattleResourceChange(type: GameResourceType.ammunition, amount: 30),
+      BattleResourceChange(type: GameResourceType.steel, amount: 15),
+    ]);
+    expect(controller.current!.rewardItems, const <BattleRewardItem>[
+      BattleRewardItem(
+        kind: BattleRewardKind.item,
+        id: 11,
+        count: 1,
+        name: '家具箱（中）',
+      ),
+    ]);
+  });
+
+  test(
+    'map happening exposes a negative radar-reduced resource change',
+    () async {
+      final controller = BattleController(gameState: () => GameState.empty);
+      addTearDown(controller.dispose);
+
+      controller.accept(
+        kcsapiEvent('/kcsapi/api_req_map/start', <String, Object?>{
+          'api_maparea_id': 3,
+          'api_mapinfo_no': 2,
+          'api_no': 4,
+          'api_event_id': 3,
+          'api_happening': <String, Object?>{
+            'api_icon_id': 2,
+            'api_count': 24,
+            'api_dentan': 1,
+          },
+        }, sequence: 224),
+      );
+      await controller.idle;
+
+      expect(controller.current!.resourceChanges, const <BattleResourceChange>[
+        BattleResourceChange(
+          type: GameResourceType.ammunition,
+          amount: -24,
+          radarReduced: true,
+        ),
+      ]);
+    },
+  );
 
   test('ignores a duplicate captured sequence', () async {
     final reducer = GameStateReducer();

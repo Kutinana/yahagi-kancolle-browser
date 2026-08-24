@@ -1019,6 +1019,94 @@ void main() {
     }
   });
 
+  testWidgets(
+    'narrow resource navigation keeps multiple long rewards in one pill',
+    (tester) async {
+      final controller = _createController();
+      addTearDown(controller.dispose);
+      controller.accept(
+        kcsapiEvent('/kcsapi/api_req_map/next', <String, Object?>{
+          'api_maparea_id': 2,
+          'api_mapinfo_no': 2,
+          'api_no': 3,
+          'api_event_id': 2,
+          'api_itemget': <Object?>[
+            <String, Object?>{'api_usemst': 4, 'api_id': 1, 'api_getcount': 80},
+            <String, Object?>{'api_usemst': 4, 'api_id': 2, 'api_getcount': 30},
+            <String, Object?>{
+              'api_usemst': 11,
+              'api_id': 11,
+              'api_getcount': 1,
+              'api_name': '家具箱（中）',
+            },
+            <String, Object?>{
+              'api_usemst': 11,
+              'api_id': 901,
+              'api_getcount': 2,
+              'api_name': '特别活动作战纪念兑换券',
+            },
+            <String, Object?>{
+              'api_usemst': 11,
+              'api_id': 902,
+              'api_getcount': 3,
+              'api_name': '试制甲板弹用改修资材箱',
+            },
+          ],
+        }, sequence: 8801),
+      );
+      await controller.idle;
+
+      await _pumpCard(tester, controller, width: 360);
+
+      expect(
+        find.byKey(const Key('battle-resource-changes-pill')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('battle-resource-icon-1')), findsOneWidget);
+      expect(find.byKey(const Key('battle-resource-icon-2')), findsOneWidget);
+      expect(find.text('+80'), findsOneWidget);
+      expect(find.text('+30'), findsOneWidget);
+      expect(find.text('资源获得'), findsNothing);
+      expect(find.byKey(const Key('battle-reward-items-pill')), findsOneWidget);
+      expect(find.text('家具箱（中） ×1'), findsOneWidget);
+      expect(find.text('特别活动作战纪念兑换券 ×2'), findsOneWidget);
+      expect(find.text('试制甲板弹用改修资材箱 ×3'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('normal and event rewards share one multi-item pill', (
+    tester,
+  ) async {
+    final controller = _createController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(mapStartEvent)
+      ..accept(dayBattleEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_req_sortie/battleresult', <String, Object?>{
+          'api_win_rank': 'S',
+          'api_get_useitem': <String, Object?>{
+            'api_useitem_id': 68,
+            'api_useitem_name': '秋刀魚',
+          },
+          'api_get_eventitem': <Object?>[
+            <String, Object?>{'api_type': 1, 'api_id': 57, 'api_value': 1},
+            <String, Object?>{'api_type': 3, 'api_id': 201, 'api_value': 2},
+          ],
+        }, sequence: 8802),
+      );
+    await controller.idle;
+
+    await _pumpCard(tester, controller, width: 360);
+
+    expect(find.byKey(const Key('battle-reward-items-pill')), findsOneWidget);
+    expect(find.text('秋刀鱼 ×1'), findsOneWidget);
+    expect(find.text('勋章 ×1'), findsOneWidget);
+    expect(find.text('12.7cm 连装炮 ×2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('compact battle colors engagement like detailed mode', (
     tester,
   ) async {
@@ -1079,7 +1167,7 @@ void main() {
     await _pumpCard(tester, controller, compact: true);
 
     expect(find.text('掉落：吹雪'), findsOneWidget);
-    expect(find.text('掉落：家具コイン'), findsOneWidget);
+    expect(find.text('家具コイン ×1'), findsOneWidget);
     expect(find.textContaining('44'), findsNothing);
     final dropText = tester.widget<Text>(find.text('掉落：吹雪'));
     expect(dropText.style?.fontSize, 10);

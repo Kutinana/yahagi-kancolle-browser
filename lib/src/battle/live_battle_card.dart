@@ -221,7 +221,23 @@ class _CompactBattlePanel extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            NodeTypePill(label: battle.context.nodeTypeLabel),
+            Expanded(
+              flex: 2,
+              child: Wrap(
+                spacing: 5,
+                runSpacing: 4,
+                alignment: WrapAlignment.end,
+                children: <Widget>[
+                  if (battle.resourceChanges.isNotEmpty)
+                    ResourceChangesPill(changes: battle.resourceChanges),
+                  if (battle.rewardItems.isNotEmpty)
+                    RewardItemsPill(items: battle.rewardItems),
+                  if (battle.resourceChanges.isEmpty &&
+                      battle.rewardItems.isEmpty)
+                    NodeTypePill(label: battle.context.nodeTypeLabel),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -252,15 +268,15 @@ class _CompactBattlePanel extends StatelessWidget {
         ],
       );
     }
-    final dropShipId = battle.dropShipMasterId ?? 0;
-    final hasDrop = dropShipId > 0;
-    final dropShipName = hasDrop
-        ? (gameState.masterShips[dropShipId]?.name ?? '舰娘 $dropShipId')
-        : '';
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    final dropShipNames = <String>[
+      for (final id in battle.effectiveDropShipMasterIds)
+        gameState.masterShips[id]?.name ?? 'ID: $id',
+    ];
     final dropEntries = <String>[
-      if (hasDrop) '掉落：$dropShipName',
-      if ((battle.dropItemId ?? 0) > 0)
-        '掉落：${battle.dropItemName?.trim().isNotEmpty == true ? battle.dropItemName!.trim() : '道具'}',
+      if (dropShipNames.isNotEmpty) l10n.dropLabel(dropShipNames.join('、')),
     ];
     final rawEnemyName = battle.enemyFleetName.isNotEmpty
         ? battle.enemyFleetName
@@ -312,6 +328,10 @@ class _CompactBattlePanel extends StatelessWidget {
                         for (final entry in dropEntries) DropPill(text: entry),
                       ],
                     ),
+                  ],
+                  if (battle.rewardItems.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 4),
+                    RewardItemsPill(items: battle.rewardItems),
                   ],
                 ],
               ),
@@ -427,7 +447,11 @@ class _CompactFleetGrid extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    for (var index = 0; index < friendColumns.length; index++) ...<Widget>[
+                    for (
+                      var index = 0;
+                      index < friendColumns.length;
+                      index++
+                    ) ...<Widget>[
                       if (index > 0) const SizedBox(width: 7),
                       Expanded(child: friendColumns[index]),
                     ],
@@ -458,7 +482,11 @@ class _CompactFleetGrid extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    for (var index = 0; index < enemyColumns.length; index++) ...<Widget>[
+                    for (
+                      var index = 0;
+                      index < enemyColumns.length;
+                      index++
+                    ) ...<Widget>[
                       if (index > 0) const SizedBox(width: 7),
                       Expanded(child: enemyColumns[index]),
                     ],

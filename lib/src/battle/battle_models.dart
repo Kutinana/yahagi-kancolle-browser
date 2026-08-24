@@ -282,6 +282,55 @@ class EnemyPreviewShip {
   int get hashCode => Object.hash(masterId, name, fleetRole);
 }
 
+enum BattleRewardKind { item, equipment, furniture }
+
+class BattleRewardItem {
+  const BattleRewardItem({
+    required this.kind,
+    required this.id,
+    required this.count,
+    required this.name,
+  });
+
+  final BattleRewardKind kind;
+  final int id;
+  final int count;
+  final String name;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BattleRewardItem &&
+      other.kind == kind &&
+      other.id == id &&
+      other.count == count &&
+      other.name == name;
+
+  @override
+  int get hashCode => Object.hash(kind, id, count, name);
+}
+
+class BattleResourceChange {
+  const BattleResourceChange({
+    required this.type,
+    required this.amount,
+    this.radarReduced = false,
+  });
+
+  final GameResourceType type;
+  final int amount;
+  final bool radarReduced;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BattleResourceChange &&
+      other.type == type &&
+      other.amount == amount &&
+      other.radarReduced == radarReduced;
+
+  @override
+  int get hashCode => Object.hash(type, amount, radarReduced);
+}
+
 class LiveBattle {
   const LiveBattle({
     required this.context,
@@ -299,8 +348,11 @@ class LiveBattle {
     this.enemyFleetName = '',
     this.mvpPositions = const <int>[],
     this.dropShipMasterId,
+    this.dropShipMasterIds = const <int>[],
     this.dropItemId,
     this.dropItemName,
+    this.rewardItems = const <BattleRewardItem>[],
+    this.resourceChanges = const <BattleResourceChange>[],
     this.airSuperiority,
     this.landBaseRaid,
     this.enemyPreviewShips,
@@ -322,8 +374,15 @@ class LiveBattle {
   final String enemyFleetName;
   final List<int> mvpPositions;
   final int? dropShipMasterId;
+  final List<int> dropShipMasterIds;
   final int? dropItemId;
   final String? dropItemName;
+  final List<BattleRewardItem> rewardItems;
+  final List<BattleResourceChange> resourceChanges;
+
+  List<int> get effectiveDropShipMasterIds => dropShipMasterIds.isNotEmpty
+      ? dropShipMasterIds
+      : <int>[if ((dropShipMasterId ?? 0) > 0) dropShipMasterId!];
   final String? airSuperiority;
   final LandBaseRaidResult? landBaseRaid;
   final List<EnemyPreviewShip>? enemyPreviewShips;
@@ -361,8 +420,11 @@ class LiveBattle {
     String? enemyFleetName,
     List<int>? mvpPositions,
     int? dropShipMasterId,
+    List<int>? dropShipMasterIds,
     int? dropItemId,
     String? dropItemName,
+    List<BattleRewardItem>? rewardItems,
+    List<BattleResourceChange>? resourceChanges,
     String? airSuperiority,
     Object? landBaseRaid = _unsetLandBaseRaid,
     Object? enemyPreviewShips = _unsetEnemyPreviewShips,
@@ -384,8 +446,11 @@ class LiveBattle {
       enemyFleetName: enemyFleetName ?? this.enemyFleetName,
       mvpPositions: mvpPositions ?? this.mvpPositions,
       dropShipMasterId: dropShipMasterId ?? this.dropShipMasterId,
+      dropShipMasterIds: dropShipMasterIds ?? this.dropShipMasterIds,
       dropItemId: dropItemId ?? this.dropItemId,
       dropItemName: dropItemName ?? this.dropItemName,
+      rewardItems: rewardItems ?? this.rewardItems,
+      resourceChanges: resourceChanges ?? this.resourceChanges,
       airSuperiority: airSuperiority ?? this.airSuperiority,
       landBaseRaid: identical(landBaseRaid, _unsetLandBaseRaid)
           ? this.landBaseRaid
@@ -407,4 +472,5 @@ class BattleRecord {
   BattleRank get rank => battle.rank;
   String get enemyFleetName => battle.enemyFleetName;
   int? get dropShipMasterId => battle.dropShipMasterId;
+  List<int> get dropShipMasterIds => battle.effectiveDropShipMasterIds;
 }

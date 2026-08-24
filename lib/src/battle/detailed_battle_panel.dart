@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../fleet/ship_status_style.dart';
 import '../fleet/ship_status_visuals.dart';
@@ -39,7 +40,7 @@ class DetailedBattlePanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (navigation)
-          _NavigationOverview(context: battle.context)
+          _NavigationOverview(battle: battle)
         else
           _BattleOverview(battle: battle, gameState: gameState),
         if (navigation && enemyPreviewShips.isNotEmpty) ...[
@@ -142,9 +143,9 @@ class _FleetColumn extends StatelessWidget {
 }
 
 class _NavigationOverview extends StatelessWidget {
-  const _NavigationOverview({required this.context});
+  const _NavigationOverview({required this.battle});
 
-  final BattleContext context;
+  final LiveBattle battle;
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +168,7 @@ class _NavigationOverview extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  this.context.forecastNodeLabel,
+                  battle.context.forecastNodeLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w800),
@@ -176,18 +177,27 @@ class _NavigationOverview extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            alignment: WrapAlignment.end,
-            children: [
-              if (this.context.combinedFleetType != CombinedFleetType.none)
-                MetaChip(
-                  label: this.context.combinedFleetType.label,
-                  color: const Color(0xff70c7bc),
-                ),
-              NodeTypePill(label: this.context.nodeTypeLabel),
-            ],
+          Expanded(
+            flex: 2,
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              alignment: WrapAlignment.end,
+              children: [
+                if (battle.context.combinedFleetType != CombinedFleetType.none)
+                  MetaChip(
+                    label: battle.context.combinedFleetType.label,
+                    color: const Color(0xff70c7bc),
+                  ),
+                if (battle.resourceChanges.isNotEmpty)
+                  ResourceChangesPill(changes: battle.resourceChanges),
+                if (battle.rewardItems.isNotEmpty)
+                  RewardItemsPill(items: battle.rewardItems),
+                if (battle.resourceChanges.isEmpty &&
+                    battle.rewardItems.isEmpty)
+                  NodeTypePill(label: battle.context.nodeTypeLabel),
+              ],
+            ),
           ),
         ],
       ),
@@ -228,15 +238,17 @@ class _BattleOverview extends StatelessWidget {
       for (final detail in details)
         MetaChip(label: detail.$1, color: detail.$2),
     ];
-    final dropShipId = battle.dropShipMasterId ?? 0;
-    final dropShipName = dropShipId > 0
-        ? '掉落：${gameState.masterShips[dropShipId]?.name ?? '舰娘 $dropShipId'}'
-        : null;
-    final dropEntries = <String>[
-      ?dropShipName,
-      if ((battle.dropItemId ?? 0) > 0)
-        '掉落：${battle.dropItemName?.trim().isNotEmpty == true ? battle.dropItemName!.trim() : '道具'}',
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    final dropShipNames = <String>[
+      for (final id in battle.effectiveDropShipMasterIds)
+        gameState.masterShips[id]?.name ?? 'ID: $id',
     ];
+    final dropShipName = dropShipNames.isEmpty
+        ? null
+        : l10n.dropLabel(dropShipNames.join('、'));
+    final dropEntries = <String>[?dropShipName];
     return Row(
       children: [
         if (battle.rank != BattleRank.unknown) ...<Widget>[
@@ -274,6 +286,10 @@ class _BattleOverview extends StatelessWidget {
                   ],
                 ),
               ],
+              if (phone && battle.rewardItems.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 4),
+                RewardItemsPill(items: battle.rewardItems),
+              ],
             ],
           ),
         ),
@@ -290,13 +306,18 @@ class _DropResult extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
     final entries = <String>[
-      if ((battle.dropShipMasterId ?? 0) > 0)
-        '掉落：${gameState.masterShips[battle.dropShipMasterId]?.name ?? '舰娘 ${battle.dropShipMasterId}'}',
-      if ((battle.dropItemId ?? 0) > 0)
-        '掉落：${battle.dropItemName?.trim().isNotEmpty == true ? battle.dropItemName!.trim() : '道具'}',
+      if (battle.effectiveDropShipMasterIds.isNotEmpty)
+        l10n.dropLabel(
+          battle.effectiveDropShipMasterIds
+              .map((id) => gameState.masterShips[id]?.name ?? 'ID: $id')
+              .join('、'),
+        ),
     ];
-    if (entries.isEmpty) {
+    if (entries.isEmpty && battle.rewardItems.isEmpty) {
       return const SizedBox.shrink();
     }
     return Padding(
@@ -305,7 +326,11 @@ class _DropResult extends StatelessWidget {
       child: Wrap(
         spacing: 6,
         runSpacing: 4,
-        children: <Widget>[for (final entry in entries) DropPill(text: entry)],
+        children: <Widget>[
+          for (final entry in entries) DropPill(text: entry),
+          if (battle.rewardItems.isNotEmpty)
+            RewardItemsPill(items: battle.rewardItems),
+        ],
       ),
     );
   }
