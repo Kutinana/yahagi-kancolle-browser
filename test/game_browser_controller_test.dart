@@ -50,6 +50,84 @@ void main() {
     ]);
   });
 
+  test('cold OOI entry clears only once per app process', () async {
+    final port = FakeGameBrowserPort();
+    final controller = GameBrowserController(
+      homeUri: GameConnector.ooi.entryUri,
+      port: port,
+    );
+
+    await controller.prepareInitialHome();
+    await controller.prepareInitialHome();
+
+    expect(port.clearedCookieOrigins, <Uri>[GameConnector.ooi.entryOrigin]);
+    expect(port.operations, <String>['clear:https://ooi.moe']);
+  });
+
+  test('cold Yahagi entry preserves every cookie', () async {
+    final port = FakeGameBrowserPort();
+    final controller = GameBrowserController(
+      homeUri: GameConnector.yahagi.entryUri,
+      port: port,
+    );
+
+    await controller.prepareInitialHome();
+
+    expect(port.clearedCookieOrigins, isEmpty);
+  });
+
+  test('each switch into OOI clears before navigation', () async {
+    final port = FakeGameBrowserPort();
+    final controller = GameBrowserController(
+      homeUri: GameConnector.yahagi.entryUri,
+      port: port,
+    );
+
+    await controller.switchHome(GameConnector.ooi.entryUri);
+    await controller.switchHome(GameConnector.yahagi.entryUri);
+    await controller.switchHome(GameConnector.ooi.entryUri);
+
+    expect(port.operations, <String>[
+      'clear:https://ooi.moe',
+      'load:https://ooi.moe/',
+      'load:${GameConnector.yahagi.entryUri}',
+      'clear:https://ooi.moe',
+      'load:https://ooi.moe/',
+    ]);
+  });
+
+  test('OOI refresh and home navigation preserve the active session', () async {
+    final port = FakeGameBrowserPort();
+    final controller = GameBrowserController(
+      homeUri: GameConnector.ooi.entryUri,
+      port: port,
+    );
+    await controller.prepareInitialHome();
+    port.operations.clear();
+    port.clearedCookieOrigins.clear();
+
+    await controller.reload();
+    await controller.goHome();
+
+    expect(port.clearedCookieOrigins, isEmpty);
+    expect(port.operations, <String>['reload', 'load:https://ooi.moe/']);
+  });
+
+  test('failed OOI cookie clearing never navigates with the old session', () async {
+    final port = FakeGameBrowserPort()..clearCookiesError = StateError('fail');
+    final controller = GameBrowserController(
+      homeUri: GameConnector.yahagi.entryUri,
+      port: port,
+    );
+
+    await expectLater(
+      controller.switchHome(GameConnector.ooi.entryUri),
+      throwsStateError,
+    );
+
+    expect(port.loadedUris, isEmpty);
+  });
+
   test('logout returns to the selected connector home', () async {
     final port = FakeGameBrowserPort();
     final controller = GameBrowserController(
@@ -278,6 +356,9 @@ final class FakeGameBrowserPort implements GameBrowserPort {
 
   final bool canGoBackResult;
   final List<Uri> loadedUris = [];
+  final List<Uri> clearedCookieOrigins = [];
+  final List<String> operations = [];
+  Object? clearCookiesError;
   var showLocalHomeCalls = 0;
   var reloadCalls = 0;
   var reloadGameFrameCalls = 0;
@@ -298,11 +379,20 @@ final class FakeGameBrowserPort implements GameBrowserPort {
   @override
   Future<void> loadUri(Uri uri) async {
     loadedUris.add(uri);
+    operations.add('load:$uri');
+  }
+
+  Future<void> clearCookiesForOrigin(Uri origin) async {
+    operations.add('clear:$origin');
+    clearedCookieOrigins.add(origin);
+    final error = clearCookiesError;
+    if (error != null) throw error;
   }
 
   @override
   Future<void> reload() async {
     reloadCalls++;
+    operations.add('reload');
     await reloadCompleter?.future;
   }
 

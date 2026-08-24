@@ -69,7 +69,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(state.connector.connector, GameConnector.ooi);
+    expect(state.port.operations, <String>[
+      'clear:https://ooi.moe',
+      'load:https://ooi.moe/',
+    ]);
     expect(state.port.loadedUris, <Uri>[GameConnector.ooi.entryUri]);
+  });
+
+  testWidgets('switching to Yahagi preserves login cookies', (tester) async {
+    final state = await createState(GameConnector.ooi);
+    addTearDown(state.connector.dispose);
+    addTearDown(state.browser.dispose);
+    await tester.pumpWidget(app(state.connector, state.browser));
+
+    await tester.tap(find.byKey(const Key('game-connector-yahagi')));
+    await tester.pumpAndSettle();
+
+    expect(state.connector.connector, GameConnector.yahagi);
+    expect(state.port.operations, <String>[
+      'load:${GameConnector.yahagi.entryUri}',
+    ]);
   });
 
   testWidgets('active game warning can cancel without changing page', (
@@ -97,9 +116,17 @@ void main() {
 
 final class _BrowserPort implements GameBrowserPort {
   final List<Uri> loadedUris = <Uri>[];
+  final List<String> operations = <String>[];
 
   @override
-  Future<void> loadUri(Uri uri) async => loadedUris.add(uri);
+  Future<void> loadUri(Uri uri) async {
+    loadedUris.add(uri);
+    operations.add('load:$uri');
+  }
+
+  Future<void> clearCookiesForOrigin(Uri origin) async {
+    operations.add('clear:$origin');
+  }
 
   @override
   Future<bool> canGoBack() async => false;
