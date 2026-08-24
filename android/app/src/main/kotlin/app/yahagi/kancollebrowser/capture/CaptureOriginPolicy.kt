@@ -4,6 +4,10 @@ import java.net.URI
 import java.util.Locale
 
 class CaptureOriginPolicy {
+    private val allowedExactHosts = setOf(
+        "ooi.moe",
+    )
+
     private val allowedRoots = setOf(
         "dmm.com",
         "dmm.co.jp",
@@ -14,6 +18,7 @@ class CaptureOriginPolicy {
         "https://*.dmm.com",
         "https://*.dmm.co.jp",
         "https://*.kancolle-server.com",
+        "https://ooi.moe",
     )
 
     fun isAllowed(origin: String): Boolean {
@@ -33,6 +38,9 @@ class CaptureOriginPolicy {
         }
 
         val host = uri.host?.lowercase(Locale.ROOT) ?: return false
+        if (host in allowedExactHosts) {
+            return uri.rawPath.isNullOrEmpty()
+        }
         return allowedRoots.any { root ->
             host == root || host.endsWith(".$root")
         }
