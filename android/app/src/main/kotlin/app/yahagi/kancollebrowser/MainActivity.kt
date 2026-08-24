@@ -56,6 +56,7 @@ import app.yahagi.kancollebrowser.browser.GameResourceCacheIndex
 import app.yahagi.kancollebrowser.browser.GameResourceCacheMode
 import app.yahagi.kancollebrowser.browser.GameResourceCacheStore
 import app.yahagi.kancollebrowser.browser.HttpUrlConnectionGameResourceFetcher
+import app.yahagi.kancollebrowser.browser.OriginCookieManagerChannel
 import app.yahagi.kancollebrowser.browser.GameResourceCacheManager
 import app.yahagi.kancollebrowser.browser.GameResourceDownloadCoordinator
 import app.yahagi.kancollebrowser.browser.GameResourceNetworkMonitor
@@ -259,6 +260,11 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         val nativeChannel = NativeGameWebViewEngineChannels.acquire(flutterEngine)
         nativeGameWebViewChannel = nativeChannel
         attachNativeGameWebViewChannel(nativeChannel)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            OriginCookieManagerChannel.METHOD_CHANNEL_NAME,
+        ).setMethodCallHandler(OriginCookieManagerChannel())
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
