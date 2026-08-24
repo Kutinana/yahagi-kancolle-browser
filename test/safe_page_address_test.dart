@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/safe_page_address.dart';
 
 void main() {
@@ -71,6 +71,16 @@ void main() {
     expect(
       SafePageAddress.canNavigateInGameWebView(
         Uri.parse('https://example.com/redirect'),
+      ),
+      isFalse,
+    );
+    expect(
+      SafePageAddress.canNavigateInGameWebView(Uri.parse('https://ooi.moe/')),
+      isTrue,
+    );
+    expect(
+      SafePageAddress.canNavigateInGameWebView(
+        Uri.parse('https://sub.ooi.moe/'),
       ),
       isFalse,
     );

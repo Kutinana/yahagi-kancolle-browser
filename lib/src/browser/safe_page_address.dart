@@ -33,10 +33,14 @@ final class SafePageAddress {
   }
 
   static bool canNavigateInGameWebView(Uri uri) {
-    if (uri.scheme != 'https' || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
+    if (uri.scheme != 'https' ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        (uri.hasPort && uri.port != 443)) {
       return false;
     }
     final host = uri.host.toLowerCase();
+    if (host == 'ooi.moe') return true;
     return _trustedGameRoots.any(
       (root) => host == root || host.endsWith('.$root'),
     );

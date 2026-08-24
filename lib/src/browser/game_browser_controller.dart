@@ -38,25 +38,38 @@ abstract interface class GameBrowserPort {
 }
 
 final class GameBrowserController extends ChangeNotifier {
-  factory GameBrowserController({GameBrowserPort? port}) {
-    return GameBrowserController._(port);
+  factory GameBrowserController({GameBrowserPort? port, Uri? homeUri}) {
+    return GameBrowserController._(
+      port,
+      homeUri ?? GameLaunchConfig.dmmGameEntry,
+    );
   }
 
-  GameBrowserController._(this._port);
+  GameBrowserController._(this._port, this._homeUri)
+    : _displayAddress = _homeUri.toString();
 
   GameBrowserPort? _port;
+  Uri _homeUri;
 
   GameBrowserMode _mode = GameBrowserMode.realWeb;
   GamePageLoadState _loadState = GamePageLoadState.idle;
-  String _displayAddress = GameLaunchConfig.dmmGameEntry.toString();
+  String _displayAddress;
   String? _errorMessage;
   Future<void>? _reloadInFlight;
   Future<GameFrameReloadResult>? _gameFrameReloadInFlight;
 
   GameBrowserMode get mode => _mode;
   GamePageLoadState get loadState => _loadState;
+  Uri get homeUri => _homeUri;
   String get displayAddress => _displayAddress;
   String? get errorMessage => _errorMessage;
+  bool get isOfficialGamePage {
+    final uri = Uri.tryParse(_displayAddress);
+    if (uri == null || uri.scheme != 'https') return false;
+    final host = uri.host.toLowerCase();
+    return host == 'kancolle-server.com' ||
+        host.endsWith('.kancolle-server.com');
+  }
 
   void attachPort(GameBrowserPort port) {
     if (identical(_port, port)) {
@@ -76,6 +89,11 @@ final class GameBrowserController extends ChangeNotifier {
   }
 
   Future<void> enterDmmLoginTest() async {
+    return switchHome(GameLaunchConfig.dmmGameEntry);
+  }
+
+  Future<void> switchHome(Uri target) async {
+    _homeUri = target;
     final port = _readyPort();
     if (port == null) {
       return;
@@ -83,11 +101,16 @@ final class GameBrowserController extends ChangeNotifier {
     _mode = GameBrowserMode.realWeb;
     _errorMessage = null;
     notifyListeners();
-    await port.loadUri(GameLaunchConfig.dmmGameEntry);
+    await port.loadUri(target);
   }
 
   Future<void> goHome() async {
-    return enterDmmLoginTest();
+    final port = _readyPort();
+    if (port == null) return;
+    _mode = GameBrowserMode.realWeb;
+    _errorMessage = null;
+    notifyListeners();
+    await port.loadUri(_homeUri);
   }
 
   Future<void> reload() async {
@@ -171,7 +194,7 @@ final class GameBrowserController extends ChangeNotifier {
     _mode = GameBrowserMode.realWeb;
     _errorMessage = null;
     notifyListeners();
-    await port.loadUri(GameLaunchConfig.dmmGameEntry);
+    await port.loadUri(_homeUri);
   }
 
   void onPageStarted(String url) {
