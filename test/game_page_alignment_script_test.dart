@@ -46,6 +46,15 @@ void main() {
     );
   });
 
+  test('alignment recognizes the standalone HTML5 game canvas', () {
+    expect(
+      gamePageAlignmentScript,
+      contains("document.querySelectorAll('canvas')"),
+    );
+    expect(gamePageAlignmentScript, contains('canvas.width === 1200'));
+    expect(gamePageAlignmentScript, contains('canvas.height === 720'));
+  });
+
   test('alignment yields to an open DMM purchase dialog', () {
     expect(gamePageAlignmentScript, contains("dialog[open]"));
     expect(gamePageAlignmentScript, contains('hasBlockingPageDialog'));

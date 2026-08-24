@@ -89,6 +89,11 @@ const String gamePageAlignmentScript = r'''
   const hasBlockingPageDialog = () =>
     Boolean(document.querySelector('dialog[open]'));
 
+  const hasStandaloneGameCanvas = () =>
+    Array.from(document.querySelectorAll('canvas')).some(
+      (canvas) => canvas.width === 1200 && canvas.height === 720,
+    );
+
   const notifyPresentationState = (hasGameSurface) => {
     const nextState = hasGameSurface ? 'game' : 'web';
     if (window.__yahagiMobilePresentationState === nextState) return;
@@ -145,7 +150,7 @@ const String gamePageAlignmentScript = r'''
   window.__yahagiMobileSyncPresentation = () => {
     const hasGameSurface = Boolean(
       document.querySelector('#game_frame, #game-container'),
-    );
+    ) || hasStandaloneGameCanvas();
     const shouldUseGamePresentation =
       isGamePage &&
       !isAccountPage &&
