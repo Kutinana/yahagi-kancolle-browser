@@ -30,6 +30,7 @@ import 'about_support_settings_page.dart';
 import 'battle_prediction_settings.dart';
 import 'game_frame_rate_settings.dart';
 import 'game_rendering_mode_controller.dart';
+import 'game_connector_controller.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -61,6 +62,7 @@ class SettingsPage extends StatelessWidget {
     this.gameFrameRateSettingsController,
     this.selectedIndex = 0,
     this.gameRenderingModeController,
+    this.gameConnectorController,
     this.isBattleActive = false,
     this.diagnosticController,
   });
@@ -92,6 +94,7 @@ class SettingsPage extends StatelessWidget {
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final int selectedIndex;
   final GameRenderingModeController? gameRenderingModeController;
+  final GameConnectorController? gameConnectorController;
   final bool isBattleActive;
   final DiagnosticController? diagnosticController;
 
@@ -124,6 +127,7 @@ class SettingsPage extends StatelessWidget {
           networkSettingsController: networkSettingsController,
           gadgetBypassController: gadgetBypassController,
           browserController: browserController,
+          gameConnectorController: gameConnectorController,
         ),
         DataSettingsPage(
           captureModeController: captureModeController,

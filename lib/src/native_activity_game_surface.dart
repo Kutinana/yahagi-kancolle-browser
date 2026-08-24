@@ -11,14 +11,13 @@ import 'browser/game_browser_controller.dart';
 import 'browser/game_frame_rate_policy.dart';
 import 'browser/game_frame_rate_port.dart';
 import 'browser/game_frame_rate_runtime_controller.dart';
+import 'browser/game_initial_address.dart';
 import 'browser/game_frame_reload_port.dart';
-import 'browser/game_launch_config.dart';
 import 'browser/game_toolbar_controller.dart';
 import 'browser/native_game_surface_slot.dart';
 import 'browser/native_game_webview_contract.dart';
 import 'browser/native_game_webview_port.dart';
 import 'browser/ooi_connector_assist.dart';
-import 'browser/safe_page_address.dart';
 import 'capture/capture_mode.dart';
 import 'capture/capture_mode_controller.dart';
 import 'capture/game_capture_controller.dart';
@@ -562,14 +561,9 @@ final class _NativeActivityGameSurfaceState
       }
       _setStartupState(GameStartupState.networkReady);
 
-      final displayAddress = widget.browserController.displayAddress;
-      final address = Uri.tryParse(displayAddress);
-      final initialAddress =
-          address != null &&
-              SafePageAddress.canNavigate(address) &&
-              widget.browserController.mode != GameBrowserMode.localPrototype
-          ? address
-          : GameLaunchConfig.dmmGameEntry;
+      final initialAddress = resolveInitialGameAddress(
+        widget.browserController,
+      );
       await orchestrator
           .runCaptureStartup(
             waitForSurface: () async {

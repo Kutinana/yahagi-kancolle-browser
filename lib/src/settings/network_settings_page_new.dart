@@ -5,6 +5,7 @@ import '../browser/gadget_bypass_controller.dart';
 import '../browser/game_browser_controller.dart';
 import 'gadget_bypass_section.dart';
 import 'network_settings_controller.dart';
+import 'game_connector_controller.dart';
 import 'network_settings_section.dart';
 import 'settings_ui_helpers.dart';
 
@@ -14,11 +15,13 @@ class NetworkSettingsPageNew extends StatelessWidget with SettingsUIHelpers {
     required this.networkSettingsController,
     required this.gadgetBypassController,
     required this.browserController,
+    this.gameConnectorController,
   });
 
   final NetworkSettingsController networkSettingsController;
   final GadgetBypassController gadgetBypassController;
   final GameBrowserController browserController;
+  final GameConnectorController? gameConnectorController;
 
   @override
   Widget build(BuildContext context) {
