@@ -40,10 +40,14 @@ class CaptureOriginPolicyTest {
     }
 
     @Test
-    fun ooiIsALoginOriginNotATrustedCaptureOrigin() {
-        assertFalse(policy.isAllowed("https://ooi.moe"))
+    fun allowsOnlyExactOoiHttpsOrigin() {
+        assertTrue(policy.isAllowed("https://ooi.moe"))
+        assertTrue(policy.allowedOriginRules.contains("https://ooi.moe"))
+        assertFalse(policy.isAllowed("http://ooi.moe"))
+        assertFalse(policy.isAllowed("https://sub.ooi.moe"))
+        assertFalse(policy.isAllowed("https://ooi.moe.example.org"))
+        assertFalse(policy.isAllowed("https://ooi.moe:8443"))
         assertFalse(policy.isAllowed("https://ooi.moe/browser"))
-        assertFalse(policy.allowedOriginRules.contains("https://ooi.moe"))
         assertTrue(policy.isAllowed("https://w01y.kancolle-server.com"))
     }
 }
