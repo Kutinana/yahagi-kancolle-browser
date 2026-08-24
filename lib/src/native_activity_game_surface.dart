@@ -17,6 +17,7 @@ import 'browser/game_toolbar_controller.dart';
 import 'browser/native_game_surface_slot.dart';
 import 'browser/native_game_webview_contract.dart';
 import 'browser/native_game_webview_port.dart';
+import 'browser/ooi_connector_assist.dart';
 import 'browser/safe_page_address.dart';
 import 'capture/capture_mode.dart';
 import 'capture/capture_mode_controller.dart';
@@ -767,6 +768,14 @@ final class _NativeActivityGameSurfaceState
     String url,
   ) async {
     try {
+      if (OoiConnectorAssist.shouldRun(url)) {
+        await port
+            .runJavaScript(OoiConnectorAssist.script)
+            .timeout(_cleanupTimeout);
+        if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
+          return;
+        }
+      }
       await port.fitGameScreen().timeout(_cleanupTimeout);
       if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
         return;
