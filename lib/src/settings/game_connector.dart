@@ -7,8 +7,10 @@ extension GameConnectorDefinition on GameConnector {
 
   Uri get entryUri => switch (this) {
     GameConnector.yahagi => GameLaunchConfig.dmmGameEntry,
-    GameConnector.ooi => Uri.parse('https://ooi.moe/'),
+    GameConnector.ooi => GameLaunchConfig.ooiEntry,
   };
+
+  Uri get entryOrigin => Uri.parse(entryUri.origin);
 
   bool ownsLoginPage(Uri uri) =>
       this == GameConnector.ooi &&

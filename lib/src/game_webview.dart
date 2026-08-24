@@ -1013,6 +1013,8 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
           isActive: () => _isCurrentStartup(startupEpoch, orchestrator),
           navigate: () async {
             if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
+            await browserController.prepareInitialHome();
+            if (!_isCurrentStartup(startupEpoch, orchestrator)) return;
             await _startupCoordinator.navigateOnce(
               initialAddress,
               () => _webViewController.loadRequest(initialAddress),

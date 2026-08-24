@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/origin_cookie_manager_port.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_connector.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_connector_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_connector_section.dart';
@@ -22,6 +23,7 @@ void main() {
     final browser = GameBrowserController(
       homeUri: initial.entryUri,
       port: port,
+      originCookieManagerPort: port,
     );
     return (connector: connector, port: port, browser: browser);
   }
@@ -114,7 +116,7 @@ void main() {
   });
 }
 
-final class _BrowserPort implements GameBrowserPort {
+final class _BrowserPort implements GameBrowserPort, OriginCookieManagerPort {
   final List<Uri> loadedUris = <Uri>[];
   final List<String> operations = <String>[];
 
@@ -124,6 +126,7 @@ final class _BrowserPort implements GameBrowserPort {
     operations.add('load:$uri');
   }
 
+  @override
   Future<void> clearCookiesForOrigin(Uri origin) async {
     operations.add('clear:$origin');
   }

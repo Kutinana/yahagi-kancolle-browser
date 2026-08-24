@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
 import 'dart:async';
 import 'package:yahagi_kancolle_browser/src/browser/game_launch_config.dart';
+import 'package:yahagi_kancolle_browser/src/browser/origin_cookie_manager_port.dart';
 import 'package:yahagi_kancolle_browser/src/settings/game_connector.dart';
 
 void main() {
@@ -38,6 +39,7 @@ void main() {
     final controller = GameBrowserController(
       homeUri: GameConnector.yahagi.entryUri,
       port: port,
+      originCookieManagerPort: port,
     );
 
     await controller.switchHome(GameConnector.ooi.entryUri);
@@ -55,6 +57,7 @@ void main() {
     final controller = GameBrowserController(
       homeUri: GameConnector.ooi.entryUri,
       port: port,
+      originCookieManagerPort: port,
     );
 
     await controller.prepareInitialHome();
@@ -69,6 +72,7 @@ void main() {
     final controller = GameBrowserController(
       homeUri: GameConnector.yahagi.entryUri,
       port: port,
+      originCookieManagerPort: port,
     );
 
     await controller.prepareInitialHome();
@@ -81,6 +85,7 @@ void main() {
     final controller = GameBrowserController(
       homeUri: GameConnector.yahagi.entryUri,
       port: port,
+      originCookieManagerPort: port,
     );
 
     await controller.switchHome(GameConnector.ooi.entryUri);
@@ -101,6 +106,7 @@ void main() {
     final controller = GameBrowserController(
       homeUri: GameConnector.ooi.entryUri,
       port: port,
+      originCookieManagerPort: port,
     );
     await controller.prepareInitialHome();
     port.operations.clear();
@@ -113,20 +119,25 @@ void main() {
     expect(port.operations, <String>['reload', 'load:https://ooi.moe/']);
   });
 
-  test('failed OOI cookie clearing never navigates with the old session', () async {
-    final port = FakeGameBrowserPort()..clearCookiesError = StateError('fail');
-    final controller = GameBrowserController(
-      homeUri: GameConnector.yahagi.entryUri,
-      port: port,
-    );
+  test(
+    'failed OOI cookie clearing never navigates with the old session',
+    () async {
+      final port = FakeGameBrowserPort()
+        ..clearCookiesError = StateError('fail');
+      final controller = GameBrowserController(
+        homeUri: GameConnector.yahagi.entryUri,
+        port: port,
+        originCookieManagerPort: port,
+      );
 
-    await expectLater(
-      controller.switchHome(GameConnector.ooi.entryUri),
-      throwsStateError,
-    );
+      await expectLater(
+        controller.switchHome(GameConnector.ooi.entryUri),
+        throwsStateError,
+      );
 
-    expect(port.loadedUris, isEmpty);
-  });
+      expect(port.loadedUris, isEmpty);
+    },
+  );
 
   test('logout returns to the selected connector home', () async {
     final port = FakeGameBrowserPort();
@@ -351,7 +362,8 @@ void main() {
   });
 }
 
-final class FakeGameBrowserPort implements GameBrowserPort {
+final class FakeGameBrowserPort
+    implements GameBrowserPort, OriginCookieManagerPort {
   FakeGameBrowserPort({this.canGoBackResult = false});
 
   final bool canGoBackResult;
@@ -382,6 +394,7 @@ final class FakeGameBrowserPort implements GameBrowserPort {
     operations.add('load:$uri');
   }
 
+  @override
   Future<void> clearCookiesForOrigin(Uri origin) async {
     operations.add('clear:$origin');
     clearedCookieOrigins.add(origin);

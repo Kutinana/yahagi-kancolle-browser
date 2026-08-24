@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'game_launch_config.dart';
+import 'origin_cookie_manager_port.dart';
 import 'safe_page_address.dart';
 
 enum GameBrowserMode { localPrototype, realWeb }
@@ -38,18 +39,29 @@ abstract interface class GameBrowserPort {
 }
 
 final class GameBrowserController extends ChangeNotifier {
-  factory GameBrowserController({GameBrowserPort? port, Uri? homeUri}) {
+  factory GameBrowserController({
+    GameBrowserPort? port,
+    Uri? homeUri,
+    OriginCookieManagerPort? originCookieManagerPort,
+  }) {
     return GameBrowserController._(
       port,
       homeUri ?? GameLaunchConfig.dmmGameEntry,
+      originCookieManagerPort ?? const MethodChannelOriginCookieManagerPort(),
     );
   }
 
-  GameBrowserController._(this._port, this._homeUri)
-    : _displayAddress = _homeUri.toString();
+  GameBrowserController._(
+    this._port,
+    this._homeUri,
+    this._originCookieManagerPort,
+  ) : _displayAddress = _homeUri.toString();
 
   GameBrowserPort? _port;
   Uri _homeUri;
+  final OriginCookieManagerPort _originCookieManagerPort;
+  bool _initialHomePrepared = false;
+  Future<void>? _initialHomePreparation;
 
   GameBrowserMode _mode = GameBrowserMode.realWeb;
   GamePageLoadState _loadState = GamePageLoadState.idle;
@@ -101,7 +113,37 @@ final class GameBrowserController extends ChangeNotifier {
     _mode = GameBrowserMode.realWeb;
     _errorMessage = null;
     notifyListeners();
+    await _clearEphemeralSessionFor(target);
+    _initialHomePrepared = true;
     await port.loadUri(target);
+  }
+
+  Future<void> prepareInitialHome() {
+    if (_initialHomePrepared) return Future<void>.value();
+    final existing = _initialHomePreparation;
+    if (existing != null) return existing;
+
+    late final Future<void> pending;
+    pending = _prepareInitialHome().whenComplete(() {
+      if (identical(_initialHomePreparation, pending)) {
+        _initialHomePreparation = null;
+      }
+    });
+    _initialHomePreparation = pending;
+    return pending;
+  }
+
+  Future<void> _prepareInitialHome() async {
+    await _clearEphemeralSessionFor(_homeUri);
+    _initialHomePrepared = true;
+  }
+
+  Future<void> _clearEphemeralSessionFor(Uri entryUri) async {
+    if (entryUri == GameLaunchConfig.ooiEntry) {
+      await _originCookieManagerPort.clearCookiesForOrigin(
+        GameLaunchConfig.ooiOrigin,
+      );
+    }
   }
 
   Future<void> goHome() async {

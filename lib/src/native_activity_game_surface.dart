@@ -572,6 +572,9 @@ final class _NativeActivityGameSurfaceState
                 _matchesGeneration(port, generationId, operationEpoch),
             navigate: () async {
               if (_matchesGeneration(port, generationId, operationEpoch)) {
+                await widget.browserController.prepareInitialHome();
+              }
+              if (_matchesGeneration(port, generationId, operationEpoch)) {
                 await _navigateInitialPage(
                   port,
                   initialAddress,
