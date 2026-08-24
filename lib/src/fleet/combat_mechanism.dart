@@ -720,22 +720,24 @@ double? _calculateFleetSpecialAttackRate(
       final flagshipEq = state.equipmentForShip(flagship);
       if (flagshipEq.any((e) => _isSurfaceRadarWithLos8(e.master))) {
         if (flagshipMaster != null) {
-          if (flagshipMaster.id == 591)
+          if (flagshipMaster.id == 591) {
             raw += 30.0;
-          else if (flagshipMaster.id == 592)
+          } else if (flagshipMaster.id == 592) {
             raw += 10.0;
-          else if (flagshipMaster.id == 593)
+          } else if (flagshipMaster.id == 593) {
             raw += 15.0;
-          else if (flagshipMaster.id == 694)
+          } else if (flagshipMaster.id == 694) {
             raw += 20.0;
+          }
         }
       }
       if (flagshipEq.any((e) => e.master?.id == 140)) {
         if (flagshipMaster != null) {
-          if (flagshipMaster.id == 591)
+          if (flagshipMaster.id == 591) {
             raw += 10.0;
-          else if (flagshipMaster.id == 592)
+          } else if (flagshipMaster.id == 592) {
             raw += 30.0;
+          }
         }
       }
       return (math.max(0.0, raw) / 100.0).clamp(0.0, 1.0);
