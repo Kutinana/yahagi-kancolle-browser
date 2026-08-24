@@ -21,7 +21,6 @@ import 'browser/game_surface_detection_result.dart';
 import 'browser/game_toolbar_controller.dart';
 import 'browser/game_webview_compatibility.dart';
 import 'browser/game_navigation_policy.dart';
-import 'browser/ooi_connector_assist.dart';
 import 'browser/network_proxy_channel.dart';
 import 'capture/capture_mode.dart';
 import 'capture/capture_mode_controller.dart';
@@ -1065,13 +1064,6 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     try {
       widget.controller.onPageFinished(url);
       widget.browserController.onPageFinished(url);
-
-      if (OoiConnectorAssist.shouldRun(url)) {
-        await _startupCoordinator.waitForStage(
-          _webViewController.runJavaScript(OoiConnectorAssist.script),
-        );
-        if (!_isCurrentNavigation(navigationEpoch)) return;
-      }
 
       await _startupCoordinator.waitForStage(_synchronizeGamePresentation());
       if (!_isCurrentNavigation(navigationEpoch)) return;

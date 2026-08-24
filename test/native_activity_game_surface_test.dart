@@ -13,7 +13,6 @@ import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart
 import 'package:yahagi_kancolle_browser/src/browser/game_frame_reload_port.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_launch_config.dart';
 import 'package:yahagi_kancolle_browser/src/browser/network_proxy_channel.dart';
-import 'package:yahagi_kancolle_browser/src/browser/ooi_connector_assist.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_surface_slot.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_contract.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_port.dart';
@@ -346,7 +345,7 @@ void main() {
     expect(frameRatePort.appliedTargets.last, GameFrameRateTarget.fps60);
   });
 
-  testWidgets('native surface assists OOI without touching official pages', (
+  testWidgets('native surface leaves the OOI mode choices untouched', (
     tester,
   ) async {
     final fixture = _SurfaceFixture();
@@ -363,7 +362,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(fixture.port.executedScripts, <String>[OoiConnectorAssist.script]);
+    expect(fixture.port.executedScripts, isEmpty);
 
     fixture.port.addEvent(
       _event(
@@ -382,7 +381,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(fixture.port.executedScripts, <String>[OoiConnectorAssist.script]);
+    expect(fixture.port.executedScripts, isEmpty);
     fixture.toolbarController.collapse();
   });
 

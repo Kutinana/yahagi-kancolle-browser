@@ -2,9 +2,9 @@
 
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
-**目标：** 在“网络”设置中增加 Yahagi/OOI 游戏连接器切换，OOI 固定使用直连登录模式，并验证登录后 KCSAPI 捕获、现有功能和本地资源缓存互不冲突。
+**目标：** 在“网络”设置中增加 Yahagi/OOI 游戏连接器切换，原样保留 OOI 模式 1、3、4，并分模式验证 KCSAPI、现有功能和本地资源缓存兼容性。
 
-**架构：** 新增独立于代理 `NetworkMode` 的 `GameConnector` 设置和控制器；连接器只决定 WebView 的登录入口，切换后保存设置并立即导航，不修改代理和本地缓存配置。OOI 页面仅执行一个不读取凭据、不自动提交的 DOM 辅助脚本；进入 DMM/舰娘官方域名后，继续沿用当前导航、KCSAPI 捕获和静态资源缓存链路。
+**架构：** 新增独立于代理 `NetworkMode` 的 `GameConnector` 设置和控制器；连接器只决定 WebView 的登录入口，切换后保存设置并立即导航，不修改代理和本地缓存配置。OOI 页面不做专用 DOM 注入，模式选择完全交给用户；进入后继续沿用当前导航、KCSAPI 捕获和静态资源缓存安全边界。
 
 **技术栈：** Flutter/Dart、SharedPreferences、webview_flutter、Android WebView/Kotlin、flutter_test、JUnit 4
 
@@ -14,11 +14,10 @@
 
 - 创建 `lib/src/settings/game_connector.dart`：定义连接器枚举、持久化名称、入口 URI 和精确域名判断。
 - 创建 `lib/src/settings/game_connector_controller.dart`：加载、保存和串行化切换操作，不接触代理或缓存控制器。
-- 创建 `lib/src/browser/ooi_connector_assist.dart`：封装 OOI 直连单选框辅助脚本及精确页面匹配。
 - 创建 `lib/src/browser/game_initial_address.dart`：统一两种渲染表面的冷启动入口解析。
 - 修改 `lib/src/browser/game_browser_controller.dart`：保存当前首页入口，并支持切换后立即导航。
 - 修改 `lib/src/browser/game_navigation_policy.dart`、`lib/src/browser/safe_page_address.dart`：仅允许精确的 OOI HTTPS 页面进入登录 WebView，并保持官方认证跳转策略。
-- 修改 `lib/src/game_webview.dart`、`lib/src/native_activity_game_surface.dart`：以连接器入口启动，并在 OOI 页面完成时运行辅助脚本。
+- 修改 `lib/src/game_webview.dart`、`lib/src/native_activity_game_surface.dart`：以连接器入口启动，并保证 OOI 页面不执行专用模式脚本。
 - 修改 `lib/main.dart`：初始化和注入连接器控制器。
 - 修改 `lib/src/settings/network_settings_page_new.dart`、`lib/src/settings/settings_page.dart`：显示连接器选择区、风险确认和立即切换逻辑。
 - 修改 `lib/l10n/app_zh.arb`、`lib/l10n/app_zh_Hant.arb`、`lib/l10n/app_ja.arb`：增加连接器、风险提示和结果文案；生成文件由 `flutter gen-l10n` 更新。
@@ -209,77 +208,52 @@ git add lib/src/browser/game_browser_controller.dart lib/src/browser/game_naviga
 git commit -m "feat(浏览器): 支持切换游戏登录入口"
 ```
 
-### 任务 3：OOI 直连模式辅助脚本
+### 任务 3：OOI 页面零注入回归
 
 **文件：**
-- 创建：`lib/src/browser/ooi_connector_assist.dart`
-- 创建：`test/ooi_connector_assist_test.dart`
 - 修改：`lib/src/game_webview.dart`
 - 修改：`lib/src/native_activity_game_surface.dart`
 - 修改：`test/native_activity_game_surface_test.dart`
 
-- [ ] **步骤 1：编写失败的脚本契约测试**
+- [ ] **步骤 1：编写失败的零注入测试**
 
 ```dart
-test('assist script selects connector mode without submitting credentials', () {
-  expect(OoiConnectorAssist.shouldRun('https://ooi.moe/'), isTrue);
-  expect(OoiConnectorAssist.shouldRun('https://ooi.moe.evil.test/'), isFalse);
-  expect(OoiConnectorAssist.script, contains('input[name="mode"][value="4"]'));
-  expect(OoiConnectorAssist.script, contains('target.checked = true'));
-  expect(OoiConnectorAssist.script, isNot(contains('.submit(')));
-  expect(OoiConnectorAssist.script, isNot(contains('password')));
-  expect(OoiConnectorAssist.script, isNot(contains('click()')));
+testWidgets('native surface leaves the OOI mode choices untouched', (tester) async {
+  final fixture = _SurfaceFixture();
+  await fixture.pump(tester);
+  fixture.port.addEvent(
+    _event('pageStarted', generationId: 7, url: 'https://ooi.moe/'),
+  );
+  fixture.port.addEvent(
+    _event('pageFinished', generationId: 7, url: 'https://ooi.moe/'),
+  );
+  await tester.pump();
+  await tester.pump();
+  expect(fixture.port.executedScripts, isEmpty);
 });
 ```
 
-在原生表面测试中，发送 `pageFinished(url: 'https://ooi.moe/')`，断言记录端口只执行一次 `OoiConnectorAssist.script`；对 DMM 和官方游戏页断言不执行。
-
 - [ ] **步骤 2：运行测试验证失败**
 
-运行：`flutter test test/ooi_connector_assist_test.dart test/native_activity_game_surface_test.dart`
+运行：`flutter test test/native_activity_game_surface_test.dart --plain-name "native surface leaves the OOI mode choices untouched"`
 
-预期：FAIL，提示 `OoiConnectorAssist` 不存在或没有执行脚本。
+预期：若旧实现仍注入模式脚本则 FAIL，`executedScripts` 中会出现选中模式 4 或隐藏模式 1、3 的脚本。
 
-- [ ] **步骤 3：实现幂等且无凭据读取的脚本**
+- [ ] **步骤 3：移除 OOI 专用 DOM 注入**
 
-```dart
-abstract final class OoiConnectorAssist {
-  static bool shouldRun(String rawUrl) {
-    final uri = Uri.tryParse(rawUrl);
-    return uri != null && uri.scheme == 'https' &&
-        uri.host.toLowerCase() == 'ooi.moe' && !uri.hasPort &&
-        uri.userInfo.isEmpty;
-  }
-
-  static const script = r'''(() => {
-    const target = document.querySelector('input[name="mode"][value="4"]');
-    if (!target) return 'missing';
-    target.checked = true;
-    target.dispatchEvent(new Event('change', { bubbles: true }));
-    for (const value of ['1', '3']) {
-      const option = document.querySelector(`input[name="mode"][value="${value}"]`);
-      const row = option && (option.closest('label') || option.parentElement);
-      if (row) row.style.display = 'none';
-      if (option) option.disabled = true;
-    }
-    return 'ready';
-  })();''';
-}
-```
-
-在 Flutter WebView 的 `_finishPage` 和原生表面的 `_finishPage` 中，仅当 `shouldRun(url)` 为真时调用各自端口的 `runJavaScript`。脚本不得读取、记录、保存账号或密码，不得自动提交表单。
+删除 Flutter WebView 和原生表面 `_finishPage` 中所有 OOI 专用 `runJavaScript` 调用及其脚本文件。通用游戏画面对齐脚本仍只按原有流程运行，不添加 OOI 表单选择器。
 
 - [ ] **步骤 4：运行测试验证通过**
 
-运行：`flutter test test/ooi_connector_assist_test.dart test/native_activity_game_surface_test.dart`
+运行：`flutter test test/native_activity_game_surface_test.dart --plain-name "native surface leaves the OOI mode choices untouched"`
 
 预期：PASS。
 
 - [ ] **步骤 5：提交**
 
 ```bash
-git add lib/src/browser/ooi_connector_assist.dart lib/src/game_webview.dart lib/src/native_activity_game_surface.dart test/ooi_connector_assist_test.dart test/native_activity_game_surface_test.dart
-git commit -m "feat(浏览器): 添加 OOI 直连登录辅助"
+git add lib/src/game_webview.dart lib/src/native_activity_game_surface.dart test/native_activity_game_surface_test.dart
+git commit -m "fix(浏览器): 保留 OOI 原始模式选择"
 ```
 
 ### 任务 4：初始化连接器并覆盖两种渲染表面的冷启动
@@ -489,7 +463,7 @@ git commit -m "test(缓存): 覆盖 OOI 连接兼容性"
 手册必须逐项记录“环境、步骤、期望、实际、证据/日志”，至少覆盖：
 
 1. Yahagi 连接 + 缓存关闭：DMM 登录、进入游戏、母港/编成/出击 KCSAPI 正常。
-2. OOI 连接 + 缓存关闭：只显示直连模式，手动登录后进入官方页面；账号密码未出现在日志或诊断导出。
+2. OOI 连接 + 缓存关闭：模式 1、3、4 保持可选，分别记录登录、页面去向和 KCSAPI 捕获结果；账号密码未出现在日志或诊断导出。
 3. OOI 连接 + 空的完整缓存：首次资源下载、`api_start2`、`api_port`、舰队/任务/装备/战斗面板更新正常。
 4. OOI 连接 + 热缓存：官方静态资源出现本地命中，OOI HTML/JS/CSS 和 `/kcsapi/` 命中数始终为 0。
 5. OOI 连接 + 清空重建：清空后能重新下载，连接器选择仍为 OOI。
