@@ -15,6 +15,14 @@ void main() {
     state = _state();
   });
 
+  test('schema version follows the build-time reporting tag', () {
+    const expected = String.fromEnvironment(
+      'KCWIKI_REPORT_VERSION',
+      defaultValue: 'yahagi-1',
+    );
+    expect(KcwikiReportCollector.schemaVersion, expected);
+  });
+
   test('completed quest reports newly unlocked quests only', () {
     collector.accept(_questList(<int>[101, 102]), state);
     collector.accept(

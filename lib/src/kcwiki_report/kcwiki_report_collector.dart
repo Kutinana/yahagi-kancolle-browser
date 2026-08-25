@@ -11,7 +11,10 @@ final class KcwikiReportCollector {
   KcwikiReportCollector({DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
 
-  static const String schemaVersion = 'yahagi-1';
+  static const String schemaVersion = String.fromEnvironment(
+    'KCWIKI_REPORT_VERSION',
+    defaultValue: 'yahagi-1',
+  );
   static final Set<String> supportedPaths = Set<String>.unmodifiable(<String>{
     '/kcsapi/api_start2/getData',
     '/kcsapi/api_get_member/questlist',

@@ -141,6 +141,8 @@ void main() {
       'notCompleted',
       // “分享” is the standard action label in both Chinese scripts.
       'diagnosticShareAction',
+      // HTTP and its numeric status placeholder are protocol terminology.
+      'kcwikiReportFailureHttp',
       // “低耗”是简中和繁中统一采用的帧率档位产品名称。
       'gameFrameRatePowerSaving',
       // “高刷” is the concise product label in both Chinese scripts.
@@ -213,6 +215,8 @@ void main() {
       'evasion',
       'highSpeedPlus',
       'questRemodeling',
+      // HTTP and its numeric status placeholder are protocol terminology.
+      'kcwikiReportFailureHttp',
       // 「最小/最大」 are the standard Japanese range labels as well.
       'minimumValue',
       'maximumValue',
