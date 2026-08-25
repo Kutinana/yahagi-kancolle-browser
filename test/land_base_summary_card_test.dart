@@ -48,7 +48,7 @@ void main() {
         find.byKey(const Key('land-base-fatigue-face-62-1')),
       );
       expect(face.top, closeTo(portrait.top, 0.1));
-      expect(face.right, closeTo(portrait.right, 0.1));
+      expect(face.right, closeTo(portrait.right - 4, 0.1));
     });
   }
 
@@ -107,7 +107,7 @@ void main() {
       expect(airPower.center.dy, closeTo(name.center.dy, 0.1));
       expect(range.center.dy, closeTo(name.center.dy, 0.1));
       expect(portrait.top, greaterThan(name.bottom));
-      expect(portrait.height, lessThanOrEqualTo(38));
+      expect(portrait.size, const Size(68, 32));
     },
   );
 

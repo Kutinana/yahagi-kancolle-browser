@@ -5,6 +5,7 @@ import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import 'dashboard_card.dart';
 import 'equipment_type_icon.dart';
+import 'fleet_ship_status_capsule.dart';
 import 'land_base_air_power.dart';
 import 'land_base_status_visuals.dart';
 import 'ship_status_style.dart';
@@ -234,8 +235,12 @@ class LandBaseAirGroupRow extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < 460;
-          final portraitWidth = narrow ? 112.0 : 138.0;
-          const portraitHeight = 34.0;
+          final portraitSize = fleetStatusPortraitSize(constraints.maxWidth);
+          final portraitWidth = portraitSize.width;
+          final portraitHeight = portraitSize.height;
+          final fatigueFaceSize = (portraitHeight * 0.34)
+              .clamp(14.0, 20.0)
+              .toDouble();
           final l10n =
               AppLocalizations.of(context) ??
               lookupAppLocalizations(const Locale('zh'));
@@ -319,13 +324,13 @@ class LandBaseAirGroupRow extends StatelessWidget {
                         ),
                         if (fatigue != LandBaseFatigueLevel.none)
                           Positioned(
-                            right: 0,
+                            right: 4,
                             top: 0,
                             child: FatigueFace(
                               level: fatigue == LandBaseFatigueLevel.red
                                   ? FatigueFaceLevel.red
                                   : FatigueFaceLevel.yellow,
-                              size: 15,
+                              size: fatigueFaceSize,
                               faceKey: Key(
                                 'land-base-fatigue-face-$_keySuffix',
                               ),

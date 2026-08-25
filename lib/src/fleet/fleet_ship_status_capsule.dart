@@ -10,6 +10,12 @@ import 'ship_status_style.dart';
 import 'equipment_display.dart';
 import 'ship_status_visuals.dart';
 
+Size fleetStatusPortraitSize(double maxWidth) => maxWidth < 430
+    ? const Size(60, 28)
+    : maxWidth < 520
+    ? const Size(68, 32)
+    : const Size(96, 42);
+
 class FleetShipStatusCapsule extends StatefulWidget {
   const FleetShipStatusCapsule({
     super.key,
@@ -78,11 +84,7 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 520;
         final narrow = constraints.maxWidth < 430;
-        final portraitSize = narrow
-            ? const Size(60, 28)
-            : compact
-            ? const Size(68, 32)
-            : const Size(96, 42);
+        final portraitSize = fleetStatusPortraitSize(constraints.maxWidth);
         final sectionGap = narrow ? 6.0 : (compact ? 8.0 : 12.0);
         final meterHeight = narrow ? 15.0 : 16.0;
 
