@@ -339,7 +339,7 @@
   "@airStateLabel": {"placeholders": {"label": {"type": "String"}}},
   "postBattleWarningTitle": "戰後安全警告",
   "postBattleWarningHeadline": "出擊艦隊中有大破艦娘！",
-  "postBattleWarningBody": "請務必在接下來的選擇畫面點選「撤退」，切勿強行進擊以免沉船！",
+  "postBattleWarningBody": "已在大破狀態下選擇進擊！請立即停止後續操作，避免進入下一場戰鬥。",
   "acknowledgeAndRetreat": "確認並撤退",
   "postBattleWarningBanner": "戰後安全警告：出擊艦隊中有大破艦娘！請注意撤退！",
   "noActiveExpedition": "沒有正在進行的遠征",

@@ -2063,7 +2063,7 @@ abstract class AppLocalizations {
   /// No description provided for @postBattleWarningBody.
   ///
   /// In zh, this message translates to:
-  /// **'继续进击前，请确认大破舰的管损及退避状态；无法确保安全时请撤退！'**
+  /// **'已在大破状态下选择进击！请立即停止后续操作，避免进入下一场战斗。'**
   String get postBattleWarningBody;
 
   /// No description provided for @acknowledgeAndRetreat.

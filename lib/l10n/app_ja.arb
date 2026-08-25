@@ -339,7 +339,7 @@
   "@airStateLabel": {"placeholders": {"label": {"type": "String"}}},
   "postBattleWarningTitle": "戦闘後の安全警告",
   "postBattleWarningHeadline": "出撃艦隊に大破艦がいます！",
-  "postBattleWarningBody": "次の選択画面では必ず「撤退」を選んでください。轟沈を防ぐため、進撃しないでください！",
+  "postBattleWarningBody": "大破艦がいる状態で進撃しました！直ちに操作を止め、次の戦闘へ進まないでください。",
   "acknowledgeAndRetreat": "確認して撤退",
   "postBattleWarningBanner": "戦闘後の安全警告：出撃艦隊に大破艦がいます。撤退してください！",
   "noActiveExpedition": "遠征中の艦隊はありません",

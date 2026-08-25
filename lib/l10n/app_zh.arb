@@ -339,7 +339,7 @@
   "@airStateLabel": {"placeholders": {"label": {"type": "String"}}},
   "postBattleWarningTitle": "大破安全警告",
   "postBattleWarningHeadline": "出击舰队中存在大破舰娘！",
-  "postBattleWarningBody": "继续进击前，请确认大破舰的管损及退避状态；无法确保安全时请撤退！",
+  "postBattleWarningBody": "已在大破状态下选择进击！请立即停止后续操作，避免进入下一场战斗。",
   "acknowledgeAndRetreat": "确认了解",
   "postBattleWarningBanner": "战后安全警告：出击舰队中存在大破舰娘！请注意撤退！",
   "noActiveExpedition": "没有正在进行的远征",

@@ -1029,7 +1029,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get postBattleWarningBody =>
-      '次の選択画面では必ず「撤退」を選んでください。轟沈を防ぐため、進撃しないでください！';
+      '大破艦がいる状態で進撃しました！直ちに操作を止め、次の戦闘へ進まないでください。';
 
   @override
   String get acknowledgeAndRetreat => '確認して撤退';

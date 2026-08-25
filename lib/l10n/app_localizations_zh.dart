@@ -1020,7 +1020,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get postBattleWarningHeadline => '出击舰队中存在大破舰娘！';
 
   @override
-  String get postBattleWarningBody => '继续进击前，请确认大破舰的管损及退避状态；无法确保安全时请撤退！';
+  String get postBattleWarningBody => '已在大破状态下选择进击！请立即停止后续操作，避免进入下一场战斗。';
 
   @override
   String get acknowledgeAndRetreat => '确认了解';
@@ -3145,7 +3145,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get postBattleWarningHeadline => '出擊艦隊中有大破艦娘！';
 
   @override
-  String get postBattleWarningBody => '請務必在接下來的選擇畫面點選「撤退」，切勿強行進擊以免沉船！';
+  String get postBattleWarningBody => '已在大破狀態下選擇進擊！請立即停止後續操作，避免進入下一場戰鬥。';
 
   @override
   String get acknowledgeAndRetreat => '確認並撤退';
