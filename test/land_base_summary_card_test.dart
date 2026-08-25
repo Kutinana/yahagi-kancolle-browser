@@ -98,6 +98,47 @@ void main() {
     expect(count.top, lessThan(icon.bottom));
   });
 
+  testWidgets('ordinary phone window keeps slot count at eight pixels', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(412, 915);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      _row(
+        width: 390,
+        base: _base(currentHp: 200, conditions: const <int>[1, 1, 1, 1]),
+      ),
+    );
+
+    final count = find.descendant(
+      of: find.byKey(const Key('land-base-slot-count-62-1-1')),
+      matching: find.byType(Text),
+    );
+    expect(tester.widget<Text>(count).style?.fontSize, 8);
+  });
+
+  testWidgets('near-square large window enlarges only the slot count', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(673, 841);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      _row(base: _base(currentHp: 200, conditions: const <int>[1, 1, 1, 1])),
+    );
+
+    final count = find.descendant(
+      of: find.byKey(const Key('land-base-slot-count-62-1-1')),
+      matching: find.byType(Text),
+    );
+    expect(tester.widget<Text>(count).style?.fontSize, 10);
+  });
+
   testWidgets(
     'ordinary landscape width uses a compact header without overflow',
     (tester) async {

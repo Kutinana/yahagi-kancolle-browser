@@ -11,6 +11,7 @@ import 'land_base_status_visuals.dart';
 import 'ship_status_style.dart';
 import 'ship_status_visuals.dart';
 import 'slot_item_portrait.dart';
+import 'status_density.dart';
 
 class LandBaseSummaryCard extends StatefulWidget {
   const LandBaseSummaryCard({
@@ -649,6 +650,7 @@ class _LandBaseSquadronSlot extends StatelessWidget {
         squadron != null &&
         squadron!.maxCount > 0 &&
         squadron!.currentCount < squadron!.maxCount;
+    final countFontSize = isNearSquareLargeDisplay(context) ? 10.0 : 8.0;
     final suffix = '$areaId-$baseId-$squadronId';
     final content = Container(
       key: Key('land-base-slot-$suffix'),
@@ -698,7 +700,7 @@ class _LandBaseSquadronSlot extends StatelessWidget {
                       color: missing
                           ? const Color(0xffff8b78)
                           : const Color(0xffe8f1f5),
-                      fontSize: 8,
+                      fontSize: countFontSize,
                       height: 1,
                       fontWeight: FontWeight.w900,
                     ),
