@@ -51,6 +51,9 @@ final class NativeGameSurfaceSlot extends StatefulWidget {
   const NativeGameSurfaceSlot({
     required this.onBoundsChanged,
     required this.onVisibilityChanged,
+    this.onBeforePopupRouteHidden,
+    this.onPopupRouteRevealStarted,
+    this.onAfterPopupRouteRevealed,
     this.routeObserver,
     this.boundsSinkIdentity,
     this.boundsRetryLimit = 3,
@@ -59,6 +62,9 @@ final class NativeGameSurfaceSlot extends StatefulWidget {
 
   final Future<void> Function(NativeGameWebViewBounds bounds) onBoundsChanged;
   final Future<void> Function(bool visible) onVisibilityChanged;
+  final Future<void> Function()? onBeforePopupRouteHidden;
+  final VoidCallback? onPopupRouteRevealStarted;
+  final VoidCallback? onAfterPopupRouteRevealed;
   final RouteObserver<ModalRoute<dynamic>>? routeObserver;
   final Object? boundsSinkIdentity;
   final int boundsRetryLimit;
@@ -87,6 +93,8 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
   FlutterView? _view;
   bool _synchronizingRouteSubscription = false;
   bool? _workspaceActive;
+  bool _popupRouteCoverActive = false;
+  int _routeCoverGeneration = 0;
 
   Object get _effectiveBoundsSinkIdentity =>
       widget.boundsSinkIdentity ?? widget.onBoundsChanged;
@@ -181,16 +189,45 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
 
   @override
   void didPushNext() {
-    _ignoreErrors(_visibility.setRouteVisible(false));
+    final observer = widget.routeObserver;
+    final popupRoute =
+        observer is YahagiGameRouteObserver && observer.isPushingPopupRoute;
+    _routeCoverGeneration++;
+    if (!popupRoute) {
+      _popupRouteCoverActive = false;
+      _ignoreErrors(_visibility.setRouteVisible(false));
+      return;
+    }
+    _popupRouteCoverActive = true;
+    final prepare = widget.onBeforePopupRouteHidden;
+    if (prepare == null) {
+      _ignoreErrors(_visibility.setRouteVisible(false));
+      return;
+    }
+    final generation = _routeCoverGeneration;
+    unawaited(_preparePopupRouteAndHide(generation, prepare));
   }
 
   @override
   void didPopNext() {
-    _ignoreErrors(_visibility.setRouteVisible(true));
+    _routeCoverGeneration++;
+    final popupRoute = _popupRouteCoverActive;
+    _popupRouteCoverActive = false;
+    if (popupRoute) {
+      widget.onPopupRouteRevealStarted?.call();
+    }
+    final generation = _routeCoverGeneration;
+    final restore = _visibility.setRouteVisible(true);
+    if (!popupRoute || widget.onAfterPopupRouteRevealed == null) {
+      _ignoreErrors(restore);
+      return;
+    }
+    unawaited(_finishPopupRouteRestore(generation, restore));
   }
 
   @override
   void dispose() {
+    _routeCoverGeneration++;
     _boundsGeneration++;
     _currentBounds = null;
     _queuedBounds = null;
@@ -198,6 +235,39 @@ final class _NativeGameSurfaceSlotState extends State<NativeGameSurfaceSlot>
     _unsubscribeFromRoute();
     _ignoreErrors(_visibility.dispose());
     super.dispose();
+  }
+
+  Future<void> _preparePopupRouteAndHide(
+    int generation,
+    Future<void> Function() prepare,
+  ) async {
+    try {
+      await prepare();
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Native game popup preview preparation failed: $error\n$stackTrace',
+      );
+    }
+    if (!mounted ||
+        generation != _routeCoverGeneration ||
+        !_popupRouteCoverActive) {
+      return;
+    }
+    _ignoreErrors(_visibility.setRouteVisible(false));
+  }
+
+  Future<void> _finishPopupRouteRestore(
+    int generation,
+    Future<void> restore,
+  ) async {
+    try {
+      await restore;
+    } catch (error, stackTrace) {
+      debugPrint('Native game surface restore failed: $error\n$stackTrace');
+      return;
+    }
+    if (!mounted || generation != _routeCoverGeneration) return;
+    widget.onAfterPopupRouteRevealed?.call();
   }
 
   @override
@@ -422,13 +492,22 @@ bool shouldRouteHideGameSurface(Route<dynamic>? route) {
 /// for modal routes (such as full-screen pages or modal dialogs), preventing lightweight non-modal
 /// overlays (like popup menus and dropdowns) from accidentally hiding the native game surface.
 class YahagiGameRouteObserver extends RouteObserver<ModalRoute<dynamic>> {
+  Route<dynamic>? _routeBeingPushed;
+
+  bool get isPushingPopupRoute => _routeBeingPushed is PopupRoute<dynamic>;
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (!shouldRouteHideGameSurface(route)) {
       super.didPush(route, null);
       return;
     }
-    super.didPush(route, previousRoute);
+    _routeBeingPushed = route;
+    try {
+      super.didPush(route, previousRoute);
+    } finally {
+      _routeBeingPushed = null;
+    }
   }
 
   @override

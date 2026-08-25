@@ -879,6 +879,107 @@ void main() {
       expect(visibility, <bool>[true, false, true]);
     });
 
+    testWidgets(
+      'waits for a popup snapshot before hiding and restores before cleanup',
+      (tester) async {
+        final observer = YahagiGameRouteObserver();
+        final navigatorKey = GlobalKey<NavigatorState>();
+        final visibility = <bool>[];
+        final sequence = <String>[];
+        final prepared = Completer<void>();
+
+        await tester.pumpWidget(
+          _slotApp(
+            navigatorKey: navigatorKey,
+            observer: observer,
+            onVisibilityChanged: (value) async {
+              visibility.add(value);
+              sequence.add('visible:$value');
+            },
+            onBeforePopupRouteHidden: () async {
+              sequence.add('prepare');
+              await prepared.future;
+            },
+            onPopupRouteRevealStarted: () => sequence.add('cancel'),
+            onAfterPopupRouteRevealed: () => sequence.add('cleanup'),
+          ),
+        );
+        await tester.pump();
+
+        unawaited(
+          navigatorKey.currentState!.push<void>(
+            RawDialogRoute<void>(
+              pageBuilder: (_, _, _) => const Text('dialog'),
+              barrierDismissible: true,
+              barrierLabel: 'barrier',
+              barrierColor: Colors.black54,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(visibility, <bool>[true]);
+        expect(sequence, <String>['visible:true', 'prepare']);
+
+        prepared.complete();
+        await tester.pumpAndSettle();
+        expect(visibility, <bool>[true, false]);
+
+        navigatorKey.currentState!.pop();
+        await tester.pumpAndSettle();
+
+        expect(visibility, <bool>[true, false, true]);
+        expect(sequence, <String>[
+          'visible:true',
+          'prepare',
+          'visible:false',
+          'cancel',
+          'visible:true',
+          'cleanup',
+        ]);
+      },
+    );
+
+    testWidgets('cancels a stale popup hide when the dialog closes quickly', (
+      tester,
+    ) async {
+      final observer = YahagiGameRouteObserver();
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final visibility = <bool>[];
+      final prepared = Completer<void>();
+      var cancellations = 0;
+
+      await tester.pumpWidget(
+        _slotApp(
+          navigatorKey: navigatorKey,
+          observer: observer,
+          onVisibilityChanged: (value) async => visibility.add(value),
+          onBeforePopupRouteHidden: () => prepared.future,
+          onPopupRouteRevealStarted: () => cancellations += 1,
+        ),
+      );
+      await tester.pump();
+
+      unawaited(
+        navigatorKey.currentState!.push<void>(
+          RawDialogRoute<void>(
+            pageBuilder: (_, _, _) => const Text('dialog'),
+            barrierDismissible: true,
+            barrierLabel: 'barrier',
+            barrierColor: Colors.black54,
+          ),
+        ),
+      );
+      await tester.pump();
+      navigatorKey.currentState!.pop();
+      await tester.pump();
+      prepared.complete();
+      await tester.pumpAndSettle();
+
+      expect(cancellations, 1);
+      expect(visibility, <bool>[true]);
+    });
+
     testWidgets('calibrates route visibility when its observer changes', (
       tester,
     ) async {
@@ -1043,6 +1144,9 @@ Widget _slotApp({
   int boundsRetryLimit = 3,
   Object? boundsSinkIdentity,
   bool workspaceActive = true,
+  Future<void> Function()? onBeforePopupRouteHidden,
+  VoidCallback? onPopupRouteRevealStarted,
+  VoidCallback? onAfterPopupRouteRevealed,
 }) {
   if (!useCurrentLifecycle &&
       WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
@@ -1069,6 +1173,9 @@ Widget _slotApp({
               boundsRetryLimit: boundsRetryLimit,
               boundsSinkIdentity:
                   boundsSinkIdentity ?? _defaultBoundsSinkIdentity,
+              onBeforePopupRouteHidden: onBeforePopupRouteHidden,
+              onPopupRouteRevealStarted: onPopupRouteRevealStarted,
+              onAfterPopupRouteRevealed: onAfterPopupRouteRevealed,
             ),
           ),
         ),
