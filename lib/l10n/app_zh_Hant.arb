@@ -730,5 +730,18 @@
   "kcwikiReportLastSuccess": "最近上傳成功：{module} · 成功 {succeeded} · 失敗 {failed} · 丟棄 {dropped}",
   "@kcwikiReportLastSuccess": {"placeholders": {"module": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}},
   "kcwikiReportLastFailure": "最近上傳失敗：{module}（狀態 {status}）· 成功 {succeeded} · 失敗 {failed} · 丟棄 {dropped}",
-  "@kcwikiReportLastFailure": {"placeholders": {"module": {"type": "String"}, "status": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}}
+  "@kcwikiReportLastFailure": {"placeholders": {"module": {"type": "String"}, "status": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}},
+  "landBaseBrief": "陸基簡報",
+  "landBaseNoData": "無資料",
+  "landBaseAreaFallback": "海域 {areaId}",
+  "@landBaseAreaFallback": {"placeholders": {"areaId": {"type": "int"}}},
+  "landBaseUnitCount": "{count} 支航空隊",
+  "@landBaseUnitCount": {"placeholders": {"count": {"type": "int"}}},
+  "landBaseRange": "航程",
+  "landBaseActionSortie": "出擊",
+  "landBaseActionAirDefense": "防空",
+  "landBaseActionRest": "休息",
+  "landBaseActionRetreat": "退避",
+  "landBaseMissingPlanes": "缺機",
+  "landBaseRelocating": "配置轉換中"
 }

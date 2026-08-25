@@ -2126,6 +2126,43 @@ class AppLocalizationsZh extends AppLocalizations {
   ) {
     return '最近上传失败：$module（状态 $status）· 成功 $succeeded · 失败 $failed · 丢弃 $dropped';
   }
+
+  @override
+  String get landBaseBrief => '陆基简报';
+
+  @override
+  String get landBaseNoData => '无数据';
+
+  @override
+  String landBaseAreaFallback(int areaId) {
+    return '海域 $areaId';
+  }
+
+  @override
+  String landBaseUnitCount(int count) {
+    return '$count 支航空队';
+  }
+
+  @override
+  String get landBaseRange => '航程';
+
+  @override
+  String get landBaseActionSortie => '出击';
+
+  @override
+  String get landBaseActionAirDefense => '防空';
+
+  @override
+  String get landBaseActionRest => '休息';
+
+  @override
+  String get landBaseActionRetreat => '退避';
+
+  @override
+  String get landBaseMissingPlanes => '缺机';
+
+  @override
+  String get landBaseRelocating => '配置转换中';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4251,4 +4288,41 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   ) {
     return '最近上傳失敗：$module（狀態 $status）· 成功 $succeeded · 失敗 $failed · 丟棄 $dropped';
   }
+
+  @override
+  String get landBaseBrief => '陸基簡報';
+
+  @override
+  String get landBaseNoData => '無資料';
+
+  @override
+  String landBaseAreaFallback(int areaId) {
+    return '海域 $areaId';
+  }
+
+  @override
+  String landBaseUnitCount(int count) {
+    return '$count 支航空隊';
+  }
+
+  @override
+  String get landBaseRange => '航程';
+
+  @override
+  String get landBaseActionSortie => '出擊';
+
+  @override
+  String get landBaseActionAirDefense => '防空';
+
+  @override
+  String get landBaseActionRest => '休息';
+
+  @override
+  String get landBaseActionRetreat => '退避';
+
+  @override
+  String get landBaseMissingPlanes => '缺機';
+
+  @override
+  String get landBaseRelocating => '配置轉換中';
 }

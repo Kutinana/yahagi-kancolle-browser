@@ -57,6 +57,7 @@ import 'src/fleet/ship_status_style.dart';
 import 'src/fleet/anchorage_repair_navigation.dart';
 import 'src/fleet/anchorage_repair_view.dart';
 import 'src/fleet/fleet_summary_card.dart';
+import 'src/fleet/land_base_summary_card.dart';
 import 'src/fleet/expedition_summary_card.dart';
 import 'src/fleet/repair_summary_card.dart';
 import 'src/fleet/construction_summary_card.dart';
@@ -2075,6 +2076,15 @@ class _InformationPanelState extends State<_InformationPanel> {
                 collapsed: isCollapsed,
                 onToggleCollapse: toggle,
                 onOpenFleet: widget.onOpenFleet,
+              ),
+              'land_base' => LandBaseSummaryCard(
+                controller: widget.gameStateController,
+                damagePulseMode:
+                    widget.layoutSettingsController.enhancedDamagePulse
+                    ? DamagePulseMode.enhanced
+                    : DamagePulseMode.normal,
+                collapsed: isCollapsed,
+                onToggleCollapse: toggle,
               ),
               'expedition' => ExpeditionSummaryCard(
                 controller: widget.gameStateController,

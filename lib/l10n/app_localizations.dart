@@ -4078,6 +4078,72 @@ abstract class AppLocalizations {
     int failed,
     int dropped,
   );
+
+  /// No description provided for @landBaseBrief.
+  ///
+  /// In zh, this message translates to:
+  /// **'陆基简报'**
+  String get landBaseBrief;
+
+  /// No description provided for @landBaseNoData.
+  ///
+  /// In zh, this message translates to:
+  /// **'无数据'**
+  String get landBaseNoData;
+
+  /// No description provided for @landBaseAreaFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'海域 {areaId}'**
+  String landBaseAreaFallback(int areaId);
+
+  /// No description provided for @landBaseUnitCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 支航空队'**
+  String landBaseUnitCount(int count);
+
+  /// No description provided for @landBaseRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'航程'**
+  String get landBaseRange;
+
+  /// No description provided for @landBaseActionSortie.
+  ///
+  /// In zh, this message translates to:
+  /// **'出击'**
+  String get landBaseActionSortie;
+
+  /// No description provided for @landBaseActionAirDefense.
+  ///
+  /// In zh, this message translates to:
+  /// **'防空'**
+  String get landBaseActionAirDefense;
+
+  /// No description provided for @landBaseActionRest.
+  ///
+  /// In zh, this message translates to:
+  /// **'休息'**
+  String get landBaseActionRest;
+
+  /// No description provided for @landBaseActionRetreat.
+  ///
+  /// In zh, this message translates to:
+  /// **'退避'**
+  String get landBaseActionRetreat;
+
+  /// No description provided for @landBaseMissingPlanes.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺机'**
+  String get landBaseMissingPlanes;
+
+  /// No description provided for @landBaseRelocating.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置转换中'**
+  String get landBaseRelocating;
 }
 
 class _AppLocalizationsDelegate

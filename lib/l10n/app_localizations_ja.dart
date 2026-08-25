@@ -2149,4 +2149,41 @@ class AppLocalizationsJa extends AppLocalizations {
   ) {
     return '直近の送信失敗：$module（状態 $status）· 成功 $succeeded · 失敗 $failed · 破棄 $dropped';
   }
+
+  @override
+  String get landBaseBrief => '基地航空隊概要';
+
+  @override
+  String get landBaseNoData => 'データなし';
+
+  @override
+  String landBaseAreaFallback(int areaId) {
+    return '海域 $areaId';
+  }
+
+  @override
+  String landBaseUnitCount(int count) {
+    return '航空隊 $count隊';
+  }
+
+  @override
+  String get landBaseRange => '航続距離';
+
+  @override
+  String get landBaseActionSortie => '出撃';
+
+  @override
+  String get landBaseActionAirDefense => '防空';
+
+  @override
+  String get landBaseActionRest => '休息';
+
+  @override
+  String get landBaseActionRetreat => '退避';
+
+  @override
+  String get landBaseMissingPlanes => '未補充';
+
+  @override
+  String get landBaseRelocating => '配置転換中';
 }

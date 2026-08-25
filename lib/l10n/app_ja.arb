@@ -730,5 +730,18 @@
   "kcwikiReportLastSuccess": "直近の送信成功：{module} · 成功 {succeeded} · 失敗 {failed} · 破棄 {dropped}",
   "@kcwikiReportLastSuccess": {"placeholders": {"module": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}},
   "kcwikiReportLastFailure": "直近の送信失敗：{module}（状態 {status}）· 成功 {succeeded} · 失敗 {failed} · 破棄 {dropped}",
-  "@kcwikiReportLastFailure": {"placeholders": {"module": {"type": "String"}, "status": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}}
+  "@kcwikiReportLastFailure": {"placeholders": {"module": {"type": "String"}, "status": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}},
+  "landBaseBrief": "基地航空隊概要",
+  "landBaseNoData": "データなし",
+  "landBaseAreaFallback": "海域 {areaId}",
+  "@landBaseAreaFallback": {"placeholders": {"areaId": {"type": "int"}}},
+  "landBaseUnitCount": "航空隊 {count}隊",
+  "@landBaseUnitCount": {"placeholders": {"count": {"type": "int"}}},
+  "landBaseRange": "航続距離",
+  "landBaseActionSortie": "出撃",
+  "landBaseActionAirDefense": "防空",
+  "landBaseActionRest": "休息",
+  "landBaseActionRetreat": "退避",
+  "landBaseMissingPlanes": "未補充",
+  "landBaseRelocating": "配置転換中"
 }

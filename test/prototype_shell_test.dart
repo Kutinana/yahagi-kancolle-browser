@@ -38,6 +38,7 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/anchorage_repair_view.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_information_center.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_summary_card.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/land_base_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/repair_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/logbook/logbook_page.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
@@ -244,6 +245,7 @@ void main() {
       tester.widget<FleetSummaryCard>(find.byType(FleetSummaryCard)).collapsed,
       isFalse,
     );
+    expect(find.byType(LandBaseSummaryCard), findsOneWidget);
     await tester.longPress(find.byKey(const ValueKey('fleet')));
     await tester.pumpAndSettle();
     expect(find.byType(Checkbox), findsWidgets);
@@ -1149,6 +1151,7 @@ class _MemoryLayoutSettingsStore implements LayoutSettingsStore {
   bool _workspaceMenuOnRight = false;
   List<String> _dashboardCardOrder = [
     'fleet',
+    'land_base',
     'expedition',
     'repair',
     'construction',

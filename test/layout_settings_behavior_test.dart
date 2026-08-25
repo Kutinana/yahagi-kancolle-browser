@@ -133,6 +133,33 @@ void main() {
     expect(controller.enhancedDamagePulse, isFalse);
   });
 
+  test('land-base card follows fleet in defaults and legacy orders', () async {
+    expect(
+      LayoutSettingsStore.defaultDashboardCardOrder,
+      containsAllInOrder(<String>['fleet', 'land_base', 'expedition']),
+    );
+
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'layout_dashboard_card_order': <String>[
+        'battle',
+        'fleet',
+        'expedition',
+        'repair',
+        'construction',
+        'quests',
+        'pre_sortie',
+      ],
+    });
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+
+    expect(
+      controller.dashboardCardOrder,
+      containsAllInOrder(<String>['fleet', 'land_base', 'expedition']),
+    );
+  });
+
   test('recommended ratio locks the information panel at 35 percent', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'layout_game_area_ratio': 0.58,

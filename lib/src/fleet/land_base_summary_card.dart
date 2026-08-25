@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
@@ -36,6 +37,7 @@ class _LandBaseSummaryCardState extends State<LandBaseSummaryCard> {
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: widget.controller,
     builder: (context, _) {
+      final l10n = AppLocalizations.of(context);
       final state = widget.controller.state;
       final areaIds =
           state.landBases.map((base) => base.areaId).toSet().toList()..sort();
@@ -43,16 +45,13 @@ class _LandBaseSummaryCardState extends State<LandBaseSummaryCard> {
         _selectedAreaId = areaIds.firstOrNull;
       }
       final areaId = _selectedAreaId;
-      final bases =
-          areaId == null
-                ? const <LandBaseState>[]
-                : state.landBases
-                      .where((base) => base.areaId == areaId)
-                      .toList()
-            ..sort((left, right) => left.baseId.compareTo(right.baseId));
+      final bases = areaId == null
+          ? <LandBaseState>[]
+          : state.landBases.where((base) => base.areaId == areaId).toList();
+      bases.sort((left, right) => left.baseId.compareTo(right.baseId));
 
       return DashboardCard(
-        title: '陆基简报',
+        title: l10n?.landBaseBrief ?? '陆基简报',
         icon: const Icon(Icons.flight_rounded),
         collapsed: widget.collapsed,
         onToggleCollapse: widget.onToggleCollapse,
@@ -63,12 +62,12 @@ class _LandBaseSummaryCardState extends State<LandBaseSummaryCard> {
           onSelected: (selected) => setState(() => _selectedAreaId = selected),
         ),
         child: bases.isEmpty
-            ? const Padding(
-                padding: EdgeInsets.all(16),
+            ? Padding(
+                padding: const EdgeInsets.all(16),
                 child: Center(
                   child: Text(
-                    '无数据',
-                    style: TextStyle(color: Color(0xff8197a5)),
+                    l10n?.landBaseNoData ?? '无数据',
+                    style: const TextStyle(color: Color(0xff8197a5)),
                   ),
                 ),
               )
@@ -77,8 +76,13 @@ class _LandBaseSummaryCardState extends State<LandBaseSummaryCard> {
                 children: <Widget>[
                   _AreaHeading(
                     areaId: areaId!,
-                    name: state.masterMapAreas[areaId] ?? '海域 $areaId',
-                    baseCount: bases.length,
+                    name:
+                        state.masterMapAreas[areaId] ??
+                        l10n?.landBaseAreaFallback(areaId) ??
+                        '海域 $areaId',
+                    countLabel:
+                        l10n?.landBaseUnitCount(bases.length) ??
+                        '${bases.length} 支航空队',
                   ),
                   const SizedBox(height: 6),
                   for (var index = 0; index < bases.length; index++) ...[
@@ -157,12 +161,12 @@ class _AreaHeading extends StatelessWidget {
   const _AreaHeading({
     required this.areaId,
     required this.name,
-    required this.baseCount,
+    required this.countLabel,
   });
 
   final int areaId;
   final String name;
-  final int baseCount;
+  final String countLabel;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -180,7 +184,7 @@ class _AreaHeading extends StatelessWidget {
         ),
       ),
       Text(
-        '$baseCount 支航空队',
+        countLabel,
         style: const TextStyle(
           color: Color(0xff8197a5),
           fontSize: 9,
@@ -337,6 +341,7 @@ class _LandBaseIdentity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final suffix = '${base.areaId}-${base.baseId}';
     final hpColor = shipHpBarColor(hpRatio, isZeroHp: currentHp <= 0);
     return Column(
@@ -355,7 +360,8 @@ class _LandBaseIdentity extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          '制空 ${airPower.displayValue} · 航程 ${base.effectiveDistance}',
+          '${l10n?.airPower ?? '制空'} ${airPower.displayValue} · '
+          '${l10n?.landBaseRange ?? '航程'} ${base.effectiveDistance}',
           maxLines: 1,
           style: const TextStyle(
             color: Color(0xff9fb3bf),
@@ -373,7 +379,7 @@ class _LandBaseIdentity extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                _actionLabel(base.actionKind),
+                _actionLabel(base.actionKind, l10n),
                 style: TextStyle(
                   color: _actionColor(base.actionKind),
                   fontSize: 8,
@@ -516,13 +522,14 @@ LandBaseSquadronState? _squadron(LandBaseState base, int id) {
   return null;
 }
 
-String _actionLabel(int actionKind) => switch (actionKind) {
-  1 => '出击',
-  2 => '防空',
-  3 => '休息',
-  4 => '退避',
-  _ => '待命',
-};
+String _actionLabel(int actionKind, AppLocalizations? l10n) =>
+    switch (actionKind) {
+      1 => l10n?.landBaseActionSortie ?? '出击',
+      2 => l10n?.landBaseActionAirDefense ?? '防空',
+      3 => l10n?.landBaseActionRest ?? '休息',
+      4 => l10n?.landBaseActionRetreat ?? '退避',
+      _ => l10n?.standby ?? '待命',
+    };
 
 Color _actionColor(int actionKind) => switch (actionKind) {
   1 => const Color(0xffef7777),

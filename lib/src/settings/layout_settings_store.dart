@@ -40,6 +40,7 @@ abstract class LayoutSettingsStore {
   static const defaultDashboardCardOrder = <String>[
     'battle',
     'fleet',
+    'land_base',
     'expedition',
     'repair',
     'construction',
@@ -230,7 +231,12 @@ class SharedPreferencesLayoutSettingsStore
     if (list != null && list.isNotEmpty) {
       // Ensure all default keys are present in case we added new ones
       for (final key in LayoutSettingsStore.defaultDashboardCardOrder) {
-        if (!list.contains(key)) list.add(key);
+        if (list.contains(key)) continue;
+        if (key == 'land_base' && list.contains('fleet')) {
+          list.insert(list.indexOf('fleet') + 1, key);
+        } else {
+          list.add(key);
+        }
       }
       // Remove any keys that are no longer supported (e.g. expedition_check)
       list.removeWhere(
