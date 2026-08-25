@@ -3320,6 +3320,12 @@ abstract class AppLocalizations {
   /// **'已排除'**
   String get unownedShipExcludedLabel;
 
+  /// No description provided for @unownedShipReminderHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'获得未勾选的舰娘时，将正常提醒并震动；勾选的舰娘则不会提醒。'**
+  String get unownedShipReminderHint;
+
   /// No description provided for @clearNewShipExclusions.
   ///
   /// In zh, this message translates to:

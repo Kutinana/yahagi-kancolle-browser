@@ -320,6 +320,20 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                   _cachedEquipmentGroups = null;
                 }),
               ),
+            if (!_showOwned && _showShips) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  l10n.unownedShipReminderHint,
+                  key: const Key('unowned-ship-reminder-hint'),
+                  style: const TextStyle(
+                    color: Color(0xff8ba2af),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 4),
             Expanded(
               child: !_showOwned

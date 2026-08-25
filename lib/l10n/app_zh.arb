@@ -600,6 +600,7 @@
   "unownedShipSummary": "显示 {count} 艘 · 已排除 {excluded} 艘",
   "@unownedShipSummary": {"placeholders": {"count": {"type": "int"}, "excluded": {"type": "int"}}},
   "unownedShipExcludedLabel": "已排除",
+  "unownedShipReminderHint": "获得未勾选的舰娘时，将正常提醒并震动；勾选的舰娘则不会提醒。",
   "clearNewShipExclusions": "清除排除",
   "unownedEquipmentSummary": "显示 {count} 件未持有装备",
   "@unownedEquipmentSummary": {"placeholders": {"count": {"type": "int"}}},

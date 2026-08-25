@@ -62,6 +62,14 @@ testWidgets('explains unowned ship reminder exclusions below the filter', (
   await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
   await tester.pump();
   expect(hint, findsNothing);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: const Locale('zh'),
+      home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+    ),
+  );
+  expect(hint, findsNothing);
 });
 ```
 

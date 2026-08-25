@@ -80,6 +80,49 @@ void main() {
     },
   );
 
+  testWidgets('explains unowned ship reminder exclusions below the filter', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(520, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(controller: controller, showOwned: false),
+        ),
+      ),
+    );
+
+    final hint = find.byKey(const Key('unowned-ship-reminder-hint'));
+    expect(hint, findsOneWidget);
+    final hintText = tester.widget<Text>(hint);
+    expect(
+      hintText.data,
+      '获得未勾选的舰娘时，将正常提醒并震动；勾选的舰娘则不会提醒。',
+    );
+    expect(hintText.style?.fontSize, 12);
+    expect(hintText.style?.color, const Color(0xff8ba2af));
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
+    await tester.pump();
+    expect(hint, findsNothing);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+    expect(hint, findsNothing);
+  });
+
   testWidgets('unowned views reuse filters and remember each category', (
     tester,
   ) async {

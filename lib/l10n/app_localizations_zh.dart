@@ -1719,6 +1719,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unownedShipExcludedLabel => '已排除';
 
   @override
+  String get unownedShipReminderHint => '获得未勾选的舰娘时，将正常提醒并震动；勾选的舰娘则不会提醒。';
+
+  @override
   String get clearNewShipExclusions => '清除排除';
 
   @override
@@ -3882,6 +3885,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get unownedShipExcludedLabel => '已排除';
+
+  @override
+  String get unownedShipReminderHint => '獲得未勾選的艦娘時，將正常提醒並震動；勾選的艦娘則不會提醒。';
 
   @override
   String get clearNewShipExclusions => '清除排除';

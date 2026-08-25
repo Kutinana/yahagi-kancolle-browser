@@ -600,6 +600,7 @@
   "unownedShipSummary": "{count}隻表示・除外済み {excluded}隻",
   "@unownedShipSummary": {"placeholders": {"count": {"type": "int"}, "excluded": {"type": "int"}}},
   "unownedShipExcludedLabel": "除外済み",
+  "unownedShipReminderHint": "未選択の艦娘を入手すると通常どおり通知と振動を行い、選択した艦娘は通知しません。",
   "clearNewShipExclusions": "除外を解除",
   "unownedEquipmentSummary": "未保有装備を {count}個表示",
   "@unownedEquipmentSummary": {"placeholders": {"count": {"type": "int"}}},

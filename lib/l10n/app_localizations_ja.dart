@@ -1731,6 +1731,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get unownedShipExcludedLabel => '除外済み';
 
   @override
+  String get unownedShipReminderHint =>
+      '未選択の艦娘を入手すると通常どおり通知と振動を行い、選択した艦娘は通知しません。';
+
+  @override
   String get clearNewShipExclusions => '除外を解除';
 
   @override
