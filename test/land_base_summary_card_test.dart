@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yahagi_kancolle_browser/src/fleet/fleet_ship_status_capsule.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/land_base_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
@@ -94,6 +93,9 @@ void main() {
       final airPower = tester.getRect(
         find.byKey(const Key('land-base-air-power-chip-62-1')),
       );
+      final action = tester.getRect(
+        find.byKey(const Key('land-base-action-chip-62-1')),
+      );
       final range = tester.getRect(
         find.byKey(const Key('land-base-range-chip-62-1')),
       );
@@ -101,26 +103,20 @@ void main() {
         find.byKey(const Key('land-base-portrait-62-1')),
       );
 
+      expect(action.center.dy, closeTo(name.center.dy, 0.1));
       expect(airPower.center.dy, closeTo(name.center.dy, 0.1));
       expect(range.center.dy, closeTo(name.center.dy, 0.1));
       expect(portrait.top, greaterThan(name.bottom));
       expect(portrait.size, const Size(68, 32));
 
-      final actionFinder = find.byKey(const Key('land-base-action-chip-62-1'));
-      final statusFinder = find.byKey(
-        const Key('land-base-status-column-62-1'),
+      final hpValue = tester.getRect(
+        find.byKey(const Key('land-base-hp-value-62-1')),
       );
-      expect(
-        find.descendant(of: actionFinder, matching: find.text('200/200')),
-        findsNothing,
+      final hpMeter = tester.getRect(
+        find.byKey(const Key('land-base-hp-meter-62-1')),
       );
-      expect(
-        find.descendant(
-          of: statusFinder,
-          matching: find.byType(CompactStatusMeter),
-        ),
-        findsOneWidget,
-      );
+      expect(hpMeter.top, greaterThan(hpValue.bottom));
+      expect(hpMeter.left, closeTo(hpValue.left, 0.1));
 
       final slots = <Rect>[
         for (var id = 1; id <= 4; id++)

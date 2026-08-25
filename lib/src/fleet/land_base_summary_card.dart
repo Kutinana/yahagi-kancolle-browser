@@ -242,7 +242,7 @@ class LandBaseAirGroupRow extends StatelessWidget {
               .clamp(14.0, 20.0)
               .toDouble();
           final sectionGap = narrow ? 5.0 : 7.0;
-          final statusWidth = narrow ? 94.0 : 108.0;
+          final statusWidth = narrow ? 68.0 : 80.0;
           final maximumSlotWidth = narrow ? 38.0 : 44.0;
           final slotWidth =
               ((constraints.maxWidth -
@@ -278,6 +278,12 @@ class LandBaseAirGroupRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
+                    _LandBaseActionChip(
+                      key: Key('land-base-action-chip-$_keySuffix'),
+                      label: _actionLabel(base.actionKind, l10n),
+                      color: _actionColor(base.actionKind),
+                    ),
+                    const SizedBox(width: 3),
                     _LandBaseInfoChip(
                       key: Key('land-base-air-power-chip-$_keySuffix'),
                       label: '${l10n.airPower} ${airPower.displayValue}',
@@ -345,51 +351,13 @@ class LandBaseAirGroupRow extends StatelessWidget {
                     key: Key('land-base-status-column-$_keySuffix'),
                     width: statusWidth,
                     height: portraitHeight > 34 ? portraitHeight : 34,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        _LandBaseActionChip(
-                          key: Key('land-base-action-chip-$_keySuffix'),
-                          label: _actionLabel(base.actionKind, l10n),
-                          color: _actionColor(base.actionKind),
-                        ),
-                        const SizedBox(height: 2),
-                        DamagePulseBuilder(
-                          ratio: hpRatio,
-                          mode: damagePulseMode,
-                          normalColor: shipHpBarColor(
-                            hpRatio,
-                            isZeroHp: currentHp <= 0,
-                          ),
-                          builder: (context, spec, phase) => Opacity(
-                            opacity: spec.pulses
-                                ? spec.minFrameOpacity +
-                                      phase * (1 - spec.minFrameOpacity)
-                                : 1,
-                            child: CompactStatusMeter(
-                              height: 14,
-                              icon: Icon(
-                                Icons.favorite_rounded,
-                                color: shipHpBarColor(
-                                  hpRatio,
-                                  isZeroHp: currentHp <= 0,
-                                ),
-                                size: 9,
-                              ),
-                              value: '$currentHp/$maximumHp',
-                              ratio: hpRatio,
-                              valueColor: shipHpValueColor(
-                                hpRatio,
-                                isZeroHp: currentHp <= 0,
-                              ),
-                              barColor: spec.color,
-                              valueKey: Key('land-base-hp-value-$_keySuffix'),
-                              trackKey: Key('land-base-hp-meter-$_keySuffix'),
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: _LandBaseStackedHpMeter(
+                      currentHp: currentHp,
+                      maximumHp: maximumHp,
+                      hpRatio: hpRatio,
+                      damagePulseMode: damagePulseMode,
+                      valueKey: Key('land-base-hp-value-$_keySuffix'),
+                      trackKey: Key('land-base-hp-meter-$_keySuffix'),
                     ),
                   ),
                   SizedBox(width: sectionGap),
@@ -486,6 +454,87 @@ class _LandBaseActionChip extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _LandBaseStackedHpMeter extends StatelessWidget {
+  const _LandBaseStackedHpMeter({
+    required this.currentHp,
+    required this.maximumHp,
+    required this.hpRatio,
+    required this.damagePulseMode,
+    required this.valueKey,
+    required this.trackKey,
+  });
+
+  final int currentHp;
+  final int maximumHp;
+  final double hpRatio;
+  final DamagePulseMode damagePulseMode;
+  final Key valueKey;
+  final Key trackKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final hpColor = shipHpBarColor(hpRatio, isZeroHp: currentHp <= 0);
+    return DamagePulseBuilder(
+      ratio: hpRatio,
+      mode: damagePulseMode,
+      normalColor: hpColor,
+      builder: (context, spec, phase) => Opacity(
+        opacity: spec.pulses
+            ? spec.minFrameOpacity + phase * (1 - spec.minFrameOpacity)
+            : 1,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              key: valueKey,
+              children: <Widget>[
+                Icon(Icons.favorite_rounded, color: hpColor, size: 9),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '$currentHp/$maximumHp',
+                      style: TextStyle(
+                        color: shipHpValueColor(
+                          hpRatio,
+                          isZeroHp: currentHp <= 0,
+                        ),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const <FontFeature>[
+                          FontFeature.tabularFigures(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                key: trackKey,
+                height: 4,
+                color: const Color(0xff294052),
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: hpRatio,
+                  heightFactor: 1,
+                  child: ColoredBox(color: spec.color),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _LandBaseSquadronSlot extends StatelessWidget {
