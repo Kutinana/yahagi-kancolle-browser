@@ -99,6 +99,7 @@ import 'src/settings/settings_page.dart';
 import 'src/settings/release_check_service.dart';
 import 'src/settings/startup_update_notice.dart';
 import 'src/settings/screen_awake_controller.dart';
+import 'src/settings/background_game_retention_controller.dart';
 import 'src/settings/battle_prediction_settings.dart';
 import 'src/settings/game_frame_rate_settings.dart';
 import 'src/settings/game_connector_controller.dart';
@@ -156,6 +157,10 @@ Future<void> main() async {
   final gameConnectorController = await GameConnectorController.load(
     SharedPreferencesGameConnectorStore(),
   );
+  final backgroundGameRetentionController =
+      await BackgroundGameRetentionController.load(
+        SharedPreferencesBackgroundGameRetentionStore(),
+      );
   applyOrientationPolicy(
     currentWindowSize(),
     displayModeController.displayMode,
@@ -412,6 +417,7 @@ Future<void> main() async {
       gameFrameRateSettingsController: gameFrameRateSettingsController,
       gameRenderingModeController: gameRenderingModeController,
       gameConnectorController: gameConnectorController,
+      backgroundGameRetentionController: backgroundGameRetentionController,
       displayModeController: displayModeController,
       controller: controller,
       browserController: browserController,
@@ -492,6 +498,7 @@ class YahagiApp extends StatelessWidget {
     this.gameFrameRateSettingsController,
     this.gameRenderingModeController,
     this.gameConnectorController,
+    this.backgroundGameRetentionController,
     required this.displayModeController,
     required this.controller,
     required this.browserController,
@@ -529,6 +536,7 @@ class YahagiApp extends StatelessWidget {
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final GameRenderingModeController? gameRenderingModeController;
   final GameConnectorController? gameConnectorController;
+  final BackgroundGameRetentionController? backgroundGameRetentionController;
   final DisplayModeController displayModeController;
   final PrototypeStatusController controller;
   final GameBrowserController browserController;
@@ -618,6 +626,8 @@ class YahagiApp extends StatelessWidget {
                       gameFrameRateSettingsController,
                   gameRenderingModeController: gameRenderingModeController,
                   gameConnectorController: gameConnectorController,
+                  backgroundGameRetentionController:
+                      backgroundGameRetentionController,
                   displayModeController: displayModeController,
                   controller: controller,
                   browserController: browserController,
@@ -756,6 +766,8 @@ class YahagiShell extends StatefulWidget {
     this.gameFrameRateSettingsController,
     this.gameRenderingModeController,
     this.gameConnectorController,
+    this.backgroundGameRetentionController,
+    this.backgroundGameRetentionPort,
     required this.displayModeController,
     required this.controller,
     required this.browserController,
@@ -790,6 +802,8 @@ class YahagiShell extends StatefulWidget {
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final GameRenderingModeController? gameRenderingModeController;
   final GameConnectorController? gameConnectorController;
+  final BackgroundGameRetentionController? backgroundGameRetentionController;
+  final BackgroundGameRetentionPort? backgroundGameRetentionPort;
   final DisplayModeController displayModeController;
   final PrototypeStatusController controller;
   final GameBrowserController browserController;
@@ -838,6 +852,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   ConstructionCenterMode _constructionCenterMode =
       ConstructionCenterMode.construction;
   SenkaCenterMode _senkaCenterMode = SenkaCenterMode.info;
+  BackgroundGameRetentionCoordinator? _backgroundGameRetentionCoordinator;
 
   @override
   void initState() {
@@ -845,6 +860,15 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     widget.displayModeController.addListener(_applyOrientationPolicy);
     widget.layoutSettingsController.addListener(_onLayoutSettingsChanged);
+    if (widget.backgroundGameRetentionController case final controller?) {
+      _backgroundGameRetentionCoordinator = BackgroundGameRetentionCoordinator(
+        controller: controller,
+        toolbarController: widget.toolbarController,
+        port:
+            widget.backgroundGameRetentionPort ??
+            const MethodChannelBackgroundGameRetentionPort(),
+      );
+    }
     _applyOrientationPolicy();
   }
 
@@ -854,6 +878,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     widget.layoutSettingsController.removeListener(_onLayoutSettingsChanged);
     _questFilters.dispose();
     _windowMetricsRecoveryScheduler.dispose();
+    _backgroundGameRetentionCoordinator?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -895,6 +920,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     widget.audioController.handleLifecycleState(state);
     widget.screenAwakeController?.handleLifecycleState(state);
+    _backgroundGameRetentionCoordinator?.handleLifecycleState(state);
   }
 
   void _scheduleWindowMetricsRecovery() {
@@ -1588,6 +1614,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                 widget.gameRenderingModeController,
                             gameConnectorController:
                                 widget.gameConnectorController,
+                            backgroundGameRetentionController:
+                                widget.backgroundGameRetentionController,
                             isBattleActive:
                                 widget.battleController.session != null &&
                                 !widget.battleController.session!.completed,
