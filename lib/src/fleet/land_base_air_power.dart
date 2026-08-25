@@ -34,6 +34,37 @@ abstract final class LandBaseAirPower {
   ];
   static const List<int> _fighterBonuses = <int>[0, 0, 2, 5, 9, 14, 14, 22];
   static const List<int> _seaplaneBomberBonuses = <int>[0, 1, 1, 1, 1, 3, 3, 6];
+  static const Set<int> _airPowerTypes = <int>{
+    6,
+    7,
+    8,
+    11,
+    26,
+    45,
+    47,
+    48,
+    53,
+    56,
+    57,
+    58,
+  };
+  static const Set<int> _reconTypes = <int>{9, 10, 41, 49};
+  static const Map<int, double> _improvementFactors = <int, double>{
+    6: 0.2,
+    41: 0.15,
+    45: 0.2,
+    47: 0.5,
+    48: 0.2,
+    49: 0.2,
+    53: 0.5,
+    56: 0.2,
+  };
+  static const Set<int> _sqrtImprovementTypes = <int>{47, 53};
+  static const Map<int, double> _improvementFactorsById = <int, double>{
+    486: 0.3,
+    487: 0.3,
+  };
+  static const Set<int> _fighterBomberIds = <int>{60, 154, 219, 447};
 
   static LandBaseAirPowerResult calculate({
     required GameState state,
@@ -52,12 +83,14 @@ abstract final class LandBaseAirPower {
       if (owned == null || master == null) continue;
       final typeId = master.type.length > 2 ? master.type[2] : -1;
 
-      final multiplier = _reconMultiplier(
-        typeId: typeId,
-        lineOfSight: master.lineOfSight,
-        actionKind: base.actionKind,
-      );
-      reconMultiplier = math.max(reconMultiplier, multiplier);
+      if (_reconTypes.contains(typeId)) {
+        final multiplier = _reconMultiplier(
+          typeId: typeId,
+          lineOfSight: master.lineOfSight,
+          actionKind: base.actionKind,
+        );
+        reconMultiplier = math.max(reconMultiplier, multiplier);
+      }
 
       final slot = _slotAirPower(
         master: master,
@@ -84,36 +117,22 @@ abstract final class LandBaseAirPower {
     required int actionKind,
   }) {
     final typeId = master.type.length > 2 ? master.type[2] : -1;
-    final standardAircraft =
-        <int>{6, 7, 45, 47, 57}.contains(typeId) ||
-        (typeId == 26 && master.antiAir > 0);
-    final carrierAircraft = typeId == 8 || typeId == 11;
-    final localFighter = typeId == 48;
-    final sortieRecon =
-        actionKind == 1 && (typeId == 10 || typeId == 41 || typeId == 49);
-    if (!standardAircraft &&
-        !carrierAircraft &&
-        !localFighter &&
-        !sortieRecon) {
+    if (!_countsTowardsAirPower(
+      typeId: typeId,
+      antiAir: master.antiAir,
+      actionKind: actionKind,
+    )) {
       return null;
     }
 
     final proficiency = owned.proficiency.clamp(0, 7).toInt();
-    final improvementFactor =
-        master.antiAir > 3 && (standardAircraft || localFighter || typeId == 49)
-        ? (master.bombing > 0 ? 0.25 : 0.2)
-        : 0.0;
-    var effectiveAntiAir = master.antiAir + owned.level * improvementFactor;
-    if (localFighter) {
-      if (actionKind == 1) {
-        effectiveAntiAir += 1.5 * master.interception;
-      } else if (actionKind == 2) {
-        effectiveAntiAir += master.interception + 2 * master.antiBomber;
-      }
-    }
+    final effectiveAntiAir =
+        master.antiAir +
+        _improvementAntiAir(master, owned.level) +
+        _interceptionBonus(master, actionKind);
 
     final typeBonus = switch (typeId) {
-      6 || 26 || 45 || 48 => _fighterBonuses[proficiency],
+      6 || 26 || 45 || 48 || 56 => _fighterBonuses[proficiency],
       11 => _seaplaneBomberBonuses[proficiency],
       _ => 0,
     };
@@ -125,22 +144,57 @@ abstract final class LandBaseAirPower {
     return (minimum: minimum.floor(), maximum: maximum.floor());
   }
 
+  static bool _countsTowardsAirPower({
+    required int typeId,
+    required int antiAir,
+    required int actionKind,
+  }) {
+    if (typeId == 26) return antiAir > 0;
+    if (_airPowerTypes.contains(typeId)) return true;
+    return typeId != 9 &&
+        _reconTypes.contains(typeId) &&
+        (actionKind == 1 || actionKind == 2);
+  }
+
+  static double _improvementAntiAir(MasterSlotItem master, int level) {
+    if (level <= 0) return 0;
+    final idFactor = _improvementFactorsById[master.id];
+    if (idFactor != null) return idFactor * level;
+
+    final typeId = master.type.length > 2 ? master.type[2] : -1;
+    final typeFactor = _improvementFactors[typeId];
+    if (typeFactor != null) {
+      final levelValue = _sqrtImprovementTypes.contains(typeId)
+          ? math.sqrt(level)
+          : level;
+      return typeFactor * levelValue;
+    }
+    return _fighterBomberIds.contains(master.id) ? 0.25 * level : 0;
+  }
+
+  static double _interceptionBonus(MasterSlotItem master, int actionKind) {
+    final typeId = master.type.length > 2 ? master.type[2] : -1;
+    if (typeId != 48) return 0;
+    if (actionKind == 1) return 1.5 * master.interception;
+    if (actionKind == 2) {
+      return (master.interception + 2 * master.antiBomber).toDouble();
+    }
+    return 0;
+  }
+
   static double _reconMultiplier({
     required int typeId,
     required int lineOfSight,
     required int actionKind,
   }) {
-    if ((typeId == 10 || typeId == 41) && actionKind == 2) {
-      if (lineOfSight >= 9) return 1.16;
-      if (lineOfSight == 8) return 1.13;
-      return 1.1;
+    final tier = (lineOfSight - 7).clamp(0, 2);
+    if (actionKind == 1) {
+      return typeId == 49 ? 1.12 + tier * 0.03 : 1;
     }
-    if (typeId == 9 && actionKind == 2) {
-      return lineOfSight >= 9 ? 1.3 : 1.2;
-    }
-    if (typeId == 49) {
-      if (actionKind == 1) return lineOfSight >= 9 ? 1.18 : 1.15;
-      if (actionKind == 2) return lineOfSight >= 9 ? 1.23 : 1.18;
+    if (actionKind == 2) {
+      if (typeId == 9) return 1.2 + tier * 0.05;
+      if (typeId == 10 || typeId == 41) return 1.1 + tier * 0.03;
+      if (typeId == 49) return 1.12 + tier * 0.06;
     }
     return 1;
   }
