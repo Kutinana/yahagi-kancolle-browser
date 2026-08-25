@@ -164,6 +164,7 @@ void main() {
       // wording in both Chinese scripts.
       'inventoryOwned',
       'inventoryUnowned',
+      'unownedShipExcludedLabel',
       'clearNewShipExclusions',
       'otherType',
       'acknowledge',
