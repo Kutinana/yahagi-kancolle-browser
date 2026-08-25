@@ -175,6 +175,46 @@ void main() {
     expect(find.byType(LandBaseAirGroupRow), findsNothing);
     expect(find.text('点击航空队查看装备详情'), findsNothing);
   });
+
+  testWidgets('expanded foldable width arranges three bases in a 2x2 grid', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLandBases(selectedAreaBaseCount: 3);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_card(controller, width: 760));
+    await tester.tap(find.byKey(const Key('land-base-area-selector-62')));
+    await tester.pump();
+
+    final first = tester.getRect(find.byKey(const Key('land-base-row-62-1')));
+    final second = tester.getRect(find.byKey(const Key('land-base-row-62-2')));
+    final third = tester.getRect(find.byKey(const Key('land-base-row-62-3')));
+
+    expect(first.top, closeTo(second.top, 0.1));
+    expect(second.left, greaterThan(first.right));
+    expect(third.left, closeTo(first.left, 0.1));
+    expect(third.top, greaterThan(first.bottom));
+    expect(third.width, closeTo(first.width, 0.1));
+    expect(third.right, lessThan(second.right));
+  });
+
+  testWidgets('ordinary width keeps land bases in one column', (tester) async {
+    final controller = await _controllerWithLandBases(selectedAreaBaseCount: 3);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_card(controller, width: 600));
+    await tester.tap(find.byKey(const Key('land-base-area-selector-62')));
+    await tester.pump();
+
+    final first = tester.getRect(find.byKey(const Key('land-base-row-62-1')));
+    final second = tester.getRect(find.byKey(const Key('land-base-row-62-2')));
+    final third = tester.getRect(find.byKey(const Key('land-base-row-62-3')));
+
+    expect(second.left, closeTo(first.left, 0.1));
+    expect(second.top, greaterThan(first.bottom));
+    expect(third.left, closeTo(first.left, 0.1));
+    expect(third.top, greaterThan(second.bottom));
+  });
 }
 
 LandBaseState _base({
@@ -230,7 +270,9 @@ GameState _state(LandBaseState base) => GameState(
   },
 );
 
-Future<GameStateController> _controllerWithLandBases() async {
+Future<GameStateController> _controllerWithLandBases({
+  int selectedAreaBaseCount = 1,
+}) async {
   final controller = GameStateController();
   controller
     ..accept(
@@ -257,6 +299,12 @@ Future<GameStateController> _controllerWithLandBases() async {
             'api_rid': 1,
             'api_name': '第一基地航空队',
           },
+          for (var baseId = 2; baseId <= selectedAreaBaseCount; baseId++)
+            <String, Object?>{
+              'api_area_id': 62,
+              'api_rid': baseId,
+              'api_name': baseId == 2 ? '第二基地航空队' : '第三基地航空队',
+            },
         ],
       }),
     );
@@ -264,8 +312,13 @@ Future<GameStateController> _controllerWithLandBases() async {
   return controller;
 }
 
-Widget _card(GameStateController controller) => MaterialApp(
-  home: Scaffold(body: _CardHarness(controller: controller)),
+Widget _card(GameStateController controller, {double? width}) => MaterialApp(
+  home: Scaffold(
+    body: SizedBox(
+      width: width,
+      child: _CardHarness(controller: controller),
+    ),
+  ),
 );
 
 class _CardHarness extends StatefulWidget {

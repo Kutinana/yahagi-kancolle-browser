@@ -84,14 +84,30 @@ class _LandBaseSummaryCardState extends State<LandBaseSummaryCard> {
                     countLabel: l10n.landBaseUnitCount(bases.length),
                   ),
                   const SizedBox(height: 6),
-                  for (var index = 0; index < bases.length; index++) ...[
-                    LandBaseAirGroupRow(
-                      state: state,
-                      base: bases[index],
-                      damagePulseMode: widget.damagePulseMode,
-                    ),
-                    if (index != bases.length - 1) const SizedBox(height: 4),
-                  ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const gap = 4.0;
+                      final columnCount = constraints.maxWidth >= 680 ? 2 : 1;
+                      final rowWidth =
+                          (constraints.maxWidth - gap * (columnCount - 1)) /
+                          columnCount;
+                      return Wrap(
+                        spacing: gap,
+                        runSpacing: gap,
+                        children: <Widget>[
+                          for (final base in bases)
+                            SizedBox(
+                              width: rowWidth,
+                              child: LandBaseAirGroupRow(
+                                state: state,
+                                base: base,
+                                damagePulseMode: widget.damagePulseMode,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
       );
