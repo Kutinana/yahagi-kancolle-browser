@@ -25,6 +25,7 @@
 在 `unowned views reuse filters and remember each category` 中保存主炮筛选行，并把旧汇总断言替换为结构和顺序断言：
 
 ```dart
+final unownedEquipmentRows = projection.unownedEquipment;
 final mainGunRows = projection.unownedEquipmentFor(
   category: EquipmentInventoryCategory.mainGun,
 );
@@ -34,6 +35,27 @@ final mainGunCount = mainGunRows.length;
 ```dart
 expect(find.byKey(const Key('unowned-equipment-summary')), findsNothing);
 expect(find.byType(ExpansionTile), findsNothing);
+final equipmentCardKeys = find
+    .byWidgetPredicate(
+      (widget) =>
+          widget.key is ValueKey<String> &&
+          RegExp(
+            r'^unowned-equipment-\d+$',
+          ).hasMatch((widget.key! as ValueKey<String>).value),
+    )
+    .evaluate()
+    .map((element) => (element.widget.key! as ValueKey<String>).value)
+    .toList();
+expect(
+  equipmentCardKeys,
+  unownedEquipmentRows
+      .map((row) => 'unowned-equipment-${row.master.id}')
+      .toList(),
+);
+expect(tester.takeException(), isNull);
+
+await tester.tap(find.byKey(const Key('unowned-equipment-filter-mainGun')));
+await tester.pump();
 expect(
   tester
       .widget<Text>(
@@ -42,22 +64,6 @@ expect(
       .data,
   '$mainGunCount',
 );
-final equipmentCardKeys = find
-    .byWidgetPredicate(
-      (widget) =>
-          widget.key is ValueKey<String> &&
-          (widget.key! as ValueKey<String>).value.startsWith(
-            'unowned-equipment-',
-          ),
-    )
-    .evaluate()
-    .map((element) => (element.widget.key! as ValueKey<String>).value)
-    .toList();
-expect(
-  equipmentCardKeys,
-  mainGunRows.map((row) => 'unowned-equipment-${row.master.id}').toList(),
-);
-expect(tester.takeException(), isNull);
 ```
 
 - [ ] **步骤 2：运行测试并确认红灯**
@@ -72,6 +78,12 @@ expect(tester.takeException(), isNull);
 - 修改：`lib/src/inventory/owned_inventory_page.dart`
 
 - [ ] **步骤 1：将装备视图替换为舰娘同款滚动 Wrap**
+
+先为未持有装备筛选条补上与未持有舰娘一致的结果数字 key：
+
+```dart
+resultKey: const Key('unowned-equipment-filter-result-count'),
+```
 
 用以下实现替换 `_UnownedEquipmentView.build`：
 
