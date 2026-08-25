@@ -77,6 +77,40 @@ void main() {
     );
   });
 
+  testWidgets(
+    'ordinary landscape width uses a compact header without overflow',
+    (tester) async {
+      await tester.pumpWidget(
+        _row(
+          width: 470,
+          base: _base(currentHp: 200, conditions: const <int>[1, 1, 1, 1]),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+
+      final name = tester.getRect(find.byKey(const Key('land-base-name-62-1')));
+      final action = tester.getRect(
+        find.byKey(const Key('land-base-action-chip-62-1')),
+      );
+      final airPower = tester.getRect(
+        find.byKey(const Key('land-base-air-power-chip-62-1')),
+      );
+      final range = tester.getRect(
+        find.byKey(const Key('land-base-range-chip-62-1')),
+      );
+      final portrait = tester.getRect(
+        find.byKey(const Key('land-base-portrait-62-1')),
+      );
+
+      expect(action.center.dy, closeTo(name.center.dy, 0.1));
+      expect(airPower.center.dy, closeTo(name.center.dy, 0.1));
+      expect(range.center.dy, closeTo(name.center.dy, 0.1));
+      expect(portrait.top, greaterThan(name.bottom));
+      expect(portrait.height, lessThanOrEqualTo(38));
+    },
+  );
+
   testWidgets('card switches areas and collapses without a details panel', (
     tester,
   ) async {
@@ -129,10 +163,10 @@ LandBaseState _base({
   ],
 );
 
-Widget _row({required LandBaseState base}) => MaterialApp(
+Widget _row({required LandBaseState base, double width = 640}) => MaterialApp(
   home: Scaffold(
     body: SizedBox(
-      width: 640,
+      width: width,
       child: LandBaseAirGroupRow(state: _state(base), base: base),
     ),
   ),

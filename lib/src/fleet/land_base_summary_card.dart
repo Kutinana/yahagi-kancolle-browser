@@ -5,7 +5,6 @@ import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import 'dashboard_card.dart';
 import 'equipment_type_icon.dart';
-import 'fleet_ship_status_capsule.dart';
 import 'land_base_air_power.dart';
 import 'land_base_status_visuals.dart';
 import 'ship_status_style.dart';
@@ -223,7 +222,7 @@ class LandBaseAirGroupRow extends StatelessWidget {
 
     return Container(
       key: Key('land-base-row-$_keySuffix'),
-      padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
       decoration: BoxDecoration(
         color: const Color(0xff1c3547),
         border: Border.all(color: const Color(0xff4c6b84), width: 1.2),
@@ -235,83 +234,128 @@ class LandBaseAirGroupRow extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < 460;
-          final portraitWidth = narrow ? 82.0 : 112.0;
-          final portraitHeight = narrow ? 42.0 : 52.0;
-          return Row(
+          final portraitWidth = narrow ? 112.0 : 138.0;
+          const portraitHeight = 34.0;
+          final l10n =
+              AppLocalizations.of(context) ??
+              lookupAppLocalizations(const Locale('zh'));
+          return Column(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               SizedBox(
-                key: Key('land-base-portrait-$_keySuffix'),
-                width: portraitWidth,
-                height: portraitHeight,
-                child: Stack(
-                  fit: StackFit.expand,
-                  clipBehavior: Clip.none,
+                height: 20,
+                child: Row(
+                  key: Key('land-base-identity-line-$_keySuffix'),
                   children: <Widget>[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: SlotItemPortrait(
-                        item: portraitMaster,
-                        serverOrigin: state.serverOrigin,
-                        width: portraitWidth,
-                        height: portraitHeight,
-                      ),
-                    ),
-                    ShipHpFrame(
-                      key: Key('land-base-portrait-hp-frame-$_keySuffix'),
-                      shipId: base.areaId * 10 + base.baseId,
-                      ratio: hpRatio,
-                      color: shipHpBarColor(hpRatio, isZeroHp: currentHp <= 0),
-                      mode: damagePulseMode,
-                      strokeWidth: 2,
-                    ),
-                    if (fatigue != LandBaseFatigueLevel.none)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: FatigueFace(
-                          level: fatigue == LandBaseFatigueLevel.red
-                              ? FatigueFaceLevel.red
-                              : FatigueFaceLevel.yellow,
-                          size: narrow ? 15 : 18,
-                          faceKey: Key('land-base-fatigue-face-$_keySuffix'),
+                    Expanded(
+                      child: Text(
+                        base.name,
+                        key: Key('land-base-name-$_keySuffix'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xffe8f1f5),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
+                    ),
+                    const SizedBox(width: 4),
+                    _LandBaseActionHpChip(
+                      key: Key('land-base-action-chip-$_keySuffix'),
+                      label: _actionLabel(base.actionKind, l10n),
+                      actionColor: _actionColor(base.actionKind),
+                      currentHp: currentHp,
+                      maximumHp: maximumHp,
+                      hpRatio: hpRatio,
+                      damagePulseMode: damagePulseMode,
+                      meterKey: Key('land-base-hp-meter-$_keySuffix'),
+                    ),
+                    const SizedBox(width: 3),
+                    _LandBaseInfoChip(
+                      key: Key('land-base-air-power-chip-$_keySuffix'),
+                      label: '${l10n.airPower} ${airPower.displayValue}',
+                      color: const Color(0xffd4a74e),
+                    ),
+                    const SizedBox(width: 3),
+                    _LandBaseInfoChip(
+                      key: Key('land-base-range-chip-$_keySuffix'),
+                      label: '${l10n.landBaseRange} ${base.effectiveDistance}',
+                      color: const Color(0xff70b8d8),
+                    ),
                   ],
                 ),
               ),
-              SizedBox(width: narrow ? 6 : 9),
-              Expanded(
-                flex: narrow ? 4 : 5,
-                child: _LandBaseIdentity(
-                  base: base,
-                  airPower: airPower,
-                  currentHp: currentHp,
-                  maximumHp: maximumHp,
-                  hpRatio: hpRatio,
-                  damagePulseMode: damagePulseMode,
-                ),
-              ),
-              SizedBox(width: narrow ? 5 : 10),
-              Expanded(
-                flex: narrow ? 5 : 6,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    for (var squadronId = 1; squadronId <= 4; squadronId++)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 2),
-                          child: _LandBaseSquadronSlot(
-                            state: state,
-                            squadron: _squadron(base, squadronId),
-                            areaId: base.areaId,
-                            baseId: base.baseId,
-                            squadronId: squadronId,
+              const SizedBox(height: 3),
+              Row(
+                children: <Widget>[
+                  SizedBox(
+                    key: Key('land-base-portrait-$_keySuffix'),
+                    width: portraitWidth,
+                    height: portraitHeight,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      clipBehavior: Clip.none,
+                      children: <Widget>[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: SlotItemPortrait(
+                            item: portraitMaster,
+                            serverOrigin: state.serverOrigin,
+                            width: portraitWidth,
+                            height: portraitHeight,
                           ),
                         ),
-                      ),
-                  ],
-                ),
+                        ShipHpFrame(
+                          key: Key('land-base-portrait-hp-frame-$_keySuffix'),
+                          shipId: base.areaId * 10 + base.baseId,
+                          ratio: hpRatio,
+                          color: shipHpBarColor(
+                            hpRatio,
+                            isZeroHp: currentHp <= 0,
+                          ),
+                          mode: damagePulseMode,
+                          strokeWidth: 2,
+                        ),
+                        if (fatigue != LandBaseFatigueLevel.none)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: FatigueFace(
+                              level: fatigue == LandBaseFatigueLevel.red
+                                  ? FatigueFaceLevel.red
+                                  : FatigueFaceLevel.yellow,
+                              size: 15,
+                              faceKey: Key(
+                                'land-base-fatigue-face-$_keySuffix',
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: narrow ? 5 : 7),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: <Widget>[
+                        for (var squadronId = 1; squadronId <= 4; squadronId++)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 2),
+                              child: _LandBaseSquadronSlot(
+                                state: state,
+                                squadron: _squadron(base, squadronId),
+                                areaId: base.areaId,
+                                baseId: base.baseId,
+                                squadronId: squadronId,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           );
@@ -321,102 +365,127 @@ class LandBaseAirGroupRow extends StatelessWidget {
   }
 }
 
-class _LandBaseIdentity extends StatelessWidget {
-  const _LandBaseIdentity({
-    required this.base,
-    required this.airPower,
+class _LandBaseInfoChip extends StatelessWidget {
+  const _LandBaseInfoChip({
+    super.key,
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.14),
+      border: Border.all(color: color.withValues(alpha: 0.42)),
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      style: TextStyle(
+        color: color,
+        fontSize: 8,
+        height: 1,
+        fontWeight: FontWeight.w900,
+      ),
+    ),
+  );
+}
+
+class _LandBaseActionHpChip extends StatelessWidget {
+  const _LandBaseActionHpChip({
+    super.key,
+    required this.label,
+    required this.actionColor,
     required this.currentHp,
     required this.maximumHp,
     required this.hpRatio,
     required this.damagePulseMode,
+    required this.meterKey,
   });
 
-  final LandBaseState base;
-  final LandBaseAirPowerResult airPower;
+  final String label;
+  final Color actionColor;
   final int currentHp;
   final int maximumHp;
   final double hpRatio;
   final DamagePulseMode damagePulseMode;
+  final Key meterKey;
 
   @override
   Widget build(BuildContext context) {
-    final l10n =
-        AppLocalizations.of(context) ??
-        lookupAppLocalizations(const Locale('zh'));
-    final suffix = '${base.areaId}-${base.baseId}';
     final hpColor = shipHpBarColor(hpRatio, isZeroHp: currentHp <= 0);
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Text(
-          base.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xffe8f1f5),
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
+    return DamagePulseBuilder(
+      ratio: hpRatio,
+      mode: damagePulseMode,
+      normalColor: hpColor,
+      builder: (context, spec, phase) => Opacity(
+        opacity: spec.pulses
+            ? spec.minFrameOpacity + phase * (1 - spec.minFrameOpacity)
+            : 1,
+        child: Container(
+          height: 18,
+          padding: const EdgeInsets.fromLTRB(5, 2, 5, 3),
+          decoration: BoxDecoration(
+            color: actionColor.withValues(alpha: 0.16),
+            border: Border.all(color: actionColor.withValues(alpha: 0.42)),
+            borderRadius: BorderRadius.circular(5),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          '${l10n.airPower} ${airPower.displayValue} · '
-          '${l10n.landBaseRange} ${base.effectiveDistance}',
-          maxLines: 1,
-          style: const TextStyle(
-            color: Color(0xff9fb3bf),
-            fontSize: 8,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Row(
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: _actionColor(base.actionKind).withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                _actionLabel(base.actionKind, l10n),
-                style: TextStyle(
-                  color: _actionColor(base.actionKind),
-                  fontSize: 8,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: DamagePulseBuilder(
-                ratio: hpRatio,
-                mode: damagePulseMode,
-                normalColor: hpColor,
-                builder: (context, spec, phase) => Opacity(
-                  opacity: spec.pulses
-                      ? spec.minFrameOpacity +
-                            phase * (1 - spec.minFrameOpacity)
-                      : 1,
-                  child: CompactStatusMeter(
-                    height: 13,
-                    icon: Icon(Icons.favorite_rounded, color: hpColor, size: 9),
-                    value: '$currentHp/$maximumHp',
-                    ratio: hpRatio,
-                    valueColor: shipHpValueColor(
-                      hpRatio,
-                      isZeroHp: currentHp <= 0,
+          child: Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: actionColor,
+                      fontSize: 8,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
                     ),
-                    barColor: spec.color,
-                    trackKey: Key('land-base-hp-meter-$suffix'),
+                  ),
+                  const SizedBox(width: 3),
+                  Icon(Icons.favorite_rounded, color: hpColor, size: 8),
+                  const SizedBox(width: 2),
+                  Text(
+                    '$currentHp/$maximumHp',
+                    style: TextStyle(
+                      color: shipHpValueColor(
+                        hpRatio,
+                        isZeroHp: currentHp <= 0,
+                      ),
+                      fontSize: 7,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                key: meterKey,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    minHeight: 2,
+                    value: hpRatio,
+                    backgroundColor: const Color(0xff102331),
+                    valueColor: AlwaysStoppedAnimation<Color>(spec.color),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -459,7 +528,7 @@ class _LandBaseSquadronSlot extends StatelessWidget {
     final suffix = '$areaId-$baseId-$squadronId';
     final content = Container(
       key: Key('land-base-slot-$suffix'),
-      height: 38,
+      height: 34,
       decoration: BoxDecoration(
         color: const Color(0xff102331),
         borderRadius: BorderRadius.circular(6),
@@ -480,7 +549,7 @@ class _LandBaseSquadronSlot extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          EquipmentTypeIconImage(iconId: iconId, width: 18, height: 18),
+          EquipmentTypeIconImage(iconId: iconId, width: 16, height: 16),
           Text(
             squadron == null ? '—' : '${squadron!.currentCount}',
             style: TextStyle(
