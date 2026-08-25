@@ -17,6 +17,9 @@ class GameStateSerializer {
       'mapDifficulties': state.mapDifficulties.map(
         (key, value) => MapEntry(key.toString(), value),
       ),
+      'masterMapAreas': state.masterMapAreas.map(
+        (key, value) => MapEntry(key.toString(), value),
+      ),
       'memberMapInfos': state.memberMapInfos.map(
         (key, value) => MapEntry(key.toString(), {
           'id': value.id,
@@ -106,6 +109,20 @@ class GameStateSerializer {
               'baseId': base.baseId,
               'name': base.name,
               'actionKind': base.actionKind,
+              'distanceBase': base.distanceBase,
+              'distanceBonus': base.distanceBonus,
+              'squadrons': base.squadrons
+                  .map(
+                    (squadron) => {
+                      'squadronId': squadron.squadronId,
+                      'state': squadron.state,
+                      'slotItemId': squadron.slotItemId,
+                      'currentCount': squadron.currentCount,
+                      'maxCount': squadron.maxCount,
+                      'condition': squadron.condition,
+                    },
+                  )
+                  .toList(),
             },
           )
           .toList(),
@@ -231,6 +248,17 @@ class GameStateSerializer {
         }
       }
 
+      final masterMapAreas = <int, String>{};
+      final rawMasterMapAreas = map['masterMapAreas'];
+      if (rawMasterMapAreas is Map) {
+        for (final entry in rawMasterMapAreas.entries) {
+          final id = int.tryParse('${entry.key}');
+          if (id != null && id > 0) {
+            masterMapAreas[id] = _string(entry.value);
+          }
+        }
+      }
+
       final memberMapInfos = <int, MemberMapInfo>{};
       final rawMemberMapInfos = map['memberMapInfos'];
       if (rawMemberMapInfos is Map) {
@@ -351,12 +379,34 @@ class GameStateSerializer {
           final areaId = _int(item['areaId']) ?? 0;
           final baseId = _int(item['baseId']) ?? 0;
           if (areaId <= 0 || baseId <= 0) continue;
+          final squadrons = <LandBaseSquadronState>[];
+          final rawSquadrons = item['squadrons'];
+          if (rawSquadrons is List) {
+            for (final squadron in rawSquadrons) {
+              if (squadron is! Map) continue;
+              final squadronId = _int(squadron['squadronId']) ?? 0;
+              if (squadronId <= 0) continue;
+              squadrons.add(
+                LandBaseSquadronState(
+                  squadronId: squadronId,
+                  state: _int(squadron['state']) ?? 0,
+                  slotItemId: _int(squadron['slotItemId']) ?? 0,
+                  currentCount: _int(squadron['currentCount']) ?? 0,
+                  maxCount: _int(squadron['maxCount']) ?? 0,
+                  condition: _int(squadron['condition']) ?? 1,
+                ),
+              );
+            }
+          }
           landBases.add(
             LandBaseState(
               areaId: areaId,
               baseId: baseId,
               name: _string(item['name']),
               actionKind: _int(item['actionKind']) ?? 0,
+              distanceBase: _int(item['distanceBase']) ?? 0,
+              distanceBonus: _int(item['distanceBonus']) ?? 0,
+              squadrons: squadrons,
             ),
           );
         }
@@ -446,6 +496,7 @@ class GameStateSerializer {
         furnitureCoins: _int(map['furnitureCoins']) ?? 0,
         hasFurnitureCoinData: map['hasFurnitureCoinData'] == true,
         mapDifficulties: mapDifficulties,
+        masterMapAreas: masterMapAreas,
         memberMapInfos: memberMapInfos,
         quests: quests,
         hasQuestData: map['hasQuestData'] == true,

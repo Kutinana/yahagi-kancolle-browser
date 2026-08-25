@@ -50,6 +50,41 @@ void main() {
     expect(restored.landBases.single.lastRaidDamage, 0);
   });
 
+  test('land-base cache keeps distance and squadron state', () {
+    const state = GameState(
+      landBases: <LandBaseState>[
+        LandBaseState(
+          areaId: 62,
+          baseId: 1,
+          name: '第一基地航空队',
+          actionKind: 1,
+          distanceBase: 7,
+          distanceBonus: 1,
+          squadrons: <LandBaseSquadronState>[
+            LandBaseSquadronState(
+              squadronId: 1,
+              state: 1,
+              slotItemId: 101,
+              currentCount: 12,
+              maxCount: 18,
+              condition: 3,
+            ),
+          ],
+        ),
+      ],
+      masterMapAreas: <int, String>{62: '反击！第三十一战队的战斗'},
+    );
+
+    final restored = GameStateSerializer.deserialize(
+      GameStateSerializer.serialize(state),
+    );
+
+    expect(restored.landBases.single.effectiveDistance, 8);
+    expect(restored.landBases.single.squadrons.single.currentCount, 12);
+    expect(restored.landBases.single.squadrons.single.condition, 3);
+    expect(restored.masterMapAreas[62], '反击！第三十一战队的战斗');
+  });
+
   test('old cache without land bases remains compatible', () {
     final restored = GameStateSerializer.deserialize('{"admiralLevel":120}');
 

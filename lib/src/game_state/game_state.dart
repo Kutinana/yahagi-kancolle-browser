@@ -117,6 +117,10 @@ class MasterSlotItem {
     this.armor = 0,
     this.range = 0,
     this.type = const <int>[],
+    this.interception = 0,
+    this.antiBomber = 0,
+    this.distance = 0,
+    this.resourceVersion = '',
   });
 
   final int id;
@@ -133,6 +137,10 @@ class MasterSlotItem {
   final int armor;
   final int range;
   final List<int> type;
+  final int interception;
+  final int antiBomber;
+  final int distance;
+  final String resourceVersion;
 }
 
 class MasterMission {
@@ -768,12 +776,33 @@ enum CombinedFleetType {
   }
 }
 
+class LandBaseSquadronState {
+  const LandBaseSquadronState({
+    required this.squadronId,
+    this.state = 0,
+    this.slotItemId = 0,
+    this.currentCount = 0,
+    this.maxCount = 0,
+    this.condition = 1,
+  });
+
+  final int squadronId;
+  final int state;
+  final int slotItemId;
+  final int currentCount;
+  final int maxCount;
+  final int condition;
+}
+
 class LandBaseState {
   const LandBaseState({
     required this.areaId,
     required this.baseId,
     required this.name,
     this.actionKind = 0,
+    this.distanceBase = 0,
+    this.distanceBonus = 0,
+    this.squadrons = const <LandBaseSquadronState>[],
     this.maxHp,
     this.currentHp,
     this.lastRaidDamage = 0,
@@ -783,9 +812,14 @@ class LandBaseState {
   final int baseId;
   final String name;
   final int actionKind;
+  final int distanceBase;
+  final int distanceBonus;
+  final List<LandBaseSquadronState> squadrons;
   final int? maxHp;
   final int? currentHp;
   final int lastRaidDamage;
+
+  int get effectiveDistance => distanceBase + distanceBonus;
 }
 
 class GameState {
@@ -814,6 +848,7 @@ class GameState {
     this.masterSlotItemTypes = const <int, String>{},
     this.masterMissions = const <int, MasterMission>{},
     this.masterMapInfos = const <int, MasterMapInfo>{},
+    this.masterMapAreas = const <int, String>{},
     Map<int, int> mapDifficulties = const <int, int>{},
     this.memberMapInfos = const <int, MemberMapInfo>{},
     this.ships = const <int, OwnedShip>{},
@@ -861,6 +896,7 @@ class GameState {
   final Map<int, String> masterSlotItemTypes;
   final Map<int, MasterMission> masterMissions;
   final Map<int, MasterMapInfo> masterMapInfos;
+  final Map<int, String> masterMapAreas;
   final Map<int, int>? _mapDifficulties;
   final Map<int, MemberMapInfo> memberMapInfos;
   final Map<int, OwnedShip> ships;
@@ -961,6 +997,7 @@ class GameState {
     Map<int, String>? masterSlotItemTypes,
     Map<int, MasterMission>? masterMissions,
     Map<int, MasterMapInfo>? masterMapInfos,
+    Map<int, String>? masterMapAreas,
     Map<int, int>? mapDifficulties,
     Map<int, MemberMapInfo>? memberMapInfos,
     Map<int, OwnedShip>? ships,
@@ -996,6 +1033,7 @@ class GameState {
       masterSlotItemTypes: masterSlotItemTypes ?? this.masterSlotItemTypes,
       masterMissions: masterMissions ?? this.masterMissions,
       masterMapInfos: masterMapInfos ?? this.masterMapInfos,
+      masterMapAreas: masterMapAreas ?? this.masterMapAreas,
       mapDifficulties: mapDifficulties ?? this.mapDifficulties,
       memberMapInfos: memberMapInfos ?? this.memberMapInfos,
       ships: ships ?? this.ships,
