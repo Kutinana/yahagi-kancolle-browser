@@ -266,7 +266,8 @@ class LandBaseAirGroupRow extends StatelessWidget {
                 child: Row(
                   key: Key('land-base-identity-line-$_keySuffix'),
                   children: <Widget>[
-                    Expanded(
+                    Flexible(
+                      fit: FlexFit.loose,
                       child: _LandBaseNameChip(
                         key: Key('land-base-name-$_keySuffix'),
                         label: base.name,

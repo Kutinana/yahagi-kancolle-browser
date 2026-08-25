@@ -127,6 +127,8 @@ void main() {
 
       expect(name.height, closeTo(action.height, 0.1));
       expect(name.top, closeTo(action.top, 0.1));
+      expect(name.width, lessThan(100));
+      expect(action.left - name.right, closeTo(4, 0.1));
       final nameContainer = find.descendant(
         of: find.byKey(const Key('land-base-name-62-1')),
         matching: find.byType(Container),
