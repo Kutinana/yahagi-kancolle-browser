@@ -1,4 +1,5 @@
 import '../game_state/game_state.dart';
+import 'owned_inventory_projection.dart';
 
 class UnownedShipFamilyRow {
   const UnownedShipFamilyRow({
@@ -94,6 +95,14 @@ class UnownedInventoryProjection {
     return List<UnownedShipFamilyRow>.unmodifiable(rows);
   }
 
+  List<UnownedShipFamilyRow> unownedShipFamiliesFor({
+    ShipInventoryCategory category = ShipInventoryCategory.all,
+  }) => List<UnownedShipFamilyRow>.unmodifiable(
+    unownedShipFamilies.where(
+      (row) => shipTypeMatchesInventoryCategory(row.typeId, category),
+    ),
+  );
+
   List<UnownedEquipmentRow> get unownedEquipment {
     final ownedMasterIds = state.slotItems.values
         .map((item) => item.masterSlotItemId)
@@ -114,6 +123,16 @@ class UnownedInventoryProjection {
     });
     return List<UnownedEquipmentRow>.unmodifiable(rows);
   }
+
+  List<UnownedEquipmentRow> unownedEquipmentFor({
+    EquipmentInventoryCategory category = EquipmentInventoryCategory.all,
+  }) => List<UnownedEquipmentRow>.unmodifiable(
+    unownedEquipment.where(
+      (row) =>
+          category == EquipmentInventoryCategory.all ||
+          equipmentInventoryCategoryFor(row.master) == category,
+    ),
+  );
 
   static Map<int, int> _buildPredecessors(GameState state) {
     final result = <int, int>{};

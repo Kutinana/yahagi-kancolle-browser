@@ -224,26 +224,8 @@ class OwnedInventoryProjection {
   }
 
   bool _matchesShipCategory(OwnedShip ship, ShipInventoryCategory category) {
-    if (category == ShipInventoryCategory.all) return true;
     final typeId = state.masterForShip(ship)?.shipTypeId ?? 0;
-    return switch (category) {
-      ShipInventoryCategory.all => true,
-      ShipInventoryCategory.bbBc => const <int>{8, 9, 10, 12}.contains(typeId),
-      ShipInventoryCategory.cvCvl => const <int>{7, 11, 18}.contains(typeId),
-      ShipInventoryCategory.ca => const <int>{5, 6}.contains(typeId),
-      ShipInventoryCategory.cl => const <int>{3, 4, 21}.contains(typeId),
-      ShipInventoryCategory.dd => typeId == 2,
-      ShipInventoryCategory.de => typeId == 1,
-      ShipInventoryCategory.ss => const <int>{13, 14}.contains(typeId),
-      ShipInventoryCategory.support => const <int>{
-        15,
-        16,
-        17,
-        19,
-        20,
-        22,
-      }.contains(typeId),
-    };
+    return shipTypeMatchesInventoryCategory(typeId, category);
   }
 
   int _compareShipRows(
@@ -400,6 +382,28 @@ int _compareEquipmentMasters(MasterSlotItem left, MasterSlotItem right) {
   final bySort = leftSort.compareTo(rightSort);
   return bySort != 0 ? bySort : left.id.compareTo(right.id);
 }
+
+bool shipTypeMatchesInventoryCategory(
+  int typeId,
+  ShipInventoryCategory category,
+) => switch (category) {
+  ShipInventoryCategory.all => true,
+  ShipInventoryCategory.bbBc => const <int>{8, 9, 10, 12}.contains(typeId),
+  ShipInventoryCategory.cvCvl => const <int>{7, 11, 18}.contains(typeId),
+  ShipInventoryCategory.ca => const <int>{5, 6}.contains(typeId),
+  ShipInventoryCategory.cl => const <int>{3, 4, 21}.contains(typeId),
+  ShipInventoryCategory.dd => typeId == 2,
+  ShipInventoryCategory.de => typeId == 1,
+  ShipInventoryCategory.ss => const <int>{13, 14}.contains(typeId),
+  ShipInventoryCategory.support => const <int>{
+    15,
+    16,
+    17,
+    19,
+    20,
+    22,
+  }.contains(typeId),
+};
 
 EquipmentInventoryCategory equipmentInventoryCategoryFor(MasterSlotItem item) {
   final broad = item.type.isNotEmpty ? item.type[0] : 0;
