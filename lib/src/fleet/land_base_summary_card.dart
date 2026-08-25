@@ -367,7 +367,6 @@ class LandBaseAirGroupRow extends StatelessWidget {
                         currentHp: currentHp,
                         maximumHp: maximumHp,
                         hpRatio: hpRatio,
-                        damagePulseMode: damagePulseMode,
                         height: portraitHeight > 34 ? portraitHeight : 34,
                         trackHeight: hpTrackHeight,
                       ),
@@ -379,7 +378,6 @@ class LandBaseAirGroupRow extends StatelessWidget {
                         currentHp: currentHp,
                         maximumHp: maximumHp,
                         hpRatio: hpRatio,
-                        damagePulseMode: damagePulseMode,
                         height: portraitHeight > 34 ? portraitHeight : 34,
                         trackHeight: hpTrackHeight,
                       ),
@@ -424,7 +422,6 @@ class _LandBaseStatusColumn extends StatelessWidget {
     required this.currentHp,
     required this.maximumHp,
     required this.hpRatio,
-    required this.damagePulseMode,
     required this.height,
     required this.trackHeight,
   });
@@ -433,7 +430,6 @@ class _LandBaseStatusColumn extends StatelessWidget {
   final int currentHp;
   final int maximumHp;
   final double hpRatio;
-  final DamagePulseMode damagePulseMode;
   final double height;
   final double trackHeight;
 
@@ -445,7 +441,6 @@ class _LandBaseStatusColumn extends StatelessWidget {
       currentHp: currentHp,
       maximumHp: maximumHp,
       hpRatio: hpRatio,
-      damagePulseMode: damagePulseMode,
       trackHeight: trackHeight,
       iconKey: Key('land-base-hp-icon-$keySuffix'),
       valueKey: Key('land-base-hp-value-$keySuffix'),
@@ -549,7 +544,6 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
     required this.currentHp,
     required this.maximumHp,
     required this.hpRatio,
-    required this.damagePulseMode,
     required this.trackHeight,
     required this.iconKey,
     required this.valueKey,
@@ -559,7 +553,6 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
   final int currentHp;
   final int maximumHp;
   final double hpRatio;
-  final DamagePulseMode damagePulseMode;
   final double trackHeight;
   final Key iconKey;
   final Key valueKey;
@@ -568,68 +561,55 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hpColor = shipHpBarColor(hpRatio, isZeroHp: currentHp <= 0);
-    return DamagePulseBuilder(
-      ratio: hpRatio,
-      mode: damagePulseMode,
-      normalColor: hpColor,
-      builder: (context, spec, phase) => Opacity(
-        opacity: spec.pulses
-            ? spec.minFrameOpacity + phase * (1 - spec.minFrameOpacity)
-            : 1,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          key: valueKey,
           children: <Widget>[
-            Row(
-              key: valueKey,
-              children: <Widget>[
-                Icon(
-                  Icons.favorite_rounded,
-                  key: iconKey,
-                  color: const Color(0xffef5a5a),
-                  size: 10,
-                ),
-                const SizedBox(width: 3),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '$currentHp/$maximumHp',
-                      style: TextStyle(
-                        color: shipHpValueColor(
-                          hpRatio,
-                          isZeroHp: currentHp <= 0,
-                        ),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        fontFeatures: const <FontFeature>[
-                          FontFeature.tabularFigures(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            Icon(
+              Icons.favorite_rounded,
+              key: iconKey,
+              color: const Color(0xffef5a5a),
+              size: 10,
             ),
-            const SizedBox(height: 2),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: Container(
-                key: trackKey,
-                height: trackHeight,
-                color: const Color(0xff294052),
+            const SizedBox(width: 3),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: hpRatio,
-                  heightFactor: 1,
-                  child: ColoredBox(color: spec.color),
+                child: Text(
+                  '$currentHp/$maximumHp',
+                  style: TextStyle(
+                    color: shipHpValueColor(hpRatio, isZeroHp: currentHp <= 0),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
                 ),
               ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 2),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            key: trackKey,
+            height: trackHeight,
+            color: const Color(0xff294052),
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: hpRatio,
+              heightFactor: 1,
+              child: ColoredBox(color: hpColor),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

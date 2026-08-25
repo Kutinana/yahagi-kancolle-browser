@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/land_base_summary_card.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/ship_status_visuals.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 
@@ -24,6 +25,13 @@ void main() {
         findsNothing,
       );
       expect(find.byKey(const Key('land-base-hp-meter-62-1')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('land-base-status-column-62-1')),
+          matching: find.byType(DamagePulseBuilder),
+        ),
+        findsNothing,
+      );
       expect(
         find.byKey(const Key('land-base-fatigue-face-62-1')),
         findsNothing,
