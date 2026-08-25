@@ -372,6 +372,30 @@ object AppNotificationManager {
             .build()
     }
 
+    internal fun buildSessionRetentionNotification(context: Context): Notification {
+        val launchIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Builder(context, ONGOING_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(context.getString(R.string.background_game_retention_notification_title))
+            .setContentText(context.getString(R.string.background_game_retention_notification_body))
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setOnlyAlertOnce(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .build()
+    }
+
     private fun bindItem(
         views: RemoteViews,
         item: OngoingNotificationItem,

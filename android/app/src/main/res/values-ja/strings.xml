@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="background_game_retention_notification_title">矢矧はバックグラウンドで実行中</string>
+    <string name="background_game_retention_notification_body">ゲームセッションを維持中 · タップしてゲームに戻る</string>
+</resources>

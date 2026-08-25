@@ -81,6 +81,7 @@ import app.yahagi.kancollebrowser.nativewebview.NativeWebViewProcessState
 import app.yahagi.kancollebrowser.nativewebview.NativeWebViewStartupGuard
 import app.yahagi.kancollebrowser.nativewebview.SharedPreferencesNativeWebViewStartupStore
 import app.yahagi.kancollebrowser.notification.AppNotificationManager
+import app.yahagi.kancollebrowser.notification.NotificationProgressService
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -155,6 +156,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         const val GAME_FRAME_RELOAD_CHANNEL = "app.yahagi.kancollebrowser/game_frame_reload"
         const val BATTLE_DAMAGE_ALERT_CHANNEL = "app.yahagi.kancollebrowser/battle_damage_alert"
         const val NOTIFICATION_CHANNEL = "app.yahagi.kancollebrowser/notification"
+        const val BACKGROUND_GAME_RETENTION_CHANNEL =
+            "app.yahagi.kancollebrowser/background_game_retention"
         const val DIAGNOSTICS_CHANNEL = "app.yahagi.kancollebrowser/diagnostics"
         const val GAME_ENVIRONMENT_CHANNEL = "app.yahagi.kancollebrowser/game_environment"
         const val GAME_RESOURCE_CACHE_CHANNEL = "app.yahagi.kancollebrowser/game_resource_cache"
@@ -468,6 +471,33 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                         },
                     )
                     result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            BACKGROUND_GAME_RETENTION_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setRetaining" -> {
+                    val retaining = call.argument<Boolean>("retaining")
+                    if (retaining == null) {
+                        result.error("invalid_argument", "retaining is required", null)
+                    } else {
+                        runCatching {
+                            NotificationProgressService.setSessionRetention(this, retaining)
+                        }.onSuccess {
+                            result.success(null)
+                        }.onFailure {
+                            result.error(
+                                "retention_failed",
+                                it.message,
+                                it.javaClass.simpleName,
+                            )
+                        }
+                    }
                 }
                 else -> result.notImplemented()
             }

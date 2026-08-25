@@ -51,7 +51,7 @@
             android:stopWithTask="false">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Refreshes visible game task progress at most every 30 seconds while timers are active" />
+                android:value="Keeps a user-initiated game WebView session active in the background and refreshes visible task progress" />
         </service>
 
         <meta-data

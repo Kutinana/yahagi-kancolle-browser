@@ -22,13 +22,24 @@ class NotificationProgressService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_SET_SESSION_RETENTION) {
+            sessionRetentionRequested = intent.getBooleanExtra(EXTRA_RETAINING, false)
+        }
         handler.removeCallbacks(refreshRunnable)
         refreshAndSchedule()
         return START_STICKY
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        sessionRetentionRequested = false
+        handler.removeCallbacks(refreshRunnable)
+        refreshAndSchedule()
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         handler.removeCallbacks(refreshRunnable)
+        sessionRetentionRequested = false
         running = false
         super.onDestroy()
     }
@@ -37,10 +48,14 @@ class NotificationProgressService : Service() {
 
     private fun refreshAndSchedule() {
         val snapshot = AppNotificationManager.loadSnapshot(this)
-        val shouldShow = snapshot.presentation.enabled &&
+        val hasOngoingItems = snapshot.presentation.enabled &&
             snapshot.presentation.ongoingLive &&
             snapshot.ongoingItems.isNotEmpty()
-        if (!shouldShow) {
+        val mode = NotificationForegroundMode.resolve(
+            sessionRetentionRequested = sessionRetentionRequested,
+            hasOngoingItems = hasOngoingItems,
+        )
+        if (mode == NotificationForegroundMode.STOP) {
             stopForegroundCompat(removeNotification = true)
             getSystemService(NotificationManager::class.java)
                 ?.cancel(AppNotificationManager.ONGOING_NOTIFICATION_ID)
@@ -48,7 +63,13 @@ class NotificationProgressService : Service() {
             return
         }
 
-        val notification = AppNotificationManager.buildOngoingNotification(this, snapshot)
+        val notification = when (mode) {
+            NotificationForegroundMode.PROGRESS ->
+                AppNotificationManager.buildOngoingNotification(this, snapshot)
+            NotificationForegroundMode.SESSION ->
+                AppNotificationManager.buildSessionRetentionNotification(this)
+            NotificationForegroundMode.STOP -> error("stop mode handled above")
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 AppNotificationManager.ONGOING_NOTIFICATION_ID,
@@ -61,12 +82,14 @@ class NotificationProgressService : Service() {
 
         val nowEpochMs = System.currentTimeMillis()
         val delayMs = NotificationProgressProjection.nextRefreshDelayMs(snapshot, nowEpochMs)
-        if (delayMs == null) {
+        if (delayMs == null && !sessionRetentionRequested) {
             stopForegroundCompat(removeNotification = false)
             stopSelf()
             return
         }
-        handler.postDelayed(refreshRunnable, delayMs)
+        if (delayMs != null) {
+            handler.postDelayed(refreshRunnable, delayMs)
+        }
     }
 
     private fun stopForegroundCompat(removeNotification: Boolean) {
@@ -81,8 +104,27 @@ class NotificationProgressService : Service() {
     }
 
     companion object {
+        private const val ACTION_SET_SESSION_RETENTION =
+            "app.yahagi.kancollebrowser.action.SET_SESSION_RETENTION"
+        private const val EXTRA_RETAINING = "retaining"
+
         @Volatile
         private var running = false
+
+        @Volatile
+        private var sessionRetentionRequested = false
+
+        fun setSessionRetention(context: Context, retaining: Boolean) {
+            val intent = Intent(context, NotificationProgressService::class.java).apply {
+                action = ACTION_SET_SESSION_RETENTION
+                putExtra(EXTRA_RETAINING, retaining)
+            }
+            if (retaining) {
+                ContextCompat.startForegroundService(context, intent)
+            } else {
+                context.startService(intent)
+            }
+        }
 
         fun sync(context: Context, snapshot: NativeNotificationSnapshot) {
             val intent = Intent(context, NotificationProgressService::class.java)
