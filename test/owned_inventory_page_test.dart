@@ -140,9 +140,11 @@ void main() {
     final ddCount = projection
         .unownedShipFamiliesFor(category: ShipInventoryCategory.dd)
         .length;
-    final mainGunCount = projection
-        .unownedEquipmentFor(category: EquipmentInventoryCategory.mainGun)
-        .length;
+    final unownedEquipmentRows = projection.unownedEquipment;
+    final mainGunRows = projection.unownedEquipmentFor(
+      category: EquipmentInventoryCategory.mainGun,
+    );
+    final mainGunCount = mainGunRows.length;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -172,13 +174,36 @@ void main() {
       find.byKey(const Key('unowned-equipment-filter-all')),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('unowned-equipment-summary')), findsNothing);
+    expect(find.byType(ExpansionTile), findsNothing);
+    final equipmentCardKeys = find
+        .byWidgetPredicate(
+          (widget) =>
+              widget.key is ValueKey<String> &&
+              RegExp(
+                r'^unowned-equipment-\d+$',
+              ).hasMatch((widget.key! as ValueKey<String>).value),
+        )
+        .evaluate()
+        .map((element) => (element.widget.key! as ValueKey<String>).value)
+        .toList();
+    expect(
+      equipmentCardKeys,
+      unownedEquipmentRows
+          .map((row) => 'unowned-equipment-${row.master.id}')
+          .toList(),
+    );
+    expect(tester.takeException(), isNull);
+
     await tester.tap(find.byKey(const Key('unowned-equipment-filter-mainGun')));
     await tester.pump();
     expect(
       tester
-          .widget<Text>(find.byKey(const Key('unowned-equipment-summary')))
+          .widget<Text>(
+            find.byKey(const Key('unowned-equipment-filter-result-count')),
+          )
           .data,
-      contains('$mainGunCount'),
+      '$mainGunCount',
     );
 
     await tester.tap(find.byKey(const Key('owned-inventory-tab-ships')));

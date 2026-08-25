@@ -280,6 +280,9 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                 values: EquipmentInventoryCategory.values,
                 selected: _unownedEquipmentCategory,
                 resultCount: unownedEquipmentRows.length,
+                resultKey: const Key(
+                  'unowned-equipment-filter-result-count',
+                ),
                 label: (value) => _equipmentCategoryLabel(value, l10n),
                 keyFor: (value) =>
                     Key('unowned-equipment-filter-${value.name}'),
@@ -496,72 +499,22 @@ class _UnownedEquipmentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n =
-        AppLocalizations.of(context) ??
-        lookupAppLocalizations(const Locale('zh'));
-    final groups = <int, List<UnownedEquipmentRow>>{};
-    for (final row in rows) {
-      groups.putIfAbsent(row.typeId, () => <UnownedEquipmentRow>[]).add(row);
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
-          child: Text(
-            l10n.unownedEquipmentSummary(rows.length),
-            key: const Key('unowned-equipment-summary'),
-            style: const TextStyle(
-              color: Color(0xffb8c9d2),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              for (final entry in groups.entries)
-                _UnownedGroup(
-                  title: entry.value.first.typeName,
-                  count: entry.value.length,
-                  children: [
-                    for (final row in entry.value)
-                      _UnownedEquipmentCard(row: row),
-                  ],
-                ),
+              for (final row in rows) _UnownedEquipmentCard(row: row),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
-}
-
-class _UnownedGroup extends StatelessWidget {
-  const _UnownedGroup({
-    required this.title,
-    required this.count,
-    required this.children,
-  });
-  final String title;
-  final int count;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => ExpansionTile(
-    initiallyExpanded: true,
-    tilePadding: const EdgeInsets.symmetric(horizontal: 8),
-    title: Text(
-      '$title ($count)',
-      style: const TextStyle(fontWeight: FontWeight.w800),
-    ),
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-        child: Wrap(spacing: 8, runSpacing: 8, children: children),
-      ),
-    ],
-  );
 }
 
 class _UnownedShipCard extends StatelessWidget {
