@@ -24,10 +24,11 @@ final class KcwikiReportDispatcher {
     this.maxPendingCount = 16,
     this.maxPendingBytes = 4 * 1024 * 1024,
   }) : assert(maxPendingCount > 0),
-       assert(maxPendingBytes > 0),
-       _transportFactory = transportFactory;
+       assert(maxPendingBytes > 0) {
+    _transportFactory = transportFactory;
+  }
 
-  final KcwikiReportTransport Function() _transportFactory;
+  late final KcwikiReportTransport Function() _transportFactory;
   final void Function(KcwikiDispatchResult result)? onResult;
   final void Function()? onDropped;
   final int maxPendingCount;

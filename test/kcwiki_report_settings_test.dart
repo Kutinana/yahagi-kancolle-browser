@@ -56,4 +56,27 @@ void main() {
     expect(controller.status.module, 'quest');
     expect(controller.status.statusCode, 503);
   });
+
+  test('network failure clears a stale HTTP status code', () async {
+    final controller = await KcwikiReportController.load(
+      MemoryKcwikiReportSettingsStore(),
+    );
+    addTearDown(controller.dispose);
+    controller.recordResult(
+      module: 'quest',
+      succeeded: true,
+      occurredAt: DateTime.utc(2026, 8, 25),
+      statusCode: 204,
+    );
+
+    controller.recordResult(
+      module: 'battle',
+      succeeded: false,
+      occurredAt: DateTime.utc(2026, 8, 25, 1),
+    );
+
+    expect(controller.status.statusCode, isNull);
+    expect(controller.status.succeededCount, 1);
+    expect(controller.status.failedCount, 1);
+  });
 }

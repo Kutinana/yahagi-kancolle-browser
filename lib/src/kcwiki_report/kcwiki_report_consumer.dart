@@ -12,8 +12,10 @@ final class KcwikiReportConsumer implements GameApiEventConsumer {
     required this.dispatcher,
     required GameState Function() gameState,
     required Future<void> Function() waitForGameState,
-  }) : _gameState = gameState,
-       _waitForGameState = waitForGameState {
+  }) {
+    _gameState = gameState;
+    _waitForGameState = waitForGameState;
+    _lastEnabled = controller.enabled;
     controller.addListener(_onSettingsChanged);
     if (controller.enabled) dispatcher.start();
   }
@@ -21,13 +23,14 @@ final class KcwikiReportConsumer implements GameApiEventConsumer {
   final KcwikiReportController controller;
   final KcwikiReportCollector collector;
   final KcwikiReportDispatcher dispatcher;
-  final GameState Function() _gameState;
-  final Future<void> Function() _waitForGameState;
+  late final GameState Function() _gameState;
+  late final Future<void> Function() _waitForGameState;
 
   Future<void> _queue = Future<void>.value();
   int _session = 0;
   int _pendingEventCount = 0;
   bool _disposed = false;
+  late bool _lastEnabled;
 
   int get pendingEventCount => _pendingEventCount;
 
@@ -65,6 +68,8 @@ final class KcwikiReportConsumer implements GameApiEventConsumer {
   }
 
   void _onSettingsChanged() {
+    if (controller.enabled == _lastEnabled) return;
+    _lastEnabled = controller.enabled;
     _session += 1;
     collector.reset();
     if (controller.enabled) {

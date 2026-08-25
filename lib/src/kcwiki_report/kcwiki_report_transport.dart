@@ -31,10 +31,11 @@ final class HttpKcwikiReportTransport implements KcwikiReportTransport {
     required this.baseUri,
     this.timeout = const Duration(seconds: 8),
     this.maxBodyBytes = 2 * 1024 * 1024,
-  }) : assert(maxBodyBytes > 0),
-       _client = client;
+  }) : assert(maxBodyBytes > 0) {
+    _client = client;
+  }
 
-  final http.Client _client;
+  late final http.Client _client;
   final Uri baseUri;
   final Duration timeout;
   final int maxBodyBytes;

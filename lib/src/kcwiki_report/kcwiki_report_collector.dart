@@ -162,7 +162,7 @@ final class KcwikiReportCollector {
           .toList(growable: false);
       if (after.isNotEmpty && !after.contains(201)) {
         final detail = <Object?>[
-          if (_quests[cleared] case final previous?) previous,
+          ?_quests[cleared],
           for (final id in after) next[id]!,
         ];
         output.add(
@@ -613,8 +613,9 @@ Object? _safeCopy(Object? value) {
     }
     return output;
   }
-  if (value is List)
+  if (value is List) {
     return <Object?>[for (final item in value) _safeCopy(item)];
+  }
   if (value == null || value is String || value is num || value is bool) {
     return value;
   }

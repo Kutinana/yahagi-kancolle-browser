@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
@@ -16,6 +18,7 @@ import '../logbook/logbook_database.dart';
 import '../prototype_status_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../senka/senka_controller.dart';
+import '../kcwiki_report/kcwiki_report_settings.dart';
 import '../widgets/top_notice.dart';
 import '../widgets/adaptive_input_dialog.dart';
 import 'diagnostic_user_section.dart';
@@ -36,6 +39,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     required this.gameStateController,
     this.senkaController,
     this.gameResourceCacheController,
+    this.kcwikiReportController,
     this.diagnosticController,
     this.showDeveloperDiagnostics = false,
     this.gameRenderingModeController,
@@ -51,6 +55,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final GameStateController gameStateController;
   final SenkaController? senkaController;
   final GameResourceCacheController? gameResourceCacheController;
+  final KcwikiReportController? kcwikiReportController;
   final DiagnosticController? diagnosticController;
   final bool showDeveloperDiagnostics;
   final GameRenderingModeController? gameRenderingModeController;
@@ -91,6 +96,29 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 child: CaptureModeSelector(controller: captureModeController),
               ),
             ),
+            if (kcwikiReportController case final controller?) ...<Widget>[
+              const SizedBox(height: 24),
+              buildSectionTitle(l10n.kcwikiReportSection),
+              buildCard(
+                child: AnimatedBuilder(
+                  animation: controller,
+                  builder: (context, _) => buildSwitchTile(
+                    switchKey: const Key('kcwiki-report-switch'),
+                    title: l10n.kcwikiReportTitle,
+                    subtitle: _kcwikiReportSubtitle(l10n, controller),
+                    value: controller.enabled,
+                    onChanged: (enabled) => unawaited(
+                      _setKcwikiReportEnabled(
+                        context,
+                        l10n,
+                        controller,
+                        enabled,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (diagnosticController case final diagnostics?) ...<Widget>[
               const SizedBox(height: 24),
               buildSectionTitle(l10n.diagnosticLoggingSection),
@@ -235,6 +263,77 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
         ),
       ),
     );
+  }
+
+  String _kcwikiReportSubtitle(
+    AppLocalizations l10n,
+    KcwikiReportController controller,
+  ) {
+    if (!controller.enabled) return l10n.kcwikiReportDisabledDesc;
+    final status = controller.status;
+    final module = status.module;
+    if (module == null || status.lastSucceeded == null) {
+      return '${l10n.kcwikiReportEnabledDesc}\n${l10n.kcwikiReportWaiting}';
+    }
+    final result = status.lastSucceeded!
+        ? l10n.kcwikiReportLastSuccess(
+            module,
+            status.succeededCount,
+            status.failedCount,
+            status.droppedCount,
+          )
+        : l10n.kcwikiReportLastFailure(
+            module,
+            status.statusCode?.toString() ?? '—',
+            status.succeededCount,
+            status.failedCount,
+            status.droppedCount,
+          );
+    return '${l10n.kcwikiReportEnabledDesc}\n$result';
+  }
+
+  Future<void> _setKcwikiReportEnabled(
+    BuildContext context,
+    AppLocalizations l10n,
+    KcwikiReportController controller,
+    bool enabled,
+  ) async {
+    if (enabled) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.kcwikiReportConfirmTitle),
+          content: Text(l10n.kcwikiReportConfirmDesc),
+          backgroundColor: const Color(0xff142735),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              key: const Key('kcwiki-report-confirm'),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.kcwikiReportEnable),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    try {
+      await controller.setEnabled(enabled);
+    } catch (_) {
+      if (context.mounted) {
+        TopNotice.show(
+          context,
+          message: l10n.kcwikiReportSaveFailed,
+          tone: TopNoticeTone.error,
+        );
+      }
+    }
   }
 
   Future<void> _logoutAndClear(

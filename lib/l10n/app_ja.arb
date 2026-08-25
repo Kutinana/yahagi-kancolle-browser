@@ -699,5 +699,18 @@
   "gameConnectorActiveWarning": "切り替えると現在のゲーム画面が中断され、対象のログイン入口へ戻ります。",
   "gameConnectorApplied": "ゲーム接続を切り替えました。",
   "gameConnectorSaveFailed": "接続設定を保存できなかったため、現在の接続を維持します。",
-  "gameConnectorNavigationFailed": "接続設定は保存されましたが、ログイン画面を開けませんでした。もう一度お試しください。"
+  "gameConnectorNavigationFailed": "接続設定は保存されましたが、ログイン画面を開けませんでした。もう一度お試しください。",
+  "kcwikiReportSection": "KCWiki データ提供",
+  "kcwikiReportTitle": "KCWiki のデータ収集に協力する",
+  "kcwikiReportDisabledDesc": "初期設定はオフです。オフの間は収集・整形・通信を行わず、ゲームやローカル機能に影響しません。",
+  "kcwikiReportEnabledDesc": "オンです。進路、任務前提、戦闘、友軍、基地航空／空襲、改修データのみ送信します。",
+  "kcwikiReportConfirmTitle": "KCWiki データ提供を有効にしますか？",
+  "kcwikiReportConfirmDesc": "有効にすると、進路、任務前提、戦闘、友軍、基地航空／空襲、改修記録を KCWiki の report2 サーバーへ送信します。このサーバーは現在、暗号化されていない HTTP を使用します。ログイントークン、Cookie、リクエストヘッダーは送信せず、送信失敗でゲーム機能が停止することもありません。",
+  "kcwikiReportEnable": "任意で有効化",
+  "kcwikiReportSaveFailed": "KCWiki データ提供の設定を保存できませんでした。もう一度お試しください。",
+  "kcwikiReportWaiting": "有効です。提供できるデータを待っています。",
+  "kcwikiReportLastSuccess": "直近の送信成功：{module} · 成功 {succeeded} · 失敗 {failed} · 破棄 {dropped}",
+  "@kcwikiReportLastSuccess": {"placeholders": {"module": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}},
+  "kcwikiReportLastFailure": "直近の送信失敗：{module}（状態 {status}）· 成功 {succeeded} · 失敗 {failed} · 破棄 {dropped}",
+  "@kcwikiReportLastFailure": {"placeholders": {"module": {"type": "String"}, "status": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}}
 }

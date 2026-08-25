@@ -57,6 +57,30 @@ void main() {
     expect(harness.dispatcher.pendingCount, 0);
   });
 
+  test(
+    'status notifications do not cancel an active reporting session',
+    () async {
+      final gate = Completer<void>();
+      final harness = await _Harness.create(
+        enabled: true,
+        waitForGameState: () => gate.future,
+      );
+      addTearDown(harness.dispose);
+      harness.consumer.accept(_mapStart);
+
+      harness.controller.recordResult(
+        module: 'quest',
+        succeeded: true,
+        occurredAt: DateTime.utc(2026, 8, 25),
+        statusCode: 204,
+      );
+      gate.complete();
+      await harness.consumer.idle;
+
+      expect(harness.transport.sent, hasLength(1));
+    },
+  );
+
   test('report failure never stops another pipeline consumer', () async {
     final controller = await KcwikiReportController.load(
       MemoryKcwikiReportSettingsStore(true),

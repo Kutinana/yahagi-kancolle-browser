@@ -110,13 +110,14 @@ final class KcwikiReportController extends ChangeNotifier {
     required DateTime occurredAt,
     int? statusCode,
   }) {
-    _status = _status.copyWith(
+    _status = KcwikiReportStatus(
       module: module,
       occurredAt: occurredAt.toUtc(),
       statusCode: statusCode,
       lastSucceeded: succeeded,
       succeededCount: _status.succeededCount + (succeeded ? 1 : 0),
       failedCount: _status.failedCount + (succeeded ? 0 : 1),
+      droppedCount: _status.droppedCount,
     );
     notifyListeners();
   }

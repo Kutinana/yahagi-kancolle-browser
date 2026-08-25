@@ -11,6 +11,7 @@ import '../diagnostics/diagnostic_controller.dart';
 import '../prototype_status_controller.dart';
 import '../game_state/game_state_controller.dart';
 import '../senka/senka_controller.dart';
+import '../kcwiki_report/kcwiki_report_settings.dart';
 import 'layout_settings_controller.dart';
 import 'display_mode_controller.dart';
 import 'safety_settings_controller.dart';
@@ -47,6 +48,7 @@ class SettingsPage extends StatelessWidget {
     required this.gameStateController,
     this.senkaController,
     this.gameResourceCacheController,
+    this.kcwikiReportController,
     required this.safetySettingsController,
     this.notificationSettingsController,
     required this.currentVersion,
@@ -79,6 +81,7 @@ class SettingsPage extends StatelessWidget {
   final GameStateController gameStateController;
   final SenkaController? senkaController;
   final GameResourceCacheController? gameResourceCacheController;
+  final KcwikiReportController? kcwikiReportController;
   final SafetySettingsController safetySettingsController;
   final NotificationSettingsController? notificationSettingsController;
   final bool showTitle;
@@ -137,6 +140,7 @@ class SettingsPage extends StatelessWidget {
           gameStateController: gameStateController,
           senkaController: senkaController,
           gameResourceCacheController: gameResourceCacheController,
+          kcwikiReportController: kcwikiReportController,
           diagnosticController: diagnosticController,
           showDeveloperDiagnostics: showDeveloperDiagnostics,
           gameRenderingModeController: gameRenderingModeController,

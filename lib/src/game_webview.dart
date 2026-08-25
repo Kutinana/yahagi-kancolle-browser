@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import 'audio/game_audio_controller.dart';
 import 'audio/game_audio_port.dart';
 import 'bridge/native_game_capture_script.dart';
+import 'kcwiki_report/kcwiki_report_settings.dart';
 import 'browser/game_browser_controller.dart';
 import 'browser/game_frame_rate_port.dart';
 import 'browser/game_frame_reload_port.dart';
@@ -231,6 +232,7 @@ final class DefaultGameSurfaceStartupOrchestrator
     required this.audioController,
     required this.gameCaptureController,
     required this.frameRateSettingsController,
+    this.kcwikiReportingEnabled,
     GameCapturePort Function()? capturePortFactory,
     GameAudioPort Function()? audioPortFactory,
     GameFrameRatePort Function()? frameRatePortFactory,
@@ -255,6 +257,7 @@ final class DefaultGameSurfaceStartupOrchestrator
   final GameAudioController audioController;
   final GameCaptureController gameCaptureController;
   final GameFrameRateSettingsController? frameRateSettingsController;
+  final bool Function()? kcwikiReportingEnabled;
   final GameCapturePort _gameCapturePort;
   final GameAudioPort Function() _audioPortFactory;
   final GameFrameRatePort Function() _frameRatePortFactory;
@@ -320,19 +323,19 @@ final class DefaultGameSurfaceStartupOrchestrator
     while (!_disposed) {
       final revision = _captureRevision;
       final enabled = captureModeController.mode.installsGameBridge;
+      final script = buildNativeGameCaptureScript(
+        kcwikiEnabled: kcwikiReportingEnabled?.call() ?? false,
+      );
       if (!_capturePortAttached) {
         await gameCaptureController.attach(
           _gameCapturePort,
           enabled: enabled,
-          script: nativeGameCaptureScript,
+          script: script,
         );
         if (_disposed) return;
         _capturePortAttached = true;
       } else {
-        await gameCaptureController.configure(
-          enabled: enabled,
-          script: nativeGameCaptureScript,
-        );
+        await gameCaptureController.configure(enabled: enabled, script: script);
       }
       if (revision == _captureRevision) return;
     }
@@ -701,6 +704,7 @@ class GameWebView extends StatefulWidget {
     required this.toolbarController,
     required this.gameCaptureController,
     this.frameRateSettingsController,
+    this.kcwikiReportController,
     this.renderingMode = GameRenderingMode.compatibility,
     this.startupTimeout,
   });
@@ -714,6 +718,7 @@ class GameWebView extends StatefulWidget {
   final GameToolbarController toolbarController;
   final GameCaptureController gameCaptureController;
   final GameFrameRateSettingsController? frameRateSettingsController;
+  final KcwikiReportController? kcwikiReportController;
   final GameRenderingMode renderingMode;
   final Duration? startupTimeout;
 
@@ -733,6 +738,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   late final GameWebViewStartupCoordinator _startupCoordinator;
   final GameWebViewPageReadiness _pageReadiness = GameWebViewPageReadiness();
   late CaptureMode _activeCaptureMode;
+  late bool _kcwikiReportingEnabled;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
   static const _scaleChannel = MethodChannel(
     'app.webview/fixed_canvas_scaling',
@@ -757,6 +763,30 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     _onCaptureModeChanged();
   }
 
+  void _onKcwikiReportingChanged() {
+    if (!mounted || _disposed) return;
+    final enabled = widget.kcwikiReportController?.enabled ?? false;
+    if (enabled == _kcwikiReportingEnabled) return;
+    _kcwikiReportingEnabled = enabled;
+    final bindingEpoch = _bindingEpoch;
+    final orchestrator = _bindings.startupOrchestrator;
+    unawaited(
+      _captureUpdates.request(
+        configure: orchestrator.prepareCapture,
+        reload: _webViewController.reload,
+        isActive: () => _isCurrentBinding(bindingEpoch, orchestrator),
+        onError: (error, stackTrace) {
+          debugPrint(
+            'KCWiki capture allowlist update failed: $error\n$stackTrace',
+          );
+          if (_isCurrentBinding(bindingEpoch, orchestrator)) {
+            _reportRecoverableError('KCWiki 数据收集切换失败：$error');
+          }
+        },
+      ),
+    );
+  }
+
   GameSurfaceStartupOrchestrator _createStartupOrchestrator(
     GameWebView config,
   ) {
@@ -766,6 +796,8 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       audioController: config.audioController,
       gameCaptureController: config.gameCaptureController,
       frameRateSettingsController: config.frameRateSettingsController,
+      kcwikiReportingEnabled: () =>
+          config.kcwikiReportController?.enabled ?? false,
     );
   }
 
@@ -776,7 +808,9 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       stageTimeout: widget.startupTimeout ?? const Duration(seconds: 10),
     );
     WidgetsBinding.instance.addObserver(this);
+    widget.kcwikiReportController?.addListener(_onKcwikiReportingChanged);
     _activeCaptureMode = widget.captureModeController.mode;
+    _kcwikiReportingEnabled = widget.kcwikiReportController?.enabled ?? false;
     _webViewController = WebViewController();
     _compatibilityReady = _configureCompatibility();
     _browserPort = WebViewGameBrowserPort(
@@ -872,6 +906,20 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   void didUpdateWidget(covariant GameWebView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_disposed) return;
+    if (!identical(
+      oldWidget.kcwikiReportController,
+      widget.kcwikiReportController,
+    )) {
+      oldWidget.kcwikiReportController?.removeListener(
+        _onKcwikiReportingChanged,
+      );
+      widget.kcwikiReportController?.addListener(_onKcwikiReportingChanged);
+      final enabled = widget.kcwikiReportController?.enabled ?? false;
+      if (enabled != _kcwikiReportingEnabled) {
+        _kcwikiReportingEnabled = !enabled;
+        _onKcwikiReportingChanged();
+      }
+    }
     if (oldWidget.startupTimeout != widget.startupTimeout) {
       _startupCoordinator.updateTimeout(
         widget.startupTimeout ?? const Duration(seconds: 10),
@@ -895,6 +943,10 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
         !identical(
           oldWidget.frameRateSettingsController,
           widget.frameRateSettingsController,
+        ) ||
+        !identical(
+          oldWidget.kcwikiReportController,
+          widget.kcwikiReportController,
         );
     final startupContextChanged =
         startupDependenciesChanged ||
@@ -1371,6 +1423,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     _bindingEpoch += 1;
     _navigationEpoch += 1;
     _captureUpdates.dispose();
+    widget.kcwikiReportController?.removeListener(_onKcwikiReportingChanged);
     WidgetsBinding.instance.removeObserver(this);
     _frameRateRuntimeController?.dispose();
     unawaited(_bindings.dispose());
