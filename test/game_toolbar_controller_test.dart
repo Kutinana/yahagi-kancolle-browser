@@ -46,6 +46,18 @@ void main() {
     });
   });
 
+  test('notifies listeners when the game surface stage changes', () {
+    final controller = GameToolbarController();
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    controller.onStageChanged(GameSurfaceStage.game);
+    controller.onStageChanged(GameSurfaceStage.game);
+
+    expect(notifications, 1);
+    expect(controller.isVisible, isFalse);
+  });
+
   test('interaction pauses and restarts the auto-hide countdown', () {
     fakeAsync((async) {
       final controller = GameToolbarController(

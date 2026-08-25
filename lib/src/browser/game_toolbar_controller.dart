@@ -28,6 +28,7 @@ final class GameToolbarController extends ChangeNotifier {
       return;
     }
     _stage = stage;
+    notifyListeners();
   }
 
   void toggle() {
