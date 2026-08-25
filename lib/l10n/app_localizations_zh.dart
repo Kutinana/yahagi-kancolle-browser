@@ -2116,24 +2116,61 @@ class AppLocalizationsZh extends AppLocalizations {
   String get kcwikiReportWaiting => '已开启，正在等待可贡献的数据。';
 
   @override
+  String kcwikiReportProcessing(String module, String time) {
+    return '正在上传：$module · $time';
+  }
+
+  @override
+  String kcwikiReportParseRecovered(String time) {
+    return '大型数据解析超时已恢复，后续数据已继续处理 · $time';
+  }
+
+  @override
+  String kcwikiReportFailureHttp(String status) {
+    return 'HTTP $status';
+  }
+
+  @override
+  String get kcwikiReportFailureTimeout => '连接超时';
+
+  @override
+  String get kcwikiReportFailureNetwork => '网络失败';
+
+  @override
+  String get kcwikiReportFailureBodyTooLarge => '数据超过单次上限';
+
+  @override
+  String get kcwikiReportFailureQueueFull => '本地等待队列已满';
+
+  @override
+  String get kcwikiReportFailureLocal => '本地处理失败';
+
+  @override
+  String kcwikiReportCounters(int succeeded, int failed, int dropped) {
+    return '成功 $succeeded · 失败 $failed · 丢弃 $dropped';
+  }
+
+  @override
   String kcwikiReportLastSuccess(
     String module,
+    String time,
     int succeeded,
     int failed,
     int dropped,
   ) {
-    return '最近上传成功：$module · 成功 $succeeded · 失败 $failed · 丢弃 $dropped';
+    return '最近上传成功：$module · $time · 成功 $succeeded · 失败 $failed · 丢弃 $dropped';
   }
 
   @override
   String kcwikiReportLastFailure(
     String module,
     String status,
+    String time,
     int succeeded,
     int failed,
     int dropped,
   ) {
-    return '最近上传失败：$module（状态 $status）· 成功 $succeeded · 失败 $failed · 丢弃 $dropped';
+    return '最近上传失败：$module（$status）· $time · 成功 $succeeded · 失败 $failed · 丢弃 $dropped';
   }
 
   @override
@@ -4287,24 +4324,61 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get kcwikiReportWaiting => '已開啟，正在等待可貢獻的資料。';
 
   @override
+  String kcwikiReportProcessing(String module, String time) {
+    return '正在上傳：$module · $time';
+  }
+
+  @override
+  String kcwikiReportParseRecovered(String time) {
+    return '大型資料解析逾時已恢復，後續資料已繼續處理 · $time';
+  }
+
+  @override
+  String kcwikiReportFailureHttp(String status) {
+    return 'HTTP $status';
+  }
+
+  @override
+  String get kcwikiReportFailureTimeout => '連線逾時';
+
+  @override
+  String get kcwikiReportFailureNetwork => '網路失敗';
+
+  @override
+  String get kcwikiReportFailureBodyTooLarge => '資料超過單次上限';
+
+  @override
+  String get kcwikiReportFailureQueueFull => '本機等待佇列已滿';
+
+  @override
+  String get kcwikiReportFailureLocal => '本機處理失敗';
+
+  @override
+  String kcwikiReportCounters(int succeeded, int failed, int dropped) {
+    return '成功 $succeeded · 失敗 $failed · 丟棄 $dropped';
+  }
+
+  @override
   String kcwikiReportLastSuccess(
     String module,
+    String time,
     int succeeded,
     int failed,
     int dropped,
   ) {
-    return '最近上傳成功：$module · 成功 $succeeded · 失敗 $failed · 丟棄 $dropped';
+    return '最近上傳成功：$module · $time · 成功 $succeeded · 失敗 $failed · 丟棄 $dropped';
   }
 
   @override
   String kcwikiReportLastFailure(
     String module,
     String status,
+    String time,
     int succeeded,
     int failed,
     int dropped,
   ) {
-    return '最近上傳失敗：$module（狀態 $status）· 成功 $succeeded · 失敗 $failed · 丟棄 $dropped';
+    return '最近上傳失敗：$module（$status）· $time · 成功 $succeeded · 失敗 $failed · 丟棄 $dropped';
   }
 
   @override

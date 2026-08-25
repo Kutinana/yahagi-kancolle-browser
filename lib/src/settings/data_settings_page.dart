@@ -271,25 +271,55 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   ) {
     if (!controller.enabled) return l10n.kcwikiReportDisabledDesc;
     final status = controller.status;
-    final module = status.module;
-    if (module == null || status.lastSucceeded == null) {
-      return '${l10n.kcwikiReportEnabledDesc}\n${l10n.kcwikiReportWaiting}';
-    }
-    final result = status.lastSucceeded!
-        ? l10n.kcwikiReportLastSuccess(
-            module,
-            status.succeededCount,
-            status.failedCount,
-            status.droppedCount,
-          )
-        : l10n.kcwikiReportLastFailure(
-            module,
-            status.statusCode?.toString() ?? '—',
-            status.succeededCount,
-            status.failedCount,
-            status.droppedCount,
-          );
+    final time = status.occurredAt == null
+        ? '—'
+        : _formatKcwikiTime(status.occurredAt!.toLocal());
+    final result = switch (status.activity) {
+      KcwikiReportActivity.waiting => l10n.kcwikiReportWaiting,
+      KcwikiReportActivity.processing => l10n.kcwikiReportProcessing(
+        status.module ?? '—',
+        time,
+      ),
+      KcwikiReportActivity.succeeded => l10n.kcwikiReportLastSuccess(
+        status.module ?? '—',
+        time,
+        status.succeededCount,
+        status.failedCount,
+        status.droppedCount,
+      ),
+      KcwikiReportActivity.failed => l10n.kcwikiReportLastFailure(
+        status.module ?? '—',
+        _kcwikiFailureText(l10n, status),
+        time,
+        status.succeededCount,
+        status.failedCount,
+        status.droppedCount,
+      ),
+      KcwikiReportActivity.parseRecovered =>
+        '${l10n.kcwikiReportParseRecovered(time)} · '
+            '${l10n.kcwikiReportCounters(status.succeededCount, status.failedCount, status.droppedCount)}',
+    };
     return '${l10n.kcwikiReportEnabledDesc}\n$result';
+  }
+
+  String _kcwikiFailureText(AppLocalizations l10n, KcwikiReportStatus status) =>
+      switch (status.failure ?? KcwikiReportFailure.local) {
+        KcwikiReportFailure.httpRejected => l10n.kcwikiReportFailureHttp(
+          status.statusCode?.toString() ?? '—',
+        ),
+        KcwikiReportFailure.bodyTooLarge =>
+          l10n.kcwikiReportFailureBodyTooLarge,
+        KcwikiReportFailure.timeout => l10n.kcwikiReportFailureTimeout,
+        KcwikiReportFailure.network => l10n.kcwikiReportFailureNetwork,
+        KcwikiReportFailure.queueFull => l10n.kcwikiReportFailureQueueFull,
+        KcwikiReportFailure.local => l10n.kcwikiReportFailureLocal,
+      };
+
+  String _formatKcwikiTime(DateTime value) {
+    String two(int part) => part.toString().padLeft(2, '0');
+    return '${value.year.toString().padLeft(4, '0')}-'
+        '${two(value.month)}-${two(value.day)} '
+        '${two(value.hour)}:${two(value.minute)}:${two(value.second)}';
   }
 
   Future<void> _setKcwikiReportEnabled(
