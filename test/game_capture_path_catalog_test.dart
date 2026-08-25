@@ -8,6 +8,7 @@ void main() {
       ...GameCapturePathCatalog.battle,
       ...GameCapturePathCatalog.senka,
       ...GameCapturePathCatalog.logbook,
+      ...GameCapturePathCatalog.kcwikiOnly,
     });
     expect(
       GameCapturePathCatalog.all.every((path) => path.startsWith('/kcsapi/')),
@@ -36,19 +37,15 @@ void main() {
     },
   );
 
-  test('KCWiki-only paths are opt-in and complete', () {
+  test('KCWiki-only paths are always in the stable allowlist', () {
     expect(GameCapturePathCatalog.kcwikiOnly, <String>{
       '/kcsapi/api_req_kousyou/remodel_slotlist',
       '/kcsapi/api_req_kousyou/remodel_slotlist_detail',
       '/kcsapi/api_req_member/set_friendly_request',
     });
     expect(
-      GameCapturePathCatalog.allFor(kcwikiEnabled: false),
       GameCapturePathCatalog.all,
+      containsAll(GameCapturePathCatalog.kcwikiOnly),
     );
-    expect(GameCapturePathCatalog.allFor(kcwikiEnabled: true), <String>{
-      ...GameCapturePathCatalog.all,
-      ...GameCapturePathCatalog.kcwikiOnly,
-    });
   });
 }

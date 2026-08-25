@@ -4,10 +4,8 @@ import '../capture/game_capture_path_catalog.dart';
 
 final String nativeGameCaptureScript = buildNativeGameCaptureScript();
 
-String buildNativeGameCaptureScript({bool kcwikiEnabled = false}) {
-  final paths = GameCapturePathCatalog.allFor(
-    kcwikiEnabled: kcwikiEnabled,
-  ).toList(growable: false)..sort();
+String buildNativeGameCaptureScript() {
+  final paths = GameCapturePathCatalog.all.toList(growable: false)..sort();
   final encodedPaths = jsonEncode(paths);
   return '''
 (() => {

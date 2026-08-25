@@ -325,29 +325,22 @@ void main() {
     },
   );
 
-  test(
-    'default orchestrator changes only the opt-in KCWiki allowlist',
-    () async {
-      final calls = <String>[];
-      final capturePort = _ScriptRecordingCapturePort();
-      var kcwikiEnabled = false;
-      final fixture = await _DefaultOrchestratorFixture.create(
-        calls,
-        capturePortFactory: () => capturePort,
-        kcwikiReportingEnabled: () => kcwikiEnabled,
-      );
-      addTearDown(fixture.dispose);
+  test('default orchestrator reuses one capture allowlist', () async {
+    final calls = <String>[];
+    final capturePort = _ScriptRecordingCapturePort();
+    final fixture = await _DefaultOrchestratorFixture.create(
+      calls,
+      capturePortFactory: () => capturePort,
+    );
+    addTearDown(fixture.dispose);
 
-      await fixture.orchestrator.prepareCapture();
-      kcwikiEnabled = true;
-      await fixture.orchestrator.prepareCapture();
+    await fixture.orchestrator.prepareCapture();
+    await fixture.orchestrator.prepareCapture();
 
-      const kcwikiOnlyPath = '/kcsapi/api_req_kousyou/remodel_slotlist';
-      expect(capturePort.scripts, hasLength(2));
-      expect(capturePort.scripts.first, isNot(contains(kcwikiOnlyPath)));
-      expect(capturePort.scripts.last, contains(kcwikiOnlyPath));
-    },
-  );
+    const kcwikiOnlyPath = '/kcsapi/api_req_kousyou/remodel_slotlist';
+    expect(capturePort.scripts, hasLength(1));
+    expect(capturePort.scripts.single, contains(kcwikiOnlyPath));
+  });
 
   testWidgets(
     'subscribes before create and builds a slot without any platform view',
@@ -2160,7 +2153,6 @@ final class _DefaultOrchestratorFixture {
     List<String> calls, {
     GameCapturePort Function()? capturePortFactory,
     GameAudioPort Function()? audioPortFactory,
-    bool Function()? kcwikiReportingEnabled,
   }) async {
     final networkController = _RecordingNetworkController(calls);
     final captureModeController = await CaptureModeController.load(
@@ -2179,7 +2171,6 @@ final class _DefaultOrchestratorFixture {
       audioController: audioController,
       gameCaptureController: captureController,
       frameRateSettingsController: frameRateController,
-      kcwikiReportingEnabled: kcwikiReportingEnabled,
       capturePortFactory:
           capturePortFactory ?? () => _RecordingCapturePort(calls),
       audioPortFactory: audioPortFactory ?? () => _RecordingAudioPort(calls),

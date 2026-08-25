@@ -785,7 +785,6 @@ class YahagiApp extends StatelessWidget {
     captureModeController: captureModeController,
     audioController: audioController,
     gameCaptureController: gameCaptureController,
-    kcwikiReportController: kcwikiReportController,
     frameRateSettingsController: gameFrameRateSettingsController,
   );
 
@@ -800,7 +799,6 @@ class YahagiApp extends StatelessWidget {
         audioController: audioController,
         toolbarController: toolbarController,
         gameCaptureController: gameCaptureController,
-        kcwikiReportController: kcwikiReportController,
         frameRateSettingsController: gameFrameRateSettingsController,
         renderingMode:
             renderingMode ??

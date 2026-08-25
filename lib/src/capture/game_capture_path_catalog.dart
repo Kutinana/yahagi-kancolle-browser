@@ -137,17 +137,14 @@ abstract final class GameCapturePathCatalog {
     ...battle,
     ...senka,
     ...logbook,
+    ...kcwikiOnly,
   });
 
-  /// Endpoints that have no local consumer and are captured only after the
-  /// user explicitly enables KCWiki reporting.
+  /// Endpoints that have no local consumer and are routed only to the
+  /// opt-in KCWiki consumer after capture.
   static const Set<String> kcwikiOnly = <String>{
     '/kcsapi/api_req_kousyou/remodel_slotlist',
     '/kcsapi/api_req_kousyou/remodel_slotlist_detail',
     '/kcsapi/api_req_member/set_friendly_request',
   };
-
-  static Set<String> allFor({required bool kcwikiEnabled}) => kcwikiEnabled
-      ? Set<String>.unmodifiable(<String>{...all, ...kcwikiOnly})
-      : all;
 }

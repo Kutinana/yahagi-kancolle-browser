@@ -38,11 +38,10 @@ void main() {
       expect(nativeGameCaptureScript, contains('targetPaths.has(path)'));
     });
 
-    test('adds KCWiki-only paths only when reporting is enabled', () {
-      final enabledScript = buildNativeGameCaptureScript(kcwikiEnabled: true);
+    test('always embeds KCWiki-only paths without a runtime variant', () {
+      expect(nativeGameCaptureScript, buildNativeGameCaptureScript());
       for (final path in GameCapturePathCatalog.kcwikiOnly) {
-        expect(nativeGameCaptureScript, isNot(contains('"$path"')));
-        expect(enabledScript, contains('"$path"'));
+        expect(nativeGameCaptureScript, contains('"$path"'));
       }
     });
 
