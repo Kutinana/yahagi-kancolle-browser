@@ -1785,7 +1785,8 @@ String _shipCategoryLabel(ShipInventoryCategory value, AppLocalizations l10n) =>
     switch (value) {
       ShipInventoryCategory.all => l10n.all,
       ShipInventoryCategory.bbBc => 'BB/BC',
-      ShipInventoryCategory.cvCvl => 'CV/CVL',
+      ShipInventoryCategory.cv => 'CV',
+      ShipInventoryCategory.cvl => 'CVL',
       ShipInventoryCategory.ca => 'CA',
       ShipInventoryCategory.cl => 'CL',
       ShipInventoryCategory.dd => 'DD',

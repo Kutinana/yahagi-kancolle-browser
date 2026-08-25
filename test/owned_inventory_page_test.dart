@@ -200,6 +200,17 @@ void main() {
 
     expect(find.byKey(const Key('unowned-ship-filter-all')), findsOneWidget);
     expect(find.byKey(const Key('unowned-ship-filter-dd')), findsOneWidget);
+    for (final key in <String>['bbBc', 'cv', 'cvl']) {
+      expect(find.byKey(Key('unowned-ship-filter-$key')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('unowned-ship-filter-cvCvl')), findsNothing);
+    final unownedCapitalFilterX = <double>[
+      tester.getTopLeft(find.byKey(const Key('unowned-ship-filter-bbBc'))).dx,
+      tester.getTopLeft(find.byKey(const Key('unowned-ship-filter-cv'))).dx,
+      tester.getTopLeft(find.byKey(const Key('unowned-ship-filter-cvl'))).dx,
+    ];
+    expect(unownedCapitalFilterX[0], lessThan(unownedCapitalFilterX[1]));
+    expect(unownedCapitalFilterX[1], lessThan(unownedCapitalFilterX[2]));
     await tester.tap(find.byKey(const Key('unowned-ship-filter-dd')));
     await tester.pump();
     expect(
@@ -334,6 +345,17 @@ void main() {
     expect(find.text('舰娘 0'), findsOneWidget);
     expect(find.text('装备 0'), findsOneWidget);
     expect(find.byKey(const Key('ship-filter-all')), findsOneWidget);
+    for (final key in <String>['bbBc', 'cv', 'cvl']) {
+      expect(find.byKey(Key('ship-filter-$key')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('ship-filter-cvCvl')), findsNothing);
+    final ownedCapitalFilterX = <double>[
+      tester.getTopLeft(find.byKey(const Key('ship-filter-bbBc'))).dx,
+      tester.getTopLeft(find.byKey(const Key('ship-filter-cv'))).dx,
+      tester.getTopLeft(find.byKey(const Key('ship-filter-cvl'))).dx,
+    ];
+    expect(ownedCapitalFilterX[0], lessThan(ownedCapitalFilterX[1]));
+    expect(ownedCapitalFilterX[1], lessThan(ownedCapitalFilterX[2]));
     expect(find.text('筛选结果 '), findsOneWidget);
     expect(find.byKey(const Key('ship-table-frozen-header')), findsOneWidget);
     expect(tester.takeException(), isNull);

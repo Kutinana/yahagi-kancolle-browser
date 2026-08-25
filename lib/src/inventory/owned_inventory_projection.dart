@@ -1,6 +1,6 @@
 import '../game_state/game_state.dart';
 
-enum ShipInventoryCategory { all, bbBc, cvCvl, ca, cl, dd, de, ss, support }
+enum ShipInventoryCategory { all, bbBc, cv, cvl, ca, cl, dd, de, ss, support }
 
 enum ShipInventorySortField {
   name,
@@ -389,7 +389,8 @@ bool shipTypeMatchesInventoryCategory(
 ) => switch (category) {
   ShipInventoryCategory.all => true,
   ShipInventoryCategory.bbBc => const <int>{8, 9, 10, 12}.contains(typeId),
-  ShipInventoryCategory.cvCvl => const <int>{7, 11, 18}.contains(typeId),
+  ShipInventoryCategory.cv => const <int>{11, 18}.contains(typeId),
+  ShipInventoryCategory.cvl => typeId == 7,
   ShipInventoryCategory.ca => const <int>{5, 6}.contains(typeId),
   ShipInventoryCategory.cl => const <int>{3, 4, 21}.contains(typeId),
   ShipInventoryCategory.dd => typeId == 2,

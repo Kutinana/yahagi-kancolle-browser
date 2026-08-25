@@ -49,6 +49,24 @@ void main() {
     ],
   );
 
+  test('keeps battleships combined and splits carrier categories', () {
+    List<int> matches(ShipInventoryCategory category) => [
+      for (var typeId = 1; typeId <= 22; typeId++)
+        if (shipTypeMatchesInventoryCategory(typeId, category)) typeId,
+    ];
+
+    expect(matches(ShipInventoryCategory.bbBc), <int>[8, 9, 10, 12]);
+    expect(matches(ShipInventoryCategory.cv), <int>[11, 18]);
+    expect(matches(ShipInventoryCategory.cvl), <int>[7]);
+    expect(
+      <int>{
+        ...matches(ShipInventoryCategory.cv),
+        ...matches(ShipInventoryCategory.cvl),
+      },
+      <int>{7, 11, 18},
+    );
+  });
+
   test(
     'filters ship categories and sorts numeric fields in both directions',
     () {
