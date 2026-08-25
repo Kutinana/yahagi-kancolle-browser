@@ -863,7 +863,7 @@ void main() {
       unawaited(
         navigatorKey.currentState!.push<void>(
           RawDialogRoute<void>(
-            pageBuilder: (_, __, ___) => const Text('dialog'),
+            pageBuilder: (_, _, _) => const Text('dialog'),
             barrierDismissible: true,
             barrierLabel: 'barrier',
             barrierColor: Colors.black54,
