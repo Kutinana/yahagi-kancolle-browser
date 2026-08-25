@@ -12,6 +12,20 @@ final class KcwikiReportCollector {
     : _clock = clock ?? DateTime.now;
 
   static const String schemaVersion = 'yahagi-1';
+  static final Set<String> supportedPaths = Set<String>.unmodifiable(<String>{
+    '/kcsapi/api_start2/getData',
+    '/kcsapi/api_get_member/questlist',
+    '/kcsapi/api_req_quest/clearitemget',
+    '/kcsapi/api_req_kousyou/remodel_slotlist',
+    '/kcsapi/api_req_kousyou/remodel_slotlist_detail',
+    '/kcsapi/api_req_member/set_friendly_request',
+    '/kcsapi/api_port/port',
+    '/kcsapi/api_req_map/start',
+    '/kcsapi/api_req_map/next',
+    ...GameCapturePathCatalog.battlePhases,
+    ...GameCapturePathCatalog.battleResults,
+    ...GameCapturePathCatalog.battleRetreat,
+  });
 
   final DateTime Function() _clock;
   final Map<int, Map<String, Object?>> _quests = <int, Map<String, Object?>>{};
