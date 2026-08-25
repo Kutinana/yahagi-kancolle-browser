@@ -6,6 +6,14 @@ import org.junit.Test
 
 class ScreenshotCapturePolicyTest {
     @Test
+    fun memoryPreviewSkipsStoragePermissionAndGalleryPersistence() {
+        assertEquals(false, ScreenshotOutput.MEMORY_PREVIEW.requiresStoragePermission)
+        assertEquals(false, ScreenshotOutput.MEMORY_PREVIEW.persistsToGallery)
+        assertEquals(true, ScreenshotOutput.GALLERY.requiresStoragePermission)
+        assertEquals(true, ScreenshotOutput.GALLERY.persistsToGallery)
+    }
+
+    @Test
     fun rejectsHiddenDetachedAndZeroSizedCandidates() {
         val candidates = listOf(
             candidate(index = 0, visible = false),

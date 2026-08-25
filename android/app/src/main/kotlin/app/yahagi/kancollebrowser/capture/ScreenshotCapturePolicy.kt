@@ -23,6 +23,14 @@ enum class ScreenshotCaptureAttempt {
     WEB_VIEW_DRAW,
 }
 
+enum class ScreenshotOutput(
+    val requiresStoragePermission: Boolean,
+    val persistsToGallery: Boolean,
+) {
+    GALLERY(requiresStoragePermission = true, persistsToGallery = true),
+    MEMORY_PREVIEW(requiresStoragePermission = false, persistsToGallery = false),
+}
+
 object ScreenshotCapturePolicy {
     fun captureAttempts(supportsPixelCopy: Boolean): List<ScreenshotCaptureAttempt> =
         if (supportsPixelCopy) {

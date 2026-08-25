@@ -64,6 +64,7 @@ import app.yahagi.kancollebrowser.capture.GameCaptureBridge
 import app.yahagi.kancollebrowser.capture.ScreenshotCaptureAttempt
 import app.yahagi.kancollebrowser.capture.ScreenshotCapturePolicy
 import app.yahagi.kancollebrowser.capture.ScreenshotDestination
+import app.yahagi.kancollebrowser.capture.ScreenshotOutput
 import app.yahagi.kancollebrowser.capture.ScreenshotViewCandidate
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticExportDirectoryHost
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticDirectoryPickerUi
@@ -83,6 +84,7 @@ import app.yahagi.kancollebrowser.nativewebview.SharedPreferencesNativeWebViewSt
 import app.yahagi.kancollebrowser.notification.AppNotificationManager
 import app.yahagi.kancollebrowser.notification.NotificationProgressService
 import java.io.File
+import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -209,6 +211,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     private var fixedCanvasContentHeight: Int = 720
     private var pendingScreenshotResult: MethodChannel.Result? = null
     private var activeScreenshotResult: MethodChannel.Result? = null
+    private var activeScreenshotOutput: ScreenshotOutput? = null
     private val nativeWebViewHandler = Handler(Looper.getMainLooper())
     private var nativeWebViewStartupTimeout: Runnable? = null
     private var nativeWebViewStartup: NativeWebViewActivityStartupCoordinator? = null
@@ -372,7 +375,9 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             GAME_SCREENSHOT_CHANNEL,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
-                "captureWebView" -> captureGameWebView(result)
+                "captureWebView" -> captureGameWebView(result, ScreenshotOutput.GALLERY)
+                "captureWebViewPreview" ->
+                    captureGameWebView(result, ScreenshotOutput.MEMORY_PREVIEW)
                 else -> result.notImplemented()
             }
         }
@@ -631,6 +636,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             null,
         )
         activeScreenshotResult = null
+        activeScreenshotOutput = null
         super.onDestroy()
     }
 
@@ -939,8 +945,12 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         }
     }
 
-    private fun captureGameWebView(result: MethodChannel.Result) {
+    private fun captureGameWebView(
+        result: MethodChannel.Result,
+        output: ScreenshotOutput = ScreenshotOutput.GALLERY,
+    ) {
         if (
+            output.requiresStoragePermission &&
             Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
             ContextCompat.checkSelfPermission(
                 this,
@@ -991,6 +1001,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         }
         val webView = webViews[selected.index]
         activeScreenshotResult = result
+        activeScreenshotOutput = output
 
         try {
             captureScreenshotAttempt(
@@ -1237,11 +1248,24 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
             return
         }
         try {
+            if (activeScreenshotOutput == ScreenshotOutput.MEMORY_PREVIEW) {
+                val bytes = ByteArrayOutputStream().use { stream ->
+                    check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
+                        "Unable to encode the game preview."
+                    }
+                    stream.toByteArray()
+                }
+                activeScreenshotResult = null
+                activeScreenshotOutput = null
+                result.success(bytes)
+                return
+            }
             val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.US)
                 .format(Date())
             val destination = ScreenshotDestination.create(timestamp)
             saveScreenshotToGallery(bitmap, destination)
             activeScreenshotResult = null
+            activeScreenshotOutput = null
             result.success(destination.displayLocation)
         } catch (error: Exception) {
             completeScreenshotError(
@@ -1261,6 +1285,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     ) {
         if (activeScreenshotResult !== result) return
         activeScreenshotResult = null
+        activeScreenshotOutput = null
         result.error(code, message, null)
     }
 
