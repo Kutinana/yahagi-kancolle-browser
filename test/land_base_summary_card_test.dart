@@ -151,6 +151,29 @@ void main() {
     },
   );
 
+  testWidgets('single-column spare width expands hp toward right slots', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _row(
+        width: 640,
+        base: _base(currentHp: 200, conditions: const <int>[1, 1, 1, 1]),
+      ),
+    );
+
+    final row = tester.getRect(find.byKey(const Key('land-base-row-62-1')));
+    final status = tester.getRect(
+      find.byKey(const Key('land-base-status-column-62-1')),
+    );
+    final squadrons = tester.getRect(
+      find.byKey(const Key('land-base-squadron-strip-62-1')),
+    );
+
+    expect(status.width, greaterThan(150));
+    expect(squadrons.left - status.right, closeTo(7, 0.1));
+    expect(row.right - squadrons.right, closeTo(7.2, 0.1));
+  });
+
   testWidgets('card switches areas and collapses without a details panel', (
     tester,
   ) async {
@@ -196,6 +219,12 @@ void main() {
     expect(third.top, greaterThan(first.bottom));
     expect(third.width, closeTo(first.width, 0.1));
     expect(third.right, lessThan(second.right));
+    expect(
+      tester
+          .getRect(find.byKey(const Key('land-base-status-column-62-1')))
+          .width,
+      closeTo(68, 0.1),
+    );
   });
 
   testWidgets('ordinary width keeps land bases in one column', (tester) async {

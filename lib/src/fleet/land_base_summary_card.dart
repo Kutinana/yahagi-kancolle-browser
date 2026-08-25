@@ -359,21 +359,31 @@ class LandBaseAirGroupRow extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: sectionGap),
-                  SizedBox(
-                    key: Key('land-base-status-column-$_keySuffix'),
-                    width: statusWidth,
-                    height: portraitHeight > 34 ? portraitHeight : 34,
-                    child: _LandBaseStackedHpMeter(
-                      currentHp: currentHp,
-                      maximumHp: maximumHp,
-                      hpRatio: hpRatio,
-                      damagePulseMode: damagePulseMode,
-                      trackHeight: hpTrackHeight,
-                      iconKey: Key('land-base-hp-icon-$_keySuffix'),
-                      valueKey: Key('land-base-hp-value-$_keySuffix'),
-                      trackKey: Key('land-base-hp-meter-$_keySuffix'),
+                  if (narrow)
+                    SizedBox(
+                      width: statusWidth,
+                      child: _LandBaseStatusColumn(
+                        keySuffix: _keySuffix,
+                        currentHp: currentHp,
+                        maximumHp: maximumHp,
+                        hpRatio: hpRatio,
+                        damagePulseMode: damagePulseMode,
+                        height: portraitHeight > 34 ? portraitHeight : 34,
+                        trackHeight: hpTrackHeight,
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: _LandBaseStatusColumn(
+                        keySuffix: _keySuffix,
+                        currentHp: currentHp,
+                        maximumHp: maximumHp,
+                        hpRatio: hpRatio,
+                        damagePulseMode: damagePulseMode,
+                        height: portraitHeight > 34 ? portraitHeight : 34,
+                        trackHeight: hpTrackHeight,
+                      ),
                     ),
-                  ),
                   SizedBox(width: sectionGap),
                   Row(
                     key: Key('land-base-squadron-strip-$_keySuffix'),
@@ -406,6 +416,42 @@ class LandBaseAirGroupRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LandBaseStatusColumn extends StatelessWidget {
+  const _LandBaseStatusColumn({
+    required this.keySuffix,
+    required this.currentHp,
+    required this.maximumHp,
+    required this.hpRatio,
+    required this.damagePulseMode,
+    required this.height,
+    required this.trackHeight,
+  });
+
+  final String keySuffix;
+  final int currentHp;
+  final int maximumHp;
+  final double hpRatio;
+  final DamagePulseMode damagePulseMode;
+  final double height;
+  final double trackHeight;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    key: Key('land-base-status-column-$keySuffix'),
+    height: height,
+    child: _LandBaseStackedHpMeter(
+      currentHp: currentHp,
+      maximumHp: maximumHp,
+      hpRatio: hpRatio,
+      damagePulseMode: damagePulseMode,
+      trackHeight: trackHeight,
+      iconKey: Key('land-base-hp-icon-$keySuffix'),
+      valueKey: Key('land-base-hp-value-$keySuffix'),
+      trackKey: Key('land-base-hp-meter-$keySuffix'),
+    ),
+  );
 }
 
 class _LandBaseInfoChip extends StatelessWidget {
