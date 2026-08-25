@@ -82,7 +82,6 @@ class _LandBaseSummaryCardState extends State<LandBaseSummaryCard> {
                     name:
                         state.masterMapAreas[areaId] ??
                         l10n.landBaseAreaFallback(areaId),
-                    countLabel: l10n.landBaseUnitCount(bases.length),
                   ),
                   const SizedBox(height: 6),
                   LayoutBuilder(
@@ -174,15 +173,10 @@ class _LandBaseAreaSwitcher extends StatelessWidget {
 }
 
 class _AreaHeading extends StatelessWidget {
-  const _AreaHeading({
-    required this.areaId,
-    required this.name,
-    required this.countLabel,
-  });
+  const _AreaHeading({required this.areaId, required this.name});
 
   final int areaId;
   final String name;
-  final String countLabel;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -197,14 +191,6 @@ class _AreaHeading extends StatelessWidget {
             fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
-        ),
-      ),
-      Text(
-        countLabel,
-        style: const TextStyle(
-          color: Color(0xff8197a5),
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
         ),
       ),
     ],
@@ -571,7 +557,7 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
                   '$currentHp/$maximumHp',
                   style: TextStyle(
                     color: shipHpValueColor(hpRatio, isZeroHp: currentHp <= 0),
-                    fontSize: 9,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     fontFeatures: const <FontFeature>[
                       FontFeature.tabularFigures(),
@@ -582,7 +568,7 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
           child: Container(

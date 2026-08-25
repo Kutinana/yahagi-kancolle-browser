@@ -257,10 +257,15 @@ void main() {
       final hpValue = tester.getRect(
         find.byKey(const Key('land-base-hp-value-62-1')),
       );
+      final hpText = find.descendant(
+        of: find.byKey(const Key('land-base-hp-value-62-1')),
+        matching: find.byType(Text),
+      );
       final hpMeter = tester.getRect(
         find.byKey(const Key('land-base-hp-meter-62-1')),
       );
-      expect(hpMeter.top, greaterThan(hpValue.bottom));
+      expect(tester.widget<Text>(hpText).style?.fontSize, 11);
+      expect(hpMeter.top - hpValue.bottom, closeTo(3, 0.1));
       expect(hpMeter.left, closeTo(hpValue.left, 0.1));
       expect(hpMeter.height, closeTo(7.2, 0.1));
 
@@ -342,6 +347,17 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.byType(LandBaseAirGroupRow), findsNothing);
     expect(find.text('点击航空队查看装备详情'), findsNothing);
+  });
+
+  testWidgets('area heading omits the land base count', (tester) async {
+    final controller = await _controllerWithLandBases(selectedAreaBaseCount: 2);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_card(controller));
+    await tester.tap(find.byKey(const Key('land-base-area-selector-62')));
+    await tester.pump();
+
+    expect(find.text('2 支航空队'), findsNothing);
   });
 
   testWidgets('expanded foldable width arranges three bases in a 2x2 grid', (
