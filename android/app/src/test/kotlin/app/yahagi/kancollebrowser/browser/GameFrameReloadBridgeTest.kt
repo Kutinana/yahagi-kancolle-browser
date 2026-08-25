@@ -7,6 +7,21 @@ import org.junit.Test
 
 class GameFrameReloadBridgeTest {
     @Test
+    fun platformViewDocumentsDisableChromiumTapHighlightBeforeNavigation() {
+        val scripts = platformGameDocumentStartScripts()
+
+        val touchFeedback = scripts.single {
+            it.source.contains("-webkit-tap-highlight-color")
+        }
+        assertTrue(touchFeedback.source.contains("transparent"))
+        assertFalse(touchFeedback.source.contains("preventDefault"))
+        assertEquals(
+            setOf("https://*.kancolle-server.com"),
+            touchFeedback.allowedOriginRules,
+        )
+    }
+
+    @Test
     fun scriptReloadsOnlyHtmlWrapAndNeverReloadsTopWindow() {
         val source = GameFrameReloadBridgeScript.source
 

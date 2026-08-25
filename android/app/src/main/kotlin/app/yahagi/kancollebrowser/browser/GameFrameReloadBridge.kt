@@ -140,7 +140,7 @@ internal class AndroidGameFrameReloadBridge(
     }
 
     private var attachedWebView: WebView? = null
-    private var scriptHandler: ScriptHandler? = null
+    private val scriptHandlers = mutableListOf<ScriptHandler>()
     private var listenerInstalled = false
     private val targetFrames: MutableSet<JavaScriptReplyProxy> =
         Collections.newSetFromMap(IdentityHashMap())
@@ -166,7 +166,13 @@ internal class AndroidGameFrameReloadBridge(
         }
 
         val webView = webViews.single()
-        if (attachedWebView === webView && listenerInstalled && scriptHandler != null) {
+        val documentScripts = platformGameDocumentStartScripts(
+            originPolicy.allowedOriginRules,
+        )
+        if (attachedWebView === webView &&
+            listenerInstalled &&
+            scriptHandlers.size == documentScripts.size
+        ) {
             return
         }
 
@@ -179,14 +185,18 @@ internal class AndroidGameFrameReloadBridge(
                 ::onPostMessage,
             )
             listenerInstalled = true
-            scriptHandler = WebViewCompat.addDocumentStartJavaScript(
-                webView,
-                GameFrameReloadBridgeScript.source,
-                originPolicy.allowedOriginRules,
-            )
+            documentScripts.forEach { script ->
+                scriptHandlers += WebViewCompat.addDocumentStartJavaScript(
+                    webView,
+                    script.source,
+                    script.allowedOriginRules,
+                )
+            }
             attachedWebView = webView
             Log.i(TAG, "configured frame-level reload bridge")
         } catch (error: RuntimeException) {
+            scriptHandlers.forEach(ScriptHandler::remove)
+            scriptHandlers.clear()
             disableWebView(webView)
             attachedWebView = null
             Log.w(TAG, "unable to configure frame-level reload bridge", error)
@@ -198,7 +208,7 @@ internal class AndroidGameFrameReloadBridge(
             onComplete("unsupported")
             return
         }
-        if (attachedWebView == null || !listenerInstalled || scriptHandler == null) {
+        if (attachedWebView == null || !listenerInstalled || scriptHandlers.isEmpty()) {
             onComplete("blocked")
             return
         }
@@ -279,8 +289,8 @@ internal class AndroidGameFrameReloadBridge(
     private fun disable() {
         cancelTimeout()
         coordinator.cancel("blocked")
-        scriptHandler?.remove()
-        scriptHandler = null
+        scriptHandlers.forEach(ScriptHandler::remove)
+        scriptHandlers.clear()
         attachedWebView?.let(::disableWebView)
         attachedWebView = null
         targetFrames.clear()

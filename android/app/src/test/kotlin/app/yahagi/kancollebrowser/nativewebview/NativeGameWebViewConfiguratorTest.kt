@@ -1,5 +1,6 @@
 package app.yahagi.kancollebrowser.nativewebview
 
+import app.yahagi.kancollebrowser.browser.GameTouchFeedbackScript
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -45,7 +46,7 @@ class NativeGameWebViewConfiguratorTest {
 
     @Test
     fun nativeGameDocumentsDisableChromiumTapHighlightWithoutInterceptingInput() {
-        val script = NativeGameTouchFeedbackScript.source
+        val script = GameTouchFeedbackScript.source
 
         assertTrue(script.contains("-webkit-tap-highlight-color"))
         assertTrue(script.contains("transparent"))
@@ -53,7 +54,7 @@ class NativeGameWebViewConfiguratorTest {
         assertFalse(script.contains("addEventListener"))
         assertEquals(
             setOf("https://*.kancolle-server.com"),
-            NativeGameTouchFeedbackScript.allowedOriginRules,
+            GameTouchFeedbackScript.allowedOriginRules,
         )
     }
 }
