@@ -85,3 +85,4 @@ test/*/fixtures/
 
 # Local Git worktrees
 .worktrees/
+.superpowers/
