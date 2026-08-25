@@ -424,6 +424,9 @@ Future<void> main() async {
     recorder: diagnosticRecorder,
     platform: diagnosticPlatform,
     pendingApiEvents: () => gameApiEventPipeline.pendingEventCount,
+    activeApiPath: () => gameApiEventPipeline.activePath,
+    backgroundDecodeFallbacks: () =>
+        gameApiEventPipeline.backgroundFallbackCount,
     databaseBytes: LogbookDatabase.instance.diagnosticFileSizeBytes,
     webViewHost: diagnosticWebViewHost,
     renderer: diagnosticRenderer,

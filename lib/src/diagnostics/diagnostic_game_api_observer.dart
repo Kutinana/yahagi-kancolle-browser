@@ -17,7 +17,11 @@ final class DiagnosticGameApiObserver implements GameApiPipelineObserver {
   void onCompleted(GameApiTiming timing) {
     final totalMicros =
         timing.queueWaitMicros + timing.decodeMicros + timing.dispatchMicros;
-    if (timing.success && totalMicros < slowThreshold.inMicroseconds) return;
+    if (timing.success &&
+        !timing.usedSynchronousFallback &&
+        totalMicros < slowThreshold.inMicroseconds) {
+      return;
+    }
     recorder.record(
       DiagnosticEvent.slowApi(
         occurredAt: _now(),
@@ -29,6 +33,7 @@ final class DiagnosticGameApiObserver implements GameApiPipelineObserver {
         outcome: timing.success
             ? DiagnosticOutcome.success
             : DiagnosticOutcome.failure,
+        usedSynchronousFallback: timing.usedSynchronousFallback,
       ),
     );
   }

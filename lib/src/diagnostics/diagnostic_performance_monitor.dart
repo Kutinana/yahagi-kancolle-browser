@@ -61,6 +61,8 @@ final class DiagnosticPerformanceMonitor with WidgetsBindingObserver {
     required this.recorder,
     required this.platform,
     required this.pendingApiEvents,
+    required this.activeApiPath,
+    required this.backgroundDecodeFallbacks,
     required this.databaseBytes,
     DiagnosticWebViewHost Function()? webViewHost,
     DiagnosticGameRenderer Function()? renderer,
@@ -83,6 +85,8 @@ final class DiagnosticPerformanceMonitor with WidgetsBindingObserver {
   final DiagnosticRecorder recorder;
   final DiagnosticPlatformPort platform;
   final int Function() pendingApiEvents;
+  final String? Function() activeApiPath;
+  final int Function() backgroundDecodeFallbacks;
   final Future<int> Function() databaseBytes;
   final DiagnosticWebViewHost Function() webViewHost;
   final DiagnosticGameRenderer Function() renderer;
@@ -144,6 +148,8 @@ final class DiagnosticPerformanceMonitor with WidgetsBindingObserver {
           over100Ms: frames.over100Ms,
           maxFrameMicros: frames.maxFrameMicros,
           pendingApiEvents: pendingApiEvents(),
+          activeApiPath: activeApiPath(),
+          backgroundDecodeFallbacks: backgroundDecodeFallbacks(),
           databaseBytes: await databaseBytes(),
         ),
       );
