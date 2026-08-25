@@ -792,6 +792,21 @@ class LandBaseSquadronState {
   final int currentCount;
   final int maxCount;
   final int condition;
+
+  LandBaseSquadronState copyWith({
+    int? state,
+    int? slotItemId,
+    int? currentCount,
+    int? maxCount,
+    int? condition,
+  }) => LandBaseSquadronState(
+    squadronId: squadronId,
+    state: state ?? this.state,
+    slotItemId: slotItemId ?? this.slotItemId,
+    currentCount: currentCount ?? this.currentCount,
+    maxCount: maxCount ?? this.maxCount,
+    condition: condition ?? this.condition,
+  );
 }
 
 class LandBaseState {
@@ -820,6 +835,29 @@ class LandBaseState {
   final int lastRaidDamage;
 
   int get effectiveDistance => distanceBase + distanceBonus;
+
+  LandBaseState copyWith({
+    String? name,
+    int? actionKind,
+    int? distanceBase,
+    int? distanceBonus,
+    List<LandBaseSquadronState>? squadrons,
+    int? maxHp,
+    int? currentHp,
+    int? lastRaidDamage,
+    bool clearHp = false,
+  }) => LandBaseState(
+    areaId: areaId,
+    baseId: baseId,
+    name: name ?? this.name,
+    actionKind: actionKind ?? this.actionKind,
+    distanceBase: distanceBase ?? this.distanceBase,
+    distanceBonus: distanceBonus ?? this.distanceBonus,
+    squadrons: squadrons ?? this.squadrons,
+    maxHp: clearHp ? null : maxHp ?? this.maxHp,
+    currentHp: clearHp ? null : currentHp ?? this.currentHp,
+    lastRaidDamage: clearHp ? 0 : lastRaidDamage ?? this.lastRaidDamage,
+  );
 }
 
 class GameState {

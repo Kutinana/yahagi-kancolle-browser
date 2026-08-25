@@ -32,6 +32,8 @@ class GameStateReducer {
           event.path == '/kcsapi/api_req_kousyou/createship_speedchange' ||
           event.path == '/kcsapi/api_req_nyukyo/start' ||
           event.path == '/kcsapi/api_req_nyukyo/speedchange' ||
+          event.path == '/kcsapi/api_req_air_corps/set_action' ||
+          event.path == '/kcsapi/api_req_air_corps/change_name' ||
           event.path == '/kcsapi/api_req_quest/clearitemget' ||
           event.path == '/kcsapi/api_req_quest/stop',
     );
@@ -110,6 +112,30 @@ class GameStateReducer {
       '/kcsapi/api_get_member/mapinfo' => _mapInfo(
         state,
         _requiredMap(data, 'mapinfo'),
+        event,
+        origin,
+      ),
+      '/kcsapi/api_req_air_corps/set_plane' ||
+      '/kcsapi/api_req_air_corps/supply' => _updateLandBasePlanes(
+        state,
+        _requiredMap(data, 'land-base planes'),
+        event,
+        origin,
+      ),
+      '/kcsapi/api_req_air_corps/change_deployment_base' =>
+        _changeLandBaseDeployment(
+          state,
+          _requiredMap(data, 'land-base deployment'),
+          event,
+          origin,
+        ),
+      '/kcsapi/api_req_air_corps/set_action' => _setLandBaseAction(
+        state,
+        event,
+        origin,
+      ),
+      '/kcsapi/api_req_air_corps/change_name' => _changeLandBaseName(
+        state,
         event,
         origin,
       ),
@@ -1109,6 +1135,7 @@ class GameStateReducer {
       masterMapInfos: _parseMasterMapInfos(
         _optionalList(data['api_mst_mapinfo']),
       ),
+      masterMapAreas: _parseIdNameMap(_optionalList(data['api_mst_maparea'])),
       serverOrigin: origin,
       hasMasterData: ships.isNotEmpty,
       updatedAt: event.capturedAt,
@@ -1216,13 +1243,7 @@ class GameStateReducer {
     );
     return snapshot.copyWith(
       landBases: <LandBaseState>[
-        for (final base in snapshot.landBases)
-          LandBaseState(
-            areaId: base.areaId,
-            baseId: base.baseId,
-            name: base.name,
-            actionKind: base.actionKind,
-          ),
+        for (final base in snapshot.landBases) base.copyWith(clearHp: true),
       ],
     );
   }
@@ -1333,6 +1354,16 @@ class GameStateReducer {
             baseId: baseId,
             name: _asString(item['api_name'], '第 $baseId 基地航空队'),
             actionKind: _asInt(item['api_action_kind']),
+            distanceBase: _asInt(
+              _optionalMap(item['api_distance'])?['api_base'],
+            ),
+            distanceBonus: _asInt(
+              _optionalMap(item['api_distance'])?['api_bonus'],
+            ),
+            squadrons: _mergeLandBaseSquadrons(
+              const <LandBaseSquadronState>[],
+              _optionalList(item['api_plane_info']),
+            ),
           ),
         );
       }
@@ -1406,6 +1437,187 @@ class GameStateReducer {
       serverOrigin: origin,
       updatedAt: event.capturedAt,
     );
+  }
+
+  GameState _updateLandBasePlanes(
+    GameState state,
+    Map<String, Object?> data,
+    CapturedApiEvent event,
+    String origin,
+  ) {
+    final areaId = _asInt(event.requestParams['api_area_id']);
+    final baseId = _asInt(event.requestParams['api_base_id']);
+    final index = state.landBases.indexWhere(
+      (base) => base.areaId == areaId && base.baseId == baseId,
+    );
+    if (index < 0 || !data.containsKey('api_plane_info')) return state;
+
+    final previous = state.landBases[index];
+    final distance = _optionalMap(data['api_distance']);
+    final updated = previous.copyWith(
+      distanceBase: distance != null && distance.containsKey('api_base')
+          ? _asInt(distance['api_base'])
+          : null,
+      distanceBonus: distance != null && distance.containsKey('api_bonus')
+          ? _asInt(distance['api_bonus'])
+          : null,
+      squadrons: _mergeLandBaseSquadrons(
+        previous.squadrons,
+        _optionalList(data['api_plane_info']),
+      ),
+    );
+    return state.copyWith(
+      landBases: <LandBaseState>[
+        for (var i = 0; i < state.landBases.length; i++)
+          if (i == index) updated else state.landBases[i],
+      ],
+      serverOrigin: origin,
+      updatedAt: event.capturedAt,
+    );
+  }
+
+  GameState _changeLandBaseDeployment(
+    GameState state,
+    Map<String, Object?> data,
+    CapturedApiEvent event,
+    String origin,
+  ) {
+    final areaId = _asInt(event.requestParams['api_area_id']);
+    final items = _optionalList(data['api_base_items']);
+    if (areaId <= 0 || items.isEmpty) return state;
+    final bases = <LandBaseState>[...state.landBases];
+    var changed = false;
+    for (final value in items) {
+      final item = _optionalMap(value);
+      final baseId = _asInt(item?['api_rid']);
+      final index = bases.indexWhere(
+        (base) => base.areaId == areaId && base.baseId == baseId,
+      );
+      if (item == null || index < 0 || !item.containsKey('api_plane_info')) {
+        continue;
+      }
+      final previous = bases[index];
+      final distance = _optionalMap(item['api_distance']);
+      bases[index] = previous.copyWith(
+        distanceBase: distance != null && distance.containsKey('api_base')
+            ? _asInt(distance['api_base'])
+            : null,
+        distanceBonus: distance != null && distance.containsKey('api_bonus')
+            ? _asInt(distance['api_bonus'])
+            : null,
+        squadrons: _mergeLandBaseSquadrons(
+          previous.squadrons,
+          _optionalList(item['api_plane_info']),
+        ),
+      );
+      changed = true;
+    }
+    return changed
+        ? state.copyWith(
+            landBases: bases,
+            serverOrigin: origin,
+            updatedAt: event.capturedAt,
+          )
+        : state;
+  }
+
+  GameState _setLandBaseAction(
+    GameState state,
+    CapturedApiEvent event,
+    String origin,
+  ) {
+    final areaId = _asInt(event.requestParams['api_area_id']);
+    final baseIds = _requestIds(event.requestParams['api_base_id']).toList();
+    final actions = _requestIds(
+      event.requestParams['api_action_kind'],
+    ).toList();
+    if (areaId <= 0 || baseIds.isEmpty || baseIds.length != actions.length) {
+      return state;
+    }
+    var changed = false;
+    final bases = <LandBaseState>[
+      for (final base in state.landBases)
+        if (base.areaId == areaId && baseIds.contains(base.baseId))
+          () {
+            final action = actions[baseIds.indexOf(base.baseId)];
+            changed = true;
+            return base.copyWith(actionKind: action);
+          }()
+        else
+          base,
+    ];
+    return changed
+        ? state.copyWith(
+            landBases: bases,
+            serverOrigin: origin,
+            updatedAt: event.capturedAt,
+          )
+        : state;
+  }
+
+  GameState _changeLandBaseName(
+    GameState state,
+    CapturedApiEvent event,
+    String origin,
+  ) {
+    final areaId = _asInt(event.requestParams['api_area_id']);
+    final baseId = _asInt(event.requestParams['api_base_id']);
+    final name = _asString(event.requestParams['api_name']);
+    final index = state.landBases.indexWhere(
+      (base) => base.areaId == areaId && base.baseId == baseId,
+    );
+    if (index < 0 || name.isEmpty) return state;
+    return state.copyWith(
+      landBases: <LandBaseState>[
+        for (var i = 0; i < state.landBases.length; i++)
+          if (i == index)
+            state.landBases[i].copyWith(name: name)
+          else
+            state.landBases[i],
+      ],
+      serverOrigin: origin,
+      updatedAt: event.capturedAt,
+    );
+  }
+
+  static List<LandBaseSquadronState> _mergeLandBaseSquadrons(
+    List<LandBaseSquadronState> existing,
+    List<Object?> values,
+  ) {
+    final result = <LandBaseSquadronState>[...existing];
+    for (final value in values) {
+      final item = _optionalMap(value);
+      final squadronId = _asInt(item?['api_squadron_id']);
+      if (item == null || squadronId <= 0) continue;
+      final index = result.indexWhere(
+        (squadron) => squadron.squadronId == squadronId,
+      );
+      final previous = index >= 0
+          ? result[index]
+          : LandBaseSquadronState(squadronId: squadronId);
+      final updated = previous.copyWith(
+        state: item.containsKey('api_state') ? _asInt(item['api_state']) : null,
+        slotItemId: item.containsKey('api_slotid')
+            ? _asInt(item['api_slotid'])
+            : null,
+        currentCount: item.containsKey('api_count')
+            ? _asInt(item['api_count'])
+            : null,
+        maxCount: item.containsKey('api_max_count')
+            ? _asInt(item['api_max_count'])
+            : null,
+        condition: item.containsKey('api_cond')
+            ? _asInt(item['api_cond'])
+            : null,
+      );
+      if (index >= 0) {
+        result[index] = updated;
+      } else {
+        result.add(updated);
+      }
+    }
+    result.sort((left, right) => left.squadronId.compareTo(right.squadronId));
+    return result;
   }
 
   GameState _shipAndDeck(
@@ -1634,6 +1846,10 @@ class GameStateReducer {
         armor: _asInt(item['api_souk']),
         range: _asInt(item['api_leng']),
         type: _intList(item['api_type'], includeNonPositive: true),
+        interception: _asInt(item['api_houk']),
+        antiBomber: _asInt(item['api_houm']),
+        distance: _asInt(item['api_distance']),
+        resourceVersion: item['api_version']?.toString() ?? '',
       );
     }
     return result;
@@ -2058,11 +2274,7 @@ class GameStateReducer {
           : 0;
       if (maximum == null || initial == null) continue;
       final current = (initial - lost).clamp(0, maximum);
-      final updated = LandBaseState(
-        areaId: previous.areaId,
-        baseId: previous.baseId,
-        name: previous.name,
-        actionKind: previous.actionKind,
+      final updated = previous.copyWith(
         maxHp: maximum,
         currentHp: current,
         lastRaidDamage: lost,

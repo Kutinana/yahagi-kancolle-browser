@@ -95,11 +95,29 @@ void main() {
           'api_mst_slotitem_equiptype': <Object?>[
             <String, Object?>{'api_id': 1, 'api_name': '小口径主炮'},
           ],
+          'api_mst_maparea': <Object?>[
+            <String, Object?>{'api_id': 62, 'api_name': '反击！第三十一战队的战斗'},
+          ],
+          'api_mst_slotitem': <Object?>[
+            <String, Object?>{
+              'api_id': 101,
+              'api_name': '雷電',
+              'api_houk': 3,
+              'api_houm': 6,
+              'api_distance': 2,
+              'api_version': 4,
+            },
+          ],
         }),
       );
 
       expect(state.masterShips[1]?.afterShipId, 2);
       expect(state.masterSlotItemTypes[1], '小口径主炮');
+      expect(state.masterMapAreas[62], '反击！第三十一战队的战斗');
+      expect(state.masterSlotItems[101]?.interception, 3);
+      expect(state.masterSlotItems[101]?.antiBomber, 6);
+      expect(state.masterSlotItems[101]?.distance, 2);
+      expect(state.masterSlotItems[101]?.resourceVersion, '4');
     });
 
     test('start2 captures base ASW and resolved per-ship equip types', () {
@@ -241,6 +259,17 @@ void main() {
               'api_rid': 1,
               'api_name': '第一基地航空队',
               'api_action_kind': 1,
+              'api_distance': <String, Object?>{'api_base': 7, 'api_bonus': 1},
+              'api_plane_info': <Object?>[
+                <String, Object?>{
+                  'api_squadron_id': 1,
+                  'api_state': 1,
+                  'api_slotid': 101,
+                  'api_count': 12,
+                  'api_max_count': 18,
+                  'api_cond': 3,
+                },
+              ],
             },
             <String, Object?>{
               'api_area_id': 47,
@@ -264,6 +293,9 @@ void main() {
       );
       expect(firstBase.name, '第一基地航空队');
       expect(firstBase.actionKind, 1);
+      expect(firstBase.effectiveDistance, 8);
+      expect(firstBase.squadrons.single.currentCount, 12);
+      expect(firstBase.squadrons.single.condition, 3);
 
       state = reducer.reduce(
         state,
@@ -290,16 +322,197 @@ void main() {
       expect(raidedBases[0].currentHp, 152);
       expect(raidedBases[0].maxHp, 200);
       expect(raidedBases[0].lastRaidDamage, 48);
+      expect(raidedBases[0].effectiveDistance, 8);
+      expect(raidedBases[0].squadrons.single.condition, 3);
       expect(raidedBases[1].currentHp, 176);
       expect(raidedBases[1].lastRaidDamage, 24);
       expect(otherArea.currentHp, isNull);
+    });
+
+    test('land-base partial APIs merge only targeted bases and squadrons', () {
+      final reducer = GameStateReducer();
+      var state = const GameState(
+        landBases: <LandBaseState>[
+          LandBaseState(
+            areaId: 62,
+            baseId: 1,
+            name: '第一基地航空队',
+            actionKind: 0,
+            distanceBase: 6,
+            squadrons: <LandBaseSquadronState>[
+              LandBaseSquadronState(
+                squadronId: 1,
+                state: 1,
+                slotItemId: 101,
+                currentCount: 4,
+                maxCount: 18,
+              ),
+              LandBaseSquadronState(
+                squadronId: 2,
+                state: 1,
+                slotItemId: 102,
+                currentCount: 8,
+                maxCount: 18,
+              ),
+            ],
+          ),
+          LandBaseState(
+            areaId: 62,
+            baseId: 2,
+            name: '第二基地航空队',
+            squadrons: <LandBaseSquadronState>[
+              LandBaseSquadronState(
+                squadronId: 1,
+                state: 1,
+                slotItemId: 201,
+                currentCount: 18,
+                maxCount: 18,
+              ),
+            ],
+          ),
+          LandBaseState(areaId: 6, baseId: 1, name: '其他海域基地'),
+        ],
+      );
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_air_corps/set_plane',
+          <String, Object?>{
+            'api_distance': <String, Object?>{'api_base': 7, 'api_bonus': 1},
+            'api_plane_info': <Object?>[
+              <String, Object?>{
+                'api_squadron_id': 1,
+                'api_state': 2,
+                'api_slotid': 103,
+                'api_count': 0,
+                'api_max_count': 18,
+                'api_cond': 2,
+              },
+            ],
+          },
+          requestParams: const <String, Object?>{
+            'api_area_id': '62',
+            'api_base_id': '1',
+          },
+        ),
+      );
+      var first = state.landBases[0];
+      expect(first.effectiveDistance, 8);
+      expect(first.squadrons, hasLength(2));
+      expect(first.squadrons.first.state, 2);
+      expect(first.squadrons.last.slotItemId, 102);
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_air_corps/supply',
+          <String, Object?>{
+            'api_plane_info': <Object?>[
+              <String, Object?>{
+                'api_squadron_id': 1,
+                'api_state': 1,
+                'api_slotid': 103,
+                'api_count': 18,
+                'api_max_count': 18,
+                'api_cond': 2,
+              },
+            ],
+          },
+          requestParams: const <String, Object?>{
+            'api_area_id': '62',
+            'api_base_id': '1',
+          },
+        ),
+      );
+      expect(state.landBases[0].squadrons.first.currentCount, 18);
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_air_corps/set_action',
+          null,
+          includeApiData: false,
+          requestParams: const <String, Object?>{
+            'api_area_id': '62',
+            'api_base_id': '1,2',
+            'api_action_kind': '1,2',
+          },
+        ),
+      );
+      expect(state.landBases[0].actionKind, 1);
+      expect(state.landBases[1].actionKind, 2);
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_air_corps/change_name',
+          null,
+          includeApiData: false,
+          requestParams: const <String, Object?>{
+            'api_area_id': '62',
+            'api_base_id': '2',
+            'api_name': '防空航空队',
+          },
+        ),
+      );
+      expect(state.landBases[1].name, '防空航空队');
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_air_corps/change_deployment_base',
+          <String, Object?>{
+            'api_base_items': <Object?>[
+              <String, Object?>{
+                'api_rid': 1,
+                'api_distance': <String, Object?>{'api_base': 6},
+                'api_plane_info': <Object?>[
+                  <String, Object?>{
+                    'api_squadron_id': 1,
+                    'api_state': 1,
+                    'api_slotid': 201,
+                    'api_count': 18,
+                    'api_max_count': 18,
+                  },
+                ],
+              },
+              <String, Object?>{
+                'api_rid': 2,
+                'api_distance': <String, Object?>{'api_base': 7},
+                'api_plane_info': <Object?>[
+                  <String, Object?>{
+                    'api_squadron_id': 1,
+                    'api_state': 2,
+                    'api_slotid': 103,
+                    'api_count': 0,
+                    'api_max_count': 18,
+                  },
+                ],
+              },
+            ],
+          },
+          requestParams: const <String, Object?>{'api_area_id': '62'},
+        ),
+      );
+      expect(state.landBases[0].squadrons.first.slotItemId, 201);
+      expect(state.landBases[1].squadrons.first.slotItemId, 103);
+      expect(state.landBases[2].name, '其他海域基地');
     });
 
     test('land-base raid accepts nested JSON and port clears transient hp', () {
       final reducer = GameStateReducer();
       var state = const GameState(
         landBases: <LandBaseState>[
-          LandBaseState(areaId: 47, baseId: 1, name: '第一基地航空队'),
+          LandBaseState(
+            areaId: 47,
+            baseId: 1,
+            name: '第一基地航空队',
+            distanceBase: 7,
+            squadrons: <LandBaseSquadronState>[
+              LandBaseSquadronState(squadronId: 1, condition: 2),
+            ],
+          ),
         ],
       );
 
@@ -325,6 +538,8 @@ void main() {
       expect(state.landBases.single.currentHp, isNull);
       expect(state.landBases.single.maxHp, isNull);
       expect(state.landBases.single.lastRaidDamage, 0);
+      expect(state.landBases.single.effectiveDistance, 7);
+      expect(state.landBases.single.squadrons.single.condition, 2);
     });
 
     test('land-base raid records zero damage when stage3 is absent', () {

@@ -26,6 +26,11 @@ void main() {
           '/kcsapi/api_req_combined_battle/ec_night_to_day',
           '/kcsapi/api_req_ranking/mxltvkpyuklh',
           '/kcsapi/api_req_kousyou/destroyship',
+          '/kcsapi/api_req_air_corps/set_plane',
+          '/kcsapi/api_req_air_corps/change_deployment_base',
+          '/kcsapi/api_req_air_corps/set_action',
+          '/kcsapi/api_req_air_corps/supply',
+          '/kcsapi/api_req_air_corps/change_name',
         }),
       );
     },
