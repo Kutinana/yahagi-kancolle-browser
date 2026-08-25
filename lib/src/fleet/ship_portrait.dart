@@ -136,7 +136,7 @@ abstract final class ShipPortraitUriBuilder {
     );
     final paddedId = ship.id.toString().padLeft(4, '0');
     final resourceName = resourceType.name;
-    final cipher = _createCipher(ship.id, 'ship_$resourceName');
+    final cipher = createCipher(ship.id, 'ship_$resourceName');
     final version = int.tryParse(ship.portraitVersion!);
     return server.replace(
       path: '/kcs2/resources/ship/$resourceName/${paddedId}_$cipher.png',
@@ -146,7 +146,7 @@ abstract final class ShipPortraitUriBuilder {
     );
   }
 
-  static String _createCipher(int id, String seed) {
+  static String createCipher(int id, String seed) {
     var key = 0;
     for (final codeUnit in seed.codeUnits) {
       key += codeUnit;

@@ -277,6 +277,47 @@ class _ShipHpFramePainter extends CustomPainter {
 
 enum ShipMoraleMarkLayout { detail, brief }
 
+enum FatigueFaceLevel { yellow, red }
+
+class FatigueFace extends StatelessWidget {
+  const FatigueFace({
+    super.key,
+    required this.level,
+    required this.size,
+    this.faceKey,
+  });
+
+  final FatigueFaceLevel level;
+  final double size;
+  final Key? faceKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final danger = level == FatigueFaceLevel.red;
+    final color = danger ? const Color(0xffef5a5a) : const Color(0xffe7ad45);
+    return Container(
+      key: faceKey,
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xfff6ead1), width: 1.5),
+        boxShadow: [
+          BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 5),
+        ],
+      ),
+      child: Icon(
+        danger
+            ? Icons.sentiment_very_dissatisfied_rounded
+            : Icons.sentiment_dissatisfied_rounded,
+        color: const Color(0xff3a2a20),
+        size: size * 0.79,
+      ),
+    );
+  }
+}
+
 class ShipMoraleMark extends StatelessWidget {
   const ShipMoraleMark({
     super.key,
@@ -422,7 +463,6 @@ class ShipMoraleMark extends StatelessWidget {
 
   Widget _fatigueFace(double height, {required bool placeOnLeft}) {
     final danger = value <= 19;
-    final color = danger ? const Color(0xffef5a5a) : const Color(0xffe7ad45);
     final size = placeOnLeft
         ? (height * 0.42).clamp(18.0, 24.0).toDouble()
         : (height * 0.34).clamp(14.0, 20.0).toDouble();
@@ -430,25 +470,10 @@ class ShipMoraleMark extends StatelessWidget {
       left: placeOnLeft ? 4 : null,
       right: placeOnLeft ? null : 4,
       top: placeOnLeft ? 4 : 0,
-      child: Container(
-        key: Key('fleet-fatigue-face-$value'),
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xfff6ead1), width: 1.5),
-          boxShadow: [
-            BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 5),
-          ],
-        ),
-        child: Icon(
-          danger
-              ? Icons.sentiment_very_dissatisfied_rounded
-              : Icons.sentiment_dissatisfied_rounded,
-          color: const Color(0xff3a2a20),
-          size: size * 0.79,
-        ),
+      child: FatigueFace(
+        level: danger ? FatigueFaceLevel.red : FatigueFaceLevel.yellow,
+        size: size,
+        faceKey: Key('fleet-fatigue-face-$value'),
       ),
     );
   }
