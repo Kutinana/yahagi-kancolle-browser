@@ -222,6 +222,11 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
             category: _unownedEquipmentCategory,
           )
         : const <UnownedEquipmentRow>[];
+    final excludedFamilyIds =
+        widget.reminderController?.excludedFamilyIds ?? const <int>{};
+    final filteredExcludedCount = unownedShipRows
+        .where((row) => excludedFamilyIds.contains(row.familyRootId))
+        .length;
     return ColoredBox(
       color: const Color(0xff081923),
       child: Padding(
@@ -253,6 +258,17 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                 values: ShipInventoryCategory.values,
                 selected: _unownedShipCategory,
                 resultCount: unownedShipRows.length,
+                resultKey: const Key('unowned-ship-filter-result-count'),
+                secondaryResultLabel: l10n.unownedShipExcludedLabel,
+                secondaryResultCount: filteredExcludedCount,
+                secondaryResultKey: const Key('unowned-ship-excluded-count'),
+                trailingActionLabel: excludedFamilyIds.isEmpty
+                    ? null
+                    : l10n.clearNewShipExclusions,
+                trailingActionKey: const Key('unowned-ship-clear-exclusions'),
+                onTrailingAction: excludedFamilyIds.isEmpty
+                    ? null
+                    : () => widget.reminderController?.clearExcludedFamilies(),
                 label: (value) => _shipCategoryLabel(value, l10n),
                 keyFor: (value) => Key('unowned-ship-filter-${value.name}'),
                 onSelected: (value) => setState(() {
@@ -430,65 +446,32 @@ class _UnownedShipsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n =
-        AppLocalizations.of(context) ??
-        lookupAppLocalizations(const Locale('zh'));
     final excluded = reminderController?.excludedFamilyIds ?? const <int>{};
-    final groups = <int, List<UnownedShipFamilyRow>>{};
-    for (final row in rows) {
-      groups.putIfAbsent(row.typeId, () => <UnownedShipFamilyRow>[]).add(row);
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-          child: Row(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Text(
-                l10n.unownedShipSummary(rows.length, excluded.length),
-                key: const Key('unowned-ship-summary'),
-                style: const TextStyle(
-                  color: Color(0xffb8c9d2),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              if (excluded.isNotEmpty)
-                TextButton(
-                  onPressed: reminderController?.clearExcludedFamilies,
-                  child: Text(l10n.clearNewShipExclusions),
+              for (final row in rows)
+                _UnownedShipCard(
+                  state: state,
+                  row: row,
+                  excluded: excluded.contains(row.familyRootId),
+                  onChanged: reminderController == null
+                      ? null
+                      : (value) => reminderController!.setFamilyExcluded(
+                          row.familyRootId,
+                          value ?? false,
+                        ),
                 ),
             ],
           ),
         ),
-        Expanded(
-          child: ListView(
-            children: [
-              for (final entry in groups.entries)
-                _UnownedGroup(
-                  title:
-                      state.masterShipTypes[entry.key]?.name ?? l10n.otherType,
-                  count: entry.value.length,
-                  children: [
-                    for (final row in entry.value)
-                      _UnownedShipCard(
-                        state: state,
-                        row: row,
-                        excluded: excluded.contains(row.familyRootId),
-                        onChanged: reminderController == null
-                            ? null
-                            : (value) => reminderController!.setFamilyExcluded(
-                                row.familyRootId,
-                                value ?? false,
-                              ),
-                      ),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -816,15 +799,23 @@ class _FilterStrip<T> extends StatelessWidget {
     required this.keyFor,
     required this.onSelected,
     this.resultSuffix = '',
+    this.resultKey,
     this.actionLabel,
     this.actionIcon,
     this.actionKey,
     this.onAction,
+    this.secondaryResultLabel,
+    this.secondaryResultCount,
+    this.secondaryResultKey,
+    this.trailingActionLabel,
+    this.trailingActionKey,
+    this.onTrailingAction,
   });
   final List<T> values;
   final T selected;
   final int resultCount;
   final String resultSuffix;
+  final Key? resultKey;
   final String Function(T) label;
   final Key Function(T) keyFor;
   final ValueChanged<T> onSelected;
@@ -832,6 +823,12 @@ class _FilterStrip<T> extends StatelessWidget {
   final IconData? actionIcon;
   final Key? actionKey;
   final VoidCallback? onAction;
+  final String? secondaryResultLabel;
+  final int? secondaryResultCount;
+  final Key? secondaryResultKey;
+  final String? trailingActionLabel;
+  final Key? trailingActionKey;
+  final VoidCallback? onTrailingAction;
   @override
   Widget build(BuildContext context) {
     final l10n =
@@ -875,12 +872,38 @@ class _FilterStrip<T> extends StatelessWidget {
             ),
             Text(
               '$resultCount$resultSuffix',
+              key: resultKey,
               style: const TextStyle(
                 color: Color(0xffffc85a),
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
               ),
             ),
+            if (secondaryResultLabel != null &&
+                secondaryResultCount != null) ...[
+              Text(
+                ' · $secondaryResultLabel ',
+                style: const TextStyle(color: Color(0xff8ba2af), fontSize: 12),
+              ),
+              Text(
+                '$secondaryResultCount',
+                key: secondaryResultKey,
+                style: const TextStyle(
+                  color: Color(0xffffc85a),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+            if (trailingActionLabel != null && onTrailingAction != null) ...[
+              const SizedBox(width: 6),
+              _FilterChip(
+                key: trailingActionKey,
+                label: trailingActionLabel!,
+                selected: false,
+                onTap: onTrailingAction!,
+              ),
+            ],
           ],
         ),
       ),

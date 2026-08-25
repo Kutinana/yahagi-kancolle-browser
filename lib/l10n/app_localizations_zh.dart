@@ -1716,6 +1716,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get unownedShipExcludedLabel => '已排除';
+
+  @override
   String get clearNewShipExclusions => '清除排除';
 
   @override
@@ -3876,6 +3879,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String unownedShipSummary(int count, int excluded) {
     return '顯示 $count 艘 · 已排除 $excluded 艘';
   }
+
+  @override
+  String get unownedShipExcludedLabel => '已排除';
 
   @override
   String get clearNewShipExclusions => '清除排除';

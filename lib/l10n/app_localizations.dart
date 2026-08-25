@@ -3314,6 +3314,12 @@ abstract class AppLocalizations {
   /// **'显示 {count} 艘 · 已排除 {excluded} 艘'**
   String unownedShipSummary(int count, int excluded);
 
+  /// No description provided for @unownedShipExcludedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'已排除'**
+  String get unownedShipExcludedLabel;
+
   /// No description provided for @clearNewShipExclusions.
   ///
   /// In zh, this message translates to:

@@ -1728,6 +1728,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get unownedShipExcludedLabel => '除外済み';
+
+  @override
   String get clearNewShipExclusions => '除外を解除';
 
   @override

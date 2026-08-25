@@ -4,16 +4,81 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_page.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/unowned_inventory_projection.dart';
+import 'package:yahagi_kancolle_browser/src/new_ship/new_ship_reminder_controller.dart';
+import 'package:yahagi_kancolle_browser/src/new_ship/new_ship_reminder_store.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/frozen_data_table.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
   setUp(() => GameStateController.disableTimerForTest = true);
+
+  testWidgets(
+    'unowned ship cards are flat and exclusions follow the active filter',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1100, 700);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(start2Event)
+        ..accept(
+          kcsapiEvent('/kcsapi/api_port/port', <String, Object?>{
+            'api_basic': <String, Object?>{'api_member_id': 1001},
+            'api_ship': <Object?>[],
+          }),
+        );
+      await controller.idle;
+      final reminderController = NewShipReminderController(
+        stateProvider: () => controller.state,
+        store: NewShipReminderStore(await SharedPreferences.getInstance()),
+        onPublish: (_) {},
+      );
+      addTearDown(reminderController.dispose);
+      await reminderController.setFamilyExcluded(101, true);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: OwnedInventoryPage(
+              controller: controller,
+              reminderController: reminderController,
+              showOwned: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('unowned-ship-summary')), findsNothing);
+      expect(find.byType(ExpansionTile), findsNothing);
+      final excludedCount = find.byKey(
+        const Key('unowned-ship-excluded-count'),
+      );
+      expect(excludedCount, findsOneWidget);
+      expect(tester.widget<Text>(excludedCount).data, '1');
+      expect(
+        tester.widget<Text>(excludedCount).style?.color,
+        const Color(0xffffc85a),
+      );
+
+      await tester.tap(find.byKey(const Key('unowned-ship-filter-cl')));
+      await tester.pump();
+      expect(tester.widget<Text>(excludedCount).data, '0');
+
+      await tester.tap(find.byKey(const Key('unowned-ship-filter-dd')));
+      await tester.pump();
+      expect(tester.widget<Text>(excludedCount).data, '1');
+    },
+  );
 
   testWidgets('unowned views reuse filters and remember each category', (
     tester,
@@ -50,8 +115,12 @@ void main() {
     await tester.tap(find.byKey(const Key('unowned-ship-filter-dd')));
     await tester.pump();
     expect(
-      tester.widget<Text>(find.byKey(const Key('unowned-ship-summary'))).data,
-      contains('$ddCount'),
+      tester
+          .widget<Text>(
+            find.byKey(const Key('unowned-ship-filter-result-count')),
+          )
+          .data,
+      '$ddCount',
     );
 
     await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
