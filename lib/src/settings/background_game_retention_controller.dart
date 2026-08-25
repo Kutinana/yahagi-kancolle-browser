@@ -82,7 +82,7 @@ final class BackgroundGameRetentionController extends ChangeNotifier {
       await _store.writeEnabled(enabled);
     } catch (error) {
       _enabled = previous;
-      _errorMessage = '后台保持游戏设置失败：$error';
+      _errorMessage = 'background game retention setting failed: $error';
       notifyListeners();
     }
   }
@@ -173,7 +173,7 @@ final class BackgroundGameRetentionCoordinator {
         _errorMessage = null;
       } catch (error) {
         _lastApplied = null;
-        _errorMessage = '后台游戏会话同步失败：$error';
+        _errorMessage = 'background game retention sync failed: $error';
       }
     }
   }
