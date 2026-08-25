@@ -52,7 +52,7 @@ void main() {
     expect(shouldShowPostBattleWarning(battle), isTrue);
   });
 
-  testWidgets('confirm warning vibrates once and shows a dialog', (
+  testWidgets('battle result only arms warning without dialog or vibration', (
     tester,
   ) async {
     final fixture = await _WarningOverlayFixture.create(
@@ -61,7 +61,26 @@ void main() {
     addTearDown(fixture.dispose);
 
     await fixture.pump(tester);
-    await fixture.showWarning(tester);
+    await fixture.publishRiskResult(tester);
+
+    expect(fixture.alerts.alerts, isEmpty);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('successful advance vibrates and shows warning only once', (
+    tester,
+  ) async {
+    final fixture = await _WarningOverlayFixture.create(
+      mode: BattleWarningMode.confirm,
+    );
+    addTearDown(fixture.dispose);
+
+    await fixture.pump(tester);
+    await fixture.publishRiskResult(tester);
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_req_map/next', const <String, Object?>{}),
+    );
 
     expect(fixture.alerts.alerts, <BattleDamageAlertSeverity>[
       BattleDamageAlertSeverity.postBattleWarning,
@@ -69,26 +88,128 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('大破安全警告'), findsOneWidget);
     expect(find.text('出击舰队中存在大破舰娘！'), findsOneWidget);
-    expect(
-      find.text('继续进击前，请确认大破舰的管损及退避状态；无法确保安全时请撤退！'),
-      findsOneWidget,
-    );
+    expect(find.text('已在大破状态下选择进击！请立即停止后续操作，避免进入下一场战斗。'), findsOneWidget);
     expect(find.text('确认了解'), findsOneWidget);
-    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.tap(find.text('确认了解'));
+    await tester.pumpAndSettle();
+
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_req_map/next', const <String, Object?>{}),
+    );
+
+    expect(fixture.alerts.alerts, <BattleDamageAlertSeverity>[
+      BattleDamageAlertSeverity.postBattleWarning,
+    ]);
+    expect(find.byType(AlertDialog), findsNothing);
   });
 
-  testWidgets('off mode neither vibrates nor shows a dialog', (tester) async {
+  testWidgets('retreat clears pending warning', (tester) async {
+    final fixture = await _WarningOverlayFixture.create(
+      mode: BattleWarningMode.confirm,
+    );
+    addTearDown(fixture.dispose);
+
+    await fixture.pump(tester);
+    await fixture.publishRiskResult(tester);
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent(
+        '/kcsapi/api_req_sortie/goback_port',
+        const <String, Object?>{},
+      ),
+    );
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_req_map/next', const <String, Object?>{}),
+    );
+
+    expect(fixture.alerts.alerts, isEmpty);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('port clears pending warning', (tester) async {
+    final fixture = await _WarningOverlayFixture.create(
+      mode: BattleWarningMode.confirm,
+    );
+    addTearDown(fixture.dispose);
+
+    await fixture.pump(tester);
+    await fixture.publishRiskResult(tester);
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_port/port', const <String, Object?>{}),
+    );
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_req_map/next', const <String, Object?>{}),
+    );
+
+    expect(fixture.alerts.alerts, isEmpty);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('failed advance keeps pending warning for a successful retry', (
+    tester,
+  ) async {
+    final fixture = await _WarningOverlayFixture.create(
+      mode: BattleWarningMode.confirm,
+    );
+    addTearDown(fixture.dispose);
+
+    await fixture.pump(tester);
+    await fixture.publishRiskResult(tester);
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent(
+        '/kcsapi/api_req_map/next',
+        const <String, Object?>{},
+        apiResult: 0,
+      ),
+    );
+
+    expect(fixture.alerts.alerts, isEmpty);
+    expect(find.byType(AlertDialog), findsNothing);
+
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_req_map/next', const <String, Object?>{}),
+    );
+
+    expect(fixture.alerts.alerts, <BattleDamageAlertSeverity>[
+      BattleDamageAlertSeverity.postBattleWarning,
+    ]);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('off mode consumes warning without vibration or dialog', (
+    tester,
+  ) async {
     final fixture = await _WarningOverlayFixture.create(
       mode: BattleWarningMode.off,
     );
     addTearDown(fixture.dispose);
 
     await fixture.pump(tester);
-    await fixture.showWarning(tester);
+    await fixture.publishRiskResult(tester);
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_req_map/next', const <String, Object?>{}),
+    );
 
     expect(fixture.alerts.alerts, isEmpty);
     expect(find.byType(AlertDialog), findsNothing);
-    await tester.pumpWidget(const SizedBox.shrink());
+
+    await fixture.settingsController.setBattleWarningMode(
+      BattleWarningMode.confirm,
+    );
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_req_map/next', const <String, Object?>{}),
+    );
+
+    expect(fixture.alerts.alerts, isEmpty);
+    expect(find.byType(AlertDialog), findsNothing);
   });
 
   testWidgets('warning does not vibrate while damage vibration is disabled', (
@@ -101,10 +222,14 @@ void main() {
     addTearDown(fixture.dispose);
 
     await fixture.pump(tester);
-    await fixture.showWarning(tester);
+    await fixture.publishRiskResult(tester);
+    await fixture.publishEvent(
+      tester,
+      kcsapiEvent('/kcsapi/api_req_map/next', const <String, Object?>{}),
+    );
 
     expect(fixture.alerts.alerts, isEmpty);
-    await tester.pumpWidget(const SizedBox.shrink());
+    expect(find.byType(AlertDialog), findsOneWidget);
   });
 }
 
@@ -163,7 +288,7 @@ final class _WarningOverlayFixture {
     ),
   );
 
-  Future<void> showWarning(WidgetTester tester) async {
+  Future<void> publishRiskResult(WidgetTester tester) async {
     battleController
       ..accept(mapStartEvent)
       ..accept(
@@ -190,6 +315,12 @@ final class _WarningOverlayFixture {
     await battleController.idle;
 
     capturePort.add(battleResultEvent);
+    await tester.pump();
+    await tester.pump();
+  }
+
+  Future<void> publishEvent(WidgetTester tester, CapturedApiEvent event) async {
+    capturePort.add(event);
     await tester.pump();
     await tester.pump();
   }
