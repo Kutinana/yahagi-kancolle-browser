@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/fleet_ship_status_capsule.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/land_base_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_status_visuals.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
@@ -137,6 +138,88 @@ void main() {
       matching: find.byType(Text),
     );
     expect(tester.widget<Text>(count).style?.fontSize, 10);
+  });
+
+  testWidgets('action kind three is retreat and four is rest', (tester) async {
+    await tester.pumpWidget(
+      _row(
+        base: _base(
+          currentHp: 200,
+          conditions: const <int>[1, 1, 1, 1],
+          actionKind: 3,
+        ),
+      ),
+    );
+
+    var actionChip = find.byKey(const Key('land-base-action-chip-62-1'));
+    var actionText = find.descendant(
+      of: actionChip,
+      matching: find.byType(Text),
+    );
+    expect(find.text('退避'), findsOneWidget);
+    expect(find.text('休息'), findsNothing);
+    expect(
+      tester.widget<Text>(actionText).style?.color,
+      const Color(0xff9ca8b2),
+    );
+
+    await tester.pumpWidget(
+      _row(
+        base: _base(
+          currentHp: 200,
+          conditions: const <int>[1, 1, 1, 1],
+          actionKind: 4,
+        ),
+      ),
+    );
+
+    actionChip = find.byKey(const Key('land-base-action-chip-62-1'));
+    actionText = find.descendant(of: actionChip, matching: find.byType(Text));
+    expect(find.text('休息'), findsOneWidget);
+    expect(find.text('退避'), findsNothing);
+    expect(
+      tester.widget<Text>(actionText).style?.color,
+      const Color(0xff70c697),
+    );
+  });
+
+  testWidgets('land base info chips match the home ship badge sizing', (
+    tester,
+  ) async {
+    final base = _base(currentHp: 200, conditions: const <int>[1, 1, 1, 1]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const MiniBadge(
+                key: Key('ship-badge-size-reference'),
+                text: '参照',
+                color: Color(0xffa9bac4),
+              ),
+              SizedBox(
+                width: 640,
+                child: LandBaseAirGroupRow(state: _state(base), base: base),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final reference = find.byKey(const Key('ship-badge-size-reference'));
+    final referenceHeight = tester.getSize(reference).height;
+    for (final key in const <Key>[
+      Key('land-base-name-62-1'),
+      Key('land-base-action-chip-62-1'),
+      Key('land-base-air-power-chip-62-1'),
+    ]) {
+      final chip = find.byKey(key);
+      final text = find.descendant(of: chip, matching: find.byType(Text));
+      expect(tester.getSize(chip).height, closeTo(referenceHeight, 0.1));
+      expect(tester.widget<Text>(text).style?.fontSize, 8);
+    }
   });
 
   testWidgets(
@@ -311,13 +394,14 @@ void main() {
 LandBaseState _base({
   required int currentHp,
   required List<int> conditions,
+  int actionKind = 1,
   List<int> states = const <int>[1, 1, 1, 1],
   List<int> counts = const <int>[18, 18, 18, 18],
 }) => LandBaseState(
   areaId: 62,
   baseId: 1,
   name: '第一基地航空队',
-  actionKind: 1,
+  actionKind: actionKind,
   distanceBase: 7,
   maxHp: 200,
   currentHp: currentHp,

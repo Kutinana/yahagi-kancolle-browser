@@ -462,21 +462,16 @@ class _LandBaseInfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
     decoration: BoxDecoration(
       color: color.withValues(alpha: 0.14),
       border: Border.all(color: color.withValues(alpha: 0.42)),
-      borderRadius: BorderRadius.circular(5),
+      borderRadius: BorderRadius.circular(4),
     ),
     child: Text(
       label,
       maxLines: 1,
-      style: TextStyle(
-        color: color,
-        fontSize: 8,
-        height: 1,
-        fontWeight: FontWeight.w900,
-      ),
+      style: TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.w700),
     ),
   );
 }
@@ -488,12 +483,11 @@ class _LandBaseNameChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 14,
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
     decoration: BoxDecoration(
       color: const Color(0xff102331),
       border: Border.all(color: const Color(0xff4c6b84)),
-      borderRadius: BorderRadius.circular(5),
+      borderRadius: BorderRadius.circular(4),
     ),
     child: Text(
       label,
@@ -502,8 +496,7 @@ class _LandBaseNameChip extends StatelessWidget {
       style: const TextStyle(
         color: Color(0xffe8f1f5),
         fontSize: 8,
-        height: 1,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
       ),
     ),
   );
@@ -521,8 +514,7 @@ class _LandBaseActionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 14,
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
     decoration: BoxDecoration(
       color: color.withValues(alpha: 0.16),
       border: Border.all(color: color.withValues(alpha: 0.42)),
@@ -530,12 +522,7 @@ class _LandBaseActionChip extends StatelessWidget {
     ),
     child: Text(
       label,
-      style: TextStyle(
-        color: color,
-        fontSize: 8,
-        height: 1,
-        fontWeight: FontWeight.w900,
-      ),
+      style: TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.w700),
     ),
   );
 }
@@ -744,15 +731,15 @@ String _actionLabel(int actionKind, AppLocalizations l10n) =>
     switch (actionKind) {
       1 => l10n.landBaseActionSortie,
       2 => l10n.landBaseActionAirDefense,
-      3 => l10n.landBaseActionRest,
-      4 => l10n.landBaseActionRetreat,
+      3 => l10n.landBaseActionRetreat,
+      4 => l10n.landBaseActionRest,
       _ => l10n.standby,
     };
 
 Color _actionColor(int actionKind) => switch (actionKind) {
   1 => const Color(0xffef7777),
   2 => const Color(0xff69aee8),
-  3 => const Color(0xff70c697),
-  4 => const Color(0xff9ca8b2),
+  3 => const Color(0xff9ca8b2),
+  4 => const Color(0xff70c697),
   _ => const Color(0xffb7c4cc),
 };
