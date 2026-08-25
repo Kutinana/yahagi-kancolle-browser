@@ -1099,6 +1099,7 @@ class _MiniBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.16),
+        border: Border.all(color: color.withValues(alpha: 0.42)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

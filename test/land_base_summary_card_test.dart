@@ -83,6 +83,19 @@ void main() {
       find.byKey(const Key('land-base-slot-relocating-62-1-3')),
       findsOneWidget,
     );
+
+    final slot = tester.getRect(find.byKey(const Key('land-base-slot-62-1-1')));
+    final icon = tester.getRect(
+      find.byKey(const Key('land-base-slot-icon-62-1-1')),
+    );
+    final count = tester.getRect(
+      find.byKey(const Key('land-base-slot-count-62-1-1')),
+    );
+    expect(icon.width, greaterThan(16));
+    expect(icon.height, greaterThan(16));
+    expect(slot.right - count.right, inInclusiveRange(2, 4));
+    expect(count.top - slot.top, inInclusiveRange(2, 4));
+    expect(count.top, lessThan(icon.bottom));
   });
 
   testWidgets(

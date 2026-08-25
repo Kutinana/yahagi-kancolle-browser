@@ -670,22 +670,44 @@ class _LandBaseSquadronSlot extends StatelessWidget {
                 ),
               ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          EquipmentTypeIconImage(iconId: iconId, width: 16, height: 16),
-          Text(
-            squadron == null ? '—' : '${squadron!.currentCount}',
-            style: TextStyle(
-              color: missing
-                  ? const Color(0xffff8b78)
-                  : const Color(0xffe8f1f5),
-              fontSize: 8,
-              height: 1,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final iconSize = (constraints.maxWidth - 8).clamp(20.0, 26.0);
+          return Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              EquipmentTypeIconImage(
+                key: Key('land-base-slot-icon-$suffix'),
+                iconId: iconId,
+                width: iconSize,
+                height: iconSize,
+              ),
+              Positioned(
+                top: 2,
+                right: 2,
+                child: Container(
+                  key: Key('land-base-slot-count-$suffix'),
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xcc102331),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    squadron == null ? '—' : '${squadron!.currentCount}',
+                    style: TextStyle(
+                      color: missing
+                          ? const Color(0xffff8b78)
+                          : const Color(0xffe8f1f5),
+                      fontSize: 8,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
     return relocating

@@ -41,6 +41,29 @@ void main() {
     expect(find.byKey(const Key('fleet-focus-mechanism-9001')), findsOneWidget);
   });
 
+  testWidgets('home ship top status badge uses its own color outline', (
+    tester,
+  ) async {
+    final controller = await _controllerWithPortData();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_card(controller: controller));
+    await tester.pump();
+
+    final badge = find.byKey(const Key('fleet-focus-speed-9001'));
+    final container = find.descendant(
+      of: badge,
+      matching: find.byType(Container),
+    );
+    final decoration = tester.widget<Container>(container).decoration;
+
+    expect(decoration, isA<BoxDecoration>());
+    expect(
+      (decoration! as BoxDecoration).border,
+      Border.all(color: const Color(0xff7ed8cf).withValues(alpha: 0.42)),
+    );
+  });
+
   testWidgets('fleet selector changes the list and ship tap opens that fleet', (
     tester,
   ) async {

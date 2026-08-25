@@ -167,9 +167,11 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                       text: '疲劳 ${ship.condition}',
                                       color: shipFatigueColor(ship.condition),
                                     ),
-                                    for (var i = 0;
-                                        i < allMechanisms.length;
-                                        i++) ...<Widget>[
+                                    for (
+                                      var i = 0;
+                                      i < allMechanisms.length;
+                                      i++
+                                    ) ...<Widget>[
                                       const SizedBox(width: 4),
                                       MiniBadge(
                                         key: Key(
@@ -177,8 +179,8 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                               ? 'fleet-focus-mechanism-${ship.id}'
                                               : 'fleet-focus-mechanism-${ship.id}-$i',
                                         ),
-                                        text:
-                                            allMechanisms[i].effectiveShortLabel,
+                                        text: allMechanisms[i]
+                                            .effectiveShortLabel,
                                         color: _mechanismColor(
                                           allMechanisms[i].tone,
                                         ),
@@ -452,6 +454,7 @@ class MiniBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.16),
+        border: Border.all(color: color.withValues(alpha: 0.42)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

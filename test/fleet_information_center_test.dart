@@ -133,6 +133,16 @@ void main() {
       tester.widget<Text>(speedText).style?.color,
       const Color(0xff7ed8cf),
     );
+    final speedContainer = find.descendant(
+      of: speedBadge,
+      matching: find.byType(Container),
+    );
+    final speedDecoration = tester.widget<Container>(speedContainer).decoration;
+    expect(speedDecoration, isA<BoxDecoration>());
+    expect(
+      (speedDecoration! as BoxDecoration).border,
+      Border.all(color: const Color(0xff7ed8cf).withValues(alpha: 0.42)),
+    );
     expect(find.text('超长'), findsOneWidget);
     expect(find.byType(ExpansionTile), findsNothing);
     expect(find.textContaining('更新于'), findsNothing);
