@@ -170,6 +170,12 @@ void main() {
       // “最小/最大” are standard range labels shared by both Chinese scripts.
       'minimumValue',
       'maximumValue',
+      // 基地航空队的海域、航程及状态均为游戏内固定术语。
+      'landBaseAreaFallback',
+      'landBaseRange',
+      'landBaseActionAirDefense',
+      'landBaseActionRest',
+      'landBaseActionRetreat',
     };
     const reviewedJa = <String>{
       'appTitle',
@@ -209,6 +215,11 @@ void main() {
       // 「最小/最大」 are the standard Japanese range labels as well.
       'minimumValue',
       'maximumValue',
+      // These are established in-game land-base terms shared with Chinese.
+      'landBaseAreaFallback',
+      'landBaseActionAirDefense',
+      'landBaseActionRest',
+      'landBaseActionRetreat',
     };
 
     Set<String> identical(String locale) {
