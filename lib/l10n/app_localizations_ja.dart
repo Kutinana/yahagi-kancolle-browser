@@ -1738,6 +1738,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get clearNewShipExclusions => '除外を解除';
 
   @override
+  String get resetFilter => '絞り込みをリセット';
+
+  @override
   String unownedEquipmentSummary(int count) {
     return '未保有装備を $count個表示';
   }

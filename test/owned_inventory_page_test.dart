@@ -69,6 +69,43 @@ void main() {
         tester.widget<Text>(excludedCount).style?.color,
         const Color(0xffffc85a),
       );
+      final clearExclusions = find.byKey(
+        const Key('unowned-ship-clear-exclusions'),
+      );
+      expect(clearExclusions, findsOneWidget);
+      final clearIcon = find.descendant(
+        of: clearExclusions,
+        matching: find.byIcon(Icons.restore),
+      );
+      expect(clearIcon, findsOneWidget);
+      expect(tester.widget<Icon>(clearIcon).size, 19);
+      expect(
+        tester.widget<Icon>(clearIcon).color,
+        const Color(0xffffc85a),
+      );
+      expect(tester.getSize(clearExclusions), const Size(34, 28));
+      expect(
+        tester
+            .widget<Tooltip>(
+              find.descendant(
+                of: clearExclusions,
+                matching: find.byType(Tooltip),
+              ),
+            )
+            .message,
+        '清除排除',
+      );
+      expect(find.text('清除排除'), findsNothing);
+      expect(
+        tester.getTopLeft(clearExclusions).dx,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const Key('unowned-ship-filter-result-count')),
+              )
+              .dx,
+        ),
+      );
 
       await tester.tap(find.byKey(const Key('unowned-ship-filter-cl')));
       await tester.pump();
@@ -77,6 +114,12 @@ void main() {
       await tester.tap(find.byKey(const Key('unowned-ship-filter-dd')));
       await tester.pump();
       expect(tester.widget<Text>(excludedCount).data, '1');
+
+      await tester.tap(clearExclusions);
+      await tester.pump();
+      expect(reminderController.excludedFamilyIds, isEmpty);
+      expect(tester.widget<Text>(excludedCount).data, '0');
+      expect(clearExclusions, findsOneWidget);
     },
   );
 
@@ -204,6 +247,59 @@ void main() {
           )
           .data,
       '$mainGunCount',
+    );
+    final resetEquipmentFilter = find.byKey(
+      const Key('unowned-equipment-filter-reset'),
+    );
+    expect(resetEquipmentFilter, findsOneWidget);
+    final resetEquipmentIcon = find.descendant(
+      of: resetEquipmentFilter,
+      matching: find.byIcon(Icons.restore),
+    );
+    expect(resetEquipmentIcon, findsOneWidget);
+    expect(tester.widget<Icon>(resetEquipmentIcon).size, 19);
+    expect(
+      tester.widget<Icon>(resetEquipmentIcon).color,
+      const Color(0xffffc85a),
+    );
+    expect(tester.getSize(resetEquipmentFilter), const Size(34, 28));
+    expect(
+      tester
+          .widget<Tooltip>(
+            find.descendant(
+              of: resetEquipmentFilter,
+              matching: find.byType(Tooltip),
+            ),
+          )
+          .message,
+      '重置筛选',
+    );
+    expect(
+      tester.getTopLeft(resetEquipmentFilter).dx,
+      lessThan(
+        tester
+            .getTopLeft(
+              find.byKey(const Key('unowned-equipment-filter-result-count')),
+            )
+            .dx,
+      ),
+    );
+    await tester.tap(resetEquipmentFilter);
+    await tester.pump();
+    final allLabel = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('unowned-equipment-filter-all')),
+        matching: find.text('全部'),
+      ),
+    );
+    expect(allLabel.style?.color, const Color(0xffffcf62));
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const Key('unowned-equipment-filter-result-count')),
+          )
+          .data,
+      '${unownedEquipmentRows.length}',
     );
 
     await tester.tap(find.byKey(const Key('owned-inventory-tab-ships')));

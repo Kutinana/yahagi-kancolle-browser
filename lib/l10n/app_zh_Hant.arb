@@ -602,6 +602,7 @@
   "unownedShipExcludedLabel": "已排除",
   "unownedShipReminderHint": "獲得未勾選的艦娘時，將正常提醒並震動；勾選的艦娘則不會提醒。",
   "clearNewShipExclusions": "清除排除",
+  "resetFilter": "重設篩選",
   "unownedEquipmentSummary": "顯示 {count} 件未持有裝備",
   "@unownedEquipmentSummary": {"placeholders": {"count": {"type": "int"}}},
   "otherType": "其他",

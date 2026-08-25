@@ -3332,6 +3332,12 @@ abstract class AppLocalizations {
   /// **'清除排除'**
   String get clearNewShipExclusions;
 
+  /// No description provided for @resetFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置筛选'**
+  String get resetFilter;
+
   /// No description provided for @unownedEquipmentSummary.
   ///
   /// In zh, this message translates to:

@@ -262,13 +262,11 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                 secondaryResultLabel: l10n.unownedShipExcludedLabel,
                 secondaryResultCount: filteredExcludedCount,
                 secondaryResultKey: const Key('unowned-ship-excluded-count'),
-                trailingActionLabel: excludedFamilyIds.isEmpty
-                    ? null
-                    : l10n.clearNewShipExclusions,
-                trailingActionKey: const Key('unowned-ship-clear-exclusions'),
-                onTrailingAction: excludedFamilyIds.isEmpty
-                    ? null
-                    : () => widget.reminderController?.clearExcludedFamilies(),
+                actionLabel: l10n.clearNewShipExclusions,
+                actionIcon: Icons.restore,
+                actionKey: const Key('unowned-ship-clear-exclusions'),
+                onAction: () =>
+                    widget.reminderController?.clearExcludedFamilies(),
                 label: (value) => _shipCategoryLabel(value, l10n),
                 keyFor: (value) => Key('unowned-ship-filter-${value.name}'),
                 onSelected: (value) => setState(() {
@@ -283,6 +281,12 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                 resultKey: const Key(
                   'unowned-equipment-filter-result-count',
                 ),
+                actionLabel: l10n.resetFilter,
+                actionIcon: Icons.restore,
+                actionKey: const Key('unowned-equipment-filter-reset'),
+                onAction: () => setState(() {
+                  _unownedEquipmentCategory = EquipmentInventoryCategory.all;
+                }),
                 label: (value) => _equipmentCategoryLabel(value, l10n),
                 keyFor: (value) =>
                     Key('unowned-equipment-filter-${value.name}'),
@@ -774,9 +778,6 @@ class _FilterStrip<T> extends StatelessWidget {
     this.secondaryResultLabel,
     this.secondaryResultCount,
     this.secondaryResultKey,
-    this.trailingActionLabel,
-    this.trailingActionKey,
-    this.onTrailingAction,
   });
   final List<T> values;
   final T selected;
@@ -793,9 +794,6 @@ class _FilterStrip<T> extends StatelessWidget {
   final String? secondaryResultLabel;
   final int? secondaryResultCount;
   final Key? secondaryResultKey;
-  final String? trailingActionLabel;
-  final Key? trailingActionKey;
-  final VoidCallback? onTrailingAction;
   @override
   Widget build(BuildContext context) {
     final l10n =
@@ -860,15 +858,6 @@ class _FilterStrip<T> extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                 ),
-              ),
-            ],
-            if (trailingActionLabel != null && onTrailingAction != null) ...[
-              const SizedBox(width: 6),
-              _FilterChip(
-                key: trailingActionKey,
-                label: trailingActionLabel!,
-                selected: false,
-                onTap: onTrailingAction!,
               ),
             ],
           ],

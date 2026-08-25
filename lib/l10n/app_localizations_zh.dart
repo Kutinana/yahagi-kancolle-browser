@@ -1725,6 +1725,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clearNewShipExclusions => '清除排除';
 
   @override
+  String get resetFilter => '重置筛选';
+
+  @override
   String unownedEquipmentSummary(int count) {
     return '显示 $count 件未持有装备';
   }
@@ -3891,6 +3894,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get clearNewShipExclusions => '清除排除';
+
+  @override
+  String get resetFilter => '重設篩選';
 
   @override
   String unownedEquipmentSummary(int count) {
