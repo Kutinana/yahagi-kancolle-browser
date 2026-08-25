@@ -708,6 +708,8 @@
   "kcwikiReportConfirmDesc": "開啟後，應用程式會把帶路、任務前置、戰鬥、友軍、陸航／空襲和改修記錄傳送到 KCWiki 的 report2 伺服器。該伺服器目前使用未加密的 HTTP；不會傳送登入權杖、Cookie 或請求標頭；上傳失敗不會阻塞遊戲功能。",
   "kcwikiReportEnable": "自願開啟",
   "kcwikiReportSaveFailed": "KCWiki 資料貢獻設定儲存失敗，請重試。",
+  "kcwikiReportCaptureFailed": "KCWiki 資料收集切換失敗：{error}",
+  "@kcwikiReportCaptureFailed": {"placeholders": {"error": {"type": "String"}}},
   "kcwikiReportWaiting": "已開啟，正在等待可貢獻的資料。",
   "kcwikiReportLastSuccess": "最近上傳成功：{module} · 成功 {succeeded} · 失敗 {failed} · 丟棄 {dropped}",
   "@kcwikiReportLastSuccess": {"placeholders": {"module": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}},

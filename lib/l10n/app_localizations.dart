@@ -3966,6 +3966,12 @@ abstract class AppLocalizations {
   /// **'KCWiki 数据贡献设置保存失败，请重试。'**
   String get kcwikiReportSaveFailed;
 
+  /// No description provided for @kcwikiReportCaptureFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'KCWiki 数据收集切换失败：{error}'**
+  String kcwikiReportCaptureFailed(String error);
+
   /// No description provided for @kcwikiReportWaiting.
   ///
   /// In zh, this message translates to:

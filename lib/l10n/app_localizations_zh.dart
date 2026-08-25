@@ -2053,6 +2053,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get kcwikiReportSaveFailed => 'KCWiki 数据贡献设置保存失败，请重试。';
 
   @override
+  String kcwikiReportCaptureFailed(String error) {
+    return 'KCWiki 数据收集切换失败：$error';
+  }
+
+  @override
   String get kcwikiReportWaiting => '已开启，正在等待可贡献的数据。';
 
   @override
@@ -4125,6 +4130,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get kcwikiReportSaveFailed => 'KCWiki 資料貢獻設定儲存失敗，請重試。';
+
+  @override
+  String kcwikiReportCaptureFailed(String error) {
+    return 'KCWiki 資料收集切換失敗：$error';
+  }
 
   @override
   String get kcwikiReportWaiting => '已開啟，正在等待可貢獻的資料。';

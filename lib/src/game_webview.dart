@@ -780,7 +780,11 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
             'KCWiki capture allowlist update failed: $error\n$stackTrace',
           );
           if (_isCurrentBinding(bindingEpoch, orchestrator)) {
-            _reportRecoverableError('KCWiki 数据收集切换失败：$error');
+            final l10n = AppLocalizations.of(context);
+            _reportRecoverableError(
+              l10n?.kcwikiReportCaptureFailed(error.toString()) ??
+                  'KCWiki capture update failed: $error',
+            );
           }
         },
       ),

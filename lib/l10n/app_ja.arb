@@ -708,6 +708,8 @@
   "kcwikiReportConfirmDesc": "有効にすると、進路、任務前提、戦闘、友軍、基地航空／空襲、改修記録を KCWiki の report2 サーバーへ送信します。このサーバーは現在、暗号化されていない HTTP を使用します。ログイントークン、Cookie、リクエストヘッダーは送信せず、送信失敗でゲーム機能が停止することもありません。",
   "kcwikiReportEnable": "任意で有効化",
   "kcwikiReportSaveFailed": "KCWiki データ提供の設定を保存できませんでした。もう一度お試しください。",
+  "kcwikiReportCaptureFailed": "KCWiki データ収集の切り替えに失敗しました：{error}",
+  "@kcwikiReportCaptureFailed": {"placeholders": {"error": {"type": "String"}}},
   "kcwikiReportWaiting": "有効です。提供できるデータを待っています。",
   "kcwikiReportLastSuccess": "直近の送信成功：{module} · 成功 {succeeded} · 失敗 {failed} · 破棄 {dropped}",
   "@kcwikiReportLastSuccess": {"placeholders": {"module": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}},

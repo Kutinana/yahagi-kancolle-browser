@@ -2075,6 +2075,11 @@ class AppLocalizationsJa extends AppLocalizations {
       'KCWiki データ提供の設定を保存できませんでした。もう一度お試しください。';
 
   @override
+  String kcwikiReportCaptureFailed(String error) {
+    return 'KCWiki データ収集の切り替えに失敗しました：$error';
+  }
+
+  @override
   String get kcwikiReportWaiting => '有効です。提供できるデータを待っています。';
 
   @override
