@@ -1717,6 +1717,39 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inventoryFilterResults => '絞り込み結果 ';
 
   @override
+  String get inventoryOwned => '保有';
+
+  @override
+  String get inventoryUnowned => '未保有';
+
+  @override
+  String unownedShipSummary(int count, int excluded) {
+    return '$count隻表示・除外済み $excluded隻';
+  }
+
+  @override
+  String get clearNewShipExclusions => '除外を解除';
+
+  @override
+  String unownedEquipmentSummary(int count) {
+    return '未保有装備を $count個表示';
+  }
+
+  @override
+  String get otherType => 'その他';
+
+  @override
+  String newShipFallbackName(int id) {
+    return '艦娘 No.$id';
+  }
+
+  @override
+  String get newShipAlertTitle => '未保有艦娘を発見';
+
+  @override
+  String get acknowledge => '了解';
+
+  @override
   String get shipName => '艦名';
 
   @override

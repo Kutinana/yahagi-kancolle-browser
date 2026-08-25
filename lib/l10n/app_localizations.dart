@@ -3296,6 +3296,60 @@ abstract class AppLocalizations {
   /// **'筛选结果 '**
   String get inventoryFilterResults;
 
+  /// No description provided for @inventoryOwned.
+  ///
+  /// In zh, this message translates to:
+  /// **'持有'**
+  String get inventoryOwned;
+
+  /// No description provided for @inventoryUnowned.
+  ///
+  /// In zh, this message translates to:
+  /// **'未持有'**
+  String get inventoryUnowned;
+
+  /// No description provided for @unownedShipSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 {count} 艘 · 已排除 {excluded} 艘'**
+  String unownedShipSummary(int count, int excluded);
+
+  /// No description provided for @clearNewShipExclusions.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除排除'**
+  String get clearNewShipExclusions;
+
+  /// No description provided for @unownedEquipmentSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 {count} 件未持有装备'**
+  String unownedEquipmentSummary(int count);
+
+  /// No description provided for @otherType.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get otherType;
+
+  /// No description provided for @newShipFallbackName.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰娘 No.{id}'**
+  String newShipFallbackName(int id);
+
+  /// No description provided for @newShipAlertTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现未持有舰娘'**
+  String get newShipAlertTitle;
+
+  /// No description provided for @acknowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'知道了'**
+  String get acknowledge;
+
   /// No description provided for @shipName.
   ///
   /// In zh, this message translates to:

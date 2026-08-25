@@ -87,8 +87,7 @@ class UnownedInventoryProjection {
             familyRootId: entry.key,
             master: entry.value,
             typeId: entry.value.shipTypeId,
-            typeName:
-                state.masterShipTypes[entry.value.shipTypeId]?.name ?? '其他',
+            typeName: state.masterShipTypes[entry.value.shipTypeId]?.name ?? '',
           ),
     ];
     rows.sort((a, b) => _compareShipMaster(a.master, b.master));

@@ -334,15 +334,18 @@ Future<void> main() async {
     store: NewShipReminderStore(await SharedPreferences.getInstance()),
     onPublish: (alert) {
       final state = gameStateController.state;
+      final l10n = lookupAppLocalizations(const Locale('zh'));
       final names = alert.masterIds
-          .map((id) => state.masterShips[id]?.name ?? '舰娘 No.$id')
+          .map(
+            (id) => state.masterShips[id]?.name ?? l10n.newShipFallbackName(id),
+          )
           .join('、');
       notificationCoordinator.enqueueImmediateAlert(
         ImmediateNotificationItem(
           key: 'new-ship:${alert.key}',
           type: GameNotificationType.newShip,
           occurredAt: alert.occurredAt,
-          title: '发现未持有舰娘',
+          title: l10n.newShipAlertTitle,
           body: names,
         ),
       );
@@ -976,19 +979,22 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final state = widget.gameStateController.state;
+      final l10n = AppLocalizations.of(context)!;
       final names = alert.masterIds
-          .map((id) => state.masterShips[id]?.name ?? '舰娘 No.$id')
+          .map(
+            (id) => state.masterShips[id]?.name ?? l10n.newShipFallbackName(id),
+          )
           .toList(growable: false);
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           key: const Key('new-ship-alert-dialog'),
-          title: const Text('发现未持有舰娘'),
+          title: Text(l10n.newShipAlertTitle),
           content: Text(names.join('、')),
           actions: [
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('知道了'),
+              child: Text(l10n.acknowledge),
             ),
           ],
         ),

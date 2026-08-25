@@ -309,37 +309,42 @@ class OwnedInventoryOwnershipSegmented extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const Key('owned-inventory-ownership-segmented'),
-    width: 180,
-    height: 38,
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(
-      color: const Color(0xff0b202d),
-      border: Border.all(color: const Color(0xff315064)),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: _SegmentButton(
-            key: const Key('owned-inventory-tab-owned'),
-            selected: showOwned,
-            label: '持有',
-            onTap: () => onChanged(true),
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    return Container(
+      key: const Key('owned-inventory-ownership-segmented'),
+      width: 180,
+      height: 38,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xff0b202d),
+        border: Border.all(color: const Color(0xff315064)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SegmentButton(
+              key: const Key('owned-inventory-tab-owned'),
+              selected: showOwned,
+              label: l10n.inventoryOwned,
+              onTap: () => onChanged(true),
+            ),
           ),
-        ),
-        Expanded(
-          child: _SegmentButton(
-            key: const Key('owned-inventory-tab-unowned'),
-            selected: !showOwned,
-            label: '未持有',
-            onTap: () => onChanged(false),
+          Expanded(
+            child: _SegmentButton(
+              key: const Key('owned-inventory-tab-unowned'),
+              selected: !showOwned,
+              label: l10n.inventoryUnowned,
+              onTap: () => onChanged(false),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class UnownedInventoryView extends StatelessWidget {
@@ -380,6 +385,9 @@ class _UnownedShipsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
     final excluded = reminderController?.excludedFamilyIds ?? const <int>{};
     final groups = <int, List<UnownedShipFamilyRow>>{};
     for (final row in rows) {
@@ -393,7 +401,7 @@ class _UnownedShipsView extends StatelessWidget {
           child: Row(
             children: [
               Text(
-                '显示 ${rows.length} 艘 · 已排除 ${excluded.length} 艘',
+                l10n.unownedShipSummary(rows.length, excluded.length),
                 key: const Key('unowned-ship-summary'),
                 style: const TextStyle(
                   color: Color(0xffb8c9d2),
@@ -404,7 +412,7 @@ class _UnownedShipsView extends StatelessWidget {
               if (excluded.isNotEmpty)
                 TextButton(
                   onPressed: reminderController?.clearExcludedFamilies,
-                  child: const Text('清除排除'),
+                  child: Text(l10n.clearNewShipExclusions),
                 ),
             ],
           ),
@@ -414,7 +422,8 @@ class _UnownedShipsView extends StatelessWidget {
             children: [
               for (final entry in groups.entries)
                 _UnownedGroup(
-                  title: state.masterShipTypes[entry.key]?.name ?? '其他',
+                  title:
+                      state.masterShipTypes[entry.key]?.name ?? l10n.otherType,
                   count: entry.value.length,
                   children: [
                     for (final row in entry.value)
@@ -445,6 +454,9 @@ class _UnownedEquipmentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
     final groups = <int, List<UnownedEquipmentRow>>{};
     for (final row in rows) {
       groups.putIfAbsent(row.typeId, () => <UnownedEquipmentRow>[]).add(row);
@@ -455,7 +467,7 @@ class _UnownedEquipmentView extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
           child: Text(
-            '显示 ${rows.length} 件未持有装备',
+            l10n.unownedEquipmentSummary(rows.length),
             key: const Key('unowned-equipment-summary'),
             style: const TextStyle(
               color: Color(0xffb8c9d2),
@@ -523,49 +535,57 @@ class _UnownedShipCard extends StatelessWidget {
   final ValueChanged<bool?>? onChanged;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: Key('unowned-ship-${row.familyRootId}'),
-    width: 210,
-    padding: const EdgeInsets.all(8),
-    decoration: BoxDecoration(
-      color: const Color(0xff102b39),
-      border: Border.all(color: const Color(0xff315064)),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Row(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: ShipPortrait(
-            ship: row.master,
-            serverOrigin: state.serverOrigin,
-            width: 78,
-            height: 51,
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    return Container(
+      key: Key('unowned-ship-${row.familyRootId}'),
+      width: 210,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xff102b39),
+        border: Border.all(color: const Color(0xff315064)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: ShipPortrait(
+              ship: row.master,
+              serverOrigin: state.serverOrigin,
+              width: 78,
+              height: 51,
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                row.master.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                row.typeName,
-                style: const TextStyle(color: Color(0xff8fa9b7), fontSize: 12),
-              ),
-            ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  row.master.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  row.typeName.isEmpty ? l10n.otherType : row.typeName,
+                  style: const TextStyle(
+                    color: Color(0xff8fa9b7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        Checkbox(value: excluded, onChanged: onChanged),
-      ],
-    ),
-  );
+          Checkbox(value: excluded, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
 }
 
 class _UnownedEquipmentCard extends StatelessWidget {

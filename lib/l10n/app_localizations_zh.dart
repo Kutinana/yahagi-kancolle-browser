@@ -1705,6 +1705,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inventoryFilterResults => '筛选结果 ';
 
   @override
+  String get inventoryOwned => '持有';
+
+  @override
+  String get inventoryUnowned => '未持有';
+
+  @override
+  String unownedShipSummary(int count, int excluded) {
+    return '显示 $count 艘 · 已排除 $excluded 艘';
+  }
+
+  @override
+  String get clearNewShipExclusions => '清除排除';
+
+  @override
+  String unownedEquipmentSummary(int count) {
+    return '显示 $count 件未持有装备';
+  }
+
+  @override
+  String get otherType => '其他';
+
+  @override
+  String newShipFallbackName(int id) {
+    return '舰娘 No.$id';
+  }
+
+  @override
+  String get newShipAlertTitle => '发现未持有舰娘';
+
+  @override
+  String get acknowledge => '知道了';
+
+  @override
   String get shipName => '舰名';
 
   @override
@@ -3795,6 +3828,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get inventoryFilterResults => '篩選結果 ';
+
+  @override
+  String get inventoryOwned => '持有';
+
+  @override
+  String get inventoryUnowned => '未持有';
+
+  @override
+  String unownedShipSummary(int count, int excluded) {
+    return '顯示 $count 艘 · 已排除 $excluded 艘';
+  }
+
+  @override
+  String get clearNewShipExclusions => '清除排除';
+
+  @override
+  String unownedEquipmentSummary(int count) {
+    return '顯示 $count 件未持有裝備';
+  }
+
+  @override
+  String get otherType => '其他';
+
+  @override
+  String newShipFallbackName(int id) {
+    return '艦娘 No.$id';
+  }
+
+  @override
+  String get newShipAlertTitle => '發現未持有艦娘';
+
+  @override
+  String get acknowledge => '知道了';
 
   @override
   String get shipName => '艦名';
