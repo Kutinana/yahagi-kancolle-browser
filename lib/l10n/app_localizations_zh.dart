@@ -2039,6 +2039,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameConnectorNavigationFailed => '连接已保存，但登录页面打开失败，请重试。';
+
+  @override
+  String get kcwikiReportSection => 'KCWiki 数据贡献';
+
+  @override
+  String get kcwikiReportTitle => '帮助 KCWiki 收集数据';
+
+  @override
+  String get kcwikiReportDisabledDesc => '默认关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。';
+
+  @override
+  String get kcwikiReportEnabledDesc => '已开启；仅发送带路、任务前置、战斗、友军、陆航/空袭和改修数据。';
+
+  @override
+  String get kcwikiReportConfirmTitle => '开启 KCWiki 数据贡献？';
+
+  @override
+  String get kcwikiReportConfirmDesc =>
+      '开启后，应用会把带路、任务前置、战斗、友军、陆航/空袭和改修记录发送到 KCWiki 的 report2 服务器。该服务器目前使用未加密的 HTTP；不会发送登录令牌、Cookie 或请求头；上传失败不会阻塞游戏功能。';
+
+  @override
+  String get kcwikiReportEnable => '自愿开启';
+
+  @override
+  String get kcwikiReportSaveFailed => 'KCWiki 数据贡献设置保存失败，请重试。';
+
+  @override
+  String kcwikiReportCaptureFailed(String error) {
+    return 'KCWiki 数据收集切换失败：$error';
+  }
+
+  @override
+  String get kcwikiReportWaiting => '已开启，正在等待可贡献的数据。';
+
+  @override
+  String kcwikiReportLastSuccess(
+    String module,
+    int succeeded,
+    int failed,
+    int dropped,
+  ) {
+    return '最近上传成功：$module · 成功 $succeeded · 失败 $failed · 丢弃 $dropped';
+  }
+
+  @override
+  String kcwikiReportLastFailure(
+    String module,
+    String status,
+    int succeeded,
+    int failed,
+    int dropped,
+  ) {
+    return '最近上传失败：$module（状态 $status）· 成功 $succeeded · 失败 $failed · 丢弃 $dropped';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4077,4 +4131,58 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameConnectorNavigationFailed => '連線已儲存，但登入頁面開啟失敗，請重試。';
+
+  @override
+  String get kcwikiReportSection => 'KCWiki 資料貢獻';
+
+  @override
+  String get kcwikiReportTitle => '協助 KCWiki 收集資料';
+
+  @override
+  String get kcwikiReportDisabledDesc => '預設關閉。關閉時不收集、不組包、不連線，也不影響遊戲和本機功能。';
+
+  @override
+  String get kcwikiReportEnabledDesc => '已開啟；僅傳送帶路、任務前置、戰鬥、友軍、陸航／空襲和改修資料。';
+
+  @override
+  String get kcwikiReportConfirmTitle => '開啟 KCWiki 資料貢獻？';
+
+  @override
+  String get kcwikiReportConfirmDesc =>
+      '開啟後，應用程式會把帶路、任務前置、戰鬥、友軍、陸航／空襲和改修記錄傳送到 KCWiki 的 report2 伺服器。該伺服器目前使用未加密的 HTTP；不會傳送登入權杖、Cookie 或請求標頭；上傳失敗不會阻塞遊戲功能。';
+
+  @override
+  String get kcwikiReportEnable => '自願開啟';
+
+  @override
+  String get kcwikiReportSaveFailed => 'KCWiki 資料貢獻設定儲存失敗，請重試。';
+
+  @override
+  String kcwikiReportCaptureFailed(String error) {
+    return 'KCWiki 資料收集切換失敗：$error';
+  }
+
+  @override
+  String get kcwikiReportWaiting => '已開啟，正在等待可貢獻的資料。';
+
+  @override
+  String kcwikiReportLastSuccess(
+    String module,
+    int succeeded,
+    int failed,
+    int dropped,
+  ) {
+    return '最近上傳成功：$module · 成功 $succeeded · 失敗 $failed · 丟棄 $dropped';
+  }
+
+  @override
+  String kcwikiReportLastFailure(
+    String module,
+    String status,
+    int succeeded,
+    int failed,
+    int dropped,
+  ) {
+    return '最近上傳失敗：$module（狀態 $status）· 成功 $succeeded · 失敗 $failed · 丟棄 $dropped';
+  }
 }

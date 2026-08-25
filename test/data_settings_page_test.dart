@@ -9,6 +9,7 @@ import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_channel.
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_controller.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_store.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
+import 'package:yahagi_kancolle_browser/src/kcwiki_report/kcwiki_report_settings.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/data_settings_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
@@ -59,6 +60,58 @@ void main() {
     expect(find.byKey(const Key('settings-reset-base-senka')), findsNothing);
     expect(find.byKey(const Key('settings-set-base-senka')), findsNothing);
     expect(find.text('安全边界'), findsOneWidget);
+  });
+
+  testWidgets('KCWiki reporting is opt-in and disabling is immediate', (
+    tester,
+  ) async {
+    final capture = await CaptureModeController.load(_MemoryCaptureModeStore());
+    final browser = GameBrowserController();
+    final gameCapture = GameCaptureController();
+    final prototype = PrototypeStatusController();
+    final gameState = GameStateController();
+    final store = MemoryKcwikiReportSettingsStore();
+    final kcwiki = await KcwikiReportController.load(store);
+    addTearDown(capture.dispose);
+    addTearDown(browser.dispose);
+    addTearDown(gameCapture.dispose);
+    addTearDown(prototype.dispose);
+    addTearDown(gameState.dispose);
+    addTearDown(kcwiki.dispose);
+
+    await tester.pumpWidget(
+      withTopNotice(
+        DataSettingsPage(
+          captureModeController: capture,
+          browserController: browser,
+          gameCaptureController: gameCapture,
+          prototypeStatusController: prototype,
+          gameStateController: gameState,
+          kcwikiReportController: kcwiki,
+        ),
+      ),
+    );
+
+    final toggle = find.byKey(const Key('kcwiki-report-switch'));
+    expect(toggle, findsOneWidget);
+    expect(kcwiki.enabled, isFalse);
+
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(find.text('开启 KCWiki 数据贡献？'), findsOneWidget);
+    expect(kcwiki.enabled, isFalse);
+
+    await tester.tap(find.byKey(const Key('kcwiki-report-confirm')));
+    await tester.pumpAndSettle();
+    expect(kcwiki.enabled, isTrue);
+    expect(store.enabled, isTrue);
+
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(kcwiki.enabled, isFalse);
+    expect(store.enabled, isFalse);
+    expect(find.text('开启 KCWiki 数据贡献？'), findsNothing);
   });
 
   testWidgets(

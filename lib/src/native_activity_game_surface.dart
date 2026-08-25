@@ -21,6 +21,7 @@ import 'capture/capture_mode.dart';
 import 'capture/capture_mode_controller.dart';
 import 'capture/game_capture_controller.dart';
 import 'game_webview.dart';
+import 'kcwiki_report/kcwiki_report_settings.dart';
 import 'layout/window_metrics_recovery_scheduler.dart';
 import 'prototype_status_controller.dart';
 import 'settings/game_frame_rate_settings.dart';
@@ -194,6 +195,7 @@ final class NativeActivityGameSurface extends StatefulWidget {
     this.audioController,
     this.gameCaptureController,
     this.frameRateSettingsController,
+    this.kcwikiReportController,
     this.frameRateRuntimePortFactory,
     this.portFactory,
     this.startupOrchestrator,
@@ -221,6 +223,7 @@ final class NativeActivityGameSurface extends StatefulWidget {
   final GameAudioController? audioController;
   final GameCaptureController? gameCaptureController;
   final GameFrameRateSettingsController? frameRateSettingsController;
+  final KcwikiReportController? kcwikiReportController;
   final GameFrameRateRuntimePort Function()? frameRateRuntimePortFactory;
   final NativeActivityGameWebViewPortFactory? portFactory;
   final GameSurfaceStartupOrchestrator? startupOrchestrator;
@@ -277,6 +280,7 @@ final class _NativeActivityGameSurfaceState
   bool _visibilityFatalCleanupStarted = false;
   int _processedCaptureRevision = 0;
   CaptureMode? _activeCaptureMode;
+  late bool _kcwikiReportingEnabled;
   GameStartupState _startupState = GameStartupState.loadingSettings;
   String _startupErrorMessage = '';
 
@@ -289,8 +293,10 @@ final class _NativeActivityGameSurfaceState
     _cleanupTimeout = widget.cleanupTimeout ?? const Duration(seconds: 2);
     _startupOrchestrator = _createStartupOrchestrator(widget);
     _activeCaptureMode = widget.captureModeController?.mode;
+    _kcwikiReportingEnabled = widget.kcwikiReportController?.enabled ?? false;
     widget.networkSettingsController?.addListener(_onNetworkSettingsChanged);
     widget.captureModeController?.addListener(_onCaptureModeChanged);
+    widget.kcwikiReportController?.addListener(_onKcwikiReportingChanged);
 
     final delegate = widget.portFactory?.call() ?? _createDefaultPort();
     final port = delegate == null
@@ -324,6 +330,8 @@ final class _NativeActivityGameSurfaceState
           gameCaptureController: configuration.gameCaptureController!,
           frameRateSettingsController:
               configuration.frameRateSettingsController,
+          kcwikiReportingEnabled: () =>
+              configuration.kcwikiReportController?.enabled ?? false,
         );
   }
 
@@ -348,6 +356,20 @@ final class _NativeActivityGameSurfaceState
       oldWidget.captureModeController?.removeListener(_onCaptureModeChanged);
       widget.captureModeController?.addListener(_onCaptureModeChanged);
       _activeCaptureMode = widget.captureModeController?.mode;
+    }
+    if (!identical(
+      oldWidget.kcwikiReportController,
+      widget.kcwikiReportController,
+    )) {
+      oldWidget.kcwikiReportController?.removeListener(
+        _onKcwikiReportingChanged,
+      );
+      widget.kcwikiReportController?.addListener(_onKcwikiReportingChanged);
+      final enabled = widget.kcwikiReportController?.enabled ?? false;
+      if (enabled != _kcwikiReportingEnabled) {
+        _kcwikiReportingEnabled = !enabled;
+        _onKcwikiReportingChanged();
+      }
     }
 
     final port = _port;
@@ -448,6 +470,10 @@ final class _NativeActivityGameSurfaceState
         !identical(
           previous.frameRateSettingsController,
           next.frameRateSettingsController,
+        ) ||
+        !identical(
+          previous.kcwikiReportController,
+          next.kcwikiReportController,
         );
   }
 
@@ -1103,6 +1129,14 @@ final class _NativeActivityGameSurfaceState
     _ensureCaptureReconfiguration();
   }
 
+  void _onKcwikiReportingChanged() {
+    final enabled = widget.kcwikiReportController?.enabled ?? false;
+    if (enabled == _kcwikiReportingEnabled) return;
+    _kcwikiReportingEnabled = enabled;
+    _captureRevision += 1;
+    _ensureCaptureReconfiguration();
+  }
+
   void _ensureCaptureReconfiguration() {
     if (_captureReconfigureFuture != null) return;
     final operation = _drainCaptureReconfiguration();
@@ -1263,6 +1297,7 @@ final class _NativeActivityGameSurfaceState
     _desiredVisible = false;
     widget.networkSettingsController?.removeListener(_onNetworkSettingsChanged);
     widget.captureModeController?.removeListener(_onCaptureModeChanged);
+    widget.kcwikiReportController?.removeListener(_onKcwikiReportingChanged);
     _pendingEvents.clear();
     final port = _port;
     if (port == null) {

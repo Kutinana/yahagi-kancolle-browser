@@ -73,6 +73,11 @@ import 'src/layout/workspace_navigation_side.dart';
 import 'src/layout/workspace_context_header.dart';
 import 'src/layout/window_metrics_change.dart';
 import 'src/layout/window_metrics_recovery_scheduler.dart';
+import 'src/kcwiki_report/kcwiki_report_collector.dart';
+import 'src/kcwiki_report/kcwiki_report_consumer.dart';
+import 'src/kcwiki_report/kcwiki_report_dispatcher.dart';
+import 'src/kcwiki_report/kcwiki_report_settings.dart';
+import 'src/kcwiki_report/kcwiki_report_transport.dart';
 import 'src/performance/second_tick_scope.dart';
 import 'src/inventory/owned_inventory_page.dart';
 import 'src/improvement/improvement_dataset_store.dart';
@@ -191,6 +196,9 @@ Future<void> main() async {
     gameStateStore: gameStateStore,
   );
   await gameStateController.initialize();
+  final kcwikiReportController = await KcwikiReportController.load(
+    SharedPreferencesKcwikiReportSettingsStore(),
+  );
   final gameResourceCacheController = GameResourceCacheController();
   await gameResourceCacheController.initialize();
   final senkaController = SenkaController(
@@ -290,9 +298,36 @@ Future<void> main() async {
     staticUrlsLoader: GameResourceStaticCatalog.load,
     waitForGameState: () => gameStateController.idle,
   );
+  late final KcwikiReportDispatcher kcwikiReportDispatcher;
+  kcwikiReportDispatcher = KcwikiReportDispatcher(
+    transportFactory: () => HttpKcwikiReportTransport(
+      client: http.Client(),
+      baseUri: Uri.parse(
+        const String.fromEnvironment(
+          'KCWIKI_REPORT_BASE_URL',
+          defaultValue: 'http://report2.kcwiki.org:17027',
+        ),
+      ),
+    ),
+    onResult: (result) => kcwikiReportController.recordResult(
+      module: result.module.wireName,
+      succeeded: result.accepted,
+      occurredAt: DateTime.now(),
+      statusCode: result.statusCode,
+    ),
+    onDropped: kcwikiReportController.recordDropped,
+  );
+  final kcwikiReportConsumer = KcwikiReportConsumer(
+    controller: kcwikiReportController,
+    collector: KcwikiReportCollector(),
+    dispatcher: kcwikiReportDispatcher,
+    gameState: () => gameStateController.state,
+    waitForGameState: () => gameStateController.idle,
+  );
   final gameApiEventPipeline = GameApiEventPipeline(
     consumers: <GameApiEventConsumer>[
       gameStateController,
+      kcwikiReportConsumer,
       gameResourceManifestConsumer,
       senkaController,
       battleController,
@@ -428,6 +463,8 @@ Future<void> main() async {
       gameScreenshotController: gameScreenshotController,
       gameCaptureController: gameCaptureController,
       gameApiEventPipeline: gameApiEventPipeline,
+      kcwikiReportController: kcwikiReportController,
+      kcwikiReportConsumer: kcwikiReportConsumer,
       gameStateController: gameStateController,
       moraleRecoveryTimerController:
           notificationCoordinator.moraleRecoveryTimerController,
@@ -507,6 +544,8 @@ class YahagiApp extends StatelessWidget {
     required this.toolbarController,
     required this.gameCaptureController,
     this.gameApiEventPipeline,
+    this.kcwikiReportController,
+    this.kcwikiReportConsumer,
     required this.gameStateController,
     this.moraleRecoveryTimerController,
     this.gameResourceCacheController,
@@ -545,6 +584,8 @@ class YahagiApp extends StatelessWidget {
   final GameToolbarController toolbarController;
   final GameCaptureController gameCaptureController;
   final GameApiEventPipeline? gameApiEventPipeline;
+  final KcwikiReportController? kcwikiReportController;
+  final KcwikiReportConsumer? kcwikiReportConsumer;
   final GameStateController gameStateController;
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final GameResourceCacheController? gameResourceCacheController;
@@ -635,6 +676,8 @@ class YahagiApp extends StatelessWidget {
                   audioController: audioController,
                   toolbarController: toolbarController,
                   gameCaptureController: gameCaptureController,
+                  kcwikiReportController: kcwikiReportController,
+                  kcwikiReportConsumer: kcwikiReportConsumer,
                   gameStateController: gameStateController,
                   moraleRecoveryTimerController: moraleRecoveryTimerController,
                   gameResourceCacheController: gameResourceCacheController,
@@ -709,6 +752,7 @@ class YahagiApp extends StatelessWidget {
     captureModeController: captureModeController,
     audioController: audioController,
     gameCaptureController: gameCaptureController,
+    kcwikiReportController: kcwikiReportController,
     frameRateSettingsController: gameFrameRateSettingsController,
   );
 
@@ -723,6 +767,7 @@ class YahagiApp extends StatelessWidget {
         audioController: audioController,
         toolbarController: toolbarController,
         gameCaptureController: gameCaptureController,
+        kcwikiReportController: kcwikiReportController,
         frameRateSettingsController: gameFrameRateSettingsController,
         renderingMode:
             renderingMode ??
@@ -776,6 +821,8 @@ class YahagiShell extends StatefulWidget {
     required this.toolbarController,
     required this.gameSurface,
     required this.gameCaptureController,
+    this.kcwikiReportController,
+    this.kcwikiReportConsumer,
     required this.gameStateController,
     this.moraleRecoveryTimerController,
     this.gameResourceCacheController,
@@ -812,6 +859,8 @@ class YahagiShell extends StatefulWidget {
   final GameToolbarController toolbarController;
   final Widget gameSurface;
   final GameCaptureController gameCaptureController;
+  final KcwikiReportController? kcwikiReportController;
+  final KcwikiReportConsumer? kcwikiReportConsumer;
   final GameStateController gameStateController;
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final GameResourceCacheController? gameResourceCacheController;
@@ -876,6 +925,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   void dispose() {
     widget.displayModeController.removeListener(_applyOrientationPolicy);
     widget.layoutSettingsController.removeListener(_onLayoutSettingsChanged);
+    widget.kcwikiReportConsumer?.dispose();
     _questFilters.dispose();
     _windowMetricsRecoveryScheduler.dispose();
     _backgroundGameRetentionCoordinator?.dispose();
@@ -1597,6 +1647,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             captureModeController: widget.captureModeController,
                             browserController: widget.browserController,
                             gameCaptureController: widget.gameCaptureController,
+                            kcwikiReportController:
+                                widget.kcwikiReportController,
                             prototypeStatusController: widget.controller,
                             gameStateController: widget.gameStateController,
                             senkaController: widget.senkaController,

@@ -703,5 +703,20 @@
   "gameConnectorActiveWarning": "切换会中断当前游戏页面并返回目标登录入口。",
   "gameConnectorApplied": "游戏连接已切换。",
   "gameConnectorSaveFailed": "连接选择保存失败，当前连接未改变。",
-  "gameConnectorNavigationFailed": "连接已保存，但登录页面打开失败，请重试。"
+  "gameConnectorNavigationFailed": "连接已保存，但登录页面打开失败，请重试。",
+  "kcwikiReportSection": "KCWiki 数据贡献",
+  "kcwikiReportTitle": "帮助 KCWiki 收集数据",
+  "kcwikiReportDisabledDesc": "默认关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。",
+  "kcwikiReportEnabledDesc": "已开启；仅发送带路、任务前置、战斗、友军、陆航/空袭和改修数据。",
+  "kcwikiReportConfirmTitle": "开启 KCWiki 数据贡献？",
+  "kcwikiReportConfirmDesc": "开启后，应用会把带路、任务前置、战斗、友军、陆航/空袭和改修记录发送到 KCWiki 的 report2 服务器。该服务器目前使用未加密的 HTTP；不会发送登录令牌、Cookie 或请求头；上传失败不会阻塞游戏功能。",
+  "kcwikiReportEnable": "自愿开启",
+  "kcwikiReportSaveFailed": "KCWiki 数据贡献设置保存失败，请重试。",
+  "kcwikiReportCaptureFailed": "KCWiki 数据收集切换失败：{error}",
+  "@kcwikiReportCaptureFailed": {"placeholders": {"error": {"type": "String"}}},
+  "kcwikiReportWaiting": "已开启，正在等待可贡献的数据。",
+  "kcwikiReportLastSuccess": "最近上传成功：{module} · 成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}",
+  "@kcwikiReportLastSuccess": {"placeholders": {"module": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}},
+  "kcwikiReportLastFailure": "最近上传失败：{module}（状态 {status}）· 成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}",
+  "@kcwikiReportLastFailure": {"placeholders": {"module": {"type": "String"}, "status": {"type": "String"}, "succeeded": {"type": "int"}, "failed": {"type": "int"}, "dropped": {"type": "int"}}}
 }

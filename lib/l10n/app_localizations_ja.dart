@@ -2059,4 +2059,61 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get gameConnectorNavigationFailed =>
       '接続設定は保存されましたが、ログイン画面を開けませんでした。もう一度お試しください。';
+
+  @override
+  String get kcwikiReportSection => 'KCWiki データ提供';
+
+  @override
+  String get kcwikiReportTitle => 'KCWiki のデータ収集に協力する';
+
+  @override
+  String get kcwikiReportDisabledDesc =>
+      '初期設定はオフです。オフの間は収集・整形・通信を行わず、ゲームやローカル機能に影響しません。';
+
+  @override
+  String get kcwikiReportEnabledDesc =>
+      'オンです。進路、任務前提、戦闘、友軍、基地航空／空襲、改修データのみ送信します。';
+
+  @override
+  String get kcwikiReportConfirmTitle => 'KCWiki データ提供を有効にしますか？';
+
+  @override
+  String get kcwikiReportConfirmDesc =>
+      '有効にすると、進路、任務前提、戦闘、友軍、基地航空／空襲、改修記録を KCWiki の report2 サーバーへ送信します。このサーバーは現在、暗号化されていない HTTP を使用します。ログイントークン、Cookie、リクエストヘッダーは送信せず、送信失敗でゲーム機能が停止することもありません。';
+
+  @override
+  String get kcwikiReportEnable => '任意で有効化';
+
+  @override
+  String get kcwikiReportSaveFailed =>
+      'KCWiki データ提供の設定を保存できませんでした。もう一度お試しください。';
+
+  @override
+  String kcwikiReportCaptureFailed(String error) {
+    return 'KCWiki データ収集の切り替えに失敗しました：$error';
+  }
+
+  @override
+  String get kcwikiReportWaiting => '有効です。提供できるデータを待っています。';
+
+  @override
+  String kcwikiReportLastSuccess(
+    String module,
+    int succeeded,
+    int failed,
+    int dropped,
+  ) {
+    return '直近の送信成功：$module · 成功 $succeeded · 失敗 $failed · 破棄 $dropped';
+  }
+
+  @override
+  String kcwikiReportLastFailure(
+    String module,
+    String status,
+    int succeeded,
+    int failed,
+    int dropped,
+  ) {
+    return '直近の送信失敗：$module（状態 $status）· 成功 $succeeded · 失敗 $failed · 破棄 $dropped';
+  }
 }

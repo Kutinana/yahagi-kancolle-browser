@@ -3941,6 +3941,89 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'连接已保存，但登录页面打开失败，请重试。'**
   String get gameConnectorNavigationFailed;
+
+  /// No description provided for @kcwikiReportSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'KCWiki 数据贡献'**
+  String get kcwikiReportSection;
+
+  /// No description provided for @kcwikiReportTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮助 KCWiki 收集数据'**
+  String get kcwikiReportTitle;
+
+  /// No description provided for @kcwikiReportDisabledDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。'**
+  String get kcwikiReportDisabledDesc;
+
+  /// No description provided for @kcwikiReportEnabledDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'已开启；仅发送带路、任务前置、战斗、友军、陆航/空袭和改修数据。'**
+  String get kcwikiReportEnabledDesc;
+
+  /// No description provided for @kcwikiReportConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启 KCWiki 数据贡献？'**
+  String get kcwikiReportConfirmTitle;
+
+  /// No description provided for @kcwikiReportConfirmDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启后，应用会把带路、任务前置、战斗、友军、陆航/空袭和改修记录发送到 KCWiki 的 report2 服务器。该服务器目前使用未加密的 HTTP；不会发送登录令牌、Cookie 或请求头；上传失败不会阻塞游戏功能。'**
+  String get kcwikiReportConfirmDesc;
+
+  /// No description provided for @kcwikiReportEnable.
+  ///
+  /// In zh, this message translates to:
+  /// **'自愿开启'**
+  String get kcwikiReportEnable;
+
+  /// No description provided for @kcwikiReportSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'KCWiki 数据贡献设置保存失败，请重试。'**
+  String get kcwikiReportSaveFailed;
+
+  /// No description provided for @kcwikiReportCaptureFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'KCWiki 数据收集切换失败：{error}'**
+  String kcwikiReportCaptureFailed(String error);
+
+  /// No description provided for @kcwikiReportWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'已开启，正在等待可贡献的数据。'**
+  String get kcwikiReportWaiting;
+
+  /// No description provided for @kcwikiReportLastSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近上传成功：{module} · 成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}'**
+  String kcwikiReportLastSuccess(
+    String module,
+    int succeeded,
+    int failed,
+    int dropped,
+  );
+
+  /// No description provided for @kcwikiReportLastFailure.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近上传失败：{module}（状态 {status}）· 成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}'**
+  String kcwikiReportLastFailure(
+    String module,
+    String status,
+    int succeeded,
+    int failed,
+    int dropped,
+  );
 }
 
 class _AppLocalizationsDelegate
