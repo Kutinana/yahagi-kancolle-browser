@@ -101,8 +101,9 @@ final class NewShipReminderController extends ChangeNotifier
     await _ensureAccount(memberId);
     final eventKey = '${event.path}:${event.sequence}';
     if (!_acceptedEventKeys.add(eventKey)) return;
-    if (_acceptedEventKeys.length > 512)
+    if (_acceptedEventKeys.length > 512) {
       _acceptedEventKeys.remove(_acceptedEventKeys.first);
+    }
 
     if (event.path == '/kcsapi/api_port/port') {
       await _publishPending(memberId);
@@ -229,7 +230,9 @@ final class NewShipReminderController extends ChangeNotifier
 
   static void _collectRewardShipIds(Object? value, Set<int> result) {
     if (value is List) {
-      for (final item in value) _collectRewardShipIds(item, result);
+      for (final item in value) {
+        _collectRewardShipIds(item, result);
+      }
       return;
     }
     if (value is! Map) return;
@@ -241,7 +244,9 @@ final class NewShipReminderController extends ChangeNotifier
       final rewardId = _positiveInt(item['api_id']);
       if (rewardId != null) result.add(rewardId);
     }
-    for (final child in value.values) _collectRewardShipIds(child, result);
+    for (final child in value.values) {
+      _collectRewardShipIds(child, result);
+    }
   }
 
   static int? _positiveInt(Object? value) {

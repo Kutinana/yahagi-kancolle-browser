@@ -8,6 +8,7 @@ import '../fleet/expedition_summary_card.dart'
 import '../fleet/resource_grid.dart';
 import '../game_state/game_state.dart';
 import '../inventory/owned_inventory_page.dart';
+import '../inventory/unowned_inventory_projection.dart';
 import '../improvement/improvement_planner_controller.dart';
 import '../logbook/logbook_page.dart';
 import '../quest/quest_center_page.dart';
@@ -29,6 +30,8 @@ class WorkspaceContextHeader extends StatelessWidget {
     required this.selectedFleetId,
     this.onFleetSelected,
     this.inventoryShowShips = true,
+    this.inventoryShowOwned = true,
+    this.onInventoryOwnershipChanged,
     this.onInventorySectionChanged,
     this.logbookTabIndex = 0,
     this.onLogbookTabChanged,
@@ -61,6 +64,8 @@ class WorkspaceContextHeader extends StatelessWidget {
   final int selectedFleetId;
   final ValueChanged<int>? onFleetSelected;
   final bool inventoryShowShips;
+  final bool inventoryShowOwned;
+  final ValueChanged<bool>? onInventoryOwnershipChanged;
   final ValueChanged<bool>? onInventorySectionChanged;
   final int logbookTabIndex;
   final ValueChanged<int>? onLogbookTabChanged;
@@ -226,6 +231,7 @@ class WorkspaceContextHeader extends StatelessWidget {
       );
     }
     if (workspaceIndex == 7) {
+      final unowned = UnownedInventoryProjection(state);
       return Row(
         children: [
           Text(
@@ -237,12 +243,33 @@ class WorkspaceContextHeader extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const Spacer(),
-          OwnedInventorySegmented(
-            showShips: inventoryShowShips,
-            shipCount: state.ships.length,
-            equipmentCount: state.equipmentCapacityUsed,
-            onChanged: onInventorySectionChanged ?? (_) {},
+          const SizedBox(width: 12),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  children: [
+                    OwnedInventoryOwnershipSegmented(
+                      showOwned: inventoryShowOwned,
+                      onChanged: onInventoryOwnershipChanged ?? (_) {},
+                    ),
+                    const SizedBox(width: 8),
+                    OwnedInventorySegmented(
+                      showShips: inventoryShowShips,
+                      shipCount: inventoryShowOwned
+                          ? state.ships.length
+                          : unowned.unownedShipFamilies.length,
+                      equipmentCount: inventoryShowOwned
+                          ? state.equipmentCapacityUsed
+                          : unowned.unownedEquipment.length,
+                      onChanged: onInventorySectionChanged ?? (_) {},
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       );

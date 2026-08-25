@@ -9,20 +9,28 @@ import '../fleet/ship_portrait.dart';
 import '../fleet/ship_status_style.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
+import '../new_ship/new_ship_reminder_controller.dart';
 import '../widgets/frozen_data_table.dart';
 import 'owned_inventory_projection.dart';
 import 'owned_inventory_sort_state.dart';
+import 'unowned_inventory_projection.dart';
 
 class OwnedInventoryPage extends StatefulWidget {
   const OwnedInventoryPage({
     super.key,
     required this.controller,
+    this.reminderController,
+    this.showOwned,
+    this.onOwnershipChanged,
     this.showShips,
     this.onSectionChanged,
     this.showSectionControl = true,
   });
 
   final GameStateController controller;
+  final NewShipReminderController? reminderController;
+  final bool? showOwned;
+  final ValueChanged<bool>? onOwnershipChanged;
   final bool? showShips;
   final ValueChanged<bool>? onSectionChanged;
   final bool showSectionControl;
@@ -33,6 +41,7 @@ class OwnedInventoryPage extends StatefulWidget {
 
 class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   bool _localShowShips = true;
+  bool _localShowOwned = true;
   ShipInventoryCategory _shipCategory = ShipInventoryCategory.all;
   EquipmentInventoryCategory _equipmentCategory =
       EquipmentInventoryCategory.all;
@@ -46,6 +55,7 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   final _equipmentRowHeightCache = _EquipmentRowHeightCache();
 
   bool get _showShips => widget.showShips ?? _localShowShips;
+  bool get _showOwned => widget.showOwned ?? _localShowOwned;
 
   @override
   void initState() {
@@ -53,22 +63,29 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     _state = widget.controller.state;
     _inventoryDependencies = _InventoryDependencies.from(_state);
     widget.controller.addListener(_handleControllerChanged);
+    widget.reminderController?.addListener(_handleReminderChanged);
   }
 
   @override
   void didUpdateWidget(covariant OwnedInventoryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (identical(oldWidget.controller, widget.controller)) return;
-    oldWidget.controller.removeListener(_handleControllerChanged);
-    _state = widget.controller.state;
-    _inventoryDependencies = _InventoryDependencies.from(_state);
-    _clearDerivedData();
-    widget.controller.addListener(_handleControllerChanged);
+    if (!identical(oldWidget.controller, widget.controller)) {
+      oldWidget.controller.removeListener(_handleControllerChanged);
+      _state = widget.controller.state;
+      _inventoryDependencies = _InventoryDependencies.from(_state);
+      _clearDerivedData();
+      widget.controller.addListener(_handleControllerChanged);
+    }
+    if (!identical(oldWidget.reminderController, widget.reminderController)) {
+      oldWidget.reminderController?.removeListener(_handleReminderChanged);
+      widget.reminderController?.addListener(_handleReminderChanged);
+    }
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_handleControllerChanged);
+    widget.reminderController?.removeListener(_handleReminderChanged);
     super.dispose();
   }
 
@@ -104,6 +121,10 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     _cachedEquipmentGroups = null;
   }
 
+  void _handleReminderChanged() {
+    if (mounted && !_showOwned && _showShips) setState(() {});
+  }
+
   List<ShipInventoryRow> _shipRows() =>
       _cachedShipRows ??= OwnedInventoryProjection(_state).shipRows(
         category: _shipCategory,
@@ -121,6 +142,11 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
       setState(() => _localShowShips = value);
     }
     widget.onSectionChanged?.call(value);
+  }
+
+  void _changeOwnership(bool value) {
+    if (widget.showOwned == null) setState(() => _localShowOwned = value);
+    widget.onOwnershipChanged?.call(value);
   }
 
   void _tapShipSort(ShipInventorySortField field) {
@@ -174,10 +200,12 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
-    final shipRows = _showShips ? _shipRows() : const <ShipInventoryRow>[];
-    final equipmentGroups = _showShips
-        ? const <EquipmentInventoryGroup>[]
-        : _equipmentGroups();
+    final shipRows = _showOwned && _showShips
+        ? _shipRows()
+        : const <ShipInventoryRow>[];
+    final equipmentGroups = _showOwned && !_showShips
+        ? _equipmentGroups()
+        : const <EquipmentInventoryGroup>[];
     return ColoredBox(
       color: const Color(0xff081923),
       child: Padding(
@@ -186,18 +214,27 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (widget.showSectionControl) ...[
-              Align(
-                alignment: Alignment.centerRight,
-                child: OwnedInventorySegmented(
-                  showShips: _showShips,
-                  shipCount: _state.ships.length,
-                  equipmentCount: _state.equipmentCapacityUsed,
-                  onChanged: _changeSection,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OwnedInventoryOwnershipSegmented(
+                    showOwned: _showOwned,
+                    onChanged: _changeOwnership,
+                  ),
+                  const SizedBox(width: 8),
+                  OwnedInventorySegmented(
+                    showShips: _showShips,
+                    shipCount: _state.ships.length,
+                    equipmentCount: _state.equipmentCapacityUsed,
+                    onChanged: _changeSection,
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
             ],
-            if (_showShips)
+            if (!_showOwned)
+              const SizedBox.shrink()
+            else if (_showShips)
               _FilterStrip<ShipInventoryCategory>(
                 values: ShipInventoryCategory.values,
                 selected: _shipCategory,
@@ -230,9 +267,15 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                   _cachedEquipmentGroups = null;
                 }),
               ),
-            const SizedBox(height: 4),
+            SizedBox(height: _showOwned ? 4 : 0),
             Expanded(
-              child: _showShips
+              child: !_showOwned
+                  ? UnownedInventoryView(
+                      state: _state,
+                      showShips: _showShips,
+                      reminderController: widget.reminderController,
+                    )
+                  : _showShips
                   ? _ShipInventoryTable(
                       state: _state,
                       rows: shipRows,
@@ -253,6 +296,317 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
       ),
     );
   }
+}
+
+class OwnedInventoryOwnershipSegmented extends StatelessWidget {
+  const OwnedInventoryOwnershipSegmented({
+    super.key,
+    required this.showOwned,
+    required this.onChanged,
+  });
+
+  final bool showOwned;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('owned-inventory-ownership-segmented'),
+    width: 180,
+    height: 38,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: const Color(0xff0b202d),
+      border: Border.all(color: const Color(0xff315064)),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: _SegmentButton(
+            key: const Key('owned-inventory-tab-owned'),
+            selected: showOwned,
+            label: '持有',
+            onTap: () => onChanged(true),
+          ),
+        ),
+        Expanded(
+          child: _SegmentButton(
+            key: const Key('owned-inventory-tab-unowned'),
+            selected: !showOwned,
+            label: '未持有',
+            onTap: () => onChanged(false),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class UnownedInventoryView extends StatelessWidget {
+  const UnownedInventoryView({
+    super.key,
+    required this.state,
+    required this.showShips,
+    this.reminderController,
+  });
+
+  final GameState state;
+  final bool showShips;
+  final NewShipReminderController? reminderController;
+
+  @override
+  Widget build(BuildContext context) {
+    final projection = UnownedInventoryProjection(state);
+    return showShips
+        ? _UnownedShipsView(
+            state: state,
+            rows: projection.unownedShipFamilies,
+            reminderController: reminderController,
+          )
+        : _UnownedEquipmentView(rows: projection.unownedEquipment);
+  }
+}
+
+class _UnownedShipsView extends StatelessWidget {
+  const _UnownedShipsView({
+    required this.state,
+    required this.rows,
+    this.reminderController,
+  });
+
+  final GameState state;
+  final List<UnownedShipFamilyRow> rows;
+  final NewShipReminderController? reminderController;
+
+  @override
+  Widget build(BuildContext context) {
+    final excluded = reminderController?.excludedFamilyIds ?? const <int>{};
+    final groups = <int, List<UnownedShipFamilyRow>>{};
+    for (final row in rows) {
+      groups.putIfAbsent(row.typeId, () => <UnownedShipFamilyRow>[]).add(row);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+          child: Row(
+            children: [
+              Text(
+                '显示 ${rows.length} 艘 · 已排除 ${excluded.length} 艘',
+                key: const Key('unowned-ship-summary'),
+                style: const TextStyle(
+                  color: Color(0xffb8c9d2),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              if (excluded.isNotEmpty)
+                TextButton(
+                  onPressed: reminderController?.clearExcludedFamilies,
+                  child: const Text('清除排除'),
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            children: [
+              for (final entry in groups.entries)
+                _UnownedGroup(
+                  title: state.masterShipTypes[entry.key]?.name ?? '其他',
+                  count: entry.value.length,
+                  children: [
+                    for (final row in entry.value)
+                      _UnownedShipCard(
+                        state: state,
+                        row: row,
+                        excluded: excluded.contains(row.familyRootId),
+                        onChanged: reminderController == null
+                            ? null
+                            : (value) => reminderController!.setFamilyExcluded(
+                                row.familyRootId,
+                                value ?? false,
+                              ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UnownedEquipmentView extends StatelessWidget {
+  const _UnownedEquipmentView({required this.rows});
+  final List<UnownedEquipmentRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = <int, List<UnownedEquipmentRow>>{};
+    for (final row in rows) {
+      groups.putIfAbsent(row.typeId, () => <UnownedEquipmentRow>[]).add(row);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+          child: Text(
+            '显示 ${rows.length} 件未持有装备',
+            key: const Key('unowned-equipment-summary'),
+            style: const TextStyle(
+              color: Color(0xffb8c9d2),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            children: [
+              for (final entry in groups.entries)
+                _UnownedGroup(
+                  title: entry.value.first.typeName,
+                  count: entry.value.length,
+                  children: [
+                    for (final row in entry.value)
+                      _UnownedEquipmentCard(row: row),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UnownedGroup extends StatelessWidget {
+  const _UnownedGroup({
+    required this.title,
+    required this.count,
+    required this.children,
+  });
+  final String title;
+  final int count;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => ExpansionTile(
+    initiallyExpanded: true,
+    tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+    title: Text(
+      '$title ($count)',
+      style: const TextStyle(fontWeight: FontWeight.w800),
+    ),
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+        child: Wrap(spacing: 8, runSpacing: 8, children: children),
+      ),
+    ],
+  );
+}
+
+class _UnownedShipCard extends StatelessWidget {
+  const _UnownedShipCard({
+    required this.state,
+    required this.row,
+    required this.excluded,
+    this.onChanged,
+  });
+  final GameState state;
+  final UnownedShipFamilyRow row;
+  final bool excluded;
+  final ValueChanged<bool?>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: Key('unowned-ship-${row.familyRootId}'),
+    width: 210,
+    padding: const EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: const Color(0xff102b39),
+      border: Border.all(color: const Color(0xff315064)),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: ShipPortrait(
+            ship: row.master,
+            serverOrigin: state.serverOrigin,
+            width: 78,
+            height: 51,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                row.master.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                row.typeName,
+                style: const TextStyle(color: Color(0xff8fa9b7), fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        Checkbox(value: excluded, onChanged: onChanged),
+      ],
+    ),
+  );
+}
+
+class _UnownedEquipmentCard extends StatelessWidget {
+  const _UnownedEquipmentCard({required this.row});
+  final UnownedEquipmentRow row;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: Key('unowned-equipment-${row.master.id}'),
+    width: 210,
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: const Color(0xff102b39),
+      border: Border.all(color: const Color(0xff315064)),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      children: [
+        _EquipmentIcon(master: row.master),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                row.master.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                row.typeName,
+                style: const TextStyle(color: Color(0xff8fa9b7), fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _InventoryDependencies {

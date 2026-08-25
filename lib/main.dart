@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import 'src/battle/battle_controller.dart';
@@ -80,6 +81,10 @@ import 'src/kcwiki_report/kcwiki_report_settings.dart';
 import 'src/kcwiki_report/kcwiki_report_transport.dart';
 import 'src/performance/second_tick_scope.dart';
 import 'src/inventory/owned_inventory_page.dart';
+import 'src/new_ship/new_ship_reminder_controller.dart';
+import 'src/new_ship/new_ship_reminder_store.dart';
+import 'src/notification/game_notification_coordinator.dart';
+import 'src/notification/notification_models.dart';
 import 'src/improvement/improvement_dataset_store.dart';
 import 'src/improvement/improvement_dataset_update_service.dart';
 import 'src/improvement/improvement_favorites_store.dart';
@@ -113,7 +118,6 @@ import 'src/settings/game_rendering_mode_controller.dart';
 import 'src/settings/game_rendering_mode.dart';
 import 'src/settings/notification_settings_controller.dart';
 import 'src/settings/notification_settings_store.dart';
-import 'src/notification/game_notification_coordinator.dart';
 import 'src/notification/method_channel_notification_port.dart';
 import 'src/notification/notification_timer_anchor_store.dart';
 import 'src/senka/senka_controller.dart';
@@ -324,6 +328,26 @@ Future<void> main() async {
     gameState: () => gameStateController.state,
     waitForGameState: () => gameStateController.idle,
   );
+  late final GameNotificationCoordinator notificationCoordinator;
+  final newShipReminderController = NewShipReminderController(
+    stateProvider: () => gameStateController.state,
+    store: NewShipReminderStore(await SharedPreferences.getInstance()),
+    onPublish: (alert) {
+      final state = gameStateController.state;
+      final names = alert.masterIds
+          .map((id) => state.masterShips[id]?.name ?? '舰娘 No.$id')
+          .join('、');
+      notificationCoordinator.enqueueImmediateAlert(
+        ImmediateNotificationItem(
+          key: 'new-ship:${alert.key}',
+          type: GameNotificationType.newShip,
+          occurredAt: alert.occurredAt,
+          title: '发现未持有舰娘',
+          body: names,
+        ),
+      );
+    },
+  );
   final gameApiEventPipeline = GameApiEventPipeline(
     consumers: <GameApiEventConsumer>[
       gameStateController,
@@ -331,6 +355,7 @@ Future<void> main() async {
       gameResourceManifestConsumer,
       senkaController,
       battleController,
+      newShipReminderController,
     ],
   );
   final gameCaptureController = GameCaptureController(
@@ -433,7 +458,7 @@ Future<void> main() async {
   const notificationTimerAnchorStore =
       SharedPreferencesNotificationTimerAnchorStore();
   final notificationTimerAnchors = await notificationTimerAnchorStore.load();
-  final notificationCoordinator = GameNotificationCoordinator(
+  notificationCoordinator = GameNotificationCoordinator(
     gameStateController: gameStateController,
     settingsController: notificationSettingsController,
     notificationPort: const MethodChannelNotificationPort(),
@@ -466,6 +491,7 @@ Future<void> main() async {
       kcwikiReportController: kcwikiReportController,
       kcwikiReportConsumer: kcwikiReportConsumer,
       gameStateController: gameStateController,
+      newShipReminderController: newShipReminderController,
       moraleRecoveryTimerController:
           notificationCoordinator.moraleRecoveryTimerController,
       gameResourceCacheController: gameResourceCacheController,
@@ -544,6 +570,7 @@ class YahagiApp extends StatelessWidget {
     required this.toolbarController,
     required this.gameCaptureController,
     this.gameApiEventPipeline,
+    this.newShipReminderController,
     this.kcwikiReportController,
     this.kcwikiReportConsumer,
     required this.gameStateController,
@@ -584,6 +611,7 @@ class YahagiApp extends StatelessWidget {
   final GameToolbarController toolbarController;
   final GameCaptureController gameCaptureController;
   final GameApiEventPipeline? gameApiEventPipeline;
+  final NewShipReminderController? newShipReminderController;
   final KcwikiReportController? kcwikiReportController;
   final KcwikiReportConsumer? kcwikiReportConsumer;
   final GameStateController gameStateController;
@@ -679,6 +707,7 @@ class YahagiApp extends StatelessWidget {
                   kcwikiReportController: kcwikiReportController,
                   kcwikiReportConsumer: kcwikiReportConsumer,
                   gameStateController: gameStateController,
+                  newShipReminderController: newShipReminderController,
                   moraleRecoveryTimerController: moraleRecoveryTimerController,
                   gameResourceCacheController: gameResourceCacheController,
                   senkaController: senkaController,
@@ -824,6 +853,7 @@ class YahagiShell extends StatefulWidget {
     this.kcwikiReportController,
     this.kcwikiReportConsumer,
     required this.gameStateController,
+    this.newShipReminderController,
     this.moraleRecoveryTimerController,
     this.gameResourceCacheController,
     this.senkaController,
@@ -862,6 +892,7 @@ class YahagiShell extends StatefulWidget {
   final KcwikiReportController? kcwikiReportController;
   final KcwikiReportConsumer? kcwikiReportConsumer;
   final GameStateController gameStateController;
+  final NewShipReminderController? newShipReminderController;
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final GameResourceCacheController? gameResourceCacheController;
   final SenkaController? senkaController;
@@ -891,6 +922,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   int? _repairCenterInitialFleetId;
   int? _questCenterInitialQuestId;
   bool _inventoryShowShips = true;
+  bool _inventoryShowOwned = true;
+  bool _newShipDialogScheduled = false;
   int _logbookTabIndex = 0;
   int _settingsTabIndex = 0;
   RepairCenterMode _repairCenterMode = RepairCenterMode.dock;
@@ -909,6 +942,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     widget.displayModeController.addListener(_applyOrientationPolicy);
     widget.layoutSettingsController.addListener(_onLayoutSettingsChanged);
+    widget.newShipReminderController?.addListener(_handleNewShipAlert);
     if (widget.backgroundGameRetentionController case final controller?) {
       _backgroundGameRetentionCoordinator = BackgroundGameRetentionCoordinator(
         controller: controller,
@@ -925,12 +959,43 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   void dispose() {
     widget.displayModeController.removeListener(_applyOrientationPolicy);
     widget.layoutSettingsController.removeListener(_onLayoutSettingsChanged);
+    widget.newShipReminderController?.removeListener(_handleNewShipAlert);
     widget.kcwikiReportConsumer?.dispose();
     _questFilters.dispose();
     _windowMetricsRecoveryScheduler.dispose();
     _backgroundGameRetentionCoordinator?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _handleNewShipAlert() {
+    final controller = widget.newShipReminderController;
+    final alert = controller?.currentAlert;
+    if (alert == null || _newShipDialogScheduled || !mounted) return;
+    _newShipDialogScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final state = widget.gameStateController.state;
+      final names = alert.masterIds
+          .map((id) => state.masterShips[id]?.name ?? '舰娘 No.$id')
+          .toList(growable: false);
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          key: const Key('new-ship-alert-dialog'),
+          title: const Text('发现未持有舰娘'),
+          content: Text(names.join('、')),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('知道了'),
+            ),
+          ],
+        ),
+      );
+      controller?.acknowledge(alert.key);
+      _newShipDialogScheduled = false;
+    });
   }
 
   @override
@@ -1236,6 +1301,12 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                       });
                                     },
                                     inventoryShowShips: _inventoryShowShips,
+                                    inventoryShowOwned: _inventoryShowOwned,
+                                    onInventoryOwnershipChanged: (value) {
+                                      setState(
+                                        () => _inventoryShowOwned = value,
+                                      );
+                                    },
                                     onInventorySectionChanged: (value) {
                                       setState(
                                         () => _inventoryShowShips = value,
@@ -1629,6 +1700,12 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                         if (_workspaceIndex == 7)
                           OwnedInventoryPage(
                             controller: widget.gameStateController,
+                            reminderController:
+                                widget.newShipReminderController,
+                            showOwned: _inventoryShowOwned,
+                            onOwnershipChanged: (value) {
+                              setState(() => _inventoryShowOwned = value);
+                            },
                             showShips: _inventoryShowShips,
                             onSectionChanged: (value) {
                               setState(() => _inventoryShowShips = value);
