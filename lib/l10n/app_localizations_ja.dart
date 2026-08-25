@@ -913,6 +913,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get backgroundAudioDesc => 'オンにすると、アプリがバックグラウンドに移動してもゲーム音声を再生します。';
 
   @override
+  String get backgroundGameRetention => 'バックグラウンドでゲームを維持';
+
+  @override
+  String get backgroundGameRetentionDesc =>
+      'バックグラウンドに移動したとき常駐通知を表示し、ゲームセッションがシステムに終了されにくくします。電池消費が増える場合があります。';
+
+  @override
+  String get backgroundGameRetentionNotificationTitle => '矢矧はバックグラウンドで実行中';
+
+  @override
+  String get backgroundGameRetentionNotificationBody =>
+      'ゲームセッションを維持中 · タップしてゲームに戻る';
+
+  @override
   String get screenAwake => '画面を常にオン';
 
   @override

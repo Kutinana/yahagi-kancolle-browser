@@ -28,6 +28,7 @@ import 'network_settings_page_new.dart';
 import 'data_settings_page.dart';
 import 'about_support_settings_page.dart';
 import 'battle_prediction_settings.dart';
+import 'background_game_retention_controller.dart';
 import 'game_frame_rate_settings.dart';
 import 'game_rendering_mode_controller.dart';
 import 'game_connector_controller.dart';
@@ -49,6 +50,7 @@ class SettingsPage extends StatelessWidget {
     this.gameResourceCacheController,
     required this.safetySettingsController,
     this.notificationSettingsController,
+    this.backgroundGameRetentionController,
     required this.currentVersion,
     this.releaseChecker,
     this.screenAwakeController,
@@ -81,6 +83,7 @@ class SettingsPage extends StatelessWidget {
   final GameResourceCacheController? gameResourceCacheController;
   final SafetySettingsController safetySettingsController;
   final NotificationSettingsController? notificationSettingsController;
+  final BackgroundGameRetentionController? backgroundGameRetentionController;
   final bool showTitle;
   final String currentVersion;
   final ReleaseChecker? releaseChecker;
@@ -107,6 +110,7 @@ class SettingsPage extends StatelessWidget {
           layoutSettingsController: layoutSettingsController,
           displayModeController: displayModeController,
           audioController: audioController,
+          backgroundGameRetentionController: backgroundGameRetentionController,
           toolbarDisplayController: toolbarDisplayController,
           gameFrameRateSettingsController: gameFrameRateSettingsController,
           screenAwakeController: screenAwakeController,

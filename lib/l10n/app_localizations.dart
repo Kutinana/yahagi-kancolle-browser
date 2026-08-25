@@ -1851,6 +1851,30 @@ abstract class AppLocalizations {
   /// **'开启后，应用进入后台时游戏声音仍会继续播放。'**
   String get backgroundAudioDesc;
 
+  /// No description provided for @backgroundGameRetention.
+  ///
+  /// In zh, this message translates to:
+  /// **'后台保持游戏'**
+  String get backgroundGameRetention;
+
+  /// No description provided for @backgroundGameRetentionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入后台时显示常驻通知以降低游戏会话被系统回收的概率，可能增加耗电。'**
+  String get backgroundGameRetentionDesc;
+
+  /// No description provided for @backgroundGameRetentionNotificationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'矢矧正在后台运行'**
+  String get backgroundGameRetentionNotificationTitle;
+
+  /// No description provided for @backgroundGameRetentionNotificationBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'游戏会话保持中 · 点击返回游戏'**
+  String get backgroundGameRetentionNotificationBody;
+
   /// No description provided for @screenAwake.
   ///
   /// In zh, this message translates to:

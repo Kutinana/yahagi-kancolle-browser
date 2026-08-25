@@ -3,6 +3,7 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../audio/game_audio_controller.dart';
 import '../browser/game_toolbar_display_controller.dart';
+import 'background_game_retention_controller.dart';
 import 'display_mode_controller.dart';
 import 'display_mode_section.dart';
 import 'game_frame_rate_settings.dart';
@@ -19,6 +20,7 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
     required this.layoutSettingsController,
     required this.displayModeController,
     this.audioController,
+    this.backgroundGameRetentionController,
     this.toolbarDisplayController,
     this.gameFrameRateSettingsController,
     this.screenAwakeController,
@@ -29,6 +31,7 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final LayoutSettingsController layoutSettingsController;
   final DisplayModeController displayModeController;
   final GameAudioController? audioController;
+  final BackgroundGameRetentionController? backgroundGameRetentionController;
   final GameToolbarDisplayController? toolbarDisplayController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final ScreenAwakeController? screenAwakeController;
@@ -207,6 +210,22 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                         value: audio.backgroundPlaybackEnabled,
                         onChanged: audio.setBackgroundPlaybackEnabled,
                       ),
+                      if (backgroundGameRetentionController
+                          case final retention?) ...<Widget>[
+                        const Divider(color: Color(0xff294052), height: 1),
+                        AnimatedBuilder(
+                          animation: retention,
+                          builder: (context, _) => buildSwitchTile(
+                            title: l10n.backgroundGameRetention,
+                            titleKey: const Key(
+                              'settings-background-game-retention',
+                            ),
+                            subtitle: l10n.backgroundGameRetentionDesc,
+                            value: retention.enabled,
+                            onChanged: retention.setEnabled,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

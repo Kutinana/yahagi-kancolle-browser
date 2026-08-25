@@ -906,6 +906,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backgroundAudioDesc => '开启后，应用进入后台时游戏声音仍会继续播放。';
 
   @override
+  String get backgroundGameRetention => '后台保持游戏';
+
+  @override
+  String get backgroundGameRetentionDesc =>
+      '进入后台时显示常驻通知以降低游戏会话被系统回收的概率，可能增加耗电。';
+
+  @override
+  String get backgroundGameRetentionNotificationTitle => '矢矧正在后台运行';
+
+  @override
+  String get backgroundGameRetentionNotificationBody => '游戏会话保持中 · 点击返回游戏';
+
+  @override
   String get screenAwake => '屏幕常亮';
 
   @override
@@ -2929,6 +2942,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backgroundAudioDesc => '開啟後，應用程式進入背景時遊戲聲音仍會繼續播放。';
+
+  @override
+  String get backgroundGameRetention => '背景保持遊戲';
+
+  @override
+  String get backgroundGameRetentionDesc =>
+      '進入背景時顯示常駐通知，以降低遊戲工作階段被系統回收的機率，可能增加耗電。';
+
+  @override
+  String get backgroundGameRetentionNotificationTitle => '矢矧正在背景執行';
+
+  @override
+  String get backgroundGameRetentionNotificationBody => '正在保持遊戲工作階段 · 點擊返回遊戲';
 
   @override
   String get screenAwake => '螢幕保持開啟';
