@@ -161,6 +161,38 @@ void main() {
   });
 
   test(
+    'a hung background decode falls back synchronously and preserves order',
+    () async {
+      final consumer = _RecordingConsumer();
+      final observer = _RecordingPipelineObserver();
+      final never = Completer<Map<String, Object?>>();
+      var syncCalls = 0;
+      final pipeline = GameApiEventPipeline(
+        consumers: <GameApiEventConsumer>[consumer],
+        observer: observer,
+        decodeEnvelope: (_) => never.future,
+        decodeSmallEnvelope: (body) {
+          syncCalls += 1;
+          return GameApiDecoder.decodeEnvelope(body);
+        },
+        backgroundDecodeTimeout: const Duration(milliseconds: 10),
+      );
+
+      pipeline
+        ..add(_event('/kcsapi/api_start2/getData', _body(1), sequence: 1))
+        ..add(_event('/kcsapi/api_port/port', _body(2), sequence: 2));
+      await pipeline.idle.timeout(const Duration(seconds: 1));
+
+      expect(consumer.events.map((event) => event.sequence), <int>[1, 2]);
+      expect(syncCalls, 2);
+      expect(observer.timings.first.usedSynchronousFallback, isTrue);
+      expect(pipeline.pendingEventCount, 0);
+      expect(pipeline.activePath, isNull);
+      expect(pipeline.backgroundFallbackCount, 1);
+    },
+  );
+
+  test(
     'decode failure dispatches the original event and queue recovers',
     () async {
       final consumer = _RecordingConsumer();
@@ -184,6 +216,47 @@ void main() {
       expect(consumer.events.last.hasDecodedEnvelope, isTrue);
     },
   );
+
+  test('a failed synchronous fallback releases the following event', () async {
+    final consumer = _RecordingConsumer();
+    final pipeline = GameApiEventPipeline(
+      consumers: <GameApiEventConsumer>[consumer],
+      decodeEnvelope: (_) => Completer<Map<String, Object?>>().future,
+      decodeSmallEnvelope: (body) {
+        if (body == 'broken') throw const FormatException('broken');
+        return GameApiDecoder.decodeEnvelope(body);
+      },
+      backgroundDecodeTimeout: const Duration(milliseconds: 10),
+    );
+
+    pipeline
+      ..add(_event('/kcsapi/api_start2/getData', 'broken', sequence: 1))
+      ..add(_event('/kcsapi/api_port/port', _body(2), sequence: 2));
+    await pipeline.idle.timeout(const Duration(seconds: 1));
+
+    expect(consumer.events.map((event) => event.sequence), <int>[1, 2]);
+    expect(consumer.events.first.hasDecodedEnvelope, isFalse);
+    expect(consumer.events.last.hasDecodedEnvelope, isTrue);
+    expect(pipeline.pendingEventCount, 0);
+  });
+
+  test('pending depth is accurate without a diagnostic observer', () async {
+    final decode = Completer<Map<String, Object?>>();
+    final pipeline = GameApiEventPipeline(
+      consumers: <GameApiEventConsumer>[_RecordingConsumer()],
+      decodeEnvelope: (_) => decode.future,
+    );
+
+    pipeline.add(_event('/kcsapi/api_start2/getData', _body(1)));
+    expect(pipeline.pendingEventCount, 1);
+    await Future<void>.delayed(Duration.zero);
+    expect(pipeline.activePath, '/kcsapi/api_start2/getData');
+
+    decode.complete(GameApiDecoder.decodeEnvelope(_body(1)));
+    await pipeline.idle;
+    expect(pipeline.pendingEventCount, 0);
+    expect(pipeline.activePath, isNull);
+  });
 
   test('dispatch does not wait for a consumer database queue', () async {
     final consumer = _BlockingConsumer();
