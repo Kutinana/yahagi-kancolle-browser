@@ -5,6 +5,7 @@ import 'quest_text_normalizer.dart';
 class GameStateSerializer {
   static String serialize(GameState state) {
     return jsonEncode({
+      'memberId': state.memberId,
       'admiralLevel': state.admiralLevel,
       'resources': state.resources.map(
         (k, v) => MapEntry(k.apiId.toString(), v),
@@ -122,9 +123,13 @@ class GameStateSerializer {
           'id': v.id,
           'name': v.name,
           'shipTypeId': v.shipTypeId,
+          'afterShipId': v.afterShipId,
           'buildTimeMinutes': v.buildTimeMinutes,
           'sortNo': v.sortNo,
         }),
+      ),
+      'masterSlotItemTypes': state.masterSlotItemTypes.map(
+        (key, value) => MapEntry(key.toString(), value),
       ),
       'ships': state.ships.map(
         (k, v) => MapEntry(k.toString(), {
@@ -386,9 +391,21 @@ class GameStateSerializer {
               id: id,
               name: _string(v['name']),
               shipTypeId: _int(v['shipTypeId']) ?? 0,
+              afterShipId: _int(v['afterShipId']) ?? 0,
               buildTimeMinutes: _int(v['buildTimeMinutes']) ?? 0,
               sortNo: _int(v['sortNo']) ?? 0,
             );
+          }
+        }
+      }
+
+      final masterSlotItemTypes = <int, String>{};
+      final rawMasterSlotItemTypes = map['masterSlotItemTypes'];
+      if (rawMasterSlotItemTypes is Map) {
+        for (final entry in rawMasterSlotItemTypes.entries) {
+          final id = int.tryParse('${entry.key}');
+          if (id != null && id > 0) {
+            masterSlotItemTypes[id] = _string(entry.value);
           }
         }
       }
@@ -410,7 +427,8 @@ class GameStateSerializer {
               currentFuel: 100,
               currentAmmo: 100,
               slotIds: const [],
-              repairDurationMilliseconds: _int(v['repairDurationMilliseconds']) ?? 0,
+              repairDurationMilliseconds:
+                  _int(v['repairDurationMilliseconds']) ?? 0,
               repairFuelCost: _int(v['repairFuelCost']) ?? 0,
               repairSteelCost: _int(v['repairSteelCost']) ?? 0,
             );
@@ -420,6 +438,7 @@ class GameStateSerializer {
 
       final updatedAt = _int(map['updatedAt']);
       return GameState(
+        memberId: _int(map['memberId']) ?? 0,
         admiralLevel: _int(map['admiralLevel']) ?? 0,
         resources: resources,
         useItems: useItems,
@@ -438,6 +457,7 @@ class GameStateSerializer {
         landBases: landBases,
         masterMissions: masterMissions,
         masterShips: masterShips,
+        masterSlotItemTypes: masterSlotItemTypes,
         ships: ships,
         updatedAt: updatedAt != null
             ? DateTime.fromMillisecondsSinceEpoch(updatedAt)

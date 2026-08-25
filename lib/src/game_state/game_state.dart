@@ -44,6 +44,7 @@ class MasterShip {
     required this.id,
     required this.name,
     required this.shipTypeId,
+    this.afterShipId = 0,
     this.sortNo = 0,
     this.classTypeId = 0,
     this.speed = 0,
@@ -62,6 +63,7 @@ class MasterShip {
   final int id;
   final String name;
   final int shipTypeId;
+  final int afterShipId;
   final int sortNo;
   final int classTypeId;
   final int speed;
@@ -81,6 +83,7 @@ class MasterShip {
       id: id,
       name: name,
       shipTypeId: shipTypeId,
+      afterShipId: afterShipId,
       sortNo: sortNo,
       classTypeId: classTypeId,
       speed: speed,
@@ -796,6 +799,7 @@ class GameState {
   };
 
   const GameState({
+    this.memberId = 0,
     this.admiralLevel = 0,
     this.maxShipCount,
     this.maxEquipmentCount,
@@ -807,6 +811,7 @@ class GameState {
     this.masterShipTypes = const <int, MasterShipType>{},
     this.masterShips = const <int, MasterShip>{},
     this.masterSlotItems = const <int, MasterSlotItem>{},
+    this.masterSlotItemTypes = const <int, String>{},
     this.masterMissions = const <int, MasterMission>{},
     this.masterMapInfos = const <int, MasterMapInfo>{},
     Map<int, int> mapDifficulties = const <int, int>{},
@@ -841,6 +846,7 @@ class GameState {
 
   static const GameState empty = GameState();
 
+  final int memberId;
   final int admiralLevel;
   final int? maxShipCount;
   final int? maxEquipmentCount;
@@ -852,6 +858,7 @@ class GameState {
   final Map<int, MasterShipType> masterShipTypes;
   final Map<int, MasterShip> masterShips;
   final Map<int, MasterSlotItem> masterSlotItems;
+  final Map<int, String> masterSlotItemTypes;
   final Map<int, MasterMission> masterMissions;
   final Map<int, MasterMapInfo> masterMapInfos;
   final Map<int, int>? _mapDifficulties;
@@ -939,6 +946,7 @@ class GameState {
   }
 
   GameState copyWith({
+    int? memberId,
     int? admiralLevel,
     int? maxShipCount,
     int? maxEquipmentCount,
@@ -950,6 +958,7 @@ class GameState {
     Map<int, MasterShipType>? masterShipTypes,
     Map<int, MasterShip>? masterShips,
     Map<int, MasterSlotItem>? masterSlotItems,
+    Map<int, String>? masterSlotItemTypes,
     Map<int, MasterMission>? masterMissions,
     Map<int, MasterMapInfo>? masterMapInfos,
     Map<int, int>? mapDifficulties,
@@ -972,6 +981,7 @@ class GameState {
     DateTime? updatedAt,
   }) {
     return GameState(
+      memberId: memberId ?? this.memberId,
       admiralLevel: admiralLevel ?? this.admiralLevel,
       maxShipCount: maxShipCount ?? this.maxShipCount,
       maxEquipmentCount: maxEquipmentCount ?? this.maxEquipmentCount,
@@ -983,6 +993,7 @@ class GameState {
       masterShipTypes: masterShipTypes ?? this.masterShipTypes,
       masterShips: masterShips ?? this.masterShips,
       masterSlotItems: masterSlotItems ?? this.masterSlotItems,
+      masterSlotItemTypes: masterSlotItemTypes ?? this.masterSlotItemTypes,
       masterMissions: masterMissions ?? this.masterMissions,
       masterMapInfos: masterMapInfos ?? this.masterMapInfos,
       mapDifficulties: mapDifficulties ?? this.mapDifficulties,

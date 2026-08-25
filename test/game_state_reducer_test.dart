@@ -67,14 +67,39 @@ void main() {
       final state = GameStateReducer().reduce(
         GameState.empty,
         kcsapiEvent('/kcsapi/api_get_member/basic', <String, Object?>{
+          'api_member_id': 90001,
           'api_level': 120,
           'api_max_chara': 310,
           'api_max_slotitem': 1499,
         }),
       );
 
+      expect(state.memberId, 90001);
       expect(state.maxShipCount, 310);
       expect(state.maxEquipmentCount, 1502);
+    });
+
+    test('start2 captures remodel successor and equipment type names', () {
+      final state = GameStateReducer().reduce(
+        GameState.empty,
+        kcsapiEvent('/kcsapi/api_start2/getData', <String, Object?>{
+          'api_mst_stype': <Object?>[],
+          'api_mst_ship': <Object?>[
+            <String, Object?>{
+              'api_id': 1,
+              'api_name': '夕立',
+              'api_stype': 2,
+              'api_aftershipid': '2',
+            },
+          ],
+          'api_mst_slotitem_equiptype': <Object?>[
+            <String, Object?>{'api_id': 1, 'api_name': '小口径主炮'},
+          ],
+        }),
+      );
+
+      expect(state.masterShips[1]?.afterShipId, 2);
+      expect(state.masterSlotItemTypes[1], '小口径主炮');
     });
 
     test('start2 captures base ASW and resolved per-ship equip types', () {

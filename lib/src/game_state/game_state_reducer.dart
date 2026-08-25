@@ -1077,6 +1077,7 @@ class GameStateReducer {
         id: id,
         name: name,
         shipTypeId: shipTypeId,
+        afterShipId: _asInt(item['api_aftershipid']),
         sortNo: _asInt(item['api_sortno']),
         classTypeId: _asInt(item['api_ctype']),
         speed: _asInt(item['api_soku']),
@@ -1099,6 +1100,9 @@ class GameStateReducer {
       masterSlotItems: _parseMasterSlotItems(
         _optionalList(data['api_mst_slotitem']),
       ),
+      masterSlotItemTypes: _parseIdNameMap(
+        _optionalList(data['api_mst_slotitem_equiptype']),
+      ),
       masterMissions: _parseMasterMissions(
         _optionalList(data['api_mst_mission']),
       ),
@@ -1117,6 +1121,7 @@ class GameStateReducer {
     CapturedApiEvent event,
     String origin,
   ) => state.copyWith(
+    memberId: _asInt(basic['api_member_id']),
     admiralLevel: _asInt(basic['api_level']),
     maxShipCount: basic.containsKey('api_max_chara')
         ? _asInt(basic['api_max_chara'])
@@ -1141,6 +1146,7 @@ class GameStateReducer {
   }) {
     final basic = _optionalMap(data['api_basic']);
     return state.copyWith(
+      memberId: basic == null ? null : _asInt(basic['api_member_id']),
       admiralLevel: basic == null ? null : _asInt(basic['api_level']),
       maxShipCount: basic?.containsKey('api_max_chara') == true
           ? _asInt(basic!['api_max_chara'])
@@ -1629,6 +1635,19 @@ class GameStateReducer {
         range: _asInt(item['api_leng']),
         type: _intList(item['api_type'], includeNonPositive: true),
       );
+    }
+    return result;
+  }
+
+  Map<int, String> _parseIdNameMap(List<Object?> values) {
+    final result = <int, String>{};
+    for (final value in values) {
+      final item = _optionalMap(value);
+      final id = _asInt(item?['api_id']);
+      final name = _asString(item?['api_name']);
+      if (item != null && id > 0 && name.isNotEmpty) {
+        result[id] = name;
+      }
     }
     return result;
   }

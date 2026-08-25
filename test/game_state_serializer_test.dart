@@ -3,6 +3,24 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_serializer.dart';
 
 void main() {
+  test('new-ship identity metadata survives cache serialization', () {
+    const state = GameState(
+      memberId: 90001,
+      masterShips: <int, MasterShip>{
+        1: MasterShip(id: 1, name: '夕立', shipTypeId: 2, afterShipId: 2),
+      },
+      masterSlotItemTypes: <int, String>{1: '小口径主炮'},
+    );
+
+    final restored = GameStateSerializer.deserialize(
+      GameStateSerializer.serialize(state),
+    );
+
+    expect(restored.memberId, 90001);
+    expect(restored.masterShips[1]?.afterShipId, 2);
+    expect(restored.masterSlotItemTypes[1], '小口径主炮');
+  });
+
   test('land-base cache keeps identity but drops sortie-only hp', () {
     const state = GameState(
       landBases: <LandBaseState>[
