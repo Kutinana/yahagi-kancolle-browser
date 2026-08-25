@@ -160,6 +160,13 @@ void main() {
       'notificationAnchorage',
       'notificationRepair',
       'notificationConstruction',
+      // Collection-state and exclusion actions use the same established
+      // wording in both Chinese scripts.
+      'inventoryOwned',
+      'inventoryUnowned',
+      'clearNewShipExclusions',
+      'otherType',
+      'acknowledge',
       // “最小/最大” are standard range labels shared by both Chinese scripts.
       'minimumValue',
       'maximumValue',
