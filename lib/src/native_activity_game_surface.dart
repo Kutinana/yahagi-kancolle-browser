@@ -14,6 +14,7 @@ import 'browser/game_frame_rate_runtime_controller.dart';
 import 'browser/game_initial_address.dart';
 import 'browser/game_frame_reload_port.dart';
 import 'browser/game_toolbar_controller.dart';
+import 'browser/native_game_surface_preview.dart';
 import 'browser/native_game_surface_slot.dart';
 import 'browser/native_game_webview_contract.dart';
 import 'browser/native_game_webview_port.dart';
@@ -182,6 +183,8 @@ final class _BoundsRecoveringNativeActivityGameWebViewPort
 
 typedef NativeActivityGameWebViewPortFactory =
     NativeActivityGameWebViewPort Function();
+typedef NativeGameSurfacePreviewDecoder =
+    Future<ImageProvider> Function(Uint8List bytes, BuildContext context);
 
 final class NativeActivityGameSurface extends StatefulWidget {
   NativeActivityGameSurface({
@@ -197,6 +200,8 @@ final class NativeActivityGameSurface extends StatefulWidget {
     this.frameRateSettingsController,
     this.kcwikiReportController,
     this.frameRateRuntimePortFactory,
+    this.previewPort,
+    this.previewDecoder,
     this.portFactory,
     this.startupOrchestrator,
     this.cleanupTimeout,
@@ -225,6 +230,8 @@ final class NativeActivityGameSurface extends StatefulWidget {
   final GameFrameRateSettingsController? frameRateSettingsController;
   final KcwikiReportController? kcwikiReportController;
   final GameFrameRateRuntimePort Function()? frameRateRuntimePortFactory;
+  final NativeGameSurfacePreviewPort? previewPort;
+  final NativeGameSurfacePreviewDecoder? previewDecoder;
   final NativeActivityGameWebViewPortFactory? portFactory;
   final GameSurfaceStartupOrchestrator? startupOrchestrator;
   final Duration? cleanupTimeout;
@@ -283,6 +290,8 @@ final class _NativeActivityGameSurfaceState
   late bool _kcwikiReportingEnabled;
   GameStartupState _startupState = GameStartupState.loadingSettings;
   String _startupErrorMessage = '';
+  ImageProvider? _popupPreview;
+  int _popupPreviewGeneration = 0;
 
   @override
   void initState() {
@@ -943,6 +952,43 @@ final class _NativeActivityGameSurfaceState
     await _requestVisibility();
   }
 
+  Future<void> _preparePopupPreview() async {
+    final generation = ++_popupPreviewGeneration;
+    final previewPort =
+        widget.previewPort ?? const MethodChannelNativeGameSurfacePreviewPort();
+    try {
+      final bytes = await previewPort.capturePreview().timeout(_cleanupTimeout);
+      if (!mounted || generation != _popupPreviewGeneration) return;
+      final decoder = widget.previewDecoder ?? _decodePopupPreview;
+      final provider = await decoder(bytes, context);
+      if (!mounted || generation != _popupPreviewGeneration) return;
+      setState(() => _popupPreview = provider);
+      await WidgetsBinding.instance.endOfFrame;
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Native game popup preview capture failed: $error\n$stackTrace',
+      );
+    }
+  }
+
+  Future<ImageProvider> _decodePopupPreview(
+    Uint8List bytes,
+    BuildContext context,
+  ) async {
+    final provider = MemoryImage(bytes);
+    await precacheImage(provider, context);
+    return provider;
+  }
+
+  void _cancelPopupPreviewPreparation() {
+    _popupPreviewGeneration++;
+  }
+
+  void _clearPopupPreview() {
+    if (!mounted || _popupPreview == null) return;
+    setState(() => _popupPreview = null);
+  }
+
   Future<void> _requestVisibility({bool force = false}) {
     _visibilityRevision += 1;
     _forceVisibilityWrite = _forceVisibilityWrite || force;
@@ -1204,7 +1250,20 @@ final class _NativeActivityGameSurfaceState
           onVisibilityChanged: _visibilitySink,
           routeObserver: widget.routeObserver,
           boundsSinkIdentity: _port ?? this,
+          onBeforePopupRouteHidden: _preparePopupPreview,
+          onPopupRouteRevealStarted: _cancelPopupPreviewPreparation,
+          onAfterPopupRouteRevealed: _clearPopupPreview,
         ),
+        if (_popupPreview case final preview?)
+          Positioned.fill(
+            child: Image(
+              key: const Key('native-game-surface-popup-preview'),
+              image: preview,
+              fit: BoxFit.fill,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.low,
+            ),
+          ),
         if (_startupState != GameStartupState.ready)
           Positioned.fill(
             child: ColoredBox(
@@ -1288,6 +1347,8 @@ final class _NativeActivityGameSurfaceState
   @override
   void dispose() {
     _active = false;
+    _popupPreviewGeneration++;
+    _popupPreview = null;
     _windowMetricsRecoveryScheduler.dispose();
     WidgetsBinding.instance.removeObserver(this);
     widget.onGenerationChanged?.call(-1);

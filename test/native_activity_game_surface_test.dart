@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +16,7 @@ import 'package:yahagi_kancolle_browser/src/browser/game_frame_reload_port.dart'
 import 'package:yahagi_kancolle_browser/src/browser/game_launch_config.dart';
 import 'package:yahagi_kancolle_browser/src/browser/network_proxy_channel.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_surface_slot.dart';
+import 'package:yahagi_kancolle_browser/src/browser/native_game_surface_preview.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_contract.dart';
 import 'package:yahagi_kancolle_browser/src/browser/native_game_webview_port.dart';
 import 'package:yahagi_kancolle_browser/src/capture/capture_mode.dart';
@@ -31,6 +34,60 @@ import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
 
 void main() {
+  testWidgets(
+    'shows a decoded popup preview while the native surface is hidden',
+    (tester) async {
+      final fixture = _SurfaceFixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester);
+      await tester.pump();
+      fixture.port.addEvent(
+        _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+      );
+      fixture.port.addEvent(
+        _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+      );
+      await _pumpUntil(
+        tester,
+        () => fixture.port.calls.contains('visible:true'),
+      );
+      fixture.port.calls.clear();
+
+      unawaited(
+        fixture.navigatorKey.currentState!.push<void>(
+          RawDialogRoute<void>(
+            pageBuilder: (_, _, _) => const Text('dialog'),
+            barrierDismissible: true,
+            barrierLabel: 'barrier',
+            barrierColor: Colors.black54,
+          ),
+        ),
+      );
+      await _pumpUntil(
+        tester,
+        () => fixture.port.calls.contains('visible:false'),
+      );
+
+      expect(fixture.previewPort.calls, 1);
+      expect(
+        find.byKey(const Key('native-game-surface-popup-preview')),
+        findsOneWidget,
+      );
+
+      fixture.navigatorKey.currentState!.pop();
+      await _pumpUntil(
+        tester,
+        () => fixture.port.calls.contains('visible:true'),
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('native-game-surface-popup-preview')),
+        findsNothing,
+      );
+    },
+  );
+
   test(
     'method-channel native port configures frame bridge before navigation',
     () async {
@@ -2341,8 +2398,9 @@ final class _SurfaceFixture {
   late final GameToolbarController toolbarController;
   final networkSettingsController = _TestNetworkSettingsController();
   final port = _FakeNativePort();
+  final previewPort = _FakePreviewPort();
   final orchestrator = _FakeStartupOrchestrator();
-  final observer = RouteObserver<ModalRoute<dynamic>>();
+  final observer = YahagiGameRouteObserver();
   final navigatorKey = GlobalKey<NavigatorState>();
 
   Future<void> pump(
@@ -2376,6 +2434,8 @@ final class _SurfaceFixture {
             startupOrchestrator: startupOrchestrator ?? orchestrator,
             frameRateSettingsController: frameRateSettingsController,
             frameRateRuntimePortFactory: frameRateRuntimePortFactory,
+            previewPort: previewPort,
+            previewDecoder: (bytes, _) async => MemoryImage(bytes),
             cleanupTimeout: cleanupTimeout,
           ),
         ),
@@ -2388,6 +2448,19 @@ final class _SurfaceFixture {
     browserController.dispose();
     toolbarController.dispose();
     networkSettingsController.dispose();
+  }
+}
+
+final class _FakePreviewPort implements NativeGameSurfacePreviewPort {
+  int calls = 0;
+
+  @override
+  Future<Uint8List> capturePreview() async {
+    calls += 1;
+    return base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC'
+      'AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
   }
 }
 
