@@ -238,6 +238,8 @@ class LandBaseAirGroupRow extends StatelessWidget {
           final portraitSize = fleetStatusPortraitSize(constraints.maxWidth);
           final portraitWidth = portraitSize.width;
           final portraitHeight = portraitSize.height;
+          final hpTrackHeight =
+              fleetStatusMeterHeight(constraints.maxWidth) * 0.45;
           final fatigueFaceSize = (portraitHeight * 0.34)
               .clamp(14.0, 20.0)
               .toDouble();
@@ -265,16 +267,9 @@ class LandBaseAirGroupRow extends StatelessWidget {
                   key: Key('land-base-identity-line-$_keySuffix'),
                   children: <Widget>[
                     Expanded(
-                      child: Text(
-                        base.name,
+                      child: _LandBaseNameChip(
                         key: Key('land-base-name-$_keySuffix'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xffe8f1f5),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                        ),
+                        label: base.name,
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -356,6 +351,8 @@ class LandBaseAirGroupRow extends StatelessWidget {
                       maximumHp: maximumHp,
                       hpRatio: hpRatio,
                       damagePulseMode: damagePulseMode,
+                      trackHeight: hpTrackHeight,
+                      iconKey: Key('land-base-hp-icon-$_keySuffix'),
                       valueKey: Key('land-base-hp-value-$_keySuffix'),
                       trackKey: Key('land-base-hp-meter-$_keySuffix'),
                     ),
@@ -425,6 +422,34 @@ class _LandBaseInfoChip extends StatelessWidget {
   );
 }
 
+class _LandBaseNameChip extends StatelessWidget {
+  const _LandBaseNameChip({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 14,
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    decoration: BoxDecoration(
+      color: const Color(0xff102331),
+      border: Border.all(color: const Color(0xff4c6b84)),
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: Color(0xffe8f1f5),
+        fontSize: 8,
+        height: 1,
+        fontWeight: FontWeight.w900,
+      ),
+    ),
+  );
+}
+
 class _LandBaseActionChip extends StatelessWidget {
   const _LandBaseActionChip({
     super.key,
@@ -462,6 +487,8 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
     required this.maximumHp,
     required this.hpRatio,
     required this.damagePulseMode,
+    required this.trackHeight,
+    required this.iconKey,
     required this.valueKey,
     required this.trackKey,
   });
@@ -470,6 +497,8 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
   final int maximumHp;
   final double hpRatio;
   final DamagePulseMode damagePulseMode;
+  final double trackHeight;
+  final Key iconKey;
   final Key valueKey;
   final Key trackKey;
 
@@ -491,7 +520,12 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
             Row(
               key: valueKey,
               children: <Widget>[
-                Icon(Icons.favorite_rounded, color: hpColor, size: 9),
+                Icon(
+                  Icons.favorite_rounded,
+                  key: iconKey,
+                  color: const Color(0xffef5a5a),
+                  size: 10,
+                ),
                 const SizedBox(width: 3),
                 Expanded(
                   child: FittedBox(
@@ -520,7 +554,7 @@ class _LandBaseStackedHpMeter extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
               child: Container(
                 key: trackKey,
-                height: 4,
+                height: trackHeight,
                 color: const Color(0xff294052),
                 alignment: Alignment.centerLeft,
                 child: FractionallySizedBox(

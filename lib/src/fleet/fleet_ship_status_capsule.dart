@@ -16,6 +16,8 @@ Size fleetStatusPortraitSize(double maxWidth) => maxWidth < 430
     ? const Size(68, 32)
     : const Size(96, 42);
 
+double fleetStatusMeterHeight(double maxWidth) => maxWidth < 430 ? 15 : 16;
+
 class FleetShipStatusCapsule extends StatefulWidget {
   const FleetShipStatusCapsule({
     super.key,
@@ -86,7 +88,7 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
         final narrow = constraints.maxWidth < 430;
         final portraitSize = fleetStatusPortraitSize(constraints.maxWidth);
         final sectionGap = narrow ? 6.0 : (compact ? 8.0 : 12.0);
-        final meterHeight = narrow ? 15.0 : 16.0;
+        final meterHeight = fleetStatusMeterHeight(constraints.maxWidth);
 
         return Container(
           decoration: BoxDecoration(

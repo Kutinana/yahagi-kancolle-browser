@@ -117,6 +117,24 @@ void main() {
       );
       expect(hpMeter.top, greaterThan(hpValue.bottom));
       expect(hpMeter.left, closeTo(hpValue.left, 0.1));
+      expect(hpMeter.height, closeTo(7.2, 0.1));
+
+      final hpIcon = tester.widget<Icon>(
+        find.byKey(const Key('land-base-hp-icon-62-1')),
+      );
+      expect(hpIcon.color, const Color(0xffef5a5a));
+      expect(hpIcon.size, 10);
+
+      expect(name.height, closeTo(action.height, 0.1));
+      expect(name.top, closeTo(action.top, 0.1));
+      final nameContainer = find.descendant(
+        of: find.byKey(const Key('land-base-name-62-1')),
+        matching: find.byType(Container),
+      );
+      expect(
+        tester.widget<Container>(nameContainer).decoration,
+        isA<BoxDecoration>(),
+      );
 
       final slots = <Rect>[
         for (var id = 1; id <= 4; id++)
