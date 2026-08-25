@@ -1733,6 +1733,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get equipmentImprovementProficiency => '改修／熟練度';
 
   @override
+  String get equipmentOfficialId => '公式ID';
+
+  @override
+  String get equipmentInstanceId => 'インスタンスID';
+
+  @override
   String get equipmentUsage => '装備状況';
 
   @override

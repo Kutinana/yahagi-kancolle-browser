@@ -126,7 +126,7 @@ class ExpeditionEvaluator {
             .where(
               (ship) => state
                   .equipmentForShip(ship)
-                  .any((e) => e.owned.masterId == 75),
+                  .any((e) => e.owned.masterSlotItemId == 75),
             )
             .length;
         return [
@@ -270,7 +270,8 @@ class ExpeditionEvaluator {
     }
     final spare = state.slotItems.values.any(
       (item) =>
-          normal.contains(item.masterId) && !usedByFleets.contains(item.id),
+          normal.contains(item.masterSlotItemId) &&
+          !usedByFleets.contains(item.instanceId),
     );
     final normalBonus =
         ExpeditionIncomeCalculator.daihatsuBonusBreakdownForFleet(
@@ -282,7 +283,7 @@ class ExpeditionEvaluator {
       if (master == null || !master.equipTypeIds.contains(24)) return false;
       final occupiedRelevantSlots = ship.slotIds.where((slotId) {
         final item = state.slotItems[slotId];
-        return item != null && related.contains(item.masterId);
+        return item != null && related.contains(item.masterSlotItemId);
       }).length;
       return master.slotCount - occupiedRelevantSlots > 0;
     });
@@ -314,7 +315,7 @@ class ExpeditionEvaluator {
         sum +
         state
             .equipmentForShip(ship)
-            .where((e) => e.owned.masterId == 75)
+            .where((e) => e.owned.masterSlotItemId == 75)
             .length,
   );
 

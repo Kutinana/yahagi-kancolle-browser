@@ -19,6 +19,8 @@ enum ShipInventorySortField {
   lineOfSight,
   equipment,
   locked,
+  officialId,
+  instanceId,
 }
 
 class ShipInventorySortCriterion {
@@ -57,6 +59,24 @@ enum EquipmentInventoryCategory {
   radar,
   landingTransport,
   support,
+}
+
+enum EquipmentInventorySortField { name, total, officialId }
+
+class EquipmentInventorySortCriterion {
+  const EquipmentInventorySortCriterion({
+    required this.field,
+    required this.descending,
+  });
+
+  final EquipmentInventorySortField field;
+  final bool descending;
+
+  EquipmentInventorySortCriterion copyWith({bool? descending}) =>
+      EquipmentInventorySortCriterion(
+        field: field,
+        descending: descending ?? this.descending,
+      );
 }
 
 class ShipInventoryRow {
@@ -248,17 +268,21 @@ class OwnedInventoryProjection {
       ShipInventorySortField.lineOfSight => row.ship.lineOfSight,
       ShipInventorySortField.equipment => row.equipment.length,
       ShipInventorySortField.locked => row.ship.locked ? 1 : 0,
+      ShipInventorySortField.officialId => row.ship.masterId,
+      ShipInventorySortField.instanceId => row.ship.id,
     };
     return value(left).compareTo(value(right));
   }
 
   List<EquipmentInventoryGroup> equipmentGroups({
     EquipmentInventoryCategory category = EquipmentInventoryCategory.all,
+    List<EquipmentInventorySortCriterion> sortCriteria =
+        const <EquipmentInventorySortCriterion>[],
   }) {
     final ownedByMaster = <int, List<OwnedSlotItem>>{};
     for (final item in state.slotItems.values) {
       ownedByMaster
-          .putIfAbsent(item.masterId, () => <OwnedSlotItem>[])
+          .putIfAbsent(item.masterSlotItemId, () => <OwnedSlotItem>[])
           .add(item);
     }
     final equippedByItemId = <int, OwnedShip>{};
@@ -282,7 +306,7 @@ class OwnedInventoryProjection {
       for (final item in entry.value) {
         final variant = (item.level, item.proficiency);
         variantCounts[variant] = (variantCounts[variant] ?? 0) + 1;
-        final ship = equippedByItemId[item.id];
+        final ship = equippedByItemId[item.instanceId];
         if (ship != null) {
           equippedCount++;
           wearingCounts[ship.id] = (wearingCounts[ship.id] ?? 0) + 1;
@@ -326,17 +350,43 @@ class OwnedInventoryProjection {
         ),
       );
     }
-    groups.sort(_compareEquipmentGroups);
+    groups.sort((left, right) {
+      for (final criterion in sortCriteria) {
+        final comparison = _compareEquipmentGroupsByField(
+          left,
+          right,
+          criterion.field,
+        );
+        final directed = criterion.descending ? -comparison : comparison;
+        if (directed != 0) return directed;
+      }
+      return _compareEquipmentGroups(left, right);
+    });
     return groups;
   }
+}
+
+int _compareEquipmentGroupsByField(
+  EquipmentInventoryGroup left,
+  EquipmentInventoryGroup right,
+  EquipmentInventorySortField field,
+) {
+  Comparable<Object> value(EquipmentInventoryGroup group) => switch (field) {
+    EquipmentInventorySortField.name => group.master.name,
+    EquipmentInventorySortField.total => group.total,
+    EquipmentInventorySortField.officialId => group.master.id,
+  };
+  return value(left).compareTo(value(right));
 }
 
 int _compareEquipmentGroups(
   EquipmentInventoryGroup left,
   EquipmentInventoryGroup right,
-) {
-  final leftType = left.master.type;
-  final rightType = right.master.type;
+) => _compareEquipmentMasters(left.master, right.master);
+
+int _compareEquipmentMasters(MasterSlotItem left, MasterSlotItem right) {
+  final leftType = left.type;
+  final rightType = right.type;
   final byBroad = (leftType.isNotEmpty ? leftType[0] : 0).compareTo(
     rightType.isNotEmpty ? rightType[0] : 0,
   );
@@ -345,12 +395,10 @@ int _compareEquipmentGroups(
     rightType.length > 2 ? rightType[2] : 0,
   );
   if (byFine != 0) return byFine;
-  final leftSort = left.master.sortNo > 0 ? left.master.sortNo : left.master.id;
-  final rightSort = right.master.sortNo > 0
-      ? right.master.sortNo
-      : right.master.id;
+  final leftSort = left.sortNo > 0 ? left.sortNo : left.id;
+  final rightSort = right.sortNo > 0 ? right.sortNo : right.id;
   final bySort = leftSort.compareTo(rightSort);
-  return bySort != 0 ? bySort : left.master.id.compareTo(right.master.id);
+  return bySort != 0 ? bySort : left.id.compareTo(right.id);
 }
 
 EquipmentInventoryCategory equipmentInventoryCategoryFor(MasterSlotItem item) {

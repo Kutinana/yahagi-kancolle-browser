@@ -221,4 +221,24 @@ void main() {
       throwsUnsupportedError,
     );
   });
+
+  test('equipment sort state uses the same lock and temporary-key model', () {
+    const state = EquipmentInventorySortState.initial();
+
+    final result = state
+        .longPress(EquipmentInventorySortField.total)
+        .tap(EquipmentInventorySortField.officialId);
+
+    expect(result.lockedCriteria, hasLength(1));
+    expect(
+      result.lockedCriteria.single.field,
+      EquipmentInventorySortField.total,
+    );
+    expect(result.lockedCriteria.single.descending, isTrue);
+    expect(
+      result.activeCriterion?.field,
+      EquipmentInventorySortField.officialId,
+    );
+    expect(result.effectiveCriteria, hasLength(2));
+  });
 }

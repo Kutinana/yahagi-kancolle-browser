@@ -67,7 +67,7 @@ class ExpeditionIncomeCalculator {
       if (ship == null) continue;
       if (ship.masterId == 487) specialShips++;
       for (final equipment in state.equipmentForShip(ship)) {
-        final id = equipment.owned.masterId;
+        final id = equipment.owned.masterSlotItemId;
         if (id == 68 || id == 193) {
           bonus05++;
           if (id == 193) toku++;

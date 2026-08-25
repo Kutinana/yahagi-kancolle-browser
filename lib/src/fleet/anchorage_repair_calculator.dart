@@ -296,7 +296,7 @@ abstract final class AnchorageRepairCalculator {
     ];
     return equipmentIds.where((id) {
       final owned = state.slotItems[id];
-      return owned?.masterId == shipRepairFacilityMasterId;
+      return owned?.masterSlotItemId == shipRepairFacilityMasterId;
     }).length;
   }
 

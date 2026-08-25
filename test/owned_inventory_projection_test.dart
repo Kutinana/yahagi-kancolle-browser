@@ -131,6 +131,37 @@ void main() {
     );
   });
 
+  test('sorts ships by official and instance ids', () {
+    final projection = OwnedInventoryProjection(fixture());
+
+    expect(
+      projection
+          .shipRows(
+            sortCriteria: const <ShipInventorySortCriterion>[
+              ShipInventorySortCriterion(
+                field: ShipInventorySortField.officialId,
+                descending: true,
+              ),
+            ],
+          )
+          .map((row) => row.ship.masterId),
+      <int>[102, 101],
+    );
+    expect(
+      projection
+          .shipRows(
+            sortCriteria: const <ShipInventorySortCriterion>[
+              ShipInventorySortCriterion(
+                field: ShipInventorySortField.instanceId,
+                descending: false,
+              ),
+            ],
+          )
+          .map((row) => row.ship.id),
+      <int>[1, 2],
+    );
+  });
+
   test(
     'groups equipment counts, remaining items, variants and wearing ships',
     () {
@@ -149,6 +180,109 @@ void main() {
       expect(group.wearings.single.count, 2);
     },
   );
+
+  test('keeps matching equipment instances in one official-id group', () {
+    const state = GameState(
+      masterShips: <int, MasterShip>{
+        101: MasterShip(id: 101, name: '大和改二', shipTypeId: 9),
+      },
+      masterSlotItems: <int, MasterSlotItem>{
+        128: MasterSlotItem(
+          id: 128,
+          name: '46cm三連装砲',
+          type: <int>[1, 1, 3, 3, 0],
+        ),
+      },
+      ships: <int, OwnedShip>{
+        1: OwnedShip(id: 1, masterId: 101, level: 99, slotIds: <int>[10521]),
+      },
+      slotItems: <int, OwnedSlotItem>{
+        10521: OwnedSlotItem(
+          instanceId: 10521,
+          masterSlotItemId: 128,
+          level: 10,
+        ),
+        16337: OwnedSlotItem(instanceId: 16337, masterSlotItemId: 128),
+      },
+    );
+
+    final groups = OwnedInventoryProjection(state).equipmentGroups();
+
+    expect(groups, hasLength(1));
+    expect(groups.single.master.id, 128);
+    expect(groups.single.total, 2);
+    expect(groups.single.remaining, 1);
+    expect(groups.single.wearings.single.shipName, '大和改二');
+  });
+
+  test('sorts equipment by total count rather than remaining count', () {
+    const state = GameState(
+      masterShips: <int, MasterShip>{
+        101: MasterShip(id: 101, name: '测试舰', shipTypeId: 2),
+      },
+      masterSlotItems: <int, MasterSlotItem>{
+        201: MasterSlotItem(id: 201, name: '多件全装备', type: <int>[1, 1, 1]),
+        202: MasterSlotItem(id: 202, name: '少件未装备', type: <int>[1, 1, 1]),
+      },
+      ships: <int, OwnedShip>{
+        1: OwnedShip(
+          id: 1,
+          masterId: 101,
+          level: 1,
+          slotIds: <int>[301, 302, 303],
+        ),
+      },
+      slotItems: <int, OwnedSlotItem>{
+        301: OwnedSlotItem(instanceId: 301, masterSlotItemId: 201),
+        302: OwnedSlotItem(instanceId: 302, masterSlotItemId: 201),
+        303: OwnedSlotItem(instanceId: 303, masterSlotItemId: 201),
+        304: OwnedSlotItem(instanceId: 304, masterSlotItemId: 202),
+      },
+    );
+
+    final groups = OwnedInventoryProjection(state).equipmentGroups(
+      sortCriteria: const <EquipmentInventorySortCriterion>[
+        EquipmentInventorySortCriterion(
+          field: EquipmentInventorySortField.total,
+          descending: true,
+        ),
+      ],
+    );
+
+    expect(groups.map((group) => group.master.id), <int>[201, 202]);
+    expect(groups.map((group) => group.total), <int>[3, 1]);
+    expect(groups.map((group) => group.remaining), <int>[0, 1]);
+  });
+
+  test('supports multi-column equipment sorting by name and official id', () {
+    const state = GameState(
+      masterSlotItems: <int, MasterSlotItem>{
+        201: MasterSlotItem(id: 201, name: '同名', type: <int>[1]),
+        202: MasterSlotItem(id: 202, name: '同名', type: <int>[1]),
+        203: MasterSlotItem(id: 203, name: '另一名', type: <int>[1]),
+      },
+      slotItems: <int, OwnedSlotItem>{
+        1: OwnedSlotItem(instanceId: 1, masterSlotItemId: 201),
+        2: OwnedSlotItem(instanceId: 2, masterSlotItemId: 202),
+        3: OwnedSlotItem(instanceId: 3, masterSlotItemId: 203),
+      },
+    );
+
+    final groups = OwnedInventoryProjection(state).equipmentGroups(
+      sortCriteria: const <EquipmentInventorySortCriterion>[
+        EquipmentInventorySortCriterion(
+          field: EquipmentInventorySortField.name,
+          descending: true,
+        ),
+        EquipmentInventorySortCriterion(
+          field: EquipmentInventorySortField.officialId,
+          descending: false,
+        ),
+      ],
+    );
+
+    expect(groups.map((group) => group.master.id), <int>[201, 202, 203]);
+  });
 
   test('sorts equipment groups by official equipment order', () {
     const masters = <int, MasterSlotItem>{

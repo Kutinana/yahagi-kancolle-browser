@@ -44,12 +44,14 @@ void main() {
     expect(find.byKey(const Key('equipment-filter-all')), findsOneWidget);
     expect(find.byKey(const Key('equipment-filter-support')), findsOneWidget);
     expect(
-      find.byKey(const Key('equipment-table-frozen-header')),
+      find.byKey(const Key('owned-inventory-equipment-sort-name')),
       findsOneWidget,
     );
     expect(find.text('总数（剩余）'), findsOneWidget);
     expect(find.text('改修／熟练度'), findsOneWidget);
     expect(find.text('着装情况'), findsOneWidget);
+    expect(find.text('官方ID'), findsOneWidget);
+    expect(find.text('实例ID'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -76,6 +78,155 @@ void main() {
     );
 
     expect(find.text('装备 1'), findsOneWidget);
+  });
+
+  testWidgets('equipment remains grouped and ends with only official id', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(844, 390);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
+    await tester.pump();
+
+    final table = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('owned-inventory-table-equipment')),
+    );
+    expect(
+      table.scrollableHeaders.last.key,
+      const Key('owned-inventory-equipment-sort-officialId'),
+    );
+    expect(table.rowHeights, hasLength(3));
+
+    final masterId = tester.widget<SelectableText>(
+      find.byKey(const Key('equipment-master-id-201')),
+    );
+    expect(masterId.data, '201');
+    expect(find.byKey(const Key('equipment-instance-id-7001')), findsNothing);
+    expect(find.textContaining('12.7cm'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ship rows end with official and instance id columns', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(844, 390);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    final table = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('owned-inventory-table-ships')),
+    );
+    expect(
+      table.scrollableHeaders
+          .map((header) => header.key)
+          .toList()
+          .sublist(table.scrollableHeaders.length - 2),
+      const <Key>[
+        Key('owned-inventory-sort-officialId'),
+        Key('owned-inventory-sort-instanceId'),
+      ],
+    );
+    final horizontal = tester.widget<SingleChildScrollView>(
+      find.byKey(const Key('owned-inventory-horizontal-scroll')),
+    );
+    horizontal.controller!.jumpTo(
+      horizontal.controller!.position.maxScrollExtent,
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('owned-inventory-sort-officialId')));
+    await tester.pump();
+    expect(find.text('官方ID ▼'), findsOneWidget);
+    expect(
+      tester
+          .widget<SelectableText>(find.byKey(const Key('ship-master-id-9001')))
+          .data,
+      '101',
+    );
+    expect(
+      tester
+          .widget<SelectableText>(
+            find.byKey(const Key('ship-instance-id-9001')),
+          )
+          .data,
+      '9001',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('only name total and official id sort equipment groups', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(844, 390);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
+    await tester.pump();
+
+    final table = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('owned-inventory-table-equipment')),
+    );
+    expect(
+      table.frozenHeaders.single.key,
+      const Key('owned-inventory-equipment-sort-name'),
+    );
+    expect(table.scrollableHeaders.map((header) => header.key), <Key?>[
+      const Key('owned-inventory-equipment-sort-total'),
+      null,
+      null,
+      const Key('owned-inventory-equipment-sort-officialId'),
+    ]);
+
+    await tester.tap(
+      find.byKey(const Key('owned-inventory-equipment-sort-total')),
+    );
+    await tester.pump();
+    expect(find.text('总数（剩余） ▼'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('uses uniform 78 widths for ship stat columns', (tester) async {
@@ -110,6 +261,8 @@ void main() {
       78,
       210,
       52,
+      92,
+      110,
     ]);
   });
 
@@ -787,7 +940,7 @@ void main() {
       find.byKey(const Key('owned-inventory-horizontal-scroll')),
     );
     horizontal.controller!.jumpTo(
-      horizontal.controller!.position.maxScrollExtent,
+      horizontal.controller!.position.maxScrollExtent - 202,
     );
     await tester.pump();
 

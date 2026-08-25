@@ -1722,6 +1722,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get equipmentImprovementProficiency => '改修／熟练度';
 
   @override
+  String get equipmentOfficialId => '官方ID';
+
+  @override
+  String get equipmentInstanceId => '实例ID';
+
+  @override
   String get equipmentUsage => '着装情况';
 
   @override
@@ -3739,6 +3745,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get equipmentImprovementProficiency => '改修／熟練度';
+
+  @override
+  String get equipmentOfficialId => '官方ID';
+
+  @override
+  String get equipmentInstanceId => '實例ID';
 
   @override
   String get equipmentUsage => '裝備情況';

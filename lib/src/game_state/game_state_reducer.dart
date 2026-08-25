@@ -288,7 +288,7 @@ class GameStateReducer {
 
     final quest = state.quests[_f96QuestId];
     final destroyedRequired = removed
-        .where((item) => item.masterId == _f96DiscardMasterId)
+        .where((item) => item.masterSlotItemId == _f96DiscardMasterId)
         .length;
     if (quest == null || !quest.isAccepted || destroyedRequired == 0) {
       return state.copyWith(
@@ -406,7 +406,7 @@ class GameStateReducer {
   }
 
   int _slotItemCount(Map<int, OwnedSlotItem> items, int masterId) =>
-      items.values.where((item) => item.masterId == masterId).length;
+      items.values.where((item) => item.masterSlotItemId == masterId).length;
 
   GameState applyFriendlyBattleHp(
     GameState state,
@@ -1746,14 +1746,14 @@ class GameStateReducer {
     final result = <int, OwnedSlotItem>{};
     for (final value in values) {
       final item = _optionalMap(value);
-      final id = _asInt(item?['api_id']);
-      final masterId = _asInt(item?['api_slotitem_id']);
-      if (item == null || id <= 0 || masterId <= 0) {
+      final instanceId = _asInt(item?['api_id']);
+      final masterSlotItemId = _asInt(item?['api_slotitem_id']);
+      if (item == null || instanceId <= 0 || masterSlotItemId <= 0) {
         continue;
       }
-      result[id] = OwnedSlotItem(
-        id: id,
-        masterId: masterId,
+      result[instanceId] = OwnedSlotItem(
+        instanceId: instanceId,
+        masterSlotItemId: masterSlotItemId,
         level: _asInt(item['api_level']),
         proficiency: _asInt(item['api_alv']),
         locked: _asInt(item['api_locked']) > 0,

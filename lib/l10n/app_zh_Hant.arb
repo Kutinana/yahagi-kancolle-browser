@@ -601,6 +601,8 @@
   "equipmentName": "裝備名稱",
   "equipmentTotalRemaining": "總數（剩餘）",
   "equipmentImprovementProficiency": "改修／熟練度",
+  "equipmentOfficialId": "官方ID",
+  "equipmentInstanceId": "實例ID",
   "equipmentUsage": "裝備情況",
   "highSpeedPlus": "高速+",
   "all": "全部",

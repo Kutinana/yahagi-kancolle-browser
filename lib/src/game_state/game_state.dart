@@ -416,18 +416,32 @@ class OwnedShip {
 
 class OwnedSlotItem {
   const OwnedSlotItem({
-    required this.id,
-    required this.masterId,
+    int? instanceId,
+    int? masterSlotItemId,
+    int? id,
+    int? masterId,
     this.level = 0,
     this.proficiency = 0,
     this.locked = false,
-  });
+  }) : assert(instanceId != null || id != null),
+       assert(masterSlotItemId != null || masterId != null),
+       instanceId = instanceId ?? id ?? -1,
+       masterSlotItemId = masterSlotItemId ?? masterId ?? -1;
 
-  final int id;
-  final int masterId;
+  /// The account-scoped ID of this concrete equipment item (`api_id`).
+  final int instanceId;
+
+  /// The official equipment Master ID (`api_slotitem_id`).
+  final int masterSlotItemId;
   final int level;
   final int proficiency;
   final bool locked;
+
+  @Deprecated('Use instanceId so this is not confused with a Master ID.')
+  int get id => instanceId;
+
+  @Deprecated('Use masterSlotItemId so this is not confused with instanceId.')
+  int get masterId => masterSlotItemId;
 }
 
 class FleetMission {
@@ -866,7 +880,9 @@ class GameState {
   int get furnitureCoins => _furnitureCoins ?? 0;
   bool get hasFurnitureCoinData => _hasFurnitureCoinData ?? false;
   int get equipmentCapacityUsed => slotItems.values
-      .where((item) => !_uncountedEquipmentMasterIds.contains(item.masterId))
+      .where(
+        (item) => !_uncountedEquipmentMasterIds.contains(item.masterSlotItemId),
+      )
       .length;
 
   List<OwnedShip> shipsForFleet(int fleetId) {
@@ -915,7 +931,10 @@ class GameState {
     return <ShipEquipment>[
       for (final id in ids)
         if (slotItems[id] case final owned?)
-          ShipEquipment(owned: owned, master: masterSlotItems[owned.masterId]),
+          ShipEquipment(
+            owned: owned,
+            master: masterSlotItems[owned.masterSlotItemId],
+          ),
     ];
   }
 

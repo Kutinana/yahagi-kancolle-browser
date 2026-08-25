@@ -3332,6 +3332,18 @@ abstract class AppLocalizations {
   /// **'改修／熟练度'**
   String get equipmentImprovementProficiency;
 
+  /// No description provided for @equipmentOfficialId.
+  ///
+  /// In zh, this message translates to:
+  /// **'官方ID'**
+  String get equipmentOfficialId;
+
+  /// No description provided for @equipmentInstanceId.
+  ///
+  /// In zh, this message translates to:
+  /// **'实例ID'**
+  String get equipmentInstanceId;
+
   /// No description provided for @equipmentUsage.
   ///
   /// In zh, this message translates to:

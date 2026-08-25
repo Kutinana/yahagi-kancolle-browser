@@ -129,6 +129,8 @@ void main() {
       // 改修 is the in-game term in both Chinese scripts; 受限 is unchanged.
       'improvement',
       'gadgetBypassRestricted',
+      // 官方ID is the same developer-facing label in both Chinese scripts.
+      'equipmentOfficialId',
       // Short game/UI terms conventionally share the same Han spelling.
       'highSpeedPlus',
       'all',

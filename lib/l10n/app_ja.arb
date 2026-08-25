@@ -601,6 +601,8 @@
   "equipmentName": "装備名",
   "equipmentTotalRemaining": "合計（残り）",
   "equipmentImprovementProficiency": "改修／熟練度",
+  "equipmentOfficialId": "公式ID",
+  "equipmentInstanceId": "インスタンスID",
   "equipmentUsage": "装備状況",
   "highSpeedPlus": "高速+",
   "all": "すべて",

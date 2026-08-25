@@ -839,7 +839,7 @@ final class BattleController extends ChangeNotifier
             condition: ownedShips[index].condition,
             equipmentMasterIds: <int>[
               for (final equipment in state.equipmentForShip(ownedShips[index]))
-                equipment.owned.masterId,
+                equipment.owned.masterSlotItemId,
             ],
             isEscaped: isEscaped,
           );

@@ -116,7 +116,7 @@ class FleetMetrics {
         final owned = state.slotItems[ownedId];
         final master = owned == null
             ? null
-            : state.masterSlotItems[owned.masterId];
+            : state.masterSlotItems[owned.masterSlotItemId];
         if (master == null) {
           airPowerKnown = false;
           continue;

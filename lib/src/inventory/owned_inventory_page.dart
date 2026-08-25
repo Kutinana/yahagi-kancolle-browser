@@ -37,6 +37,8 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   EquipmentInventoryCategory _equipmentCategory =
       EquipmentInventoryCategory.all;
   ShipInventorySortState _sortState = const ShipInventorySortState.initial();
+  EquipmentInventorySortState _equipmentSortState =
+      const EquipmentInventorySortState.initial();
   late GameState _state;
   late _InventoryDependencies _inventoryDependencies;
   List<ShipInventoryRow>? _cachedShipRows;
@@ -108,10 +110,11 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
         sortCriteria: _sortState.effectiveCriteria,
       );
 
-  List<EquipmentInventoryGroup> _equipmentGroups() =>
-      _cachedEquipmentGroups ??= OwnedInventoryProjection(
-        _state,
-      ).equipmentGroups(category: _equipmentCategory);
+  List<EquipmentInventoryGroup> _equipmentGroups() => _cachedEquipmentGroups ??=
+      OwnedInventoryProjection(_state).equipmentGroups(
+        category: _equipmentCategory,
+        sortCriteria: _equipmentSortState.effectiveCriteria,
+      );
 
   void _changeSection(bool value) {
     if (widget.showShips == null) {
@@ -140,6 +143,29 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     setState(() {
       _sortState = _sortState.restoreDefault();
       _cachedShipRows = null;
+    });
+  }
+
+  void _tapEquipmentSort(EquipmentInventorySortField field) {
+    setState(() {
+      _equipmentSortState = _equipmentSortState.tap(field);
+      _cachedEquipmentGroups = null;
+    });
+  }
+
+  void _longPressEquipmentSort(EquipmentInventorySortField field) {
+    final nextState = _equipmentSortState.longPress(field);
+    if (identical(nextState, _equipmentSortState)) return;
+    setState(() {
+      _equipmentSortState = nextState;
+      _cachedEquipmentGroups = null;
+    });
+  }
+
+  void _restoreDefaultEquipmentSort() {
+    setState(() {
+      _equipmentSortState = _equipmentSortState.restoreDefault();
+      _cachedEquipmentGroups = null;
     });
   }
 
@@ -195,6 +221,10 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                 resultSuffix: l10n.inventoryTypeSuffix,
                 label: (value) => _equipmentCategoryLabel(value, l10n),
                 keyFor: (value) => Key('equipment-filter-${value.name}'),
+                actionLabel: l10n.restoreDefaultOrder,
+                actionIcon: Icons.restore,
+                actionKey: const Key('owned-inventory-equipment-sort-reset'),
+                onAction: _restoreDefaultEquipmentSort,
                 onSelected: (value) => setState(() {
                   _equipmentCategory = value;
                   _cachedEquipmentGroups = null;
@@ -213,6 +243,9 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                   : _EquipmentInventoryTable(
                       groups: equipmentGroups,
                       rowHeightCache: _equipmentRowHeightCache,
+                      sortState: _equipmentSortState,
+                      onSort: _tapEquipmentSort,
+                      onLongPressSort: _longPressEquipmentSort,
                     ),
             ),
           ],
@@ -559,6 +592,8 @@ class _ShipInventoryTable extends StatelessWidget {
       l10n.los,
       l10n.equipment,
       l10n.lockedStatus,
+      l10n.equipmentOfficialId,
+      l10n.equipmentInstanceId,
     ];
     final widths = <double>[
       96,
@@ -576,6 +611,8 @@ class _ShipInventoryTable extends StatelessWidget {
       78,
       210,
       52,
+      92,
+      110,
     ];
     Widget header(ShipInventorySortField field, String label, {Key? key}) {
       final lockedIndex = sortState.lockedCriteria.indexWhere(
@@ -658,6 +695,14 @@ class _ShipInventoryTable extends StatelessWidget {
                 ? const Icon(Icons.lock, size: 14, color: Color(0xffe8eef1))
                 : const SizedBox.shrink(),
           ),
+          _InventoryIdCell(
+            textKey: Key('ship-master-id-${ship.id}'),
+            value: ship.masterId,
+          ),
+          _InventoryIdCell(
+            textKey: Key('ship-instance-id-${ship.id}'),
+            value: ship.id,
+          ),
         ];
       },
     );
@@ -735,9 +780,15 @@ class _EquipmentInventoryTable extends StatefulWidget {
   const _EquipmentInventoryTable({
     required this.groups,
     required this.rowHeightCache,
+    required this.sortState,
+    required this.onSort,
+    required this.onLongPressSort,
   });
   final List<EquipmentInventoryGroup> groups;
   final _EquipmentRowHeightCache rowHeightCache;
+  final EquipmentInventorySortState sortState;
+  final ValueChanged<EquipmentInventorySortField> onSort;
+  final ValueChanged<EquipmentInventorySortField> onLongPressSort;
 
   @override
   State<_EquipmentInventoryTable> createState() =>
@@ -780,16 +831,42 @@ class _EquipmentInventoryTableState extends State<_EquipmentInventoryTable> {
         lookupAppLocalizations(const Locale('zh'));
     final groups = widget.groups;
     final rowHeights = widget.rowHeightCache.resolve(context, groups);
+    Widget sortableHeader(EquipmentInventorySortField field, String label) {
+      final lockedIndex = widget.sortState.lockedCriteria.indexWhere(
+        (criterion) => criterion.field == field,
+      );
+      final locked = lockedIndex >= 0;
+      final temporarilyActive =
+          widget.sortState.activeCriterion?.field == field;
+      final criterion = locked
+          ? widget.sortState.lockedCriteria[lockedIndex]
+          : temporarilyActive
+          ? widget.sortState.activeCriterion
+          : null;
+      final priority = locked
+          ? lockedIndex + 1
+          : temporarilyActive && widget.sortState.lockedCriteria.isNotEmpty
+          ? widget.sortState.lockedCriteria.length + 1
+          : null;
+      return _SortableHeader(
+        key: Key('owned-inventory-equipment-sort-${field.name}'),
+        label: label,
+        active: locked || temporarilyActive,
+        locked: locked,
+        priority: priority,
+        descending: criterion?.descending ?? true,
+        onTap: () => widget.onSort(field),
+        onLongPress: () => widget.onLongPressSort(field),
+      );
+    }
+
     return FrozenDataTable(
       key: const Key('owned-inventory-table-equipment'),
       keyPrefix: 'owned-inventory',
       rowHeights: rowHeights,
       frozenColumnWidths: const <double>[230],
       frozenHeaders: <Widget>[
-        _PlainHeader(
-          key: const Key('equipment-table-frozen-header'),
-          label: l10n.equipmentName,
-        ),
+        sortableHeader(EquipmentInventorySortField.name, l10n.equipmentName),
       ],
       frozenCells: (index) => <Widget>[
         SizedBox.expand(
@@ -815,11 +892,18 @@ class _EquipmentInventoryTableState extends State<_EquipmentInventoryTable> {
           ),
         ),
       ],
-      scrollableColumnWidths: const <double>[118, 270, 560],
+      scrollableColumnWidths: const <double>[118, 270, 560, 92],
       scrollableHeaders: <Widget>[
-        _PlainHeader(label: l10n.equipmentTotalRemaining),
+        sortableHeader(
+          EquipmentInventorySortField.total,
+          l10n.equipmentTotalRemaining,
+        ),
         _PlainHeader(label: l10n.equipmentImprovementProficiency),
         _PlainHeader(label: l10n.equipmentUsage),
+        sortableHeader(
+          EquipmentInventorySortField.officialId,
+          l10n.equipmentOfficialId,
+        ),
       ],
       scrollableCells: (index) {
         final group = groups[index];
@@ -876,6 +960,10 @@ class _EquipmentInventoryTableState extends State<_EquipmentInventoryTable> {
                 ],
               ),
             ),
+          ),
+          _InventoryIdCell(
+            textKey: Key('equipment-master-id-${group.master.id}'),
+            value: group.master.id,
           ),
         ];
       },
@@ -1031,6 +1119,26 @@ class _EquipmentVariantSummaryView extends StatelessWidget {
       ],
     );
   }
+}
+
+class _InventoryIdCell extends StatelessWidget {
+  const _InventoryIdCell({required this.textKey, required this.value});
+
+  final Key textKey;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: SelectableText(
+      key: textKey,
+      '$value',
+      style: const TextStyle(
+        color: Color(0xffc7d5dc),
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 }
 
 class _EquipmentIcon extends StatelessWidget {
@@ -1209,7 +1317,7 @@ String _circledPriority(int priority) => priority >= 1 && priority <= 20
     : '($priority)';
 
 class _PlainHeader extends StatelessWidget {
-  const _PlainHeader({super.key, required this.label});
+  const _PlainHeader({required this.label});
   final String label;
   @override
   Widget build(BuildContext context) => Padding(
