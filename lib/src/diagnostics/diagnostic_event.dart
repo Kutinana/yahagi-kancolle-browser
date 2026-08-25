@@ -65,6 +65,7 @@ final class DiagnosticEvent {
     required int decodeMicros,
     required int dispatchMicros,
     required DiagnosticOutcome outcome,
+    required bool usedSynchronousFallback,
   }) => DiagnosticEvent._(
     occurredAt: occurredAt.toUtc(),
     type: 'apiSlow',
@@ -75,6 +76,7 @@ final class DiagnosticEvent {
       'decodeMicros': decodeMicros,
       'dispatchMicros': dispatchMicros,
       'outcome': outcome.name,
+      'usedSynchronousFallback': usedSynchronousFallback,
     },
   );
 
@@ -146,6 +148,8 @@ final class DiagnosticEvent {
     required int over100Ms,
     required int maxFrameMicros,
     required int pendingApiEvents,
+    required String? activeApiPath,
+    required int backgroundDecodeFallbacks,
     required int databaseBytes,
   }) => DiagnosticEvent._(
     occurredAt: occurredAt.toUtc(),
@@ -167,6 +171,10 @@ final class DiagnosticEvent {
       'over100Ms': over100Ms,
       'maxFrameMicros': maxFrameMicros,
       'pendingApiEvents': pendingApiEvents,
+      'activeApiPath': activeApiPath == null
+          ? null
+          : _policy.safeApiPath(activeApiPath),
+      'backgroundDecodeFallbacks': backgroundDecodeFallbacks,
       'databaseBytes': databaseBytes,
     },
   );

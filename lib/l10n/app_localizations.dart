@@ -4074,12 +4074,67 @@ abstract class AppLocalizations {
   /// **'已开启，正在等待可贡献的数据。'**
   String get kcwikiReportWaiting;
 
+  /// No description provided for @kcwikiReportProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在上传：{module} · {time}'**
+  String kcwikiReportProcessing(String module, String time);
+
+  /// No description provided for @kcwikiReportParseRecovered.
+  ///
+  /// In zh, this message translates to:
+  /// **'大型数据解析超时已恢复，后续数据已继续处理 · {time}'**
+  String kcwikiReportParseRecovered(String time);
+
+  /// No description provided for @kcwikiReportFailureHttp.
+  ///
+  /// In zh, this message translates to:
+  /// **'HTTP {status}'**
+  String kcwikiReportFailureHttp(String status);
+
+  /// No description provided for @kcwikiReportFailureTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接超时'**
+  String get kcwikiReportFailureTimeout;
+
+  /// No description provided for @kcwikiReportFailureNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络失败'**
+  String get kcwikiReportFailureNetwork;
+
+  /// No description provided for @kcwikiReportFailureBodyTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据超过单次上限'**
+  String get kcwikiReportFailureBodyTooLarge;
+
+  /// No description provided for @kcwikiReportFailureQueueFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地等待队列已满'**
+  String get kcwikiReportFailureQueueFull;
+
+  /// No description provided for @kcwikiReportFailureLocal.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地处理失败'**
+  String get kcwikiReportFailureLocal;
+
+  /// No description provided for @kcwikiReportCounters.
+  ///
+  /// In zh, this message translates to:
+  /// **'成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}'**
+  String kcwikiReportCounters(int succeeded, int failed, int dropped);
+
   /// No description provided for @kcwikiReportLastSuccess.
   ///
   /// In zh, this message translates to:
-  /// **'最近上传成功：{module} · 成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}'**
+  /// **'最近上传成功：{module} · {time} · 成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}'**
   String kcwikiReportLastSuccess(
     String module,
+    String time,
     int succeeded,
     int failed,
     int dropped,
@@ -4088,10 +4143,11 @@ abstract class AppLocalizations {
   /// No description provided for @kcwikiReportLastFailure.
   ///
   /// In zh, this message translates to:
-  /// **'最近上传失败：{module}（状态 {status}）· 成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}'**
+  /// **'最近上传失败：{module}（{status}）· {time} · 成功 {succeeded} · 失败 {failed} · 丢弃 {dropped}'**
   String kcwikiReportLastFailure(
     String module,
     String status,
+    String time,
     int succeeded,
     int failed,
     int dropped,

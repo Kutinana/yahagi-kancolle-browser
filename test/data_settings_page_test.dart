@@ -114,6 +114,73 @@ void main() {
     expect(find.text('开启 KCWiki 数据贡献？'), findsNothing);
   });
 
+  testWidgets('KCWiki reporting shows persistent activity states', (
+    tester,
+  ) async {
+    final capture = await CaptureModeController.load(_MemoryCaptureModeStore());
+    final browser = GameBrowserController();
+    final gameCapture = GameCaptureController();
+    final prototype = PrototypeStatusController();
+    final gameState = GameStateController();
+    final kcwiki = await KcwikiReportController.load(
+      MemoryKcwikiReportSettingsStore(true),
+    );
+    addTearDown(capture.dispose);
+    addTearDown(browser.dispose);
+    addTearDown(gameCapture.dispose);
+    addTearDown(prototype.dispose);
+    addTearDown(gameState.dispose);
+    addTearDown(kcwiki.dispose);
+
+    await tester.pumpWidget(
+      withTopNotice(
+        DataSettingsPage(
+          captureModeController: capture,
+          browserController: browser,
+          gameCaptureController: gameCapture,
+          prototypeStatusController: prototype,
+          gameStateController: gameState,
+          kcwikiReportController: kcwiki,
+        ),
+      ),
+    );
+    expect(find.textContaining('正在等待可贡献的数据'), findsOneWidget);
+
+    kcwiki.recordQueued(
+      module: 'battle',
+      occurredAt: DateTime.utc(2026, 8, 26),
+    );
+    await tester.pump();
+    expect(find.textContaining('正在上传：battle'), findsOneWidget);
+
+    kcwiki.recordResult(
+      module: 'battle',
+      succeeded: true,
+      occurredAt: DateTime.utc(2026, 8, 26, 1, 2, 3),
+      statusCode: 200,
+    );
+    await tester.pump();
+    expect(find.textContaining('最近上传成功：battle'), findsOneWidget);
+    expect(find.textContaining('成功 1'), findsOneWidget);
+
+    kcwiki.recordResult(
+      module: 'quest',
+      succeeded: false,
+      occurredAt: DateTime.utc(2026, 8, 26, 1, 3, 4),
+      failure: KcwikiReportFailure.network,
+    );
+    await tester.pump();
+    expect(find.textContaining('网络失败'), findsOneWidget);
+
+    kcwiki.recordParseRecovered(
+      path: '/kcsapi/api_start2/getData',
+      occurredAt: DateTime.utc(2026, 8, 26, 1, 4, 5),
+    );
+    await tester.pump();
+    expect(find.textContaining('解析超时已恢复'), findsOneWidget);
+    expect(find.textContaining('成功 1'), findsOneWidget);
+  });
+
   testWidgets(
     'checks alignment inside GameResourceCacheSection in DataSettingsPage',
     (tester) async {

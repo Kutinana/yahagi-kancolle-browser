@@ -13,6 +13,7 @@ void main() {
       decodeMicros: 200,
       dispatchMicros: 300,
       outcome: DiagnosticOutcome.success,
+      usedSynchronousFallback: true,
     );
 
     final encoded = jsonEncode(event.toJson());
@@ -21,6 +22,7 @@ void main() {
     expect(encoded, isNot(contains('requestParams')));
     expect(encoded, isNot(contains('responseBody')));
     expect(encoded, isNot(contains('decodedEnvelope')));
+    expect(encoded, contains('"usedSynchronousFallback":true'));
   });
 
   test('fixed error stores only type code and safe stack', () {
@@ -60,6 +62,8 @@ void main() {
       over100Ms: 6,
       maxFrameMicros: 120000,
       pendingApiEvents: 3,
+      activeApiPath: '/kcsapi/api_start2/getData',
+      backgroundDecodeFallbacks: 2,
       databaseBytes: 8192,
     );
 
@@ -68,6 +72,10 @@ void main() {
     expect(encoded, contains('webgl'));
     expect(encoded, contains('"generationId":17'));
     expect(encoded, contains('"graphicsKb":210000'));
+    expect(encoded, contains('"backgroundDecodeFallbacks":2'));
+    expect(encoded, contains('/kcsapi/api_start2/getData'));
+    expect(encoded, isNot(contains('responseBody')));
+    expect(encoded, isNot(contains('requestParams')));
     expect(encoded, isNot(contains('"previousExitReason"')));
   });
 

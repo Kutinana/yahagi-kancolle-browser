@@ -314,11 +314,22 @@ Future<void> main() async {
         ),
       ),
     ),
+    onQueued: (module) => kcwikiReportController.recordQueued(
+      module: module.wireName,
+      occurredAt: DateTime.now(),
+    ),
     onResult: (result) => kcwikiReportController.recordResult(
       module: result.module.wireName,
       succeeded: result.accepted,
       occurredAt: DateTime.now(),
       statusCode: result.statusCode,
+      failure: switch (result.failure) {
+        KcwikiTransportFailure.bodyTooLarge => KcwikiReportFailure.bodyTooLarge,
+        KcwikiTransportFailure.timeout => KcwikiReportFailure.timeout,
+        KcwikiTransportFailure.network => KcwikiReportFailure.network,
+        KcwikiTransportFailure.rejected => KcwikiReportFailure.httpRejected,
+        null => null,
+      },
     ),
     onDropped: kcwikiReportController.recordDropped,
   );
@@ -361,6 +372,13 @@ Future<void> main() async {
       battleController,
       newShipReminderController,
     ],
+    onBackgroundDecodeFallback: (path) {
+      if (!kcwikiReportController.enabled) return;
+      kcwikiReportController.recordParseRecovered(
+        path: path,
+        occurredAt: DateTime.now(),
+      );
+    },
   );
   final gameCaptureController = GameCaptureController(
     onAcceptedEvent: gameApiEventPipeline.add,
@@ -424,6 +442,9 @@ Future<void> main() async {
     recorder: diagnosticRecorder,
     platform: diagnosticPlatform,
     pendingApiEvents: () => gameApiEventPipeline.pendingEventCount,
+    activeApiPath: () => gameApiEventPipeline.activePath,
+    backgroundDecodeFallbacks: () =>
+        gameApiEventPipeline.backgroundFallbackCount,
     databaseBytes: LogbookDatabase.instance.diagnosticFileSizeBytes,
     webViewHost: diagnosticWebViewHost,
     renderer: diagnosticRenderer,
@@ -785,7 +806,6 @@ class YahagiApp extends StatelessWidget {
     captureModeController: captureModeController,
     audioController: audioController,
     gameCaptureController: gameCaptureController,
-    kcwikiReportController: kcwikiReportController,
     frameRateSettingsController: gameFrameRateSettingsController,
   );
 
@@ -800,7 +820,6 @@ class YahagiApp extends StatelessWidget {
         audioController: audioController,
         toolbarController: toolbarController,
         gameCaptureController: gameCaptureController,
-        kcwikiReportController: kcwikiReportController,
         frameRateSettingsController: gameFrameRateSettingsController,
         renderingMode:
             renderingMode ??

@@ -2140,24 +2140,61 @@ class AppLocalizationsJa extends AppLocalizations {
   String get kcwikiReportWaiting => '有効です。提供できるデータを待っています。';
 
   @override
+  String kcwikiReportProcessing(String module, String time) {
+    return '送信中：$module · $time';
+  }
+
+  @override
+  String kcwikiReportParseRecovered(String time) {
+    return '大きなデータの解析タイムアウトから復旧し、後続処理を再開しました · $time';
+  }
+
+  @override
+  String kcwikiReportFailureHttp(String status) {
+    return 'HTTP $status';
+  }
+
+  @override
+  String get kcwikiReportFailureTimeout => '接続タイムアウト';
+
+  @override
+  String get kcwikiReportFailureNetwork => 'ネットワークエラー';
+
+  @override
+  String get kcwikiReportFailureBodyTooLarge => '1回の送信上限を超えました';
+
+  @override
+  String get kcwikiReportFailureQueueFull => '端末内の待機キューが上限です';
+
+  @override
+  String get kcwikiReportFailureLocal => '端末内処理エラー';
+
+  @override
+  String kcwikiReportCounters(int succeeded, int failed, int dropped) {
+    return '成功 $succeeded · 失敗 $failed · 破棄 $dropped';
+  }
+
+  @override
   String kcwikiReportLastSuccess(
     String module,
+    String time,
     int succeeded,
     int failed,
     int dropped,
   ) {
-    return '直近の送信成功：$module · 成功 $succeeded · 失敗 $failed · 破棄 $dropped';
+    return '直近の送信成功：$module · $time · 成功 $succeeded · 失敗 $failed · 破棄 $dropped';
   }
 
   @override
   String kcwikiReportLastFailure(
     String module,
     String status,
+    String time,
     int succeeded,
     int failed,
     int dropped,
   ) {
-    return '直近の送信失敗：$module（状態 $status）· 成功 $succeeded · 失敗 $failed · 破棄 $dropped';
+    return '直近の送信失敗：$module（$status）· $time · 成功 $succeeded · 失敗 $failed · 破棄 $dropped';
   }
 
   @override
