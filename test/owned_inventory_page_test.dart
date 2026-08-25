@@ -6,12 +6,79 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_page.dart';
+import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
+import 'package:yahagi_kancolle_browser/src/inventory/unowned_inventory_projection.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/frozen_data_table.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
   setUp(() => GameStateController.disableTimerForTest = true);
+
+  testWidgets('unowned views reuse filters and remember each category', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent);
+    await controller.idle;
+    final projection = UnownedInventoryProjection(controller.state);
+    final ddCount = projection
+        .unownedShipFamiliesFor(category: ShipInventoryCategory.dd)
+        .length;
+    final mainGunCount = projection
+        .unownedEquipmentFor(category: EquipmentInventoryCategory.mainGun)
+        .length;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(controller: controller, showOwned: false),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('unowned-ship-filter-all')), findsOneWidget);
+    expect(find.byKey(const Key('unowned-ship-filter-dd')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('unowned-ship-filter-dd')));
+    await tester.pump();
+    expect(
+      tester.widget<Text>(find.byKey(const Key('unowned-ship-summary'))).data,
+      contains('$ddCount'),
+    );
+
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
+    await tester.pump();
+    expect(
+      find.byKey(const Key('unowned-equipment-filter-all')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('unowned-equipment-filter-mainGun')));
+    await tester.pump();
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('unowned-equipment-summary')))
+          .data,
+      contains('$mainGunCount'),
+    );
+
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-ships')));
+    await tester.pump();
+    final ddLabel = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('unowned-ship-filter-dd')),
+        matching: find.text('DD'),
+      ),
+    );
+    expect(ddLabel.style?.color, const Color(0xffffcf62));
+  });
 
   testWidgets('matches the confirmed compact ship and equipment controls', (
     tester,

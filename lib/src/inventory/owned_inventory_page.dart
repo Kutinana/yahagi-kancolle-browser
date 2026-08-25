@@ -45,6 +45,9 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   ShipInventoryCategory _shipCategory = ShipInventoryCategory.all;
   EquipmentInventoryCategory _equipmentCategory =
       EquipmentInventoryCategory.all;
+  ShipInventoryCategory _unownedShipCategory = ShipInventoryCategory.all;
+  EquipmentInventoryCategory _unownedEquipmentCategory =
+      EquipmentInventoryCategory.all;
   ShipInventorySortState _sortState = const ShipInventorySortState.initial();
   EquipmentInventorySortState _equipmentSortState =
       const EquipmentInventorySortState.initial();
@@ -206,6 +209,19 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     final equipmentGroups = _showOwned && !_showShips
         ? _equipmentGroups()
         : const <EquipmentInventoryGroup>[];
+    final unownedProjection = !_showOwned
+        ? UnownedInventoryProjection(_state)
+        : null;
+    final unownedShipRows = !_showOwned && _showShips
+        ? unownedProjection!.unownedShipFamiliesFor(
+            category: _unownedShipCategory,
+          )
+        : const <UnownedShipFamilyRow>[];
+    final unownedEquipmentRows = !_showOwned && !_showShips
+        ? unownedProjection!.unownedEquipmentFor(
+            category: _unownedEquipmentCategory,
+          )
+        : const <UnownedEquipmentRow>[];
     return ColoredBox(
       color: const Color(0xff081923),
       child: Padding(
@@ -232,8 +248,29 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
               ),
               const SizedBox(height: 4),
             ],
-            if (!_showOwned)
-              const SizedBox.shrink()
+            if (!_showOwned && _showShips)
+              _FilterStrip<ShipInventoryCategory>(
+                values: ShipInventoryCategory.values,
+                selected: _unownedShipCategory,
+                resultCount: unownedShipRows.length,
+                label: (value) => _shipCategoryLabel(value, l10n),
+                keyFor: (value) => Key('unowned-ship-filter-${value.name}'),
+                onSelected: (value) => setState(() {
+                  _unownedShipCategory = value;
+                }),
+              )
+            else if (!_showOwned)
+              _FilterStrip<EquipmentInventoryCategory>(
+                values: EquipmentInventoryCategory.values,
+                selected: _unownedEquipmentCategory,
+                resultCount: unownedEquipmentRows.length,
+                label: (value) => _equipmentCategoryLabel(value, l10n),
+                keyFor: (value) =>
+                    Key('unowned-equipment-filter-${value.name}'),
+                onSelected: (value) => setState(() {
+                  _unownedEquipmentCategory = value;
+                }),
+              )
             else if (_showShips)
               _FilterStrip<ShipInventoryCategory>(
                 values: ShipInventoryCategory.values,
@@ -267,13 +304,15 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                   _cachedEquipmentGroups = null;
                 }),
               ),
-            SizedBox(height: _showOwned ? 4 : 0),
+            const SizedBox(height: 4),
             Expanded(
               child: !_showOwned
                   ? UnownedInventoryView(
                       state: _state,
                       showShips: _showShips,
                       reminderController: widget.reminderController,
+                      shipRows: unownedShipRows,
+                      equipmentRows: unownedEquipmentRows,
                     )
                   : _showShips
                   ? _ShipInventoryTable(
@@ -353,11 +392,15 @@ class UnownedInventoryView extends StatelessWidget {
     required this.state,
     required this.showShips,
     this.reminderController,
+    this.shipRows,
+    this.equipmentRows,
   });
 
   final GameState state;
   final bool showShips;
   final NewShipReminderController? reminderController;
+  final List<UnownedShipFamilyRow>? shipRows;
+  final List<UnownedEquipmentRow>? equipmentRows;
 
   @override
   Widget build(BuildContext context) {
@@ -365,10 +408,12 @@ class UnownedInventoryView extends StatelessWidget {
     return showShips
         ? _UnownedShipsView(
             state: state,
-            rows: projection.unownedShipFamilies,
+            rows: shipRows ?? projection.unownedShipFamilies,
             reminderController: reminderController,
           )
-        : _UnownedEquipmentView(rows: projection.unownedEquipment);
+        : _UnownedEquipmentView(
+            rows: equipmentRows ?? projection.unownedEquipment,
+          );
   }
 }
 
