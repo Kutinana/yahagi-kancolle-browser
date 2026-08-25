@@ -28,7 +28,7 @@ void main() {
         3: MasterShip(id: 3, name: '一号改二', shipTypeId: 2, sortNo: 3),
         4: MasterShip(id: 4, name: '四号', shipTypeId: 2, sortNo: 4),
         8: MasterShip(id: 8, name: '八号', shipTypeId: 8, sortNo: 8),
-        999: MasterShip(id: 999, name: '内部舰', shipTypeId: 2),
+        1501: MasterShip(id: 1501, name: '非玩家舰', shipTypeId: 2, sortNo: 999),
       },
       ships: <int, OwnedShip>{30: OwnedShip(id: 30, masterId: 3, level: 80)},
       masterSlotItemTypes: <int, String>{1: '小口径主炮', 6: '舰上战斗机'},
@@ -100,19 +100,58 @@ void main() {
     );
   });
 
-  test('broken and cyclic remodel links safely keep their own roots', () {
+  test('matches Poi roots for entered and isolated remodel cycles', () {
     const state = GameState(
       masterShips: <int, MasterShip>{
-        5: MasterShip(id: 5, name: '缺失后继', shipTypeId: 2, afterShipId: 50),
-        6: MasterShip(id: 6, name: '循环甲', shipTypeId: 2, afterShipId: 7),
-        7: MasterShip(id: 7, name: '循环乙', shipTypeId: 2, afterShipId: 6),
+        5: MasterShip(
+          id: 5,
+          name: '初始舰',
+          shipTypeId: 2,
+          sortNo: 5,
+          afterShipId: 6,
+        ),
+        6: MasterShip(
+          id: 6,
+          name: '循环甲',
+          shipTypeId: 2,
+          sortNo: 6,
+          afterShipId: 7,
+        ),
+        7: MasterShip(
+          id: 7,
+          name: '循环乙',
+          shipTypeId: 2,
+          sortNo: 7,
+          afterShipId: 6,
+        ),
+        8: MasterShip(
+          id: 8,
+          name: '孤立循环甲',
+          shipTypeId: 2,
+          sortNo: 8,
+          afterShipId: 9,
+        ),
+        9: MasterShip(
+          id: 9,
+          name: '孤立循环乙',
+          shipTypeId: 2,
+          sortNo: 9,
+          afterShipId: 8,
+        ),
+        1501: MasterShip(id: 1501, name: '非玩家舰', shipTypeId: 2, sortNo: 1501),
       },
     );
 
     final projection = UnownedInventoryProjection(state);
 
     expect(projection.familyRootOf(5), 5);
-    expect(projection.familyRootOf(6), 6);
-    expect(projection.familyRootOf(7), 7);
+    expect(projection.familyRootOf(6), 5);
+    expect(projection.familyRootOf(7), 5);
+    expect(projection.familyRootOf(8), 8);
+    expect(projection.familyRootOf(9), 8);
+    expect(projection.unownedShipFamilies.map((row) => row.master.id), <int>[
+      5,
+      8,
+    ]);
   });
 }

@@ -31,66 +31,32 @@ class UnownedEquipmentRow {
 /// current inventory. Remodel forms are treated as one ship family.
 class UnownedInventoryProjection {
   UnownedInventoryProjection(this.state)
-    : _predecessors = _buildPredecessors(state);
+    : _familyRoots = _buildFamilyRoots(state);
 
   final GameState state;
-  final Map<int, int> _predecessors;
-  final Map<int, int> _rootCache = <int, int>{};
+  final Map<int, int> _familyRoots;
 
-  int familyRootOf(int masterId) {
-    final cached = _rootCache[masterId];
-    if (cached != null) return cached;
-    if (!state.masterShips.containsKey(masterId)) return masterId;
-
-    final visited = <int>{};
-    var current = masterId;
-    while (true) {
-      if (!visited.add(current)) {
-        _rootCache[masterId] = masterId;
-        return masterId;
-      }
-      final predecessor = _predecessors[current];
-      if (predecessor == null) {
-        final currentMaster = state.masterShips[current];
-        if (currentMaster != null &&
-            currentMaster.afterShipId > 0 &&
-            !state.masterShips.containsKey(currentMaster.afterShipId)) {
-          _rootCache[masterId] = masterId;
-          return masterId;
-        }
-        for (final id in visited) {
-          _rootCache[id] = current;
-        }
-        return current;
-      }
-      current = predecessor;
-    }
-  }
+  int familyRootOf(int masterId) => _familyRoots[masterId] ?? masterId;
 
   List<UnownedShipFamilyRow> get unownedShipFamilies {
     final ownedRoots = state.ships.values
         .map((ship) => familyRootOf(ship.masterId))
         .toSet();
-    final representatives = <int, MasterShip>{};
-    for (final master in state.masterShips.values) {
-      if (master.sortNo <= 0) continue;
-      final root = familyRootOf(master.id);
-      final existing = representatives[root];
-      if (existing == null || _compareShipMaster(master, existing) < 0) {
-        representatives[root] = master;
-      }
-    }
+    final roots = _familyRoots.values.toSet();
 
-    final rows = <UnownedShipFamilyRow>[
-      for (final entry in representatives.entries)
-        if (!ownedRoots.contains(entry.key))
-          UnownedShipFamilyRow(
-            familyRootId: entry.key,
-            master: entry.value,
-            typeId: entry.value.shipTypeId,
-            typeName: state.masterShipTypes[entry.value.shipTypeId]?.name ?? '',
-          ),
-    ];
+    final rows = <UnownedShipFamilyRow>[];
+    for (final root in roots) {
+      final master = state.masterShips[root];
+      if (root > 1500 || master == null || ownedRoots.contains(root)) continue;
+      rows.add(
+        UnownedShipFamilyRow(
+          familyRootId: root,
+          master: master,
+          typeId: master.shipTypeId,
+          typeName: state.masterShipTypes[master.shipTypeId]?.name ?? '',
+        ),
+      );
+    }
     rows.sort((a, b) => _compareShipMaster(a.master, b.master));
     return List<UnownedShipFamilyRow>.unmodifiable(rows);
   }
@@ -134,12 +100,48 @@ class UnownedInventoryProjection {
     ),
   );
 
-  static Map<int, int> _buildPredecessors(GameState state) {
+  static Map<int, int> _buildFamilyRoots(GameState state) {
+    final validIds = state.masterShips.keys.where((id) => id <= 1500).toList()
+      ..sort();
+    final afterIds = <int>{
+      for (final id in validIds)
+        if (state.masterShips[id]!.afterShipId > 0)
+          state.masterShips[id]!.afterShipId,
+    };
+    final originIds = validIds.where((id) => !afterIds.contains(id));
+    final chains = <int, List<int>>{};
+
+    List<int> trace(int root) {
+      final chain = <int>[];
+      final visited = <int>{};
+      var current = root;
+      while (visited.add(current)) {
+        chain.add(current);
+        final next = state.masterShips[current]?.afterShipId ?? 0;
+        if (next <= 0) break;
+        current = next;
+      }
+      return chain;
+    }
+
+    for (final root in originIds) {
+      chains[root] = trace(root);
+    }
+
+    final covered = chains.values.expand((chain) => chain).toSet();
+    final missing = validIds.where((id) => !covered.contains(id)).toList();
+    while (missing.isNotEmpty) {
+      final root = missing.first;
+      final chain = trace(root);
+      chains[root] = chain;
+      final chainIds = chain.toSet();
+      missing.removeWhere(chainIds.contains);
+    }
+
     final result = <int, int>{};
-    for (final master in state.masterShips.values) {
-      final next = master.afterShipId;
-      if (next > 0 && state.masterShips.containsKey(next)) {
-        result.putIfAbsent(next, () => master.id);
+    for (final entry in chains.entries) {
+      for (final id in entry.value) {
+        result[id] = entry.key;
       }
     }
     return result;
