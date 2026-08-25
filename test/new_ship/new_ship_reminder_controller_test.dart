@@ -98,4 +98,85 @@ void main() {
       NewShipAcquisitionSource.construction,
     });
   });
+
+  test(
+    'multiple battle drops merge at port and duplicate events are ignored',
+    () async {
+      state = state.copyWith(
+        masterShips: <int, MasterShip>{
+          ...state.masterShips,
+          5: const MasterShip(id: 5, name: '五号', shipTypeId: 2, sortNo: 5),
+        },
+      );
+      final controller = NewShipReminderController(
+        stateProvider: () => state,
+        store: store,
+        onPublish: published.add,
+      );
+      final first = kcsapiEvent(
+        '/kcsapi/api_req_sortie/battleresult',
+        <String, Object?>{
+          'api_get_ship': <String, Object?>{'api_ship_id': 4},
+        },
+        sequence: 60,
+      );
+      controller.accept(first);
+      controller.accept(first);
+      controller.accept(
+        kcsapiEvent(
+          '/kcsapi/api_req_combined_battle/battleresult',
+          <String, Object?>{
+            'api_get_ship': <String, Object?>{'api_ship_id': 5},
+          },
+          sequence: 61,
+        ),
+      );
+      controller.accept(
+        kcsapiEvent('/kcsapi/api_port/port', <String, Object?>{}, sequence: 62),
+      );
+      await controller.idle;
+
+      expect(published, hasLength(1));
+      expect(published.single.masterIds, <int>[4, 5]);
+    },
+  );
+
+  for (final reward
+      in <({String path, Object data, NewShipAcquisitionSource source})>[
+        (
+          path: '/kcsapi/api_req_quest/clearitemget',
+          data: <String, Object?>{
+            'api_bounus': <Object?>[
+              <String, Object?>{
+                'api_type': 1,
+                'api_item': <String, Object?>{'api_id': 4},
+              },
+            ],
+          },
+          source: NewShipAcquisitionSource.questReward,
+        ),
+        (
+          path: '/kcsapi/api_req_map/next',
+          data: <String, Object?>{
+            'api_event_reward': <String, Object?>{'api_ship_id': 4},
+          },
+          source: NewShipAcquisitionSource.eventReward,
+        ),
+      ]) {
+    test('${reward.source.name} publishes immediately', () async {
+      final controller = NewShipReminderController(
+        stateProvider: () => state,
+        store: store,
+        onPublish: published.add,
+      );
+
+      controller.accept(kcsapiEvent(reward.path, reward.data, sequence: 70));
+      await controller.idle;
+
+      expect(published.single.masterIds, <int>[4]);
+      expect(published.single.sources, <NewShipAcquisitionSource>{
+        reward.source,
+      });
+    });
+  }
 }
