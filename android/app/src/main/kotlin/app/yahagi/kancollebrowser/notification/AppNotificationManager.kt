@@ -32,6 +32,7 @@ object AppNotificationManager {
         "anchorage" to "泊地修理",
         "construction" to "工厂建造",
         "morale" to "士气与刷闪",
+        "newShip" to "新舰提醒",
     )
 
     fun initChannels(context: Context) {

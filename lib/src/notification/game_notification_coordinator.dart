@@ -99,6 +99,12 @@ class GameNotificationCoordinator {
     moraleRecoveryTimerController.dispose();
   }
 
+  /// Queues a one-shot notification using the same master, sound and
+  /// vibration settings as the existing game notifications.
+  void enqueueImmediateAlert(ImmediateNotificationItem alert) {
+    _syncSnapshot(immediateAlerts: <ImmediateNotificationItem>[alert]);
+  }
+
   void _onGameStateChanged() {
     if (_disposed) return;
     final now = _now();

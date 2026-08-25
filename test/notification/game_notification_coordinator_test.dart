@@ -130,6 +130,38 @@ void main() {
       testState = GameState.empty;
     });
 
+    test(
+      'delivers a new-ship immediate alert with vibration settings',
+      () async {
+        final coordinator = GameNotificationCoordinator(
+          gameStateController: gameStateController,
+          settingsController: settingsController,
+          notificationPort: fakePort,
+          gameStateProvider: () => testState,
+          nowProvider: () => testNow,
+        );
+        coordinator.start();
+
+        coordinator.enqueueImmediateAlert(
+          ImmediateNotificationItem(
+            key: 'new-ship:42',
+            type: GameNotificationType.newShip,
+            occurredAt: testNow,
+            title: '发现未持有舰娘',
+            body: '四号',
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+
+        expect(
+          fakePort.deliveredImmediateAlerts.last.type,
+          GameNotificationType.newShip,
+        );
+        expect(fakePort.latestSnapshot?.presentation.vibration, isTrue);
+        coordinator.dispose();
+      },
+    );
+
     test('schedules expedition complete and preempt alarms correctly', () {
       final returnTime = testNow.add(const Duration(minutes: 30));
 

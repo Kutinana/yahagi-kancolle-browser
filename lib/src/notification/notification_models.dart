@@ -3,7 +3,8 @@ enum GameNotificationType {
   repair,
   anchorage,
   construction,
-  morale;
+  morale,
+  newShip;
 
   String get channelId => 'channel_$name';
 }
