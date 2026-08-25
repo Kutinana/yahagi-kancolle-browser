@@ -9,17 +9,20 @@ final class KcwikiDispatchResult {
     required this.module,
     required this.accepted,
     this.statusCode,
+    this.failure,
   });
 
   final KcwikiReportModule module;
   final bool accepted;
   final int? statusCode;
+  final KcwikiTransportFailure? failure;
 }
 
 final class KcwikiReportDispatcher {
   KcwikiReportDispatcher({
     required KcwikiReportTransport Function() transportFactory,
     this.onResult,
+    this.onQueued,
     this.onDropped,
     this.maxPendingCount = 16,
     this.maxPendingBytes = 4 * 1024 * 1024,
@@ -30,6 +33,7 @@ final class KcwikiReportDispatcher {
 
   late final KcwikiReportTransport Function() _transportFactory;
   final void Function(KcwikiDispatchResult result)? onResult;
+  final void Function(KcwikiReportModule module)? onQueued;
   final void Function()? onDropped;
   final int maxPendingCount;
   final int maxPendingBytes;
@@ -77,6 +81,7 @@ final class KcwikiReportDispatcher {
     }
     _waiting.add(request);
     _pendingBytes += request.byteLength;
+    onQueued?.call(request.module);
     _ensureDrain();
     return true;
   }
@@ -118,6 +123,7 @@ final class KcwikiReportDispatcher {
           module: request.module,
           accepted: result.accepted,
           statusCode: result.statusCode,
+          failure: result.failure,
         ),
       );
     }

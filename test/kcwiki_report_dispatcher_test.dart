@@ -88,13 +88,53 @@ void main() {
 
     expect(newTransport.sent, 1);
   });
+
+  test('accepted submit announces processing before its result', () async {
+    final events = <String>[];
+    final dispatcher = KcwikiReportDispatcher(
+      transportFactory: () => _ControlledTransport(),
+      onQueued: (module) => events.add('queued:${module.wireName}'),
+      onResult: (result) => events.add('result:${result.module.wireName}'),
+    );
+    addTearDown(dispatcher.dispose);
+    dispatcher.start();
+
+    dispatcher.submit(request);
+    await dispatcher.idle;
+
+    expect(events, <String>['queued:quest', 'result:quest']);
+  });
+
+  test('transport failure is preserved in dispatch result', () async {
+    KcwikiDispatchResult? observed;
+    final dispatcher = KcwikiReportDispatcher(
+      transportFactory: () => _ControlledTransport(
+        result: const KcwikiTransportResult.failed(
+          failure: KcwikiTransportFailure.timeout,
+        ),
+      ),
+      onResult: (result) => observed = result,
+    );
+    addTearDown(dispatcher.dispose);
+    dispatcher.start();
+
+    dispatcher.submit(request);
+    await dispatcher.idle;
+
+    expect(observed?.failure, KcwikiTransportFailure.timeout);
+  });
 }
 
 final class _ControlledTransport implements KcwikiReportTransport {
-  _ControlledTransport({this.block = false, this.failFirst = false});
+  _ControlledTransport({
+    this.block = false,
+    this.failFirst = false,
+    this.result = const KcwikiTransportResult.accepted(statusCode: 204),
+  });
 
   final bool block;
   final bool failFirst;
+  final KcwikiTransportResult result;
   int sent = 0;
   bool closed = false;
 
@@ -103,7 +143,7 @@ final class _ControlledTransport implements KcwikiReportTransport {
     sent += 1;
     if (block) await Completer<void>().future;
     if (failFirst && sent == 1) throw StateError('network failed');
-    return const KcwikiTransportResult.accepted(statusCode: 204);
+    return result;
   }
 
   @override

@@ -79,4 +79,42 @@ void main() {
     expect(controller.status.succeededCount, 1);
     expect(controller.status.failedCount, 1);
   });
+
+  test('upload status and counters survive controller reload', () async {
+    final store = MemoryKcwikiReportSettingsStore(true);
+    final first = await KcwikiReportController.load(store);
+    first.recordQueued(module: 'battle', occurredAt: DateTime.utc(2026, 8, 26));
+    first.recordResult(
+      module: 'battle',
+      succeeded: true,
+      occurredAt: DateTime.utc(2026, 8, 26, 1),
+      statusCode: 200,
+    );
+    await first.settled;
+    first.dispose();
+
+    final restored = await KcwikiReportController.load(store);
+    addTearDown(restored.dispose);
+    expect(restored.status.activity, KcwikiReportActivity.succeeded);
+    expect(restored.status.module, 'battle');
+    expect(restored.status.succeededCount, 1);
+    expect(restored.status.occurredAt, DateTime.utc(2026, 8, 26, 1));
+  });
+
+  test('parse recovery is visible but does not count as an upload', () async {
+    final controller = await KcwikiReportController.load(
+      MemoryKcwikiReportSettingsStore(true),
+    );
+    addTearDown(controller.dispose);
+
+    controller.recordParseRecovered(
+      path: '/kcsapi/api_start2/getData',
+      occurredAt: DateTime.utc(2026, 8, 26),
+    );
+
+    expect(controller.status.activity, KcwikiReportActivity.parseRecovered);
+    expect(controller.status.path, '/kcsapi/api_start2/getData');
+    expect(controller.status.succeededCount, 0);
+    expect(controller.status.failedCount, 0);
+  });
 }
