@@ -241,6 +241,18 @@ class LandBaseAirGroupRow extends StatelessWidget {
           final fatigueFaceSize = (portraitHeight * 0.34)
               .clamp(14.0, 20.0)
               .toDouble();
+          final sectionGap = narrow ? 5.0 : 7.0;
+          final statusWidth = narrow ? 94.0 : 108.0;
+          final maximumSlotWidth = narrow ? 38.0 : 44.0;
+          final slotWidth =
+              ((constraints.maxWidth -
+                          portraitWidth -
+                          statusWidth -
+                          sectionGap * 2 -
+                          6) /
+                      4)
+                  .clamp(24.0, maximumSlotWidth)
+                  .toDouble();
           final l10n =
               AppLocalizations.of(context) ??
               lookupAppLocalizations(const Locale('zh'));
@@ -266,17 +278,6 @@ class LandBaseAirGroupRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    _LandBaseActionHpChip(
-                      key: Key('land-base-action-chip-$_keySuffix'),
-                      label: _actionLabel(base.actionKind, l10n),
-                      actionColor: _actionColor(base.actionKind),
-                      currentHp: currentHp,
-                      maximumHp: maximumHp,
-                      hpRatio: hpRatio,
-                      damagePulseMode: damagePulseMode,
-                      meterKey: Key('land-base-hp-meter-$_keySuffix'),
-                    ),
-                    const SizedBox(width: 3),
                     _LandBaseInfoChip(
                       key: Key('land-base-air-power-chip-$_keySuffix'),
                       label: '${l10n.airPower} ${airPower.displayValue}',
@@ -339,26 +340,81 @@ class LandBaseAirGroupRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SizedBox(width: narrow ? 5 : 7),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                  SizedBox(width: sectionGap),
+                  SizedBox(
+                    key: Key('land-base-status-column-$_keySuffix'),
+                    width: statusWidth,
+                    height: portraitHeight > 34 ? portraitHeight : 34,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        for (var squadronId = 1; squadronId <= 4; squadronId++)
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 2),
-                              child: _LandBaseSquadronSlot(
-                                state: state,
-                                squadron: _squadron(base, squadronId),
-                                areaId: base.areaId,
-                                baseId: base.baseId,
-                                squadronId: squadronId,
+                        _LandBaseActionChip(
+                          key: Key('land-base-action-chip-$_keySuffix'),
+                          label: _actionLabel(base.actionKind, l10n),
+                          color: _actionColor(base.actionKind),
+                        ),
+                        const SizedBox(height: 2),
+                        DamagePulseBuilder(
+                          ratio: hpRatio,
+                          mode: damagePulseMode,
+                          normalColor: shipHpBarColor(
+                            hpRatio,
+                            isZeroHp: currentHp <= 0,
+                          ),
+                          builder: (context, spec, phase) => Opacity(
+                            opacity: spec.pulses
+                                ? spec.minFrameOpacity +
+                                      phase * (1 - spec.minFrameOpacity)
+                                : 1,
+                            child: CompactStatusMeter(
+                              height: 14,
+                              icon: Icon(
+                                Icons.favorite_rounded,
+                                color: shipHpBarColor(
+                                  hpRatio,
+                                  isZeroHp: currentHp <= 0,
+                                ),
+                                size: 9,
                               ),
+                              value: '$currentHp/$maximumHp',
+                              ratio: hpRatio,
+                              valueColor: shipHpValueColor(
+                                hpRatio,
+                                isZeroHp: currentHp <= 0,
+                              ),
+                              barColor: spec.color,
+                              valueKey: Key('land-base-hp-value-$_keySuffix'),
+                              trackKey: Key('land-base-hp-meter-$_keySuffix'),
                             ),
                           ),
+                        ),
                       ],
                     ),
+                  ),
+                  SizedBox(width: sectionGap),
+                  Row(
+                    key: Key('land-base-squadron-strip-$_keySuffix'),
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      for (
+                        var squadronId = 1;
+                        squadronId <= 4;
+                        squadronId++
+                      ) ...[
+                        if (squadronId > 1) const SizedBox(width: 2),
+                        SizedBox(
+                          width: slotWidth,
+                          child: _LandBaseSquadronSlot(
+                            state: state,
+                            squadron: _squadron(base, squadronId),
+                            areaId: base.areaId,
+                            baseId: base.baseId,
+                            squadronId: squadronId,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -401,98 +457,35 @@ class _LandBaseInfoChip extends StatelessWidget {
   );
 }
 
-class _LandBaseActionHpChip extends StatelessWidget {
-  const _LandBaseActionHpChip({
+class _LandBaseActionChip extends StatelessWidget {
+  const _LandBaseActionChip({
     super.key,
     required this.label,
-    required this.actionColor,
-    required this.currentHp,
-    required this.maximumHp,
-    required this.hpRatio,
-    required this.damagePulseMode,
-    required this.meterKey,
+    required this.color,
   });
 
   final String label;
-  final Color actionColor;
-  final int currentHp;
-  final int maximumHp;
-  final double hpRatio;
-  final DamagePulseMode damagePulseMode;
-  final Key meterKey;
+  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    final hpColor = shipHpBarColor(hpRatio, isZeroHp: currentHp <= 0);
-    return DamagePulseBuilder(
-      ratio: hpRatio,
-      mode: damagePulseMode,
-      normalColor: hpColor,
-      builder: (context, spec, phase) => Opacity(
-        opacity: spec.pulses
-            ? spec.minFrameOpacity + phase * (1 - spec.minFrameOpacity)
-            : 1,
-        child: Container(
-          height: 18,
-          padding: const EdgeInsets.fromLTRB(5, 2, 5, 3),
-          decoration: BoxDecoration(
-            color: actionColor.withValues(alpha: 0.16),
-            border: Border.all(color: actionColor.withValues(alpha: 0.42)),
-            borderRadius: BorderRadius.circular(5),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: <Widget>[
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: actionColor,
-                      fontSize: 8,
-                      height: 1,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  Icon(Icons.favorite_rounded, color: hpColor, size: 8),
-                  const SizedBox(width: 2),
-                  Text(
-                    '$currentHp/$maximumHp',
-                    style: TextStyle(
-                      color: shipHpValueColor(
-                        hpRatio,
-                        isZeroHp: currentHp <= 0,
-                      ),
-                      fontSize: 7,
-                      height: 1,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-              Positioned(
-                key: meterKey,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    minHeight: 2,
-                    value: hpRatio,
-                    backgroundColor: const Color(0xff102331),
-                    valueColor: AlwaysStoppedAnimation<Color>(spec.color),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget build(BuildContext context) => Container(
+    height: 14,
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.16),
+      border: Border.all(color: color.withValues(alpha: 0.42)),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        color: color,
+        fontSize: 8,
+        height: 1,
+        fontWeight: FontWeight.w900,
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _LandBaseSquadronSlot extends StatelessWidget {

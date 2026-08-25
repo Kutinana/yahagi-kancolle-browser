@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/fleet_ship_status_capsule.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/land_base_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
@@ -90,9 +91,6 @@ void main() {
       expect(tester.takeException(), isNull);
 
       final name = tester.getRect(find.byKey(const Key('land-base-name-62-1')));
-      final action = tester.getRect(
-        find.byKey(const Key('land-base-action-chip-62-1')),
-      );
       final airPower = tester.getRect(
         find.byKey(const Key('land-base-air-power-chip-62-1')),
       );
@@ -103,11 +101,37 @@ void main() {
         find.byKey(const Key('land-base-portrait-62-1')),
       );
 
-      expect(action.center.dy, closeTo(name.center.dy, 0.1));
       expect(airPower.center.dy, closeTo(name.center.dy, 0.1));
       expect(range.center.dy, closeTo(name.center.dy, 0.1));
       expect(portrait.top, greaterThan(name.bottom));
       expect(portrait.size, const Size(68, 32));
+
+      final actionFinder = find.byKey(const Key('land-base-action-chip-62-1'));
+      final statusFinder = find.byKey(
+        const Key('land-base-status-column-62-1'),
+      );
+      expect(
+        find.descendant(of: actionFinder, matching: find.text('200/200')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: statusFinder,
+          matching: find.byType(CompactStatusMeter),
+        ),
+        findsOneWidget,
+      );
+
+      final slots = <Rect>[
+        for (var id = 1; id <= 4; id++)
+          tester.getRect(find.byKey(Key('land-base-slot-62-1-$id'))),
+      ];
+      for (final slot in slots) {
+        expect(slot.width, lessThanOrEqualTo(38));
+      }
+      for (var index = 1; index < slots.length; index++) {
+        expect(slots[index].left - slots[index - 1].right, closeTo(2, 0.1));
+      }
     },
   );
 
