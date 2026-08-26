@@ -16,7 +16,7 @@ void main() {
 
   test('migrates the old boolean preference to an enum value', () async {
     for (final entry in <bool, GameFrameRateMode>{
-      true: GameFrameRateMode.highRefresh,
+      true: GameFrameRateMode.automatic,
       false: GameFrameRateMode.stable30,
     }.entries) {
       SharedPreferences.setMockInitialValues(<String, Object>{
@@ -37,7 +37,7 @@ void main() {
   test('migrates legacy string values', () async {
     for (final entry in <String, GameFrameRateMode>{
       'max60': GameFrameRateMode.automatic,
-      'followDisplay': GameFrameRateMode.highRefresh,
+      'followDisplay': GameFrameRateMode.automatic,
       'off': GameFrameRateMode.stable30,
     }.entries) {
       SharedPreferences.setMockInitialValues(<String, Object>{
@@ -46,6 +46,13 @@ void main() {
       final store = SharedPreferencesGameFrameRateSettingsStore();
       expect(await store.loadMode(), entry.value);
     }
+  });
+
+  test('removed high refresh wire value falls back to automatic', () {
+    expect(
+      GameFrameRateMode.fromWireName('prefer60'),
+      GameFrameRateMode.automatic,
+    );
   });
 
   test('new enum values round-trip and unknown values use automatic', () async {
@@ -67,9 +74,7 @@ void main() {
   test(
     'controller applies startup mode and live changes to the port',
     () async {
-      final store = MemoryGameFrameRateSettingsStore(
-        GameFrameRateMode.highRefresh,
-      );
+      final store = MemoryGameFrameRateSettingsStore();
       final controller = await GameFrameRateSettingsController.load(store);
       final port = _RecordingFrameRatePort();
       addTearDown(controller.dispose);
@@ -78,7 +83,7 @@ void main() {
       await controller.setMode(GameFrameRateMode.stable30);
 
       expect(port.configuredModes, <GameFrameRateMode>[
-        GameFrameRateMode.highRefresh,
+        GameFrameRateMode.automatic,
         GameFrameRateMode.stable30,
       ]);
       expect(controller.mode, GameFrameRateMode.stable30);
@@ -93,10 +98,10 @@ void main() {
     addTearDown(controller.dispose);
 
     await controller.attachPort(port);
-    await controller.setMode(GameFrameRateMode.highRefresh);
+    await controller.setMode(GameFrameRateMode.stable30);
 
-    expect(controller.mode, GameFrameRateMode.highRefresh);
-    expect(await store.loadMode(), GameFrameRateMode.highRefresh);
+    expect(controller.mode, GameFrameRateMode.stable30);
+    expect(await store.loadMode(), GameFrameRateMode.stable30);
     expect(controller.supported, isFalse);
   });
 
@@ -138,7 +143,7 @@ void main() {
       addTearDown(controller.dispose);
 
       final stable30 = controller.setMode(GameFrameRateMode.stable30);
-      final highRefresh = controller.setMode(GameFrameRateMode.highRefresh);
+      final automatic = controller.setMode(GameFrameRateMode.automatic);
       await Future<void>.delayed(Duration.zero);
 
       expect(store.pendingModes, <GameFrameRateMode>[
@@ -147,13 +152,13 @@ void main() {
       store.completeNext();
       await Future<void>.delayed(Duration.zero);
       expect(store.pendingModes, <GameFrameRateMode>[
-        GameFrameRateMode.highRefresh,
+        GameFrameRateMode.automatic,
       ]);
       store.completeNext();
-      await Future.wait<void>(<Future<void>>[stable30, highRefresh]);
+      await Future.wait<void>(<Future<void>>[stable30, automatic]);
 
-      expect(controller.mode, GameFrameRateMode.highRefresh);
-      expect(await store.loadMode(), GameFrameRateMode.highRefresh);
+      expect(controller.mode, GameFrameRateMode.automatic);
+      expect(await store.loadMode(), GameFrameRateMode.automatic);
     },
   );
 }
