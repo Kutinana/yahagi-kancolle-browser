@@ -564,6 +564,30 @@ void main() {
     expect(fixture.statusController.loadState, WebViewLoadState.ready);
   });
 
+  testWidgets('page initialization reports the timed out stage', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    fixture.port.fitCompleters.add(Completer<void>());
+    addTearDown(fixture.dispose);
+    await fixture.pump(
+      tester,
+      cleanupTimeout: const Duration(seconds: 1),
+      pageInitializationTimeout: const Duration(milliseconds: 10),
+    );
+    await tester.pump();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump(const Duration(milliseconds: 11));
+
+    expect(fixture.browserController.errorMessage, contains('[fitGameScreen]'));
+  });
+
   testWidgets('route desire stays authoritative when a page becomes ready', (
     tester,
   ) async {
@@ -2429,6 +2453,7 @@ final class _SurfaceFixture {
     WidgetTester tester, {
     bool injectPort = true,
     Duration? cleanupTimeout,
+    Duration? pageInitializationTimeout,
     CaptureModeController? captureModeController,
     GameBrowserController? browserController,
     GameSurfaceStartupOrchestrator? startupOrchestrator,
@@ -2459,6 +2484,7 @@ final class _SurfaceFixture {
             previewPort: previewPort,
             previewDecoder: (bytes, _) async => MemoryImage(bytes),
             cleanupTimeout: cleanupTimeout,
+            pageInitializationTimeout: pageInitializationTimeout,
           ),
         ),
       ),
@@ -2514,6 +2540,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Completer<void>? loadCompleter;
   Object? loadFailure;
   int successfulReloadCalls = 0;
+  final List<Completer<void>> fitCompleters = <Completer<void>>[];
   final List<Completer<void>> visibilityCompleters = <Completer<void>>[];
   int visibilityFailuresRemaining = 0;
   bool failHide = false;
@@ -2579,6 +2606,9 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   @override
   Future<void> fitGameScreen() async {
     calls.add('fit');
+    if (fitCompleters.isNotEmpty) {
+      await fitCompleters.removeAt(0).future;
+    }
   }
 
   @override

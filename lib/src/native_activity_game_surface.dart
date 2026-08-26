@@ -201,6 +201,18 @@ final class _PendingPageFinish {
   final String url;
 }
 
+final class _PageInitializationFailure implements Exception {
+  const _PageInitializationFailure({
+    required this.stage,
+    required this.cause,
+    required this.stackTrace,
+  });
+
+  final String stage;
+  final Object cause;
+  final StackTrace stackTrace;
+}
+
 final class NativeActivityGameSurface extends StatefulWidget {
   NativeActivityGameSurface({
     required this.statusController,
@@ -219,6 +231,7 @@ final class NativeActivityGameSurface extends StatefulWidget {
     this.portFactory,
     this.startupOrchestrator,
     this.cleanupTimeout,
+    this.pageInitializationTimeout,
     super.key,
   }) {
     if (startupOrchestrator == null &&
@@ -248,6 +261,7 @@ final class NativeActivityGameSurface extends StatefulWidget {
   final NativeActivityGameWebViewPortFactory? portFactory;
   final GameSurfaceStartupOrchestrator? startupOrchestrator;
   final Duration? cleanupTimeout;
+  final Duration? pageInitializationTimeout;
 
   @override
   State<NativeActivityGameSurface> createState() =>
@@ -261,6 +275,7 @@ final class _NativeActivityGameSurfaceState
   StreamSubscription<NativeGameWebViewEvent>? _eventSubscription;
   late GameSurfaceStartupOrchestrator _startupOrchestrator;
   late Duration _cleanupTimeout;
+  late Duration _pageInitializationTimeout;
   late final Future<void> Function(NativeGameWebViewBounds) _boundsSink;
   late final Future<void> Function(bool) _visibilitySink;
   final GlobalKey _surfaceSlotKey = GlobalKey(
@@ -316,6 +331,8 @@ final class _NativeActivityGameSurfaceState
     _visibilitySink = _onVisibilityChanged;
     _appLifecycleState = WidgetsBinding.instance.lifecycleState;
     _cleanupTimeout = widget.cleanupTimeout ?? const Duration(seconds: 2);
+    _pageInitializationTimeout =
+        widget.pageInitializationTimeout ?? const Duration(seconds: 10);
     _startupOrchestrator = _createStartupOrchestrator(widget);
     _activeCaptureMode = widget.captureModeController?.mode;
     widget.networkSettingsController?.addListener(_onNetworkSettingsChanged);
@@ -360,6 +377,8 @@ final class _NativeActivityGameSurfaceState
   void didUpdateWidget(covariant NativeActivityGameSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
     _cleanupTimeout = widget.cleanupTimeout ?? const Duration(seconds: 2);
+    _pageInitializationTimeout =
+        widget.pageInitializationTimeout ?? const Duration(seconds: 10);
 
     if (!identical(
       oldWidget.networkSettingsController,
@@ -856,15 +875,21 @@ final class _NativeActivityGameSurfaceState
     String url,
   ) async {
     try {
-      await port.fitGameScreen().timeout(_cleanupTimeout);
+      await _runPageInitializationStage('fitGameScreen', port.fitGameScreen);
       if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
         return;
       }
-      await _startupOrchestrator.prepareCapture().timeout(_cleanupTimeout);
+      await _runPageInitializationStage(
+        'prepareCapture',
+        _startupOrchestrator.prepareCapture,
+      );
       if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
         return;
       }
-      await _startupOrchestrator.attachAudioPortOnce().timeout(_cleanupTimeout);
+      await _runPageInitializationStage(
+        'attachAudioPortOnce',
+        _startupOrchestrator.attachAudioPortOnce,
+      );
       if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
         return;
       }
@@ -878,8 +903,26 @@ final class _NativeActivityGameSurfaceState
     } catch (error, stackTrace) {
       debugPrint('Native game surface page finish failed: $error\n$stackTrace');
       if (_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
-        _reportPageError('游戏页面初始化失败：${error.runtimeType}');
+        final failure = error is _PageInitializationFailure ? error : null;
+        final stage = failure?.stage ?? 'unknown';
+        final cause = failure?.cause ?? error;
+        _reportPageError('游戏页面初始化失败 [$stage]：${cause.runtimeType}');
       }
+    }
+  }
+
+  Future<void> _runPageInitializationStage(
+    String stage,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action().timeout(_pageInitializationTimeout);
+    } catch (error, stackTrace) {
+      throw _PageInitializationFailure(
+        stage: stage,
+        cause: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
