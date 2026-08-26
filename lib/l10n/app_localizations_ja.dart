@@ -1404,6 +1404,14 @@ class AppLocalizationsJa extends AppLocalizations {
       '現在の端末ではこのモードに対応していない可能性があります。【設定 - 画面と音声】から描画モードを変更してください';
 
   @override
+  String nativeGameSurfacePageInitializationFailed(
+    String stage,
+    String errorType,
+  ) {
+    return 'ゲーム画面の初期化に失敗しました [$stage]：$errorType';
+  }
+
+  @override
   String get senka => '戦果';
 
   @override

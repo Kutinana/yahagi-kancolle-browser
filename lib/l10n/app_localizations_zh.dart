@@ -1394,6 +1394,14 @@ class AppLocalizationsZh extends AppLocalizations {
       '当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式';
 
   @override
+  String nativeGameSurfacePageInitializationFailed(
+    String stage,
+    String errorType,
+  ) {
+    return '游戏页面初始化失败 [$stage]：$errorType';
+  }
+
+  @override
   String get senka => '战果';
 
   @override
@@ -3601,6 +3609,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get nativeGameSurfaceSwitchRenderingModeHint =>
       '目前裝置暫不相容此模式，請前往【設定 - 畫面與聲音】切換渲染模式';
+
+  @override
+  String nativeGameSurfacePageInitializationFailed(
+    String stage,
+    String errorType,
+  ) {
+    return '遊戲頁面初始化失敗 [$stage]：$errorType';
+  }
 
   @override
   String get senka => '戰果';

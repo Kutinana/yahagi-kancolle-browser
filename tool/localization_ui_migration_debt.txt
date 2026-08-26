@@ -852,7 +852,6 @@
 "lib/src/native_activity_game_surface.dart|原生 WebView 启动失败：${error.runtimeType}"
 "lib/src/native_activity_game_surface.dart|游戏渲染进程已退出。"
 "lib/src/native_activity_game_surface.dart|原生 WebView 已销毁。"
-"lib/src/native_activity_game_surface.dart|游戏页面初始化失败：${error.runtimeType}"
 "lib/src/native_activity_game_surface.dart|原生 WebView 事件通道异常。"
 "lib/src/native_activity_game_surface.dart|原生 WebView 事件通道已关闭。"
 "lib/src/native_activity_game_surface.dart|原生 WebView 显示失败：${lastError.runtimeType}"

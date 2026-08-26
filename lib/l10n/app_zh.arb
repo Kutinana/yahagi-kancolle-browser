@@ -483,6 +483,8 @@
   "gameRenderingModeApplied": "渲染模式已切换。",
   "gameRenderingModeFailed": "切换失败，已保留或回退到安全模式。",
   "nativeGameSurfaceSwitchRenderingModeHint": "当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式",
+  "nativeGameSurfacePageInitializationFailed": "游戏页面初始化失败 [{stage}]：{errorType}",
+  "@nativeGameSurfacePageInitializationFailed": {"placeholders": {"stage": {"type": "String"}, "errorType": {"type": "String"}}},
   "senka": "战果",
   "ownedInventory": "持有一览",
   "improvement": "改修",

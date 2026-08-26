@@ -960,9 +960,14 @@ final class _NativeActivityGameSurfaceState
   );
 
   void _reportPageInitializationFailure(_PageInitializationFailure failure) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
     _reportPageError(
-      '游戏页面初始化失败 [${failure.stage}]：'
-      '${failure.cause.runtimeType}',
+      l10n.nativeGameSurfacePageInitializationFailed(
+        failure.stage,
+        failure.cause.runtimeType.toString(),
+      ),
       pageReloadAvailable: true,
     );
   }

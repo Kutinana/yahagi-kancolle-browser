@@ -483,6 +483,8 @@
   "gameRenderingModeApplied": "描画モードを切り替えました。",
   "gameRenderingModeFailed": "切り替えに失敗しました。現在の設定を維持するか、安全なモードへ戻しました。",
   "nativeGameSurfaceSwitchRenderingModeHint": "現在の端末ではこのモードに対応していない可能性があります。【設定 - 画面と音声】から描画モードを変更してください",
+  "nativeGameSurfacePageInitializationFailed": "ゲーム画面の初期化に失敗しました [{stage}]：{errorType}",
+  "@nativeGameSurfacePageInitializationFailed": {"placeholders": {"stage": {"type": "String"}, "errorType": {"type": "String"}}},
   "senka": "戦果",
   "ownedInventory": "保有一覧",
   "improvement": "改修",

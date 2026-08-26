@@ -2708,6 +2708,15 @@ abstract class AppLocalizations {
   /// **'当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式'**
   String get nativeGameSurfaceSwitchRenderingModeHint;
 
+  /// No description provided for @nativeGameSurfacePageInitializationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'游戏页面初始化失败 [{stage}]：{errorType}'**
+  String nativeGameSurfacePageInitializationFailed(
+    String stage,
+    String errorType,
+  );
+
   /// No description provided for @senka.
   ///
   /// In zh, this message translates to:
