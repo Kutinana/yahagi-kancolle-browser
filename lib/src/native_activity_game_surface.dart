@@ -185,6 +185,22 @@ typedef NativeActivityGameWebViewPortFactory =
 typedef NativeGameSurfacePreviewDecoder =
     Future<ImageProvider> Function(Uint8List bytes, BuildContext context);
 
+final class _PendingPageFinish {
+  const _PendingPageFinish({
+    required this.port,
+    required this.generationId,
+    required this.operationEpoch,
+    required this.pageEpoch,
+    required this.url,
+  });
+
+  final NativeActivityGameWebViewPort port;
+  final int generationId;
+  final int operationEpoch;
+  final int pageEpoch;
+  final String url;
+}
+
 final class NativeActivityGameSurface extends StatefulWidget {
   NativeActivityGameSurface({
     required this.statusController,
@@ -281,6 +297,9 @@ final class _NativeActivityGameSurfaceState
   GameFrameRateRuntimeController? _frameRateRuntimeController;
   Future<void>? _navigationFuture;
   Future<void>? _bootstrapTail;
+  Future<void>? _pageFinishFuture;
+  _PendingPageFinish? _pendingPageFinish;
+  AppLifecycleState? _appLifecycleState;
   bool _visibilityFatalCleanupStarted = false;
   int _processedCaptureRevision = 0;
   CaptureMode? _activeCaptureMode;
@@ -295,6 +314,7 @@ final class _NativeActivityGameSurfaceState
     WidgetsBinding.instance.addObserver(this);
     _boundsSink = _onBoundsChanged;
     _visibilitySink = _onVisibilityChanged;
+    _appLifecycleState = WidgetsBinding.instance.lifecycleState;
     _cleanupTimeout = widget.cleanupTimeout ?? const Duration(seconds: 2);
     _startupOrchestrator = _createStartupOrchestrator(widget);
     _activeCaptureMode = widget.captureModeController?.mode;
@@ -395,11 +415,16 @@ final class _NativeActivityGameSurfaceState
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appLifecycleState = state;
     _frameRateRuntimeController?.onLifecycleChanged(state);
     if (state == AppLifecycleState.resumed) {
+      _ensurePageFinish();
       _windowMetricsRecoveryScheduler.schedule(() {
         final port = _port;
         if (!_active || !mounted || port == null || _generationId == null) {
+          return;
+        }
+        if (_pendingPageFinish != null || _pageFinishFuture != null) {
           return;
         }
         unawaited(
@@ -697,6 +722,7 @@ final class _NativeActivityGameSurfaceState
       case NativeGameWebViewEventType.created:
         return;
       case NativeGameWebViewEventType.pageStarted:
+        _pendingPageFinish = null;
         _frameRateRuntimeController?.onPageStarted();
         final startedUri = event.navigationUri;
         if (_navigationIssued &&
@@ -725,8 +751,14 @@ final class _NativeActivityGameSurfaceState
         widget.browserController.onPageFinished(url);
         final port = _port;
         if (port != null) {
-          unawaited(
-            _finishPage(port, generationId, _operationEpoch, _pageEpoch, url),
+          _schedulePageFinish(
+            _PendingPageFinish(
+              port: port,
+              generationId: generationId,
+              operationEpoch: _operationEpoch,
+              pageEpoch: _pageEpoch,
+              url: url,
+            ),
           );
         }
         return;
@@ -761,6 +793,58 @@ final class _NativeActivityGameSurfaceState
           _notifyFatalError('原生 WebView 已销毁。');
         }
         return;
+    }
+  }
+
+  void _schedulePageFinish(_PendingPageFinish pending) {
+    _pendingPageFinish = pending;
+    _ensurePageFinish();
+  }
+
+  void _ensurePageFinish() {
+    if (!_active ||
+        !mounted ||
+        _appLifecycleState != AppLifecycleState.resumed ||
+        _pageFinishFuture != null ||
+        _pendingPageFinish == null) {
+      return;
+    }
+    final operation = _drainPageFinishes();
+    _pageFinishFuture = operation;
+    unawaited(
+      operation.whenComplete(() {
+        if (identical(_pageFinishFuture, operation)) {
+          _pageFinishFuture = null;
+        }
+        if (_pendingPageFinish != null) {
+          _ensurePageFinish();
+        }
+      }),
+    );
+  }
+
+  Future<void> _drainPageFinishes() async {
+    while (_active &&
+        mounted &&
+        _appLifecycleState == AppLifecycleState.resumed) {
+      final pending = _pendingPageFinish;
+      if (pending == null) return;
+      _pendingPageFinish = null;
+      if (!_matchesPage(
+        pending.port,
+        pending.generationId,
+        pending.operationEpoch,
+        pending.pageEpoch,
+      )) {
+        continue;
+      }
+      await _finishPage(
+        pending.port,
+        pending.generationId,
+        pending.operationEpoch,
+        pending.pageEpoch,
+        pending.url,
+      );
     }
   }
 
@@ -845,6 +929,7 @@ final class _NativeActivityGameSurfaceState
   }
 
   void _invalidateOperations({required bool fatal}) {
+    _pendingPageFinish = null;
     if (fatal) {
       _fatal = true;
       _awaitingNewPageStart = false;
@@ -1312,6 +1397,7 @@ final class _NativeActivityGameSurfaceState
   @override
   void dispose() {
     _active = false;
+    _pendingPageFinish = null;
     _popupPreviewGeneration++;
     _popupPreview = null;
     _windowMetricsRecoveryScheduler.dispose();

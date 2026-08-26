@@ -532,6 +532,38 @@ void main() {
     fixture.toolbarController.collapse();
   });
 
+  testWidgets('page completion waits for foreground before finalizing', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(() async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await fixture.dispose();
+    });
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.calls.clear();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(fixture.port.calls, isNot(contains('fit')));
+    expect(fixture.statusController.loadState, isNot(WebViewLoadState.failed));
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump();
+
+    expect(fixture.port.calls.where((call) => call == 'fit'), hasLength(1));
+    expect(fixture.statusController.loadState, WebViewLoadState.ready);
+  });
+
   testWidgets('route desire stays authoritative when a page becomes ready', (
     tester,
   ) async {
