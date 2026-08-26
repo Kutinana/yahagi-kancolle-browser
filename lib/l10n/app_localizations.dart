@@ -2582,12 +2582,6 @@ abstract class AppLocalizations {
   /// **'低耗'**
   String get gameFrameRatePowerSaving;
 
-  /// No description provided for @gameFrameRateHighRefresh.
-  ///
-  /// In zh, this message translates to:
-  /// **'高刷'**
-  String get gameFrameRateHighRefresh;
-
   /// No description provided for @gameFrameRateAutomaticDesc.
   ///
   /// In zh, this message translates to:
@@ -2599,12 +2593,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'固定 30 FPS，优先降低发热和耗电。'**
   String get gameFrameRatePowerSavingDesc;
-
-  /// No description provided for @gameFrameRateHighRefreshDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'跟随设备刷新率运行，可能达到 90/120 FPS，并显著增加发热和耗电。'**
-  String get gameFrameRateHighRefreshDesc;
 
   /// No description provided for @gameFrameRateUnsupported.
   ///

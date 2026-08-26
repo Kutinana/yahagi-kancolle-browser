@@ -1331,18 +1331,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get gameFrameRatePowerSaving => '省電';
 
   @override
-  String get gameFrameRateHighRefresh => '高リフレッシュレート';
-
-  @override
   String get gameFrameRateAutomaticDesc =>
       '上限を 60 FPS とし、動作が不安定な場合や省電力モード、端末の発熱時には自動的に 30 FPS へ下げます。';
 
   @override
   String get gameFrameRatePowerSavingDesc => '30 FPS に固定し、発熱と消費電力の低減を優先します。';
-
-  @override
-  String get gameFrameRateHighRefreshDesc =>
-      '端末のリフレッシュレートに追従し、90/120 FPS に達する場合があります。発熱と消費電力が大きく増加します。';
 
   @override
   String get gameFrameRateUnsupported =>
