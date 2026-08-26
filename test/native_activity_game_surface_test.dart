@@ -564,17 +564,18 @@ void main() {
     expect(fixture.statusController.loadState, WebViewLoadState.ready);
   });
 
-  testWidgets('page initialization reports the timed out stage', (
+  testWidgets('terminal page initialization reports the failed stage', (
     tester,
   ) async {
     final fixture = _SurfaceFixture();
-    fixture.port.fitCompleters.add(Completer<void>());
+    fixture.port.fitFailures.addAll(<Object>[
+      TimeoutException('first attempt'),
+      TimeoutException('first retry'),
+      TimeoutException('reloaded attempt'),
+      TimeoutException('reloaded retry'),
+    ]);
     addTearDown(fixture.dispose);
-    await fixture.pump(
-      tester,
-      cleanupTimeout: const Duration(seconds: 1),
-      pageInitializationTimeout: const Duration(milliseconds: 10),
-    );
+    await fixture.pump(tester);
     await tester.pump();
 
     fixture.port.addEvent(
@@ -583,9 +584,78 @@ void main() {
     fixture.port.addEvent(
       _event('pageFinished', generationId: 7, url: 'https://game.example/'),
     );
-    await tester.pump(const Duration(milliseconds: 11));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+    expect(fixture.port.calls.where((call) => call == 'reload'), hasLength(1));
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
 
     expect(fixture.browserController.errorMessage, contains('[fitGameScreen]'));
+    expect(
+      fixture.browserController.errorMessage,
+      contains('TimeoutException'),
+    );
+  });
+
+  testWidgets('page initialization retries once before becoming ready', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    fixture.port.fitFailures.add(StateError('first fit failed'));
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.calls.clear();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+
+    expect(fixture.port.calls.where((call) => call == 'fit'), hasLength(2));
+    expect(fixture.port.calls.where((call) => call == 'reload'), isEmpty);
+    expect(fixture.statusController.loadState, WebViewLoadState.ready);
+  });
+
+  testWidgets('page initialization reloads once after two failures', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    fixture.port.fitFailures.addAll(<Object>[
+      StateError('first fit failed'),
+      StateError('second fit failed'),
+    ]);
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.calls.clear();
+
+    fixture.port.addEvent(
+      _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+    );
+    fixture.port.addEvent(
+      _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+
+    expect(fixture.port.calls.where((call) => call == 'fit'), hasLength(2));
+    expect(fixture.port.calls.where((call) => call == 'reload'), hasLength(1));
   });
 
   testWidgets('route desire stays authoritative when a page becomes ready', (
@@ -1666,7 +1736,7 @@ void main() {
   });
 
   for (final failureStage in <String>['capture', 'audio']) {
-    testWidgets('$failureStage finish failure is contained and hides', (
+    testWidgets('$failureStage finish failure retries before reloading', (
       tester,
     ) async {
       final fixture = _SurfaceFixture();
@@ -1694,15 +1764,16 @@ void main() {
           _event('pageFinished', generationId: 7, url: 'https://game.example/'),
         );
         await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
         await tester.pump();
       } finally {
         debugPrint = previousDebugPrint;
       }
 
-      expect(fixture.statusController.loadState, WebViewLoadState.failed);
+      expect(find.byKey(const Key('native-game-surface-error')), findsNothing);
       expect(
-        find.byKey(const Key('native-game-surface-error')),
-        findsOneWidget,
+        fixture.port.calls.where((call) => call == 'reload'),
+        hasLength(1),
       );
       expect(
         fixture.port.calls.lastWhere((call) => call.startsWith('visible:')),
@@ -2541,6 +2612,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Object? loadFailure;
   int successfulReloadCalls = 0;
   final List<Completer<void>> fitCompleters = <Completer<void>>[];
+  final List<Object> fitFailures = <Object>[];
   final List<Completer<void>> visibilityCompleters = <Completer<void>>[];
   int visibilityFailuresRemaining = 0;
   bool failHide = false;
@@ -2608,6 +2680,9 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
     calls.add('fit');
     if (fitCompleters.isNotEmpty) {
       await fitCompleters.removeAt(0).future;
+    }
+    if (fitFailures.isNotEmpty) {
+      throw fitFailures.removeAt(0);
     }
   }
 

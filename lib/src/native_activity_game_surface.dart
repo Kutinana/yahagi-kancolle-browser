@@ -305,6 +305,7 @@ final class _NativeActivityGameSurfaceState
   bool _forceVisibilityWrite = false;
   bool _navigationIssued = false;
   bool _navigationAcknowledged = false;
+  bool _automaticRecoveryReloadUsed = false;
   Uri? _navigationTarget;
   bool _pageReady = false;
   bool _renderProcessRecoveryAvailable = false;
@@ -857,58 +858,110 @@ final class _NativeActivityGameSurfaceState
       )) {
         continue;
       }
-      await _finishPage(
-        pending.port,
-        pending.generationId,
-        pending.operationEpoch,
-        pending.pageEpoch,
-        pending.url,
-      );
+      await _finishPage(pending);
     }
   }
 
-  Future<void> _finishPage(
-    NativeActivityGameWebViewPort port,
-    int generationId,
-    int operationEpoch,
-    int pageEpoch,
-    String url,
-  ) async {
-    try {
-      await _runPageInitializationStage('fitGameScreen', port.fitGameScreen);
-      if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
+  Future<void> _finishPage(_PendingPageFinish pending) async {
+    _PageInitializationFailure? lastFailure;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      if (!_matchesPendingPageFinish(pending)) return;
+      if (_appLifecycleState != AppLifecycleState.resumed) {
+        _pendingPageFinish = pending;
         return;
       }
-      await _runPageInitializationStage(
-        'prepareCapture',
-        _startupOrchestrator.prepareCapture,
-      );
-      if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
+      try {
+        await _runPageInitializationAttempt(pending);
+        if (!_matchesPendingPageFinish(pending)) return;
+        _pageReady = true;
+        _automaticRecoveryReloadUsed = false;
+        _setStartupState(GameStartupState.ready);
+        await _frameRateRuntimeController?.onPageReady(
+          samplingEnabled:
+              widget.browserController.mode != GameBrowserMode.localPrototype &&
+              isGameFrameRateSamplingPage(pending.url),
+        );
         return;
-      }
-      await _runPageInitializationStage(
-        'attachAudioPortOnce',
-        _startupOrchestrator.attachAudioPortOnce,
-      );
-      if (!_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
-        return;
-      }
-      _pageReady = true;
-      _setStartupState(GameStartupState.ready);
-      await _frameRateRuntimeController?.onPageReady(
-        samplingEnabled:
-            widget.browserController.mode != GameBrowserMode.localPrototype &&
-            isGameFrameRateSamplingPage(url),
-      );
-    } catch (error, stackTrace) {
-      debugPrint('Native game surface page finish failed: $error\n$stackTrace');
-      if (_matchesPage(port, generationId, operationEpoch, pageEpoch)) {
-        final failure = error is _PageInitializationFailure ? error : null;
-        final stage = failure?.stage ?? 'unknown';
-        final cause = failure?.cause ?? error;
-        _reportPageError('游戏页面初始化失败 [$stage]：${cause.runtimeType}');
+      } on _PageInitializationFailure catch (error, stackTrace) {
+        lastFailure = error;
+        debugPrint(
+          'Native game surface page finish attempt ${attempt + 1} failed: '
+          '$error\n$stackTrace',
+        );
+        if (!_matchesPendingPageFinish(pending)) return;
+        if (_appLifecycleState != AppLifecycleState.resumed) {
+          _pendingPageFinish = pending;
+          return;
+        }
+        if (attempt == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          if (!_matchesPendingPageFinish(pending)) return;
+          if (_appLifecycleState != AppLifecycleState.resumed) {
+            _pendingPageFinish = pending;
+            return;
+          }
+        }
       }
     }
+    if (lastFailure == null || !_matchesPendingPageFinish(pending)) return;
+    await _reloadAfterPageInitializationFailure(pending, lastFailure);
+  }
+
+  Future<void> _runPageInitializationAttempt(_PendingPageFinish pending) async {
+    await _runPageInitializationStage(
+      'fitGameScreen',
+      pending.port.fitGameScreen,
+    );
+    if (!_matchesPendingPageFinish(pending)) return;
+    await _runPageInitializationStage(
+      'prepareCapture',
+      _startupOrchestrator.prepareCapture,
+    );
+    if (!_matchesPendingPageFinish(pending)) return;
+    await _runPageInitializationStage(
+      'attachAudioPortOnce',
+      _startupOrchestrator.attachAudioPortOnce,
+    );
+  }
+
+  Future<void> _reloadAfterPageInitializationFailure(
+    _PendingPageFinish pending,
+    _PageInitializationFailure failure,
+  ) async {
+    if (_automaticRecoveryReloadUsed) {
+      _reportPageInitializationFailure(failure);
+      return;
+    }
+    _automaticRecoveryReloadUsed = true;
+    _pageReady = false;
+    _awaitingNewPageStart = true;
+    _setStartupState(GameStartupState.loadingGame);
+    try {
+      await _runPageInitializationStage('reload', pending.port.reload);
+    } on _PageInitializationFailure catch (reloadFailure, stackTrace) {
+      debugPrint(
+        'Native game surface automatic page reload failed: '
+        '$reloadFailure\n$stackTrace',
+      );
+      if (_matchesPendingPageFinish(pending)) {
+        _awaitingNewPageStart = false;
+        _reportPageInitializationFailure(reloadFailure);
+      }
+    }
+  }
+
+  bool _matchesPendingPageFinish(_PendingPageFinish pending) => _matchesPage(
+    pending.port,
+    pending.generationId,
+    pending.operationEpoch,
+    pending.pageEpoch,
+  );
+
+  void _reportPageInitializationFailure(_PageInitializationFailure failure) {
+    _reportPageError(
+      '游戏页面初始化失败 [${failure.stage}]：'
+      '${failure.cause.runtimeType}',
+    );
   }
 
   Future<void> _runPageInitializationStage(
