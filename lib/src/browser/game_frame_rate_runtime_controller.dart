@@ -5,7 +5,7 @@ import 'package:flutter/scheduler.dart';
 import '../settings/game_frame_rate_settings.dart';
 import 'game_frame_rate_policy.dart';
 
-enum GameFrameRateTarget { fps30, fps60, highRefresh }
+enum GameFrameRateTarget { fps30, fps60 }
 
 abstract interface class GameFrameRateRuntimePort {
   Future<void> apply(GameFrameRateTarget target);
@@ -133,7 +133,6 @@ final class GameFrameRateRuntimeController {
       GameFrameRateMode.automatic when policy.isLockedTo30 =>
         GameFrameRateTarget.fps30,
       GameFrameRateMode.automatic => GameFrameRateTarget.fps60,
-      GameFrameRateMode.highRefresh => GameFrameRateTarget.highRefresh,
     };
     try {
       await port.apply(target);

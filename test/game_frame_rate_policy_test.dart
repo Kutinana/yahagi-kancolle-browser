@@ -77,21 +77,11 @@ void main() {
     }
   });
 
-  test('manual modes never trigger an automatic downgrade', () {
-    for (final mode in <GameFrameRateMode>[
-      GameFrameRateMode.stable30,
-      GameFrameRateMode.highRefresh,
-    ]) {
-      final policy = GameFrameRatePolicy(mode: mode);
-      _addUnstableCreateJsWindow(policy);
-      _addUnstableFlutterWindow(policy);
-      expect(
-        policy.completeWindow(),
-        mode == GameFrameRateMode.stable30
-            ? FrameRateDecision.lock30
-            : FrameRateDecision.keep60,
-      );
-    }
+  test('stable 30 mode remains locked under unstable samples', () {
+    final policy = GameFrameRatePolicy(mode: GameFrameRateMode.stable30);
+    _addUnstableCreateJsWindow(policy);
+    _addUnstableFlutterWindow(policy);
+    expect(policy.completeWindow(), FrameRateDecision.lock30);
   });
 }
 

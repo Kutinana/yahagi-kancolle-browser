@@ -16,10 +16,6 @@ String gameFrameRateApplyScript(GameFrameRateTarget target) {
       }
       ticker.framerate=60;
     ''',
-    GameFrameRateTarget.highRefresh =>
-      '''
-      if (typeof ticker.RAF !== 'undefined') ticker.timingMode=ticker.RAF;
-    ''',
   };
   return '''
     (() => {

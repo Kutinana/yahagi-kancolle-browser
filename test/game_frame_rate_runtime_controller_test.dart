@@ -96,22 +96,9 @@ void main() {
     expect(fixture.timer!.isActive, isFalse);
   });
 
-  test('high refresh mode applies the unthrottled target', () async {
-    final fixture = await _Fixture.create();
-    addTearDown(fixture.dispose);
-    await fixture.runtime.onPageReady();
-
-    await fixture.settings.setMode(GameFrameRateMode.highRefresh);
-    await fixture.runtime.idle;
-
-    expect(fixture.port.appliedTargets.last, GameFrameRateTarget.highRefresh);
-    expect(fixture.timer!.isActive, isFalse);
-  });
-
   test('leaving the foreground lowers load and resume restores mode', () async {
     final fixture = await _Fixture.create();
     addTearDown(fixture.dispose);
-    await fixture.settings.setMode(GameFrameRateMode.highRefresh);
     await fixture.runtime.onPageReady();
 
     fixture.runtime.onLifecycleChanged(AppLifecycleState.paused);
@@ -120,7 +107,7 @@ void main() {
 
     fixture.runtime.onLifecycleChanged(AppLifecycleState.resumed);
     await fixture.runtime.idle;
-    expect(fixture.port.appliedTargets.last, GameFrameRateTarget.highRefresh);
+    expect(fixture.port.appliedTargets.last, GameFrameRateTarget.fps60);
   });
 
   test('dispose cancels timers and unregisters the timings callback', () async {

@@ -38,10 +38,6 @@ class GameFrameRateSettingsSection extends StatelessWidget {
                   value: GameFrameRateMode.stable30,
                   label: Text(l10n.gameFrameRatePowerSaving),
                 ),
-                ButtonSegment<GameFrameRateMode>(
-                  value: GameFrameRateMode.highRefresh,
-                  label: Text(l10n.gameFrameRateHighRefresh),
-                ),
               ],
               selected: <GameFrameRateMode>{controller.mode},
               onSelectionChanged: controller.supported == false
@@ -59,8 +55,6 @@ class GameFrameRateSettingsSection extends StatelessWidget {
                         l10n.gameFrameRateAutomaticDesc,
                       GameFrameRateMode.stable30 =>
                         l10n.gameFrameRatePowerSavingDesc,
-                      GameFrameRateMode.highRefresh =>
-                        l10n.gameFrameRateHighRefreshDesc,
                     },
               style: Theme.of(
                 context,

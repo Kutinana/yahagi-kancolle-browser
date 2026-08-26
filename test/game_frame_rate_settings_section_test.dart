@@ -7,7 +7,7 @@ import 'package:yahagi_kancolle_browser/src/settings/game_frame_rate_settings_se
 
 void main() {
   testWidgets(
-    'shows three modes and applies a selection without reload notice',
+    'shows two conservative modes and applies a selection without reload notice',
     (tester) async {
       final store = MemoryGameFrameRateSettingsStore();
       final controller = await GameFrameRateSettingsController.load(store);
@@ -18,7 +18,15 @@ void main() {
       expect(find.byType(SegmentedButton<GameFrameRateMode>), findsOneWidget);
       expect(find.text('自动'), findsOneWidget);
       expect(find.text('低耗'), findsOneWidget);
-      expect(find.text('高刷'), findsOneWidget);
+      expect(find.text('高刷'), findsNothing);
+      expect(
+        tester
+            .widget<SegmentedButton<GameFrameRateMode>>(
+              find.byType(SegmentedButton<GameFrameRateMode>),
+            )
+            .segments,
+        hasLength(2),
+      );
 
       await tester.tap(find.text('低耗'));
       await tester.pumpAndSettle();
@@ -30,15 +38,12 @@ void main() {
   );
 
   for (final localeCase in <({Locale locale, List<String> texts})>[
-    (locale: const Locale('zh'), texts: <String>['游戏帧率', '自动', '低耗', '高刷']),
+    (locale: const Locale('zh'), texts: <String>['游戏帧率', '自动', '低耗']),
     (
       locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
-      texts: <String>['遊戲幀率', '自動', '低耗', '高刷'],
+      texts: <String>['遊戲幀率', '自動', '低耗'],
     ),
-    (
-      locale: const Locale('ja'),
-      texts: <String>['ゲームフレームレート', '自動', '省電', '高リフレッシュレート'],
-    ),
+    (locale: const Locale('ja'), texts: <String>['ゲームフレームレート', '自動', '省電']),
   ]) {
     testWidgets('localizes all modes for ${localeCase.locale}', (tester) async {
       final controller = await GameFrameRateSettingsController.load(

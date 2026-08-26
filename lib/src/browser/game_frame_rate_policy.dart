@@ -62,12 +62,6 @@ final class GameFrameRatePolicy {
       resetWindow();
       return FrameRateDecision.lock30;
     }
-    if (mode == GameFrameRateMode.highRefresh) {
-      resetWindow();
-      _consecutiveUnstableWindows = 0;
-      return FrameRateDecision.keep60;
-    }
-
     final createJsUnstable =
         _createJsSamples.length >= 4 &&
         _createJsSamples.where((fps) => fps < 50).length >= 3;
