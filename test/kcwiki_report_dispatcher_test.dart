@@ -52,6 +52,24 @@ void main() {
     expect(dispatcher.submit(request), isFalse);
   });
 
+  test('default queue accepts 64 pending reports', () {
+    final dispatcher = KcwikiReportDispatcher(
+      transportFactory: () => _ControlledTransport(block: true),
+    );
+    addTearDown(dispatcher.dispose);
+    dispatcher.start();
+
+    for (var index = 0; index < 64; index++) {
+      expect(
+        dispatcher.submit(request),
+        isTrue,
+        reason: 'report ${index + 1} should fit in the default queue',
+      );
+    }
+    expect(dispatcher.submit(request), isFalse);
+    expect(dispatcher.pendingCount, 64);
+  });
+
   test('transport exception does not prevent the next report', () async {
     final transport = _ControlledTransport(failFirst: true);
     final results = <KcwikiDispatchResult>[];

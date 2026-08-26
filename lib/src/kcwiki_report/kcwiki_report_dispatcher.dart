@@ -24,7 +24,7 @@ final class KcwikiReportDispatcher {
     this.onResult,
     this.onQueued,
     this.onDropped,
-    this.maxPendingCount = 16,
+    this.maxPendingCount = 64,
     this.maxPendingBytes = 4 * 1024 * 1024,
   }) : assert(maxPendingCount > 0),
        assert(maxPendingBytes > 0) {
