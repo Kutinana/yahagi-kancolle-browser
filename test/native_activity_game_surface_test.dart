@@ -658,6 +658,62 @@ void main() {
     expect(fixture.port.calls.where((call) => call == 'reload'), hasLength(1));
   });
 
+  testWidgets(
+    'automatic page recovery stops after one reload and offers manual reload',
+    (tester) async {
+      final fixture = _SurfaceFixture();
+      fixture.port.fitFailures.addAll(<Object>[
+        StateError('first attempt'),
+        StateError('first retry'),
+        StateError('reloaded attempt'),
+        StateError('reloaded retry'),
+      ]);
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester);
+      await tester.pump();
+      fixture.port.calls.clear();
+
+      fixture.port.addEvent(
+        _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+      );
+      fixture.port.addEvent(
+        _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+
+      fixture.port.addEvent(
+        _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+      );
+      fixture.port.addEvent(
+        _event('pageFinished', generationId: 7, url: 'https://game.example/'),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+
+      expect(
+        fixture.port.calls.where((call) => call == 'reload'),
+        hasLength(1),
+      );
+      expect(
+        find.byKey(const Key('native-game-surface-page-reload')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('native-game-surface-page-reload')),
+      );
+      await tester.pump();
+
+      expect(
+        fixture.port.calls.where((call) => call == 'reload'),
+        hasLength(2),
+      );
+    },
+  );
+
   testWidgets('route desire stays authoritative when a page becomes ready', (
     tester,
   ) async {

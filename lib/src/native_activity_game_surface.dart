@@ -306,6 +306,7 @@ final class _NativeActivityGameSurfaceState
   bool _navigationIssued = false;
   bool _navigationAcknowledged = false;
   bool _automaticRecoveryReloadUsed = false;
+  bool _pageReloadAvailable = false;
   Uri? _navigationTarget;
   bool _pageReady = false;
   bool _renderProcessRecoveryAvailable = false;
@@ -875,6 +876,7 @@ final class _NativeActivityGameSurfaceState
         if (!_matchesPendingPageFinish(pending)) return;
         _pageReady = true;
         _automaticRecoveryReloadUsed = false;
+        _pageReloadAvailable = false;
         _setStartupState(GameStartupState.ready);
         await _frameRateRuntimeController?.onPageReady(
           samplingEnabled:
@@ -961,7 +963,50 @@ final class _NativeActivityGameSurfaceState
     _reportPageError(
       '游戏页面初始化失败 [${failure.stage}]：'
       '${failure.cause.runtimeType}',
+      pageReloadAvailable: true,
     );
+  }
+
+  void _reloadAfterPageInitializationError() {
+    if (!_pageReloadAvailable || !_active || !mounted || _fatal) return;
+    final port = _port;
+    final generationId = _generationId;
+    if (port == null || generationId == null) return;
+    final operationEpoch = _operationEpoch;
+    _pageReloadAvailable = false;
+    _pageReady = false;
+    _awaitingNewPageStart = true;
+    _setStartupState(GameStartupState.loadingGame);
+    unawaited(
+      _runManualPageReload(port, generationId, operationEpoch).catchError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        debugPrint(
+          'Native game surface manual page reload failed unexpectedly: '
+          '$error\n$stackTrace',
+        );
+      }),
+    );
+  }
+
+  Future<void> _runManualPageReload(
+    NativeActivityGameWebViewPort port,
+    int generationId,
+    int operationEpoch,
+  ) async {
+    try {
+      await _runPageInitializationStage('reload', port.reload);
+    } on _PageInitializationFailure catch (failure, stackTrace) {
+      debugPrint(
+        'Native game surface manual page reload failed: '
+        '$failure\n$stackTrace',
+      );
+      if (_matchesGeneration(port, generationId, operationEpoch)) {
+        _awaitingNewPageStart = false;
+        _reportPageInitializationFailure(failure);
+      }
+    }
   }
 
   Future<void> _runPageInitializationStage(
@@ -990,7 +1035,8 @@ final class _NativeActivityGameSurfaceState
     _setFatalError('原生 WebView 事件通道已关闭。');
   }
 
-  void _reportPageError(String message) {
+  void _reportPageError(String message, {bool pageReloadAvailable = false}) {
+    _pageReloadAvailable = pageReloadAvailable;
     _frameRateRuntimeController?.onPageStarted();
     _invalidateOperations(fatal: false);
     _pageReady = false;
@@ -1452,6 +1498,15 @@ final class _NativeActivityGameSurfaceState
               FilledButton.icon(
                 key: const Key('native-game-surface-reload'),
                 onPressed: _reloadAfterRenderProcessGone,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.reload),
+              ),
+            ],
+            if (_pageReloadAvailable) ...<Widget>[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                key: const Key('native-game-surface-page-reload'),
+                onPressed: _reloadAfterPageInitializationError,
                 icon: const Icon(Icons.refresh),
                 label: Text(l10n.reload),
               ),
