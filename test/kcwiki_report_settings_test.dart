@@ -2,8 +2,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/kcwiki_report/kcwiki_report_settings.dart';
 
 void main() {
-  test('missing preference keeps KCWiki reporting disabled', () async {
+  test('missing preference enables KCWiki reporting by default', () async {
     final store = MemoryKcwikiReportSettingsStore();
+    final controller = await KcwikiReportController.load(store);
+    addTearDown(controller.dispose);
+
+    expect(controller.enabled, isTrue);
+  });
+
+  test('disabled preference is restored', () async {
+    final store = MemoryKcwikiReportSettingsStore(false);
     final controller = await KcwikiReportController.load(store);
     addTearDown(controller.dispose);
 

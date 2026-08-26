@@ -2111,7 +2111,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get kcwikiReportDisabledDesc =>
-      '初期設定はオフです。オフの間は収集・整形・通信を行わず、ゲームやローカル機能に影響しません。';
+      '初期設定はオンで、現在はオフです。オフの間は収集・整形・通信を行わず、ゲームやローカル機能に影響しません。';
 
   @override
   String get kcwikiReportEnabledDesc =>

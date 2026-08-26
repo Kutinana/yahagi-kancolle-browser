@@ -721,7 +721,7 @@
   "gameConnectorNavigationFailed": "接続設定は保存されましたが、ログイン画面を開けませんでした。もう一度お試しください。",
   "kcwikiReportSection": "KCWiki データ提供",
   "kcwikiReportTitle": "KCWiki のデータ収集に協力する",
-  "kcwikiReportDisabledDesc": "初期設定はオフです。オフの間は収集・整形・通信を行わず、ゲームやローカル機能に影響しません。",
+  "kcwikiReportDisabledDesc": "初期設定はオンで、現在はオフです。オフの間は収集・整形・通信を行わず、ゲームやローカル機能に影響しません。",
   "kcwikiReportEnabledDesc": "オンです。進路、任務前提、戦闘、友軍、基地航空／空襲、改修データのみ送信します。",
   "kcwikiReportConfirmTitle": "KCWiki データ提供を有効にしますか？",
   "kcwikiReportConfirmDesc": "有効にすると、進路、任務前提、戦闘、友軍、基地航空／空襲、改修記録を KCWiki の report2 サーバーへ送信します。このサーバーは現在、暗号化されていない HTTP を使用します。ログイントークン、Cookie、リクエストヘッダーは送信せず、送信失敗でゲーム機能が停止することもありません。",

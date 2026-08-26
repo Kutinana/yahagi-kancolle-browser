@@ -4029,7 +4029,7 @@ abstract class AppLocalizations {
   /// No description provided for @kcwikiReportDisabledDesc.
   ///
   /// In zh, this message translates to:
-  /// **'默认关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。'**
+  /// **'默认开启，当前已关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。'**
   String get kcwikiReportDisabledDesc;
 
   /// No description provided for @kcwikiReportEnabledDesc.

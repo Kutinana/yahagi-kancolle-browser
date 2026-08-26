@@ -62,7 +62,7 @@ void main() {
     expect(find.text('安全边界'), findsOneWidget);
   });
 
-  testWidgets('KCWiki reporting is opt-in and disabling is immediate', (
+  testWidgets('KCWiki reporting defaults on and reenabling is confirmed', (
     tester,
   ) async {
     final capture = await CaptureModeController.load(_MemoryCaptureModeStore());
@@ -94,9 +94,15 @@ void main() {
 
     final toggle = find.byKey(const Key('kcwiki-report-switch'));
     expect(toggle, findsOneWidget);
-    expect(kcwiki.enabled, isFalse);
+    expect(kcwiki.enabled, isTrue);
 
     await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(kcwiki.enabled, isFalse);
+    expect(store.enabled, isFalse);
+    expect(find.text('开启 KCWiki 数据贡献？'), findsNothing);
+
     await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(find.text('开启 KCWiki 数据贡献？'), findsOneWidget);
@@ -106,12 +112,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(kcwiki.enabled, isTrue);
     expect(store.enabled, isTrue);
-
-    await tester.tap(toggle);
-    await tester.pumpAndSettle();
-    expect(kcwiki.enabled, isFalse);
-    expect(store.enabled, isFalse);
-    expect(find.text('开启 KCWiki 数据贡献？'), findsNothing);
   });
 
   testWidgets('KCWiki reporting shows persistent activity states', (

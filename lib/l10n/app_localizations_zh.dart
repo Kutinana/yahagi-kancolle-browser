@@ -2089,7 +2089,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get kcwikiReportTitle => '帮助 KCWiki 收集数据';
 
   @override
-  String get kcwikiReportDisabledDesc => '默认关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。';
+  String get kcwikiReportDisabledDesc =>
+      '默认开启，当前已关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。';
 
   @override
   String get kcwikiReportEnabledDesc => '已开启；仅发送带路、任务前置、战斗、友军、陆航/空袭和改修数据。';
@@ -4297,7 +4298,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get kcwikiReportTitle => '協助 KCWiki 收集資料';
 
   @override
-  String get kcwikiReportDisabledDesc => '預設關閉。關閉時不收集、不組包、不連線，也不影響遊戲和本機功能。';
+  String get kcwikiReportDisabledDesc =>
+      '預設開啟，目前已關閉。關閉時不收集、不組包、不連線，也不影響遊戲和本機功能。';
 
   @override
   String get kcwikiReportEnabledDesc => '已開啟；僅傳送帶路、任務前置、戰鬥、友軍、陸航／空襲和改修資料。';

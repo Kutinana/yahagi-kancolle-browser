@@ -20,7 +20,7 @@ final class SharedPreferencesKcwikiReportSettingsStore
 
   @override
   Future<bool> loadEnabled() async =>
-      (await SharedPreferences.getInstance()).getBool(_enabledKey) ?? false;
+      (await SharedPreferences.getInstance()).getBool(_enabledKey) ?? true;
 
   @override
   Future<void> saveEnabled(bool enabled) async {
@@ -57,7 +57,7 @@ final class SharedPreferencesKcwikiReportSettingsStore
 final class MemoryKcwikiReportSettingsStore
     implements KcwikiReportSettingsStore {
   MemoryKcwikiReportSettingsStore([
-    this.enabled = false,
+    this.enabled = true,
     KcwikiReportStatus? initialStatus,
   ]) : status = initialStatus ?? const KcwikiReportStatus();
 
