@@ -37,12 +37,12 @@ class GameFrameRateSystemConstraintsTest {
     }
 
     @Test
-    fun highRefreshRemainsUserControlledUnderSystemConstraints() {
+    fun stable30RemainsSelectedUnderSystemConstraints() {
         assertEquals(
-            GameFrameRateTarget.HIGH_REFRESH,
+            GameFrameRateTarget.FPS_30,
             GameFrameRateSystemPolicy.effectiveTarget(
-                mode = GameFrameRateMode.HIGH_REFRESH,
-                requestedTarget = GameFrameRateTarget.HIGH_REFRESH,
+                mode = GameFrameRateMode.STABLE_30,
+                requestedTarget = GameFrameRateTarget.FPS_30,
                 state = GameFrameRateSystemState(
                     powerSaveEnabled = true,
                     thermalStatus = PowerManager.THERMAL_STATUS_SEVERE,
@@ -52,12 +52,12 @@ class GameFrameRateSystemConstraintsTest {
     }
 
     @Test
-    fun automaticModeNeverAcceptsAnUnthrottledRuntimeTarget() {
+    fun automaticModeKeepsTheRequested60TargetWithoutConstraints() {
         assertEquals(
             GameFrameRateTarget.FPS_60,
             GameFrameRateSystemPolicy.effectiveTarget(
                 mode = GameFrameRateMode.AUTO,
-                requestedTarget = GameFrameRateTarget.HIGH_REFRESH,
+                requestedTarget = GameFrameRateTarget.FPS_60,
                 state = GameFrameRateSystemState(),
             ),
         )
@@ -87,13 +87,13 @@ class GameFrameRateSystemConstraintsTest {
     }
 
     @Test
-    fun manualModesKeepRuntimeSamplesUnderSystemConstraints() {
+    fun stable30KeepsRuntimeSamplesUnderSystemConstraints() {
         assertEquals(
-            120.0,
+            30.0,
             GameFrameRateSystemPolicy.runtimeSample(
-                mode = GameFrameRateMode.HIGH_REFRESH,
+                mode = GameFrameRateMode.STABLE_30,
                 state = GameFrameRateSystemState(powerSaveEnabled = true),
-                measuredFps = 120.0,
+                measuredFps = 30.0,
             ),
         )
     }

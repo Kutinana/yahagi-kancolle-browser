@@ -808,39 +808,24 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         if (enabled) {
             installGadgetBypassLayoutListener()
             ensureGadgetBypassWrap()
-        } else if (gameFrameRateManager?.mainScriptTickerMode == null &&
-            gameResourceCacheMode == GameResourceCacheMode.NONE
-        ) {
+        } else if (gameResourceCacheMode == GameResourceCacheMode.NONE) {
             restoreGadgetBypassClient()
             removeGadgetBypassLayoutListener()
         }
     }
 
-    override fun onFrameRateModeChanged(mode: GameFrameRateMode) {
+    override fun onFrameRateModeChanged(@Suppress("UNUSED_PARAMETER") mode: GameFrameRateMode) {
         val attributes = window.attributes
-        val preferredRefreshRate = if (mode == GameFrameRateMode.HIGH_REFRESH) 0f else 60f
-        if (attributes.preferredRefreshRate != preferredRefreshRate) {
-            attributes.preferredRefreshRate = preferredRefreshRate
+        if (attributes.preferredRefreshRate != 60f) {
+            attributes.preferredRefreshRate = 60f
             window.attributes = attributes
-        }
-        if (mode.mainScriptTickerMode != null) {
-            installGadgetBypassLayoutListener()
-            ensureGadgetBypassWrap()
-        } else if (gadgetBypassManager?.enabled != true &&
-            gameResourceCacheMode == GameResourceCacheMode.NONE
-        ) {
-            restoreGadgetBypassClient()
-            removeGadgetBypassLayoutListener()
         }
     }
 
     private fun ensureGadgetBypassWrap() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = gadgetBypassManager ?: return
-        val frameRateManager = gameFrameRateManager
-        if (!manager.enabled && frameRateManager?.mainScriptTickerMode == null &&
-            gameResourceCacheMode == GameResourceCacheMode.NONE
-        ) return
+        if (!manager.enabled && gameResourceCacheMode == GameResourceCacheMode.NONE) return
 
         val webViews = mutableListOf<WebView>()
         collectWebViews(window.decorView, webViews)
@@ -857,7 +842,6 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 engine = manager.engine,
                 isEnabled = { manager.enabled },
                 endpoint = { manager.endpoint },
-                mainScriptTickerMode = { frameRateManager?.mainScriptTickerMode },
                 gameResourceEngine = gameResourceCacheEngine,
             ),
         )
@@ -868,9 +852,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         if (mode != GameResourceCacheMode.NONE) {
             installGadgetBypassLayoutListener()
             ensureGadgetBypassWrap()
-        } else if (gadgetBypassManager?.enabled != true &&
-            gameFrameRateManager?.mainScriptTickerMode == null
-        ) {
+        } else if (gadgetBypassManager?.enabled != true) {
             restoreGadgetBypassClient()
             removeGadgetBypassLayoutListener()
         }

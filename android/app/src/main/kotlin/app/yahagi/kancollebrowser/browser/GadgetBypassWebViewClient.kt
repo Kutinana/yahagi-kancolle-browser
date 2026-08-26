@@ -27,8 +27,6 @@ class GadgetBypassWebViewClient(
     private val engine: GadgetBypassEngine,
     private val isEnabled: () -> Boolean,
     private val endpoint: () -> String,
-    private val mainScriptTickerMode: () -> GameMainScriptTickerMode? = { null },
-    private val mainScriptFetcher: GameMainScriptFetcher = GameMainScriptFetcher(),
     private val gameResourceEngine: GameResourceCacheEngine? = null,
 ) : WebViewClient() {
 
@@ -44,13 +42,6 @@ class GadgetBypassWebViewClient(
         request: WebResourceRequest,
     ): WebResourceResponse? {
         val url = request.url?.toString() ?: return null
-        val tickerMode = mainScriptTickerMode()
-        if (request.method.equals("GET", ignoreCase = true) &&
-            tickerMode != null &&
-            GameMainScriptPatcher.isMainScriptUrl(url)
-        ) {
-            servePatchedMainScript(url, tickerMode, request.requestHeaders)?.let { return it }
-        }
         if (isEnabled() && GadgetBypassRules.shouldIntercept(url, request.method)) {
             return serveFromBypass(url) ?: original.shouldInterceptRequest(view, request)
         }
@@ -64,42 +55,11 @@ class GadgetBypassWebViewClient(
         if (url == null) {
             return null
         }
-        val tickerMode = mainScriptTickerMode()
-        if (tickerMode != null && GameMainScriptPatcher.isMainScriptUrl(url)) {
-            servePatchedMainScript(url, tickerMode)?.let { return it }
-        }
         if (isEnabled() && GadgetBypassRules.shouldIntercept(url, "GET")) {
             return serveFromBypass(url) ?: original.shouldInterceptRequest(view, url)
         }
         serveFromGameCache(url)?.let { return it }
         return original.shouldInterceptRequest(view, url)
-    }
-
-    private fun servePatchedMainScript(
-        url: String,
-        tickerMode: GameMainScriptTickerMode,
-        requestHeaders: Map<String, String> = emptyMap(),
-    ): WebResourceResponse? = try {
-        val originalBytes = if (isEnabled() && GadgetBypassRules.shouldIntercept(url, "GET")) {
-            engine.fetch(url, endpoint())
-        } else {
-            gameResourceEngine?.fetch(url, requestHeaders)?.bytes
-                ?: mainScriptFetcher.fetch(url, requestHeaders)
-        } ?: return null
-        val originalScript = originalBytes.toString(Charsets.UTF_8)
-        val patchedScript = GameMainScriptPatcher.patch(originalScript, tickerMode)
-        if (patchedScript == originalScript) {
-            Log.w(TAG, "frame-rate ticker pattern not found in $url")
-        } else {
-            Log.d(TAG, "patched frame-rate ticker to ${tickerMode.createJsConstant} in $url")
-        }
-        WebResourceResponse(
-            "application/javascript",
-            "utf-8",
-            ByteArrayInputStream(patchedScript.toByteArray(Charsets.UTF_8)),
-        )
-    } catch (_: Exception) {
-        null
     }
 
     private fun serveFromBypass(url: String): WebResourceResponse? {

@@ -37,18 +37,10 @@ object GameFrameRateSystemPolicy {
         requestedTarget: GameFrameRateTarget,
         state: GameFrameRateSystemState,
     ): GameFrameRateTarget {
-        val safeRequestedTarget = if (
-            mode == GameFrameRateMode.AUTO &&
-            requestedTarget == GameFrameRateTarget.HIGH_REFRESH
-        ) {
-            GameFrameRateTarget.FPS_60
-        } else {
-            requestedTarget
-        }
         return if (mode == GameFrameRateMode.AUTO && state.shouldConservePower) {
             GameFrameRateTarget.FPS_30
         } else {
-            safeRequestedTarget
+            requestedTarget
         }
     }
 }
