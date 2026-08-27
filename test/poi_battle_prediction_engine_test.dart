@@ -209,6 +209,41 @@ void main() {
     expect(result.enemyEscort.single.currentHp, 80);
     expect(result.issues, isEmpty);
   });
+
+  test(
+    'POI engine uses seven-ship boundary when attacker flags are absent',
+    () {
+      final engine = PoiBattlePredictionEngine(
+        friendMain: <BattleShipSnapshot>[
+          for (var position = 0; position < 7; position++)
+            poiShip(side: BattleSide.friend, position: position, hp: 30),
+        ],
+        enemyMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+          poiShip(side: BattleSide.enemy, position: 1, hp: 30),
+        ],
+      );
+
+      final result = engine.append(
+        path: '/kcsapi/api_req_sortie/battle',
+        data: <String, Object?>{
+          'api_hougeki1': <String, Object?>{
+            'api_at_list': <int>[0],
+            'api_df_list': <Object?>[
+              <int>[7],
+            ],
+            'api_damage': <Object?>[
+              <num>[11],
+            ],
+          },
+        },
+      );
+
+      expect(result.enemyMain.map((ship) => ship.currentHp), <int>[19, 30]);
+      expect(result.friendMain.every((ship) => ship.currentHp == 30), isTrue);
+      expect(result.issues, isEmpty);
+    },
+  );
 }
 
 Map<String, Object?> _enemyNightDamage(num damage) => <String, Object?>{

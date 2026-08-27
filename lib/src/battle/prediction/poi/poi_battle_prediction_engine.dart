@@ -285,12 +285,14 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
     final defenders = _list(map['api_df_list']);
     final damages = _list(map['api_damage']);
     final attackTypes = _list(map[isNight ? 'api_sp_list' : 'api_at_type']);
+    final mainFleetRange = _friendMain.length;
     for (var row = 0; row < defenders.length && row < damages.length; row++) {
       final targets = _list(defenders[row]);
       final hits = _list(damages[row]);
       final enemyAttack = row < flags.length
           ? _int(flags[row]) != 0
-          : (targets.isNotEmpty && _int(targets.first) < 6);
+          : (targets.isNotEmpty &&
+                _int(targets.first) < mainFleetRange);
       final attackOrder = row < attackTypes.length
           ? _multiTargetAttackOrder(_int(attackTypes[row]), isNight: isNight)
           : null;
@@ -317,7 +319,9 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
         var position = _int(targets[hit]);
         var escort = enemyAttack ? friendEscort : enemyEscort;
         if (row >= flags.length) {
-          if (!enemyAttack && position >= 6) position -= 6;
+          if (!enemyAttack && position >= mainFleetRange) {
+            position -= mainFleetRange;
+          }
           escort = false;
         }
         _damagePosition(enemyAttack, escort, position, amount);
@@ -328,8 +332,8 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
           row < attackers.length &&
           dealt > 0) {
         var position = _int(attackers[row]);
-        final escort = friendEscort || position >= 6;
-        if (position >= 6) position -= 6;
+        final escort = friendEscort || position >= mainFleetRange;
+        if (position >= mainFleetRange) position -= mainFleetRange;
         _addDealt(escort ? _friendEscort : _friendMain, position, dealt);
         if (isNight && escort && position < _nightEscortDamage.length) {
           _nightEscortDamage[position] += dealt;
