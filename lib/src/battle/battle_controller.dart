@@ -98,7 +98,8 @@ final class BattleController extends ChangeNotifier
     final current = _current;
     if (current == null ||
         current.context.practice ||
-        current.displayStage == BattleDisplayStage.navigation) {
+        current.displayStage == BattleDisplayStage.navigation ||
+        _hasUntrustedPoiLedger) {
       return;
     }
     _emitFriendlyHp(current, _lastBattleCapturedAt ?? DateTime.now().toUtc());
@@ -527,12 +528,15 @@ final class BattleController extends ChangeNotifier
         );
       }
     }
+    final hasUntrustedPoiLedger = _hasUntrustedPoiLedger;
     final parsedFriendMain = _mergeEscapedFlags(parsed.friendMain, friendMain);
     final parsedFriendEscort = _mergeEscapedFlags(
       parsed.friendEscort,
       friendEscort,
     );
-    if (!practice && (battleDamageVibrationEnabled?.call() ?? false)) {
+    if (!practice &&
+        !hasUntrustedPoiLedger &&
+        (battleDamageVibrationEnabled?.call() ?? false)) {
       final severity = detectFriendlyDamageAlert(
         before: <BattleShipSnapshot>[...friendMain, ...friendEscort],
         after: <BattleShipSnapshot>[...parsedFriendMain, ...parsedFriendEscort],
@@ -577,7 +581,7 @@ final class BattleController extends ChangeNotifier
           : _predictedMvpPositions(parsed.friendMain, parsed.friendEscort),
     );
     _lastBattleCapturedAt = event.capturedAt;
-    if (!practice) {
+    if (!practice && !hasUntrustedPoiLedger) {
       _emitFriendlyHp(_current!, event.capturedAt);
     }
   }
@@ -591,6 +595,11 @@ final class BattleController extends ChangeNotifier
       capturedAt,
     );
   }
+
+  bool get _hasUntrustedPoiLedger =>
+      _predictionEngineMethod == BattlePredictionMethod.poi &&
+      _sortieDamageControls.isActive &&
+      !_sortieDamageControls.isTrusted;
 
   BattlePredictionEngine _createPredictionEngine({
     required BattlePredictionMethod method,

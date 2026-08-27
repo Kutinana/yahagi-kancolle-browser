@@ -318,7 +318,7 @@ git commit -m "fix(战斗): 阻止损管跨节点重复使用（任务 2/4）"
 - 修改：`test/battle_controller_damage_control_lifecycle_test.dart`
 - 修改：`lib/src/battle/battle_controller.dart`
 
-- [ ] **步骤 1：编写要员加女神、七舰和母港重置测试**
+- [x] **步骤 1：编写要员加女神、七舰和母港重置测试**
 
 断言：
 
@@ -370,13 +370,13 @@ test('port resets the sortie damage control ledger', () async {
 });
 ```
 
-- [ ] **步骤 2：运行新增测试并确认至少一个因边界未实现而失败**
+- [x] **步骤 2：运行新增测试并确认至少一个因边界未实现而失败**
 
 运行：`flutter test test/battle_controller_damage_control_lifecycle_test.dart`
 
 预期：新增边界用例在完成关闭式失败和引擎隔离前 FAIL。
 
-- [ ] **步骤 3：实现未确认传播和 Yahagi 引擎隔离**
+- [x] **步骤 3：实现未确认传播和 Yahagi 引擎隔离**
 
 当 POI 预测出现解析问题、账本不可信或中途接入时：
 
@@ -390,7 +390,7 @@ _session?.markUnconfirmed(
 仅当 `!practice` 且当前不是“不可信 POI 出击”时调用 `_emitFriendlyHp`。创建
 Yahagi 引擎时使用未注入的原始舰队快照，也不把其输出同步到账本。
 
-- [ ] **步骤 4：运行账本、控制器和两套引擎测试**
+- [x] **步骤 4：运行账本、控制器和两套引擎测试**
 
 运行：
 
@@ -400,7 +400,7 @@ flutter test test/sortie_damage_control_ledger_test.dart test/battle_controller_
 
 预期：全部 PASS。
 
-- [ ] **步骤 5：提交任务 3**
+- [x] **步骤 5：提交任务 3**
 
 ```bash
 git add lib/src/battle/battle_controller.dart test/battle_controller_damage_control_lifecycle_test.dart
