@@ -372,47 +372,70 @@ class BattleDamageParser {
           ? targets.length
           : damages.length;
       var dealt = 0;
-      for (var hit = 0; hit < hitCount; hit++) {
-        final damage = _damage(damages[hit]);
-        if (damage <= 0) {
-          continue;
-        }
-        if (attributeFriendDamage && !attackerIsEnemy && attackOrder != null) {
-          var attacker = attackIndex < attackers.length
-              ? _int(attackers[attackIndex])
-              : -1;
-          if (attacker >= 0) {
-            attacker += hit < attackOrder.length ? attackOrder[hit] : 0;
-            if (isNight &&
-                battle.friendEscort.isNotEmpty &&
-                attacker < battle.friendMain.length) {
-              attacker += battle.friendMain.length;
-            }
-            _addDamageDealt(
-              battle,
-              absolutePosition: attacker,
-              damage: damage,
-              roleHint: BattleFleetRole.main,
-            );
-          }
-        } else {
-          dealt += damage;
-        }
-        var targetPosition = _int(targets[hit]);
-        var targetRole = attackerIsEnemy ? friendActiveRole : enemyActiveRole;
-        if (!hasAttackerFlag) {
-          if (!attackerIsEnemy && targetPosition >= mainFleetRange) {
-            targetPosition -= mainFleetRange;
-          }
-          targetRole = BattleFleetRole.main;
-        }
-        _damagePosition(
-          battle,
-          side: attackerIsEnemy ? BattleSide.friend : BattleSide.enemy,
-          absolutePosition: targetPosition,
-          damage: damage,
-          roleHint: targetRole,
+      if (attackOrder == null) {
+        final damage = damages.fold<int>(
+          0,
+          (sum, value) => sum + _damage(value),
         );
+        if (damage > 0) {
+          if (attributeFriendDamage && !attackerIsEnemy) dealt = damage;
+          var targetPosition = _int(targets.first);
+          var targetRole = attackerIsEnemy ? friendActiveRole : enemyActiveRole;
+          if (!hasAttackerFlag) {
+            if (!attackerIsEnemy && targetPosition >= mainFleetRange) {
+              targetPosition -= mainFleetRange;
+            }
+            targetRole = BattleFleetRole.main;
+          }
+          _damagePosition(
+            battle,
+            side: attackerIsEnemy ? BattleSide.friend : BattleSide.enemy,
+            absolutePosition: targetPosition,
+            damage: damage,
+            roleHint: targetRole,
+          );
+        }
+      } else {
+        for (var hit = 0; hit < hitCount; hit++) {
+          final damage = _damage(damages[hit]);
+          if (damage <= 0) {
+            continue;
+          }
+          if (attributeFriendDamage && !attackerIsEnemy) {
+            var attacker = attackIndex < attackers.length
+                ? _int(attackers[attackIndex])
+                : -1;
+            if (attacker >= 0) {
+              attacker += hit < attackOrder.length ? attackOrder[hit] : 0;
+              if (isNight &&
+                  battle.friendEscort.isNotEmpty &&
+                  attacker < battle.friendMain.length) {
+                attacker += battle.friendMain.length;
+              }
+              _addDamageDealt(
+                battle,
+                absolutePosition: attacker,
+                damage: damage,
+                roleHint: BattleFleetRole.main,
+              );
+            }
+          }
+          var targetPosition = _int(targets[hit]);
+          var targetRole = attackerIsEnemy ? friendActiveRole : enemyActiveRole;
+          if (!hasAttackerFlag) {
+            if (!attackerIsEnemy && targetPosition >= mainFleetRange) {
+              targetPosition -= mainFleetRange;
+            }
+            targetRole = BattleFleetRole.main;
+          }
+          _damagePosition(
+            battle,
+            side: attackerIsEnemy ? BattleSide.friend : BattleSide.enemy,
+            absolutePosition: targetPosition,
+            damage: damage,
+            roleHint: targetRole,
+          );
+        }
       }
       if (attributeFriendDamage &&
           !attackerIsEnemy &&

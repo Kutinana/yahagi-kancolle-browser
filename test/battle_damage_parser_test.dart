@@ -438,6 +438,39 @@ void main() {
     },
   );
 
+  test('aggregates ordinary multi-hit damage before damage control', () {
+    final result = BattleDamageParser().apply(
+      data: <String, Object?>{
+        'api_hougeki': <String, Object?>{
+          'api_at_eflag': <int>[1],
+          'api_at_list': <int>[0],
+          'api_sp_list': <int>[3],
+          'api_df_list': <Object?>[
+            <int>[0, 0],
+          ],
+          'api_damage': <Object?>[
+            <num>[30, 1],
+          ],
+        },
+      },
+      path: '/kcsapi/api_req_battle_midnight/battle',
+      friendMain: <BattleShipSnapshot>[
+        snapshot(
+          side: BattleSide.friend,
+          position: 0,
+          hp: 30,
+          equipmentMasterIds: const <int>[42],
+        ),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        snapshot(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    expect(result.friendMain.single.currentHp, 6);
+    expect(result.friendMain.single.usedDamageControlItemIds, <int>[42]);
+  });
+
   test('repair goddess restores full hp after lethal damage', () {
     final result = BattleDamageParser().apply(
       data: <String, Object?>{
