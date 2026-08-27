@@ -1,34 +1,80 @@
 import '../../battle_damage_parser.dart';
 import '../../battle_models.dart';
 import '../battle_prediction_engine.dart';
+import 'poi_battle_replay_state.dart';
 
-/// Native Dart port of poi-lib-battle's packet replay semantics.
+/// POI-compatible engine that rebuilds the simulator from the opening state
+/// whenever a new battle packet arrives.
 final class PoiBattlePredictionEngine implements BattlePredictionEngine {
   PoiBattlePredictionEngine({
     required List<BattleShipSnapshot> friendMain,
     List<BattleShipSnapshot> friendEscort = const <BattleShipSnapshot>[],
     required List<BattleShipSnapshot> enemyMain,
     List<BattleShipSnapshot> enemyEscort = const <BattleShipSnapshot>[],
-  }) : _friendMain = List.of(friendMain),
-       _friendEscort = List.of(friendEscort),
-       _enemyMain = List.of(enemyMain),
-       _enemyEscort = List.of(enemyEscort);
+    this.fleetType = 0,
+  }) : _friendMain = clonePoiBattleFleet(friendMain),
+       _friendEscort = clonePoiBattleFleet(friendEscort),
+       _enemyMain = clonePoiBattleFleet(enemyMain),
+       _enemyEscort = clonePoiBattleFleet(enemyEscort);
 
   final List<BattleShipSnapshot> _friendMain;
   final List<BattleShipSnapshot> _friendEscort;
   final List<BattleShipSnapshot> _enemyMain;
   final List<BattleShipSnapshot> _enemyEscort;
-  final List<BattleParseIssue> _issues = <BattleParseIssue>[];
-  String _stage = 'unknown';
-  bool _airRaid = false;
-  bool _nightOnlyMvp = false;
-  final List<int> _nightEscortDamage = List<int>.filled(6, 0);
+  final int fleetType;
+  final List<PoiBattleReplayPacket> _packets = <PoiBattleReplayPacket>[];
 
   @override
   BattlePrediction append({
     required String path,
     required Map<String, Object?> data,
   }) {
+    _packets.add(PoiBattleReplayPacket(path: path, data: data));
+    final simulator = _PoiBattleSimulator(
+      friendMain: clonePoiBattleFleet(_friendMain),
+      friendEscort: clonePoiBattleFleet(_friendEscort),
+      enemyMain: clonePoiBattleFleet(_enemyMain),
+      enemyEscort: clonePoiBattleFleet(_enemyEscort),
+      fleetType: fleetType,
+    );
+    BattlePrediction? prediction;
+    for (final packet in _packets) {
+      prediction = simulator.simulate(path: packet.path, data: packet.data);
+    }
+    return prediction!;
+  }
+}
+
+/// Mutable simulator used for one complete replay only.
+final class _PoiBattleSimulator {
+  _PoiBattleSimulator({
+    required List<BattleShipSnapshot> friendMain,
+    List<BattleShipSnapshot> friendEscort = const <BattleShipSnapshot>[],
+    required List<BattleShipSnapshot> enemyMain,
+    List<BattleShipSnapshot> enemyEscort = const <BattleShipSnapshot>[],
+    required this.fleetType,
+  }) : _friendMain = friendMain,
+       _friendEscort = friendEscort,
+       _enemyMain = enemyMain,
+       _enemyEscort = enemyEscort;
+
+  final List<BattleShipSnapshot> _friendMain;
+  final List<BattleShipSnapshot> _friendEscort;
+  final List<BattleShipSnapshot> _enemyMain;
+  final List<BattleShipSnapshot> _enemyEscort;
+  List<BattleShipSnapshot> _npcFriend = <BattleShipSnapshot>[];
+  final int fleetType;
+  final List<BattleParseIssue> _issues = <BattleParseIssue>[];
+  String _stage = 'unknown';
+  bool _airRaid = false;
+  bool _nightOnlyMvp = false;
+  final List<int> _nightEscortDamage = List<int>.filled(6, 0);
+
+  BattlePrediction simulate({
+    required String path,
+    required Map<String, Object?> data,
+  }) {
+    _prepareNpcFriend(data['api_friendly_info']);
     _airRaid =
         _airRaid ||
         path.contains('ld_airbattle') ||
@@ -84,11 +130,8 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
         enemyEscort: false,
       );
     }
-    for (final key in <String>[
-      'api_friendly_kouku',
-      'api_kouku',
-      'api_kouku2',
-    ]) {
+    _friendlyAerial(data['api_friendly_kouku']);
+    for (final key in <String>['api_kouku', 'api_kouku2']) {
       _aerial(
         data[key],
         key,
@@ -139,6 +182,58 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
       friendEscort: friendEscort,
       enemyEscort: enemyEscort,
     );
+  }
+
+  void _prepareNpcFriend(Object? value) {
+    final info = _map(value);
+    if (info == null) return;
+    final ids = _list(info['api_ship_id']);
+    final now = _list(info['api_nowhps']);
+    final max = _list(info['api_maxhps']);
+    _npcFriend = <BattleShipSnapshot>[
+      for (var position = 0; position < ids.length; position++)
+        if (_atInt(ids, position) > 0)
+          BattleShipSnapshot(
+            masterId: _atInt(ids, position),
+            name: 'NPC friendly ${_atInt(ids, position)}',
+            side: BattleSide.friend,
+            fleetRole: BattleFleetRole.main,
+            position: position,
+            initialHp: _atInt(now, position),
+            maxHp: _atInt(max, position),
+            currentHp: _atInt(now, position),
+          ),
+    ];
+  }
+
+  void _friendlyAerial(Object? value) {
+    final map = _map(value);
+    if (map == null) return;
+    _stage = 'api_friendly_kouku';
+    final stage3 = _map(map['api_stage3']);
+    if (stage3 != null) {
+      _damageArray(
+        _enemyMain,
+        _list(stage3['api_edam']),
+        main: _enemyMain,
+        escortFleet: _enemyEscort,
+      );
+      _damageArray(
+        _npcFriend,
+        _list(stage3['api_fdam']),
+        main: _npcFriend,
+        escortFleet: const <BattleShipSnapshot>[],
+      );
+    }
+    final combined = _map(map['api_stage3_combined']);
+    if (combined != null) {
+      _damageArray(
+        _enemyEscort,
+        _list(combined['api_edam']),
+        main: _enemyEscort,
+        escortFleet: const <BattleShipSnapshot>[],
+      );
+    }
   }
 
   void _night(

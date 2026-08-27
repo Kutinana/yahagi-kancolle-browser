@@ -283,6 +283,83 @@ void main() {
       expect(result.issues, isEmpty);
     },
   );
+
+  test('POI engine keeps NPC friendly aerial damage off the player fleet', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 50),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_combined_battle/ec_battle',
+      data: <String, Object?>{
+        'api_friendly_info': <String, Object?>{
+          'api_ship_id': <int>[1001],
+          'api_ship_lv': <int>[90],
+          'api_nowhps': <int>[40],
+          'api_maxhps': <int>[40],
+          'api_Slot': <Object?>[<int>[]],
+          'api_Param': <Object?>[
+            <int>[0, 0, 0, 0],
+          ],
+        },
+        'api_friendly_kouku': <String, Object?>{
+          'api_stage3': <String, Object?>{
+            'api_edam': <num>[12],
+            'api_ebak_flag': <int>[1],
+            'api_erai_flag': <int>[0],
+            'api_ecl_flag': <int>[1],
+            'api_fdam': <num>[9],
+            'api_fbak_flag': <int>[1],
+            'api_frai_flag': <int>[0],
+            'api_fcl_flag': <int>[1],
+          },
+        },
+      },
+    );
+
+    expect(result.friendMain.single.currentHp, 30);
+    expect(result.enemyMain.single.currentHp, 38);
+    expect(result.issues, isEmpty);
+  });
+
+  test('POI engine replays immutable copies of every captured packet', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 50),
+      ],
+    );
+    final firstPacket = <String, Object?>{
+      'api_hougeki1': <String, Object?>{
+        'api_at_eflag': <int>[0],
+        'api_at_list': <int>[0],
+        'api_df_list': <Object?>[
+          <int>[0],
+        ],
+        'api_damage': <Object?>[
+          <num>[10],
+        ],
+      },
+    };
+
+    engine.append(path: '/kcsapi/api_req_sortie/battle', data: firstPacket);
+    ((firstPacket['api_hougeki1']! as Map)['api_damage']! as List)[0] = <num>[
+      40,
+    ];
+    final result = engine.append(
+      path: '/kcsapi/api_req_battle_midnight/battle',
+      data: const <String, Object?>{},
+    );
+
+    expect(result.enemyMain.single.currentHp, 40);
+  });
 }
 
 Map<String, Object?> _enemyNightDamage(num damage) => <String, Object?>{
