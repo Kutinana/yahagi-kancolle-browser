@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/poi/poi_battle_prediction_engine.dart';
 
 BattleShipSnapshot poiShip({
@@ -456,6 +460,215 @@ void main() {
       42,
       43,
     ]);
+  });
+
+  test(
+    'POI engine treats missing friendly flags as NPC attacks on enemies',
+    () {
+      final engine = PoiBattlePredictionEngine(
+        fleetType: 1,
+        friendMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.friend, position: 0, hp: 30),
+        ],
+        friendEscort: <BattleShipSnapshot>[
+          poiShip(
+            side: BattleSide.friend,
+            fleetRole: BattleFleetRole.escort,
+            position: 0,
+            hp: 30,
+          ),
+        ],
+        enemyMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.enemy, position: 0, hp: 50),
+        ],
+        enemyEscort: <BattleShipSnapshot>[
+          poiShip(
+            side: BattleSide.enemy,
+            fleetRole: BattleFleetRole.escort,
+            position: 0,
+            hp: 40,
+          ),
+        ],
+      );
+
+      final result = engine.append(
+        path: '/kcsapi/api_req_combined_battle/ec_midnight_battle',
+        data: <String, Object?>{
+          'api_active_deck': <int>[2, 1],
+          'api_friendly_info': <String, Object?>{
+            'api_ship_id': <int>[1001],
+            'api_ship_lv': <int>[90],
+            'api_nowhps': <int>[40],
+            'api_maxhps': <int>[40],
+          },
+          'api_friendly_battle': <String, Object?>{
+            'api_hougeki': <String, Object?>{
+              'api_at_list': <int>[0, 0],
+              'api_sp_list': <int>[0, 0],
+              'api_df_list': <Object?>[
+                <int>[0],
+                <int>[1],
+              ],
+              'api_damage': <Object?>[
+                <num>[12],
+                <num>[9],
+              ],
+            },
+          },
+        },
+      );
+
+      expect(result.friendMain.single.currentHp, 30);
+      expect(result.friendEscort.single.currentHp, 30);
+      expect(result.enemyMain.single.currentHp, 38);
+      expect(result.enemyEscort.single.currentHp, 31);
+      expect(result.friendMain.single.damageDealt, 0);
+      expect(result.friendEscort.single.damageDealt, 0);
+      expect(result.issues, isEmpty);
+    },
+  );
+
+  test('POI engine rejects contradictory NPC friendly attacker flags', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 50),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_combined_battle/ec_midnight_battle',
+      data: <String, Object?>{
+        'api_friendly_battle': <String, Object?>{
+          'api_hougeki': <String, Object?>{
+            'api_at_eflag': <int>[1],
+            'api_at_list': <int>[0],
+            'api_df_list': <Object?>[
+              <int>[0],
+            ],
+            'api_damage': <Object?>[
+              <num>[20],
+            ],
+          },
+        },
+      },
+    );
+
+    expect(result.friendMain.single.currentHp, 30);
+    expect(result.enemyMain.single.currentHp, 50);
+    expect(result.rank, BattleRank.unknown);
+    expect(result.issues.single.stage, 'api_friendly_battle.api_hougeki');
+  });
+
+  test('POI engine maps every strike-force position zero through six', () {
+    for (var target = 0; target < 7; target++) {
+      final engine = PoiBattlePredictionEngine(
+        friendMain: <BattleShipSnapshot>[
+          for (var position = 0; position < 7; position++)
+            poiShip(side: BattleSide.friend, position: position, hp: 30),
+        ],
+        enemyMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+        ],
+      );
+      final result = engine.append(
+        path: '/kcsapi/api_req_sortie/battle',
+        data: <String, Object?>{
+          'api_hougeki1': <String, Object?>{
+            'api_at_eflag': <int>[1],
+            'api_at_list': <int>[0],
+            'api_df_list': <Object?>[
+              <int>[target],
+            ],
+            'api_damage': <Object?>[
+              <num>[7],
+            ],
+          },
+        },
+      );
+
+      expect(
+        result.friendMain.map((ship) => ship.currentHp),
+        <int>[
+          for (var position = 0; position < 7; position++)
+            position == target ? 23 : 30,
+        ],
+        reason: 'strike-force target $target must stay on its own ship',
+      );
+      expect(result.enemyMain.single.currentHp, 30);
+      expect(result.issues, isEmpty);
+    }
+  });
+
+  test('POI engine replays E4 combined battle with NPC friendly night', () {
+    final fixture = Map<String, Object?>.from(
+      jsonDecode(
+            File(
+              'test/fixtures/battle/e4_combined_friendly_night.json',
+            ).readAsStringSync(),
+          )
+          as Map,
+    );
+    List<int> hp(String key, [Map<String, Object?>? source]) =>
+        List<Object?>.from(
+          (source ?? fixture)[key]! as List,
+        ).map((value) => (value as num).toInt()).toList();
+    List<BattleShipSnapshot> fleet(
+      String key,
+      BattleSide side,
+      BattleFleetRole role,
+    ) => <BattleShipSnapshot>[
+      for (final (position, value) in hp(key).indexed)
+        poiShip(side: side, fleetRole: role, position: position, hp: value),
+    ];
+    final engine = PoiBattlePredictionEngine(
+      fleetType: (fixture['fleetType']! as num).toInt(),
+      friendMain: fleet(
+        'friendMainHp',
+        BattleSide.friend,
+        BattleFleetRole.main,
+      ),
+      friendEscort: fleet(
+        'friendEscortHp',
+        BattleSide.friend,
+        BattleFleetRole.escort,
+      ),
+      enemyMain: fleet('enemyMainHp', BattleSide.enemy, BattleFleetRole.main),
+      enemyEscort: fleet(
+        'enemyEscortHp',
+        BattleSide.enemy,
+        BattleFleetRole.escort,
+      ),
+    );
+    BattlePrediction? prediction;
+    for (final raw in List<Object?>.from(fixture['packets']! as List)) {
+      final packet = Map<String, Object?>.from(raw! as Map);
+      prediction = engine.append(
+        path: packet['path']! as String,
+        data: Map<String, Object?>.from(packet['data']! as Map),
+      );
+    }
+    final expected = Map<String, Object?>.from(fixture['expected']! as Map);
+
+    expect(
+      prediction!.friendMain.map((ship) => ship.currentHp),
+      hp('friendMainHp', expected),
+    );
+    expect(
+      prediction.friendEscort.map((ship) => ship.currentHp),
+      hp('friendEscortHp', expected),
+    );
+    expect(
+      prediction.enemyMain.map((ship) => ship.currentHp),
+      hp('enemyMainHp', expected),
+    );
+    expect(
+      prediction.enemyEscort.map((ship) => ship.currentHp),
+      hp('enemyEscortHp', expected),
+    );
+    expect(prediction.issues, isEmpty);
   });
 }
 

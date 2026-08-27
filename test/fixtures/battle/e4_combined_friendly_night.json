@@ -1,0 +1,65 @@
+{
+  "fleetType": 1,
+  "friendMainHp": [100, 71, 69, 46, 43, 38],
+  "friendEscortHp": [100, 87, 69, 46, 43, 38],
+  "enemyMainHp": [1200, 133, 133, 740, 740, 130],
+  "enemyEscortHp": [470, 1200, 459, 133, 740, 160],
+  "packets": [
+    {
+      "path": "/kcsapi/api_req_combined_battle/each_battle",
+      "data": {
+        "api_friendly_info": {
+          "api_ship_id": [1001, 1002],
+          "api_ship_lv": [90, 90],
+          "api_nowhps": [45, 40],
+          "api_maxhps": [45, 40]
+        },
+        "api_friendly_kouku": {
+          "api_stage3": {
+            "api_edam": [20, 0, 0, 0, 0, 0],
+            "api_ebak_flag": [1, 0, 0, 0, 0, 0],
+            "api_erai_flag": [0, 0, 0, 0, 0, 0],
+            "api_ecl_flag": [1, 0, 0, 0, 0, 0],
+            "api_fdam": [5, 0],
+            "api_fbak_flag": [1, 0],
+            "api_frai_flag": [0, 0],
+            "api_fcl_flag": [1, 0]
+          }
+        }
+      }
+    },
+    {
+      "path": "/kcsapi/api_req_combined_battle/ec_midnight_battle",
+      "data": {
+        "api_active_deck": [2, 1],
+        "api_friendly_info": {
+          "api_ship_id": [1001, 1002],
+          "api_ship_lv": [90, 90],
+          "api_nowhps": [45, 40],
+          "api_maxhps": [45, 40]
+        },
+        "api_friendly_battle": {
+          "api_hougeki": {
+            "api_at_list": [0, 1],
+            "api_sp_list": [0, 0],
+            "api_df_list": [[0], [6]],
+            "api_damage": [[100], [50]]
+          }
+        },
+        "api_hougeki": {
+          "api_at_eflag": [1],
+          "api_at_list": [0],
+          "api_sp_list": [0],
+          "api_df_list": [[7]],
+          "api_damage": [[20]]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "friendMainHp": [100, 71, 69, 46, 43, 38],
+    "friendEscortHp": [100, 67, 69, 46, 43, 38],
+    "enemyMainHp": [1080, 133, 133, 740, 740, 130],
+    "enemyEscortHp": [420, 1200, 459, 133, 740, 160]
+  }
+}

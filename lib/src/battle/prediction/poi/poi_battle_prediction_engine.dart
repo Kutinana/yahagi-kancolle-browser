@@ -298,14 +298,7 @@ final class _PoiBattleSimulator {
       );
     }
     final friendly = _map(data['api_friendly_battle']);
-    _shell(
-      friendly?['api_hougeki'],
-      'api_friendly_battle.api_hougeki',
-      friendEscort: friendEscort,
-      enemyEscort: enemyEscort,
-      attributeFriendDamage: false,
-      isNight: true,
-    );
+    _friendlyShell(friendly?['api_hougeki'], 'api_friendly_battle.api_hougeki');
     _shell(
       data['api_hougeki'],
       'api_hougeki',
@@ -313,6 +306,51 @@ final class _PoiBattleSimulator {
       enemyEscort: enemyEscort,
       isNight: true,
     );
+  }
+
+  void _friendlyShell(Object? value, String stage) {
+    final map = _map(value);
+    if (map == null) return;
+    _stage = stage;
+    final flags = _list(map['api_at_eflag']);
+    final defenders = _list(map['api_df_list']);
+    final damages = _list(map['api_damage']);
+    final attackTypes = _list(map['api_sp_list']);
+    for (var row = 0; row < defenders.length && row < damages.length; row++) {
+      if (row < flags.length && _int(flags[row]) != 0) {
+        _issues.add(
+          BattleParseIssue(
+            stage: stage,
+            message: 'NPC friendly attack row $row has enemy attacker flag',
+          ),
+        );
+        continue;
+      }
+      final targets = _list(defenders[row]);
+      final hits = _list(damages[row]);
+      final attackOrder = row < attackTypes.length
+          ? _multiTargetAttackOrder(_int(attackTypes[row]), isNight: true)
+          : null;
+      if (attackOrder == null) {
+        if (targets.isEmpty) continue;
+        final amount = hits.fold<int>(0, (sum, hit) => sum + _damage(hit));
+        _damageNpcFriendlyTarget(_int(targets.first), amount);
+        continue;
+      }
+      for (var hit = 0; hit < targets.length && hit < hits.length; hit++) {
+        _damageNpcFriendlyTarget(_int(targets[hit]), _damage(hits[hit]));
+      }
+    }
+  }
+
+  void _damageNpcFriendlyTarget(int absolutePosition, int amount) {
+    if (amount <= 0) return;
+    final mainRange = _fleetRange(_enemyMain);
+    if (absolutePosition < mainRange) {
+      _receive(_enemyMain, absolutePosition, amount);
+      return;
+    }
+    _receive(_enemyEscort, absolutePosition - mainRange, amount);
   }
 
   void _aerial(Object? value, String stage) {
@@ -373,8 +411,9 @@ final class _PoiBattleSimulator {
 
   void _addAbsoluteFriendDamage(int position, int amount) {
     if (amount <= 0) return;
-    if (_friendEscort.isNotEmpty && position >= _friendMain.length) {
-      _addDealt(_friendEscort, position - _friendMain.length, amount);
+    final mainRange = _fleetRange(_friendMain);
+    if (_friendEscort.isNotEmpty && position >= mainRange) {
+      _addDealt(_friendEscort, position - mainRange, amount);
     } else {
       _addDealt(_friendMain, position, amount);
     }
@@ -417,7 +456,7 @@ final class _PoiBattleSimulator {
     final defenders = _list(map['api_df_list']);
     final damages = _list(map['api_damage']);
     final attackTypes = _list(map[isNight ? 'api_sp_list' : 'api_at_type']);
-    final mainFleetRange = _friendMain.length;
+    final mainFleetRange = _fleetRange(_friendMain);
     for (var row = 0; row < defenders.length && row < damages.length; row++) {
       final targets = _list(defenders[row]);
       final hits = _list(damages[row]);
@@ -453,8 +492,8 @@ final class _PoiBattleSimulator {
               // poi-lib-battle mirrors this server-side combined-night index fix.
               if (isNight &&
                   _friendEscort.isNotEmpty &&
-                  attacker < _friendMain.length) {
-                attacker += _friendMain.length;
+                  attacker < mainFleetRange) {
+                attacker += mainFleetRange;
               }
               _addAbsoluteFriendDamage(attacker, amount);
               if (isNight) _addNightDamage(attacker, amount);
@@ -510,7 +549,7 @@ final class _PoiBattleSimulator {
 
   void _addNightDamage(int absolutePosition, int amount) {
     if (amount <= 0 || _friendEscort.isEmpty) return;
-    final index = absolutePosition - _friendMain.length;
+    final index = absolutePosition - _fleetRange(_friendMain);
     if (index >= 0 && index < _nightEscortDamage.length) {
       _nightEscortDamage[index] += amount;
     }
@@ -600,9 +639,12 @@ final class _PoiBattleSimulator {
     final hasEscort = friendTarget
         ? _friendEscort.isNotEmpty
         : _enemyEscort.isNotEmpty;
-    if (hasEscort && position >= 6) {
+    final mainRange = friendTarget
+        ? _fleetRange(_friendMain)
+        : _fleetRange(_enemyMain);
+    if (hasEscort && position >= mainRange) {
       escort = true;
-      position -= 6;
+      position -= mainRange;
     }
     final fleets = friendTarget
         ? (escort ? _friendEscort : _friendMain)
@@ -719,6 +761,10 @@ final class _PoiBattleSimulator {
 
   int _halfSunk(int count) =>
       const <int>[0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 8][count.clamp(0, 12)];
+  int _fleetRange(List<BattleShipSnapshot> fleet) => fleet.fold<int>(
+    0,
+    (range, ship) => ship.position >= range ? ship.position + 1 : range,
+  );
   List<Object?> _list(Object? value) =>
       value is List ? List<Object?>.from(value) : const <Object?>[];
   Map<String, Object?>? _map(Object? value) =>
