@@ -12,5 +12,14 @@ if (-not (Test-Path -LiteralPath (Join-Path $repository '.git'))) {
 git -C $repository fetch --depth 1 origin $pinnedCommit
 git -C $repository checkout --detach $pinnedCommit
 
+Push-Location $repository
+try {
+    npm ci
+    npm run build
+}
+finally {
+    Pop-Location
+}
+
 $env:YAHAGI_POI_BATTLE_FIXTURES = Join-Path $repository 'tests\fixtures\battle-detail'
 flutter test test\battle_poi_corpus_test.dart

@@ -413,7 +413,7 @@ git commit -m "fix(战斗): 完善损管状态异常保护（任务 3/4）"
 - 修改：`test/battle_poi_corpus_test.dart`
 - 修改：`tool/run_poi_battle_corpus.ps1`
 
-- [ ] **步骤 1：编写或调整语料门禁断言**
+- [x] **步骤 1：编写或调整语料门禁断言**
 
 把夹具数量断言更新为 304。仅当敌方 `maxHp` 全部已知且大于 0 时，才用
 `api_dests` 对照最终沉船数；逐包 HP、等级和 MVP 比较始终保留。
@@ -430,7 +430,7 @@ if (allEnemyHpKnown) {
 }
 ```
 
-- [ ] **步骤 2：让工具构建官方 oracle 后运行语料**
+- [x] **步骤 2：让工具构建官方 oracle 后运行语料**
 
 在仓库检出后执行：
 
@@ -442,14 +442,14 @@ flutter test test/battle_poi_corpus_test.dart --dart-define=YAHAGI_POI_BATTLE_FI
 
 预期：304 个文件、366 个战斗包全部 PASS。
 
-- [ ] **步骤 3：运行全部战斗专项测试**
+- [x] **步骤 3：运行全部战斗专项测试**
 
 运行全部文件名包含 `battle`、`prediction`、`damage_control`、`fcf_retreat` 和
 `live_battle_card` 的测试。
 
 预期：0 failures。
 
-- [ ] **步骤 4：运行静态分析、完整 Flutter 测试和格式检查**
+- [x] **步骤 4：运行静态分析、完整 Flutter 测试和格式检查**
 
 ```bash
 dart format --output=none --set-exit-if-changed lib/src/battle test tool
@@ -460,7 +460,10 @@ git diff --check
 
 预期：所有命令退出码为 0。
 
-- [ ] **步骤 5：提交任务 4**
+结果：改动文件定向分析、格式检查、`git diff --check` 和 1852 项完整 Flutter
+测试均通过；全仓分析仍报告仓库既有的 71 条跨模块 warning/info，本任务未新增分析问题。
+
+- [x] **步骤 5：提交任务 4**
 
 ```bash
 git add test/battle_poi_corpus_test.dart tool/run_poi_battle_corpus.ps1

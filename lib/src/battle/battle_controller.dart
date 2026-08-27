@@ -170,7 +170,10 @@ final class BattleController extends ChangeNotifier
       if (event.path == '/kcsapi/api_req_map/start') {
         _sortieDamageControls.beginSortie();
       } else if (!_sortieDamageControls.isActive) {
-        _sortieDamageControls.beginSortie(trusted: false, reason: '缺少前序出击节点');
+        _sortieDamageControls.beginSortie(
+          trusted: false,
+          reason: 'missing previous sortie node',
+        );
       }
       _context = _contextFromMap(map, event);
       final state = gameState();
@@ -479,7 +482,7 @@ final class BattleController extends ChangeNotifier
         if (!_sortieDamageControls.isActive) {
           _sortieDamageControls.beginSortie(
             trusted: false,
-            reason: '缺少出击节点上下文',
+            reason: 'missing sortie node context',
           );
         }
         _predictionEngine = _createPredictionEngine(
@@ -519,12 +522,16 @@ final class BattleController extends ChangeNotifier
           ),
         );
       } else if (parsed.issues.isNotEmpty) {
-        _sortieDamageControls.markUntrusted('战斗解析不完整，无法确认损管消费');
+        _sortieDamageControls.markUntrusted(
+          'incomplete battle parse; damage-control consumption is unknown',
+        );
       }
       if (!_sortieDamageControls.isTrusted) {
         _session?.markUnconfirmed(
           stage: 'damage-control-ledger',
-          message: _sortieDamageControls.untrustedReason ?? '跨节点损管状态无法确认',
+          message:
+              _sortieDamageControls.untrustedReason ??
+              'cross-node damage-control state is unknown',
         );
       }
     }

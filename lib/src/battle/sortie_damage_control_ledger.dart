@@ -25,7 +25,9 @@ final class SortieDamageControlLedger {
     _consumed.clear();
     _active = true;
     _trusted = trusted;
-    _untrustedReason = trusted ? null : (reason ?? '跨节点损管状态无法确认');
+    _untrustedReason = trusted
+        ? null
+        : (reason ?? 'cross-node damage-control state is unknown');
   }
 
   void endSortie() {
@@ -84,7 +86,9 @@ final class SortieDamageControlLedger {
       if (output.isEmpty) continue;
       final shipId = ship.ownedShipId;
       if (shipId == null) {
-        markUntrusted('损管消费缺少舰娘实例 ID');
+        markUntrusted(
+          'predicted damage-control consumption has no owned ship ID',
+        );
         return;
       }
       final existing = pending.putIfAbsent(
@@ -92,7 +96,9 @@ final class SortieDamageControlLedger {
         () => <DamageControlEquipmentRef>[],
       );
       if (!_matchesPrefix(existing, output)) {
-        markUntrusted('损管消费序列与前序节点不一致');
+        markUntrusted(
+          'predicted damage-control sequence conflicts with previous nodes',
+        );
         return;
       }
       final equipment =
@@ -100,7 +106,9 @@ final class SortieDamageControlLedger {
       for (var index = existing.length; index < output.length; index++) {
         final masterId = output[index];
         if (masterId != 42 && masterId != 43) {
-          markUntrusted('预测消费序列包含非损管装备');
+          markUntrusted(
+            'predicted consumption includes a non-damage-control item',
+          );
           return;
         }
         final match = equipment
@@ -111,7 +119,9 @@ final class SortieDamageControlLedger {
             )
             .firstOrNull;
         if (match == null) {
-          markUntrusted('找不到预测消费对应的损管装备实例');
+          markUntrusted(
+            'no equipment instance matches predicted damage-control consumption',
+          );
           return;
         }
         existing.add(match);

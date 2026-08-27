@@ -131,7 +131,7 @@ List<BattleShipSnapshot> _enemyFleet(
 }
 
 void main() {
-  test('poi 303-fixture corpus matches authoritative sink results', () {
+  test('poi 304-fixture corpus matches authoritative sink results', () {
     final rootPath = Platform.environment['YAHAGI_POI_BATTLE_FIXTURES'];
     if (rootPath == null || rootPath.isEmpty) {
       markTestSkipped(
@@ -147,9 +147,9 @@ void main() {
             .where((file) => file.path.endsWith('.json'))
             .toList()
           ..sort((a, b) => a.path.compareTo(b.path));
-    expect(files, hasLength(303));
+    expect(files, hasLength(304));
     final upstream = _loadUpstreamPoiOracle(root);
-    expect(upstream, hasLength(303));
+    expect(upstream, hasLength(304));
     var comparedPackets = 0;
     var friendlyInfoPackets = 0;
     var friendlyBattlePackets = 0;
@@ -326,11 +326,11 @@ void main() {
           reason: '${file.path} final HP differs between engines',
         );
         expect(yahagi.rank, predictedRank, reason: '${file.path} rank differs');
-        final sunk = <BattleShipSnapshot>[
-          ...enemyMain,
-          ...enemyEscort,
-        ].where((ship) => ship.isSunk).length;
-        if (result['api_dests'] is num) {
+        final allEnemyHpKnown =
+            enemyShips.isNotEmpty &&
+            enemyShips.every((ship) => !ship.hpUnknown && ship.maxHp > 0);
+        final sunk = enemyShips.where((ship) => ship.isSunk).length;
+        if (allEnemyHpKnown && result['api_dests'] is num) {
           expect(
             sunk,
             _int(result['api_dests']),
@@ -338,7 +338,9 @@ void main() {
                 '${file.path} enemy=${enemyShips.map((ship) => '${ship.fleetRole.name}:${ship.position}:${ship.currentHp}').join(',')}',
           );
         }
-        if (result['api_destsf'] is num && enemyMain.isNotEmpty) {
+        if (allEnemyHpKnown &&
+            result['api_destsf'] is num &&
+            enemyMain.isNotEmpty) {
           expect(
             enemyMain.first.isSunk ? 1 : 0,
             _int(result['api_destsf']),
@@ -347,7 +349,7 @@ void main() {
         }
       }
     }
-    expect(comparedPackets, greaterThan(303));
+    expect(comparedPackets, greaterThan(304));
     // ignore: avoid_print
     print(
       'POI corpus coverage: files=${files.length}, packets=$comparedPackets, '
