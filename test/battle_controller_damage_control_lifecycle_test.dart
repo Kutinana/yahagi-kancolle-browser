@@ -6,6 +6,7 @@ import 'package:yahagi_kancolle_browser/src/battle/battle_damage_alert.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_damage_parser.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/settings/battle_prediction_settings.dart';
@@ -282,8 +283,10 @@ void main() {
       ]);
       var method = BattlePredictionMethod.poi;
       List<int>? yahagiOpeningUsedItems;
+      final published = <Map<int, int>>[];
       final controller = BattleController(
         gameState: () => state,
+        onFriendlyHpUpdated: (hpByShipId, _) => published.add(hpByShipId),
         predictionMethod: () => method,
         yahagiEngineFactory:
             ({
@@ -337,8 +340,74 @@ void main() {
       await controller.idle;
 
       expect(yahagiOpeningUsedItems, isEmpty);
+
+      published.clear();
+      method = BattlePredictionMethod.poi;
+      controller
+        ..accept(apiEvent('/kcsapi/api_req_map/next', mapData, sequence: 45))
+        ..accept(
+          apiEvent(
+            '/kcsapi/api_req_sortie/battle',
+            lethalBattle(6, openingHp: 6),
+            sequence: 46,
+          ),
+        );
+      await controller.idle;
+
+      expect(controller.session!.isConfirmed, isFalse);
+      expect(controller.current!.rank, BattleRank.unknown);
+      expect(published, isEmpty);
     },
   );
+
+  test('prediction failure makes later POI nodes untrusted', () async {
+    final state = damageControlState(const <OwnedSlotItem>[
+      OwnedSlotItem(instanceId: 501, masterSlotItemId: 42),
+    ]);
+    final published = <Map<int, int>>[];
+    final controller = BattleController(
+      gameState: () => state,
+      predictionExecutor: FailOncePredictionExecutor(),
+      onFriendlyHpUpdated: (hpByShipId, _) => published.add(hpByShipId),
+    );
+    addTearDown(controller.dispose);
+
+    controller
+      ..accept(
+        apiEvent(
+          '/kcsapi/api_req_map/start',
+          mapData,
+          sequence: 47,
+          requestParams: const <String, Object?>{'api_deck_id': '1'},
+        ),
+      )
+      ..accept(
+        apiEvent(
+          '/kcsapi/api_req_sortie/battle',
+          lethalBattle(30, openingHp: 30),
+          sequence: 48,
+        ),
+      );
+    await controller.idle;
+    expect(controller.lastError, isNotNull);
+
+    published.clear();
+    controller
+      ..accept(apiEvent('/kcsapi/api_req_map/next', mapData, sequence: 49))
+      ..accept(
+        apiEvent(
+          '/kcsapi/api_req_sortie/battle',
+          lethalBattle(6, openingHp: 6),
+          sequence: 50,
+        ),
+      );
+    await controller.idle;
+
+    expect(controller.lastError, isNull);
+    expect(controller.session!.isConfirmed, isFalse);
+    expect(controller.current!.rank, BattleRank.unknown);
+    expect(published, isEmpty);
+  });
 
   test('does not publish HP when the sortie ledger is untrusted', () async {
     final state = damageControlState(const <OwnedSlotItem>[
@@ -592,5 +661,22 @@ final class RecordingDamageAlertPort implements BattleDamageAlertPort {
   @override
   Future<void> alert(BattleDamageAlertSeverity severity) async {
     alerts.add(severity);
+  }
+}
+
+final class FailOncePredictionExecutor implements BattlePredictionExecutor {
+  var _failed = false;
+
+  @override
+  Future<BattlePredictionAppendResult> append({
+    required BattlePredictionEngine engine,
+    required String path,
+    required Map<String, Object?> data,
+  }) async {
+    if (!_failed) {
+      _failed = true;
+      throw StateError('expected prediction failure');
+    }
+    return (engine: engine, prediction: engine.append(path: path, data: data));
   }
 }

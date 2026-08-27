@@ -142,6 +142,13 @@ final class BattleController extends ChangeNotifier
         _lastError = null;
         _captureNotifications.schedule(notifyListeners);
       } catch (error) {
+        if (_battlePaths.contains(event.path) &&
+            _predictionEngineMethod == BattlePredictionMethod.poi &&
+            _sortieDamageControls.isActive) {
+          _sortieDamageControls.markUntrusted(
+            'battle prediction failed before damage-control synchronization',
+          );
+        }
         _session?.markUnconfirmed(stage: event.path, message: error.toString());
         _lastError = '战斗数据暂时无法解析（${error.runtimeType}）';
         _captureNotifications.schedule(notifyListeners);
@@ -501,6 +508,13 @@ final class BattleController extends ChangeNotifier
           enemyEscort: enemyEscort,
         );
       }
+    }
+    if (!practice &&
+        _predictionEngineMethod != BattlePredictionMethod.poi &&
+        _sortieDamageControls.isActive) {
+      _sortieDamageControls.markUntrusted(
+        'sortie contains a battle predicted by another engine',
+      );
     }
     final appendResult = await _predictionExecutor.append(
       engine: _predictionEngine!,
