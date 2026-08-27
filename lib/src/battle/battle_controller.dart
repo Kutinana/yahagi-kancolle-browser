@@ -561,6 +561,7 @@ final class BattleController extends ChangeNotifier
         friendEscort: friendEscort,
         enemyMain: enemyMain,
         enemyEscort: enemyEscort,
+        fleetType: _context.combinedFleetType.apiValue,
       ),
       BattlePredictionMethod.yahagi => YahagiBattlePredictionEngine(
         friendMain: friendMain,
@@ -873,6 +874,11 @@ final class BattleController extends ChangeNotifier
         continue;
       }
       final hp = _atNonNegative(nowHp, index, _atPositive(maxHp, index, 1));
+      final hpUnknown =
+          index >= nowHp.length ||
+          index >= maxHp.length ||
+          nowHp[index] is! num ||
+          maxHp[index] is! num;
       result.add(
         BattleShipSnapshot(
           masterId: masterId,
@@ -883,6 +889,7 @@ final class BattleController extends ChangeNotifier
           initialHp: hp,
           maxHp: _atPositive(maxHp, index, hp),
           currentHp: hp,
+          hpUnknown: hpUnknown,
           damageReceived: index < (previous?.length ?? 0)
               ? previous![index].damageReceived
               : 0,
