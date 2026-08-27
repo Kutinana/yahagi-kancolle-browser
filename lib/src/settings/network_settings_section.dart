@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'network_settings_controller.dart';
@@ -359,11 +360,17 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
             lookupAppLocalizations(const Locale('zh'));
         final c = widget.controller;
         final bool isProxySupported = c.isProxyOverrideSupported;
+        final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+        final bool isIOSLegacy = isIOS && !isProxySupported;
+
+        if (isIOSLegacy && _selectedMode != NetworkMode.system) {
+          _selectedMode = NetworkMode.system;
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!isProxySupported)
+            if (!isProxySupported && !isIOS)
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),
@@ -388,24 +395,60 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
                   subtitle: l10n.systemNetworkDesc,
                   enabled: true,
                 ),
-                const Divider(color: Color(0xff294052), height: 1),
-                _networkModeTile(
-                  key: const Key('network-mode-http'),
-                  mode: NetworkMode.httpProxy,
-                  title: l10n.httpProxy,
-                  subtitle: l10n.httpProxyDesc,
-                  enabled: isProxySupported,
-                ),
-                const Divider(color: Color(0xff294052), height: 1),
-                _networkModeTile(
-                  key: const Key('network-mode-socks5'),
-                  mode: NetworkMode.socks5Proxy,
-                  title: l10n.socks5Proxy,
-                  subtitle: l10n.socks5ProxyDesc,
-                  enabled: isProxySupported,
-                ),
+                if (!isIOSLegacy) ...[
+                  const Divider(color: Color(0xff294052), height: 1),
+                  _networkModeTile(
+                    key: const Key('network-mode-http'),
+                    mode: NetworkMode.httpProxy,
+                    title: l10n.httpProxy,
+                    subtitle: l10n.httpProxyDesc,
+                    enabled: isProxySupported,
+                  ),
+                  const Divider(color: Color(0xff294052), height: 1),
+                  _networkModeTile(
+                    key: const Key('network-mode-socks5'),
+                    mode: NetworkMode.socks5Proxy,
+                    title: l10n.socks5Proxy,
+                    subtitle: l10n.socks5ProxyDesc,
+                    enabled: isProxySupported,
+                  ),
+                ],
               ],
             ),
+
+            if (isIOSLegacy)
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                  bottom: 4,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: Color(0xff8197a5),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _getIOSLegacyProxyNote(l10n),
+                        style: const TextStyle(
+                          color: Color(0xff8197a5),
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             if (_selectedMode != NetworkMode.system)
               Padding(
@@ -557,6 +600,16 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
         );
       },
     );
+  }
+
+  String _getIOSLegacyProxyNote(AppLocalizations l10n) {
+    final locale = l10n.localeName;
+    if (locale.startsWith('ja')) {
+      return 'APIの制限により、iOS 17.0 未満のバージョンではアプリ内独立プロキシはサポートされていません';
+    } else if (locale.startsWith('zh_Hant')) {
+      return '因底層 API 限制，iOS 17.0 以下版本暫不支援應用程式內獨立代理';
+    }
+    return '因底层 API 限制，iOS 17.0 以下版本暂不支持应用内独立代理';
   }
 
   Widget _networkModeTile({
