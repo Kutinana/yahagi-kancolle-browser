@@ -139,7 +139,7 @@ class GameStateSerializer {
         (k, v) => MapEntry(k.toString(), {
           'id': v.id,
           'name': v.name,
-          'equipTypeIds': v.equipTypeIds.toList(),
+          'equipTypeIds': v.equipTypeIds.toList(growable: false),
         }),
       ),
       'masterShips': state.masterShips.map(
@@ -148,14 +148,23 @@ class GameStateSerializer {
           'name': v.name,
           'shipTypeId': v.shipTypeId,
           'afterShipId': v.afterShipId,
-          'buildTimeMinutes': v.buildTimeMinutes,
           'sortNo': v.sortNo,
           'classTypeId': v.classTypeId,
-          'equipTypeIds': v.equipTypeIds.toList(),
+          'speed': v.speed,
+          'range': v.range,
+          'maxFuel': v.maxFuel,
+          'maxAmmo': v.maxAmmo,
+          'slotCount': v.slotCount,
+          'slotCapacities': v.slotCapacities,
+          'buildTimeMinutes': v.buildTimeMinutes,
+          'baseAntiSub': v.baseAntiSub,
+          'equipTypeIds': v.equipTypeIds.toList(growable: false),
           'limitedEquipmentIdsByType': v.limitedEquipmentIdsByType.map(
             (typeId, equipmentIds) =>
                 MapEntry(typeId.toString(), equipmentIds.toList()),
           ),
+          'portraitFileName': v.portraitFileName,
+          'portraitVersion': v.portraitVersion,
         }),
       ),
       'masterSlotItems': state.masterSlotItems.map(
@@ -163,7 +172,21 @@ class GameStateSerializer {
           'id': v.id,
           'name': v.name,
           'sortNo': v.sortNo,
+          'firepower': v.firepower,
+          'torpedo': v.torpedo,
+          'bombing': v.bombing,
+          'antiAir': v.antiAir,
+          'antiSub': v.antiSub,
+          'lineOfSight': v.lineOfSight,
+          'accuracy': v.accuracy,
+          'evasion': v.evasion,
+          'armor': v.armor,
+          'range': v.range,
           'type': v.type,
+          'interception': v.interception,
+          'antiBomber': v.antiBomber,
+          'distance': v.distance,
+          'resourceVersion': v.resourceVersion,
         }),
       ),
       'masterSlotItemTypes': state.masterSlotItemTypes.map(
@@ -193,13 +216,45 @@ class GameStateSerializer {
           'maxHp': v.maxHp,
           'condition': v.condition,
           'experience': v.experience,
+          'currentFuel': v.currentFuel,
+          'currentAmmo': v.currentAmmo,
           'nextExperience': v.nextExperience,
+          'firepower': v.firepower,
+          'firepowerMax': v.firepowerMax,
+          'torpedo': v.torpedo,
+          'torpedoMax': v.torpedoMax,
+          'antiAir': v.antiAir,
+          'antiAirMax': v.antiAirMax,
+          'antiSub': v.antiSub,
+          'lineOfSight': v.lineOfSight,
+          'armor': v.armor,
+          'armorMax': v.armorMax,
+          'evasion': v.evasion,
+          'luck': v.luck,
+          'luckMax': v.luckMax,
+          'speed': v.speed,
+          'range': v.range,
+          'slotIds': v.slotIds,
+          'onSlot': v.onSlot,
           'extraSlotId': v.extraSlotId,
           'repairDurationMilliseconds': v.repairDurationMilliseconds,
           'repairFuelCost': v.repairFuelCost,
           'repairSteelCost': v.repairSteelCost,
+          'locked': v.locked,
         }),
       ),
+      'slotItems': state.slotItems.map(
+        (k, v) => MapEntry(k.toString(), {
+          'instanceId': v.instanceId,
+          'masterSlotItemId': v.masterSlotItemId,
+          'level': v.level,
+          'proficiency': v.proficiency,
+          'locked': v.locked,
+        }),
+      ),
+      'serverOrigin': state.serverOrigin,
+      'hasMasterData': state.hasMasterData,
+      'hasPortData': state.hasPortData,
       'updatedAt': state.updatedAt?.millisecondsSinceEpoch,
     });
   }
@@ -486,6 +541,7 @@ class GameStateSerializer {
       }
 
       final masterShips = <int, MasterShip>{};
+
       final rawMasterShips = map['masterShips'];
       if (rawMasterShips is Map) {
         for (final entry in rawMasterShips.entries) {
@@ -497,13 +553,22 @@ class GameStateSerializer {
               name: _string(v['name']),
               shipTypeId: _int(v['shipTypeId']) ?? 0,
               afterShipId: _int(v['afterShipId']) ?? 0,
-              buildTimeMinutes: _int(v['buildTimeMinutes']) ?? 0,
               sortNo: _int(v['sortNo']) ?? 0,
               classTypeId: _int(v['classTypeId']) ?? 0,
+              speed: _int(v['speed']) ?? 0,
+              range: _int(v['range']) ?? 0,
+              maxFuel: _int(v['maxFuel']) ?? 0,
+              maxAmmo: _int(v['maxAmmo']) ?? 0,
+              slotCount: _int(v['slotCount']) ?? 0,
+              slotCapacities: _intList(v['slotCapacities']),
+              buildTimeMinutes: _int(v['buildTimeMinutes']) ?? 0,
+              baseAntiSub: _int(v['baseAntiSub']) ?? 0,
               equipTypeIds: _positiveIntSet(v['equipTypeIds']),
               limitedEquipmentIdsByType: _positiveIntSetMap(
                 v['limitedEquipmentIdsByType'],
               ),
+              portraitFileName: _nullableString(v['portraitFileName']),
+              portraitVersion: _nullableString(v['portraitVersion']),
             );
           }
         }
@@ -520,7 +585,21 @@ class GameStateSerializer {
               id: id,
               name: _string(v['name']),
               sortNo: _int(v['sortNo']) ?? 0,
+              firepower: _int(v['firepower']) ?? 0,
+              torpedo: _int(v['torpedo']) ?? 0,
+              bombing: _int(v['bombing']) ?? 0,
+              antiAir: _int(v['antiAir']) ?? 0,
+              antiSub: _int(v['antiSub']) ?? 0,
+              lineOfSight: _int(v['lineOfSight']) ?? 0,
+              accuracy: _int(v['accuracy']) ?? 0,
+              evasion: _int(v['evasion']) ?? 0,
+              armor: _int(v['armor']) ?? 0,
+              range: _int(v['range']) ?? 0,
               type: _intList(v['type']),
+              interception: _int(v['interception']) ?? 0,
+              antiBomber: _int(v['antiBomber']) ?? 0,
+              distance: _int(v['distance']) ?? 0,
+              resourceVersion: _string(v['resourceVersion']),
             );
           }
         }
@@ -577,17 +656,55 @@ class GameStateSerializer {
               currentHp: _int(v['currentHp']) ?? 0,
               maxHp: _int(v['maxHp']) ?? 0,
               condition: _int(v['condition']) ?? 49,
-              currentFuel: 100,
-              currentAmmo: 100,
+              currentFuel: _int(v['currentFuel']) ?? 0,
+              currentAmmo: _int(v['currentAmmo']) ?? 0,
               experience: _int(v['experience']) ?? 0,
               nextExperience: _int(v['nextExperience']) ?? 0,
-              slotIds: const [],
+              firepower: _int(v['firepower']) ?? 0,
+              firepowerMax: _int(v['firepowerMax']) ?? 0,
+              torpedo: _int(v['torpedo']) ?? 0,
+              torpedoMax: _int(v['torpedoMax']) ?? 0,
+              antiAir: _int(v['antiAir']) ?? 0,
+              antiAirMax: _int(v['antiAirMax']) ?? 0,
+              antiSub: _int(v['antiSub']) ?? 0,
+              lineOfSight: _int(v['lineOfSight']) ?? 0,
+              armor: _int(v['armor']) ?? 0,
+              armorMax: _int(v['armorMax']) ?? 0,
+              evasion: _int(v['evasion']) ?? 0,
+              luck: _int(v['luck']) ?? 0,
+              luckMax: _int(v['luckMax']) ?? 0,
+              speed: _int(v['speed']) ?? 0,
+              range: _int(v['range']) ?? 0,
+              slotIds: _intList(v['slotIds']),
+              onSlot: _intList(v['onSlot']),
               extraSlotId: _int(v['extraSlotId']) ?? -1,
               repairDurationMilliseconds:
                   _int(v['repairDurationMilliseconds']) ?? 0,
               repairFuelCost: _int(v['repairFuelCost']) ?? 0,
               repairSteelCost: _int(v['repairSteelCost']) ?? 0,
+              locked: v['locked'] == true,
             );
+          }
+        }
+      }
+
+      final slotItems = <int, OwnedSlotItem>{};
+      final rawSlotItems = map['slotItems'];
+      if (rawSlotItems is Map) {
+        for (final entry in rawSlotItems.entries) {
+          final instanceId = int.tryParse('${entry.key}');
+          final v = entry.value;
+          if (instanceId != null && instanceId > 0 && v is Map) {
+            final masterSlotItemId = _int(v['masterSlotItemId']) ?? 0;
+            if (masterSlotItemId > 0) {
+              slotItems[instanceId] = OwnedSlotItem(
+                instanceId: instanceId,
+                masterSlotItemId: masterSlotItemId,
+                level: _int(v['level']) ?? 0,
+                proficiency: _int(v['proficiency']) ?? 0,
+                locked: v['locked'] == true,
+              );
+            }
           }
         }
       }
@@ -623,6 +740,10 @@ class GameStateSerializer {
         hasEquipmentCompatibilityData:
             map['hasEquipmentCompatibilityData'] == true,
         ships: ships,
+        slotItems: slotItems,
+        serverOrigin: _string(map['serverOrigin']),
+        hasMasterData: map['hasMasterData'] == true,
+        hasPortData: map['hasPortData'] == true,
         updatedAt: updatedAt != null
             ? DateTime.fromMillisecondsSinceEpoch(updatedAt)
             : null,
@@ -646,6 +767,9 @@ class GameStateSerializer {
   }
 
   static String _string(Object? value) => value?.toString() ?? '';
+
+  static String? _nullableString(Object? value) =>
+      value is String ? value : null;
 
   static bool? _completionVerification(
     Map<dynamic, dynamic> map, {

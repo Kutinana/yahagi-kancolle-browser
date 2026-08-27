@@ -47,6 +47,129 @@ void main() {
     expect(restored.masterSlotItemTypes[1], '小口径主炮');
   });
 
+  test('fleet summary data survives cache serialization', () {
+    const state = GameState(
+      serverOrigin: 'https://w01y.kancolle-server.com',
+      hasMasterData: true,
+      hasPortData: true,
+      masterShipTypes: <int, MasterShipType>{
+        2: MasterShipType(id: 2, name: '駆逐艦', equipTypeIds: <int>{1, 2, 3}),
+      },
+      masterShips: <int, MasterShip>{
+        1: MasterShip(
+          id: 1,
+          name: '夕立',
+          shipTypeId: 2,
+          sortNo: 101,
+          classTypeId: 12,
+          speed: 10,
+          range: 2,
+          maxFuel: 15,
+          maxAmmo: 20,
+          slotCount: 2,
+          slotCapacities: <int>[12, 12],
+          buildTimeMinutes: 22,
+          baseAntiSub: 30,
+          equipTypeIds: <int>{1, 2, 3},
+          portraitFileName: '0001',
+          portraitVersion: '7',
+        ),
+      },
+      ships: <int, OwnedShip>{
+        101: OwnedShip(
+          id: 101,
+          masterId: 1,
+          level: 98,
+          currentHp: 29,
+          maxHp: 31,
+          condition: 85,
+          currentFuel: 13,
+          currentAmmo: 17,
+          nextExperience: 1234,
+          firepower: 59,
+          firepowerMax: 63,
+          torpedo: 88,
+          torpedoMax: 93,
+          antiAir: 62,
+          antiAirMax: 67,
+          antiSub: 71,
+          lineOfSight: 42,
+          armor: 49,
+          armorMax: 52,
+          evasion: 81,
+          luck: 25,
+          luckMax: 59,
+          speed: 15,
+          range: 3,
+          slotIds: <int>[1001, -1],
+          onSlot: <int>[12, 0],
+          extraSlotId: 1002,
+          repairDurationMilliseconds: 120000,
+          repairFuelCost: 3,
+          repairSteelCost: 4,
+          locked: true,
+        ),
+      },
+      masterSlotItems: <int, MasterSlotItem>{
+        201: MasterSlotItem(
+          id: 201,
+          name: '局地戦闘機',
+          antiAir: 12,
+          type: <int>[0, 0, 48, 44],
+          interception: 3,
+          antiBomber: 2,
+          distance: 4,
+          resourceVersion: '5',
+        ),
+      },
+      slotItems: <int, OwnedSlotItem>{
+        1001: OwnedSlotItem(
+          instanceId: 1001,
+          masterSlotItemId: 201,
+          level: 6,
+          proficiency: 7,
+          locked: true,
+        ),
+      },
+    );
+
+    final restored = GameStateSerializer.deserialize(
+      GameStateSerializer.serialize(state),
+    );
+
+    expect(restored.serverOrigin, state.serverOrigin);
+    expect(restored.hasMasterData, isTrue);
+    expect(restored.hasPortData, isTrue);
+    expect(restored.masterShipTypes[2]?.name, '駆逐艦');
+    expect(restored.masterShipTypes[2]?.equipTypeIds, <int>{1, 2, 3});
+    expect(restored.masterShips[1]?.speed, 10);
+    expect(restored.masterShips[1]?.maxFuel, 15);
+    expect(restored.masterShips[1]?.maxAmmo, 20);
+    expect(restored.masterShips[1]?.slotCapacities, <int>[12, 12]);
+    expect(restored.masterShips[1]?.equipTypeIds, <int>{1, 2, 3});
+    expect(restored.masterShips[1]?.portraitFileName, '0001');
+    expect(restored.masterShips[1]?.portraitVersion, '7');
+    expect(restored.ships[101]?.level, 98);
+    expect(restored.ships[101]?.currentFuel, 13);
+    expect(restored.ships[101]?.currentAmmo, 17);
+    expect(restored.ships[101]?.speed, 15);
+    expect(restored.ships[101]?.range, 3);
+    expect(restored.ships[101]?.slotIds, <int>[1001, -1]);
+    expect(restored.ships[101]?.onSlot, <int>[12, 0]);
+    expect(restored.ships[101]?.extraSlotId, 1002);
+    expect(restored.ships[101]?.locked, isTrue);
+    expect(restored.masterSlotItems[201]?.type, <int>[0, 0, 48, 44]);
+    expect(restored.masterSlotItems[201]?.antiAir, 12);
+    expect(restored.masterSlotItems[201]?.interception, 3);
+    expect(restored.masterSlotItems[201]?.antiBomber, 2);
+    expect(restored.masterSlotItems[201]?.distance, 4);
+    expect(restored.masterSlotItems[201]?.resourceVersion, '5');
+    expect(restored.slotItems[1001]?.masterSlotItemId, 201);
+    expect(restored.slotItems[1001]?.level, 6);
+    expect(restored.slotItems[1001]?.proficiency, 7);
+    expect(restored.slotItems[1001]?.locked, isTrue);
+  });
+
   test('equipment compatibility master data survives cache serialization', () {
     const state = GameState(
       masterShipTypes: <int, MasterShipType>{
