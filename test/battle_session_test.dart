@@ -28,6 +28,20 @@ void main() {
     expect(session.friendMainSlots[2]?.masterId, 102);
   });
 
+  test('retains the seventh strike-force ship slot', () {
+    final session = BattleSession(
+      id: 'session-7',
+      context: const BattleContext(node: 1),
+      startedAt: DateTime.utc(2026),
+      friendMain: <BattleShipSnapshot>[
+        for (var position = 0; position < 7; position++) _ship(position),
+      ],
+    );
+
+    expect(session.friendMainSlots, hasLength(7));
+    expect(session.friendMainSlots[6]?.masterId, 106);
+  });
+
   test('diagnostic packets redact credentials and have a fixed capacity', () {
     final session = BattleSession(
       id: 'session-2',

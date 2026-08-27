@@ -23,8 +23,9 @@ class BattleSessionIssue {
 
 /// Position-preserving state for one map-node battle from navigation to result.
 ///
-/// Slots are fixed at six entries per fleet. Diagnostics are bounded and
-/// recursively stripped of credentials before they can be retained.
+/// Slots preserve at least the six standard fleet positions and expand for a
+/// seven-ship striking force. Diagnostics are bounded and recursively stripped
+/// of credentials before they can be retained.
 class BattleSession {
   BattleSession({
     required this.id,
@@ -94,7 +95,7 @@ class BattleSession {
   }
 
   static List<BattleShipSnapshot?> _slots(List<BattleShipSnapshot> ships) {
-    final result = List<BattleShipSnapshot?>.filled(6, null);
+    final result = List<BattleShipSnapshot?>.filled(6, null, growable: true);
     _replaceSlots(result, ships);
     return result;
   }
@@ -103,6 +104,13 @@ class BattleSession {
     List<BattleShipSnapshot?> result,
     List<BattleShipSnapshot> ships,
   ) {
+    final requiredLength = ships.fold<int>(
+      result.length,
+      (length, ship) => ship.position >= length ? ship.position + 1 : length,
+    );
+    if (requiredLength > result.length) {
+      result.length = requiredLength;
+    }
     result.fillRange(0, result.length, null);
     for (final ship in ships) {
       if (ship.position >= 0 && ship.position < result.length) {
