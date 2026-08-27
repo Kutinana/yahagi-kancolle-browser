@@ -193,7 +193,7 @@ git commit -m "feat(战斗): 添加出击级损管消费账本（任务 1/4）"
 - 创建：`test/battle_controller_damage_control_lifecycle_test.dart`
 - 修改：`lib/src/battle/battle_controller.dart`
 
-- [ ] **步骤 1：编写跨节点重复使用回归测试**
+- [x] **步骤 1：编写跨节点重复使用回归测试**
 
 测试建立一艘 30 HP、装备实例 `501/42` 的舰娘，依次发送：
 
@@ -266,13 +266,13 @@ Map<String, Object?> lethalBattle(num damage, {required int openingHp}) => <Stri
 };
 ```
 
-- [ ] **步骤 2：运行测试并确认旧实现错误复活**
+- [x] **步骤 2：运行测试并确认旧实现错误复活**
 
 运行：`flutter test test/battle_controller_damage_control_lifecycle_test.dart --plain-name "does not reuse damage control on the next node"`
 
 预期：FAIL，实际 HP 为 6，期望为 0。
 
-- [ ] **步骤 3：实现控制器最小接入**
+- [x] **步骤 3：实现控制器最小接入**
 
 在 `BattleController` 中增加：
 
@@ -299,13 +299,13 @@ if (event.path == '/kcsapi/api_req_map/next' && !_sortieDamageControls.isActive)
 创建引擎时只对 POI 路径调用 `seedFleet`。预测完成且没有解析问题时，用
 `GameState.equipmentForShip` 生成 `DamageControlEquipmentRef` 并执行 `synchronize`。
 
-- [ ] **步骤 4：运行跨节点测试和原有控制器测试**
+- [x] **步骤 4：运行跨节点测试和原有控制器测试**
 
 运行：`flutter test test/battle_controller_damage_control_lifecycle_test.dart test/battle_controller_test.dart`
 
 预期：全部 PASS。
 
-- [ ] **步骤 5：提交任务 2**
+- [x] **步骤 5：提交任务 2**
 
 ```bash
 git add lib/src/battle/battle_controller.dart test/battle_controller_damage_control_lifecycle_test.dart

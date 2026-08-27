@@ -13,6 +13,7 @@ import 'battle_damage_parser.dart';
 import 'battle_models.dart';
 import 'battle_node_label_resolver.dart';
 import 'battle_session.dart';
+import 'sortie_damage_control_ledger.dart';
 import 'prediction/battle_prediction_engine.dart';
 import 'prediction/battle_prediction_executor.dart';
 import 'prediction/poi/poi_battle_prediction_engine.dart';
@@ -73,6 +74,9 @@ final class BattleController extends ChangeNotifier
   BattleContext _context = const BattleContext();
   BattleSession? _session;
   BattlePredictionEngine? _predictionEngine;
+  BattlePredictionMethod? _predictionEngineMethod;
+  final SortieDamageControlLedger _sortieDamageControls =
+      SortieDamageControlLedger();
   LiveBattle? _current;
   DateTime? _lastBattleCapturedAt;
   String? _lastError;
@@ -155,11 +159,18 @@ final class BattleController extends ChangeNotifier
       _archiveSession();
       _session = null;
       _predictionEngine = null;
+      _predictionEngineMethod = null;
+      _sortieDamageControls.endSortie();
       return;
     }
     final data = GameApiDecoder.decodeEventData(event);
     final map = _map(data);
     if (_mapPaths.contains(event.path)) {
+      if (event.path == '/kcsapi/api_req_map/start') {
+        _sortieDamageControls.beginSortie();
+      } else if (!_sortieDamageControls.isActive) {
+        _sortieDamageControls.beginSortie(trusted: false, reason: '缺少前序出击节点');
+      }
       _context = _contextFromMap(map, event);
       final state = gameState();
       final landBaseRaid = _landBaseRaid(map, state);
@@ -190,6 +201,7 @@ final class BattleController extends ChangeNotifier
       );
       _archiveSession();
       _predictionEngine = null;
+      _predictionEngineMethod = null;
       _session = BattleSession(
         id: '${event.sequence}:${_context.mapAreaId}-${_context.mapInfoNo}-${_context.node}',
         context: _context,
@@ -459,12 +471,33 @@ final class BattleController extends ChangeNotifier
       previous: previousBattle?.enemyEscort,
     );
 
-    _predictionEngine ??= _createPredictionEngine(
-      friendMain: friendMain,
-      friendEscort: friendEscort,
-      enemyMain: enemyMain,
-      enemyEscort: enemyEscort,
-    );
+    if (_predictionEngine == null) {
+      final method = predictionMethod?.call() ?? BattlePredictionMethod.poi;
+      _predictionEngineMethod = method;
+      if (!practice && method == BattlePredictionMethod.poi) {
+        if (!_sortieDamageControls.isActive) {
+          _sortieDamageControls.beginSortie(
+            trusted: false,
+            reason: '缺少出击节点上下文',
+          );
+        }
+        _predictionEngine = _createPredictionEngine(
+          method: method,
+          friendMain: _sortieDamageControls.seedFleet(friendMain),
+          friendEscort: _sortieDamageControls.seedFleet(friendEscort),
+          enemyMain: enemyMain,
+          enemyEscort: enemyEscort,
+        );
+      } else {
+        _predictionEngine = _createPredictionEngine(
+          method: method,
+          friendMain: friendMain,
+          friendEscort: friendEscort,
+          enemyMain: enemyMain,
+          enemyEscort: enemyEscort,
+        );
+      }
+    }
     final appendResult = await _predictionExecutor.append(
       engine: _predictionEngine!,
       path: event.path,
@@ -472,6 +505,28 @@ final class BattleController extends ChangeNotifier
     );
     _predictionEngine = appendResult.engine;
     final parsed = appendResult.prediction;
+    if (!practice && _predictionEngineMethod == BattlePredictionMethod.poi) {
+      if (parsed.issues.isEmpty && _sortieDamageControls.isTrusted) {
+        _sortieDamageControls.synchronize(
+          ships: <BattleShipSnapshot>[
+            ...parsed.friendMain,
+            ...parsed.friendEscort,
+          ],
+          equipmentByShipId: _damageControlEquipmentByShipId(
+            state,
+            <BattleShipSnapshot>[...parsed.friendMain, ...parsed.friendEscort],
+          ),
+        );
+      } else if (parsed.issues.isNotEmpty) {
+        _sortieDamageControls.markUntrusted('战斗解析不完整，无法确认损管消费');
+      }
+      if (!_sortieDamageControls.isTrusted) {
+        _session?.markUnconfirmed(
+          stage: 'damage-control-ledger',
+          message: _sortieDamageControls.untrustedReason ?? '跨节点损管状态无法确认',
+        );
+      }
+    }
     final parsedFriendMain = _mergeEscapedFlags(parsed.friendMain, friendMain);
     final parsedFriendEscort = _mergeEscapedFlags(
       parsed.friendEscort,
@@ -538,12 +593,12 @@ final class BattleController extends ChangeNotifier
   }
 
   BattlePredictionEngine _createPredictionEngine({
+    required BattlePredictionMethod method,
     required List<BattleShipSnapshot> friendMain,
     required List<BattleShipSnapshot> friendEscort,
     required List<BattleShipSnapshot> enemyMain,
     required List<BattleShipSnapshot> enemyEscort,
   }) {
-    final method = predictionMethod?.call() ?? BattlePredictionMethod.poi;
     final factory = method == BattlePredictionMethod.poi
         ? poiEngineFactory
         : yahagiEngineFactory;
@@ -768,6 +823,28 @@ final class BattleController extends ChangeNotifier
       }
     }
     return changed ? List.unmodifiable(result) : parsed;
+  }
+
+  Map<int, List<DamageControlEquipmentRef>> _damageControlEquipmentByShipId(
+    GameState state,
+    Iterable<BattleShipSnapshot> ships,
+  ) {
+    final result = <int, List<DamageControlEquipmentRef>>{};
+    for (final ship in ships) {
+      final shipId = ship.ownedShipId;
+      final ownedShip = shipId == null ? null : state.ships[shipId];
+      if (shipId == null || ownedShip == null) continue;
+      result[shipId] = <DamageControlEquipmentRef>[
+        for (final equipment in state.equipmentForShip(ownedShip))
+          if (equipment.owned.masterSlotItemId == 42 ||
+              equipment.owned.masterSlotItemId == 43)
+            DamageControlEquipmentRef(
+              instanceId: equipment.owned.instanceId,
+              masterId: equipment.owned.masterSlotItemId,
+            ),
+      ];
+    }
+    return result;
   }
 
   List<BattleShipSnapshot> _friendFleet(

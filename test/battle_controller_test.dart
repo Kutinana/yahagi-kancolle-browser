@@ -986,9 +986,9 @@ void main() {
         ('/kcsapi/api_req_sortie/airbattle', BattleRank.d),
       ]) {
         final controller = BattleController(gameState: () => state);
-        controller.accept(
-          kcsapiEvent(scenario.$1, untouchedBattle(), sequence: 33),
-        );
+        controller
+          ..accept(mapStartEvent)
+          ..accept(kcsapiEvent(scenario.$1, untouchedBattle(), sequence: 33));
         await controller.idle;
         expect(controller.current!.rank, scenario.$2);
         controller.dispose();
