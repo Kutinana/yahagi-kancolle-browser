@@ -25,7 +25,7 @@
 - 创建：`test/sortie_damage_control_ledger_test.dart`
 - 创建：`lib/src/battle/sortie_damage_control_ledger.dart`
 
-- [ ] **步骤 1：编写实例顺序与幂等同步失败测试**
+- [x] **步骤 1：编写实例顺序与幂等同步失败测试**
 
 ```dart
 test('synchronizes duplicate damage controls by concrete instance', () {
@@ -59,13 +59,13 @@ test('synchronizes duplicate damage controls by concrete instance', () {
 });
 ```
 
-- [ ] **步骤 2：运行测试并确认因类型尚不存在而失败**
+- [x] **步骤 2：运行测试并确认因类型尚不存在而失败**
 
 运行：`flutter test test/sortie_damage_control_ledger_test.dart`
 
 预期：FAIL，`SortieDamageControlLedger` 和 `DamageControlEquipmentRef` 未定义。
 
-- [ ] **步骤 3：实现最小账本 API**
+- [x] **步骤 3：实现最小账本 API**
 
 ```dart
 final class DamageControlEquipmentRef {
@@ -172,7 +172,7 @@ final class SortieDamageControlLedger {
 
 实现中只接受 Master ID `42` 和 `43`；已有消费序列必须是预测输出的严格前缀或完整相等序列。任何矛盾调用 `markUntrusted`，不得部分追加当前批次。
 
-- [ ] **步骤 4：补充异常和位置变化测试并运行绿灯**
+- [x] **步骤 4：补充异常和位置变化测试并运行绿灯**
 
 覆盖 `[42, 43]`、缺失 `ownedShipId`、找不到实例、前缀矛盾、位置改变但舰娘 ID 不变。
 
@@ -180,7 +180,7 @@ final class SortieDamageControlLedger {
 
 预期：全部 PASS。
 
-- [ ] **步骤 5：提交任务 1**
+- [x] **步骤 5：提交任务 1**
 
 ```bash
 git add lib/src/battle/sortie_damage_control_ledger.dart test/sortie_damage_control_ledger_test.dart
