@@ -291,8 +291,7 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
       final hits = _list(damages[row]);
       final enemyAttack = row < flags.length
           ? _int(flags[row]) != 0
-          : (targets.isNotEmpty &&
-                _int(targets.first) < mainFleetRange);
+          : (targets.isNotEmpty && _int(targets.first) < mainFleetRange);
       final attackOrder = row < attackTypes.length
           ? _multiTargetAttackOrder(_int(attackTypes[row]), isNight: isNight)
           : null;
