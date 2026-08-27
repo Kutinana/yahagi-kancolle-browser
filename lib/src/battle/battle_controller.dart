@@ -561,6 +561,7 @@ final class BattleController extends ChangeNotifier
         friendEscort: friendEscort,
         enemyMain: enemyMain,
         enemyEscort: enemyEscort,
+        fleetType: _context.combinedFleetType.apiValue,
       ),
       BattlePredictionMethod.yahagi => YahagiBattlePredictionEngine(
         friendMain: friendMain,

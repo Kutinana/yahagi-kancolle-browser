@@ -31,10 +31,10 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
   }) {
     _packets.add(PoiBattleReplayPacket(path: path, data: data));
     final simulator = _PoiBattleSimulator(
-      friendMain: clonePoiBattleFleet(_friendMain),
-      friendEscort: clonePoiBattleFleet(_friendEscort),
-      enemyMain: clonePoiBattleFleet(_enemyMain),
-      enemyEscort: clonePoiBattleFleet(_enemyEscort),
+      clonePoiBattleFleet(_friendMain),
+      clonePoiBattleFleet(_friendEscort),
+      clonePoiBattleFleet(_enemyMain),
+      clonePoiBattleFleet(_enemyEscort),
       fleetType: fleetType,
     );
     BattlePrediction? prediction;
@@ -47,16 +47,47 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
 
 /// Mutable simulator used for one complete replay only.
 final class _PoiBattleSimulator {
-  _PoiBattleSimulator({
-    required List<BattleShipSnapshot> friendMain,
-    List<BattleShipSnapshot> friendEscort = const <BattleShipSnapshot>[],
-    required List<BattleShipSnapshot> enemyMain,
-    List<BattleShipSnapshot> enemyEscort = const <BattleShipSnapshot>[],
+  static const Set<String> _dayPaths = <String>{
+    '/kcsapi/api_req_practice/battle',
+    '/kcsapi/api_req_sortie/battle',
+    '/kcsapi/api_req_sortie/airbattle',
+    '/kcsapi/api_req_sortie/ld_airbattle',
+    '/kcsapi/api_req_sortie/ld_shooting',
+    '/kcsapi/api_req_combined_battle/battle',
+    '/kcsapi/api_req_combined_battle/battle_water',
+    '/kcsapi/api_req_combined_battle/airbattle',
+    '/kcsapi/api_req_combined_battle/ld_airbattle',
+    '/kcsapi/api_req_combined_battle/ld_shooting',
+    '/kcsapi/api_req_combined_battle/ec_battle',
+    '/kcsapi/api_req_combined_battle/each_battle',
+    '/kcsapi/api_req_combined_battle/each_battle_water',
+  };
+  static const Set<String> _nightPaths = <String>{
+    '/kcsapi/api_req_practice/midnight_battle',
+    '/kcsapi/api_req_battle_midnight/battle',
+    '/kcsapi/api_req_battle_midnight/sp_midnight',
+    '/kcsapi/api_req_combined_battle/midnight_battle',
+    '/kcsapi/api_req_combined_battle/sp_midnight',
+    '/kcsapi/api_req_combined_battle/ec_midnight_battle',
+    '!COMPAT/midnight_battle',
+  };
+  static const Set<String> _nightToDayPaths = <String>{
+    '/kcsapi/api_req_combined_battle/ec_night_to_day',
+  };
+  static const Set<String> _airRaidPaths = <String>{
+    '/kcsapi/api_req_sortie/ld_airbattle',
+    '/kcsapi/api_req_sortie/ld_shooting',
+    '/kcsapi/api_req_combined_battle/ld_airbattle',
+    '/kcsapi/api_req_combined_battle/ld_shooting',
+  };
+
+  _PoiBattleSimulator(
+    this._friendMain,
+    this._friendEscort,
+    this._enemyMain,
+    this._enemyEscort, {
     required this.fleetType,
-  }) : _friendMain = friendMain,
-       _friendEscort = friendEscort,
-       _enemyMain = enemyMain,
-       _enemyEscort = enemyEscort;
+  });
 
   final List<BattleShipSnapshot> _friendMain;
   final List<BattleShipSnapshot> _friendEscort;
@@ -75,23 +106,21 @@ final class _PoiBattleSimulator {
     required Map<String, Object?> data,
   }) {
     _prepareNpcFriend(data['api_friendly_info']);
-    _airRaid =
-        _airRaid ||
-        path.contains('ld_airbattle') ||
-        path.contains('ld_shooting');
+    _airRaid = _airRaid || _airRaidPaths.contains(path);
     _nightOnlyMvp =
         _nightOnlyMvp ||
         (path == '/kcsapi/api_req_combined_battle/midnight_battle' &&
-            _friendEscort.isNotEmpty);
+            fleetType >= 1 &&
+            fleetType <= 3);
     final active = _list(data['api_active_deck']);
     final friendEscort = _atInt(active, 0) == 2;
     final enemyEscort = _atInt(active, 1) == 2;
-    final nightFirst = path.contains('night_to_day');
-    if (nightFirst) {
+    if (_nightToDayPaths.contains(path)) {
       _night(data, friendEscort: friendEscort, enemyEscort: enemyEscort);
-    }
-    _day(data, friendEscort: friendEscort, enemyEscort: enemyEscort);
-    if (!nightFirst) {
+      _day(data, path: path);
+    } else if (_dayPaths.contains(path)) {
+      _day(data, path: path);
+    } else if (_nightPaths.contains(path)) {
       _night(data, friendEscort: friendEscort, enemyEscort: enemyEscort);
     }
     return BattlePrediction(
@@ -105,47 +134,23 @@ final class _PoiBattleSimulator {
     );
   }
 
-  void _day(
-    Map<String, Object?> data, {
-    required bool friendEscort,
-    required bool enemyEscort,
-  }) {
+  void _day(Map<String, Object?> data, {required String path}) {
     for (final key in <String>[
       'api_air_base_injection',
       'api_injection_kouku',
     ]) {
-      _aerial(
-        data[key],
-        key,
-        friendEscort: friendEscort,
-        enemyEscort: enemyEscort,
-      );
+      _aerial(data[key], key);
     }
     final bases = _list(data['api_air_base_attack']);
     for (var i = 0; i < bases.length; i++) {
-      _aerial(
-        bases[i],
-        'api_air_base_attack[$i]',
-        friendEscort: false,
-        enemyEscort: false,
-      );
+      _aerial(bases[i], 'api_air_base_attack[$i]');
     }
     _friendlyAerial(data['api_friendly_kouku']);
     for (final key in <String>['api_kouku', 'api_kouku2']) {
-      _aerial(
-        data[key],
-        key,
-        friendEscort: friendEscort,
-        enemyEscort: enemyEscort,
-      );
+      _aerial(data[key], key);
     }
     if (data['api_stage3'] is Map || data['api_stage3_combined'] is Map) {
-      _aerial(
-        data,
-        'packet-stage3',
-        friendEscort: friendEscort,
-        enemyEscort: enemyEscort,
-      );
+      _aerial(data, 'packet-stage3');
     }
     _support(
       data['api_support_info'],
@@ -155,33 +160,70 @@ final class _PoiBattleSimulator {
     _shell(
       data['api_opening_taisen'],
       'api_opening_taisen',
-      friendEscort: friendEscort,
-      enemyEscort: enemyEscort,
+      friendEscort: false,
+      enemyEscort: false,
     );
     _torpedo(
       data['api_opening_atack'],
       'api_opening_atack',
-      friendEscort: friendEscort,
-      enemyEscort: enemyEscort,
+      friendEscort: false,
+      enemyEscort: false,
     );
-    for (final key in <String>[
-      'api_hougeki1',
-      'api_hougeki2',
-      'api_hougeki3',
-    ]) {
-      _shell(
-        data[key],
-        key,
-        friendEscort: friendEscort,
-        enemyEscort: enemyEscort,
-      );
+
+    void shell(String key) {
+      _shell(data[key], key, friendEscort: false, enemyEscort: false);
     }
-    _torpedo(
+
+    void torpedo() => _torpedo(
       data['api_raigeki'],
       'api_raigeki',
-      friendEscort: friendEscort,
-      enemyEscort: enemyEscort,
+      friendEscort: false,
+      enemyEscort: false,
     );
+
+    final enemyCombined = path.contains('/ec_') || path.contains('/each_');
+    final type = _fleetTypeForPath(path);
+    if (type == 0 && !enemyCombined) {
+      shell('api_hougeki1');
+      shell('api_hougeki2');
+      torpedo();
+    } else if (type == 0) {
+      shell('api_hougeki1');
+      torpedo();
+      shell('api_hougeki2');
+      shell('api_hougeki3');
+    } else if (type == 2) {
+      shell('api_hougeki1');
+      shell('api_hougeki2');
+      shell('api_hougeki3');
+      torpedo();
+    } else if (!enemyCombined) {
+      shell('api_hougeki1');
+      torpedo();
+      shell('api_hougeki2');
+      shell('api_hougeki3');
+    } else {
+      shell('api_hougeki1');
+      shell('api_hougeki2');
+      torpedo();
+      shell('api_hougeki3');
+    }
+  }
+
+  int _fleetTypeForPath(String path) {
+    if (path == '/kcsapi/api_req_combined_battle/battle_water' ||
+        path == '/kcsapi/api_req_combined_battle/each_battle_water') {
+      return 2;
+    }
+    if (path == '/kcsapi/api_req_combined_battle/battle' ||
+        path == '/kcsapi/api_req_combined_battle/each_battle') {
+      return fleetType == 1 || fleetType == 3 ? fleetType : 1;
+    }
+    if (path.startsWith('/kcsapi/api_req_sortie/') ||
+        path.startsWith('/kcsapi/api_req_practice/')) {
+      return 0;
+    }
+    return fleetType;
   }
 
   void _prepareNpcFriend(Object? value) {
@@ -273,26 +315,21 @@ final class _PoiBattleSimulator {
     );
   }
 
-  void _aerial(
-    Object? value,
-    String stage, {
-    required bool friendEscort,
-    required bool enemyEscort,
-  }) {
+  void _aerial(Object? value, String stage) {
     final map = _map(value);
     if (map == null) return;
     _stage = stage;
     _arrayDamage(
       _map(map['api_stage3']),
       escort: false,
-      friendEscort: friendEscort,
-      enemyEscort: enemyEscort,
+      friendEscort: false,
+      enemyEscort: false,
     );
     _arrayDamage(
       _map(map['api_stage3_combined']),
       escort: true,
-      friendEscort: friendEscort,
-      enemyEscort: enemyEscort,
+      friendEscort: false,
+      enemyEscort: false,
     );
   }
 

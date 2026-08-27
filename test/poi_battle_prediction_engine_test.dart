@@ -360,6 +360,103 @@ void main() {
 
     expect(result.enemyMain.single.currentHp, 40);
   });
+
+  test('POI engine ignores night-only fields on a day battle path', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_sortie/battle',
+      data: _enemyNightDamage(10),
+    );
+
+    expect(result.friendMain.single.currentHp, 30);
+  });
+
+  test('POI engine ignores day-only fields on a night battle path', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_battle_midnight/battle',
+      data: <String, Object?>{
+        'api_hougeki1': <String, Object?>{
+          'api_at_eflag': <int>[0],
+          'api_at_list': <int>[0],
+          'api_df_list': <Object?>[
+            <int>[0],
+          ],
+          'api_damage': <Object?>[
+            <num>[10],
+          ],
+        },
+      },
+    );
+
+    expect(result.enemyMain.single.currentHp, 30);
+  });
+
+  test('POI engine follows POI phase order for carrier and surface fleets', () {
+    PoiBattlePredictionEngine engine(int fleetType) =>
+        PoiBattlePredictionEngine(
+          fleetType: fleetType,
+          friendMain: <BattleShipSnapshot>[
+            poiShip(
+              side: BattleSide.friend,
+              position: 0,
+              hp: 30,
+              equipment: const <int>[42, 43],
+            ),
+          ],
+          enemyMain: <BattleShipSnapshot>[
+            poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+          ],
+        );
+
+    final packet = <String, Object?>{
+      'api_hougeki2': <String, Object?>{
+        'api_at_eflag': <int>[1],
+        'api_at_list': <int>[0],
+        'api_df_list': <Object?>[
+          <int>[0],
+        ],
+        'api_damage': <Object?>[
+          <num>[30],
+        ],
+      },
+      'api_raigeki': <String, Object?>{
+        'api_fdam': <num>[-1, 6],
+      },
+    };
+
+    final carrier = engine(
+      1,
+    ).append(path: '/kcsapi/api_req_combined_battle/battle', data: packet);
+    final surface = engine(2).append(
+      path: '/kcsapi/api_req_combined_battle/battle_water',
+      data: packet,
+    );
+
+    expect(carrier.friendMain.single.currentHp, 6);
+    expect(carrier.friendMain.single.usedDamageControlItemIds, const <int>[42]);
+    expect(surface.friendMain.single.currentHp, 30);
+    expect(surface.friendMain.single.usedDamageControlItemIds, const <int>[
+      42,
+      43,
+    ]);
+  });
 }
 
 Map<String, Object?> _enemyNightDamage(num damage) => <String, Object?>{
