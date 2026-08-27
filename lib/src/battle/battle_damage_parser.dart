@@ -350,6 +350,7 @@ class BattleDamageParser {
     final count = defenders.length < damageRows.length
         ? defenders.length
         : damageRows.length;
+    final mainFleetRange = battle.friendMain.length;
 
     for (var attackIndex = 0; attackIndex < count; attackIndex++) {
       final targets = _list(defenders[attackIndex]);
@@ -360,7 +361,7 @@ class BattleDamageParser {
       final hasAttackerFlag = attackIndex < flags.length;
       final attackerIsEnemy = hasAttackerFlag
           ? _int(flags[attackIndex]) != 0
-          : _int(targets.first) < 6;
+          : _int(targets.first) < mainFleetRange;
       final attackOrder = attackIndex < attackTypes.length
           ? _multiTargetAttackOrder(
               _int(attackTypes[attackIndex]),
@@ -400,8 +401,8 @@ class BattleDamageParser {
         var targetPosition = _int(targets[hit]);
         var targetRole = attackerIsEnemy ? friendActiveRole : enemyActiveRole;
         if (!hasAttackerFlag) {
-          if (!attackerIsEnemy && targetPosition >= 6) {
-            targetPosition -= 6;
+          if (!attackerIsEnemy && targetPosition >= mainFleetRange) {
+            targetPosition -= mainFleetRange;
           }
           targetRole = BattleFleetRole.main;
         }

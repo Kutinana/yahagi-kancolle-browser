@@ -299,6 +299,34 @@ void main() {
     expect(result.friendMain[1].damageDealt, 20);
   });
 
+  test('uses seven-ship boundary when shelling omits api_at_eflag', () {
+    final result = BattleDamageParser().apply(
+      data: <String, Object?>{
+        'api_hougeki1': <String, Object?>{
+          'api_at_list': <int>[0],
+          'api_df_list': <Object?>[
+            <int>[7],
+          ],
+          'api_damage': <Object?>[
+            <num>[11],
+          ],
+        },
+      },
+      friendMain: <BattleShipSnapshot>[
+        for (var position = 0; position < 7; position++)
+          snapshot(side: BattleSide.friend, position: position, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        snapshot(side: BattleSide.enemy, position: 0, hp: 30),
+        snapshot(side: BattleSide.enemy, position: 1, hp: 30),
+      ],
+    );
+
+    expect(result.enemyMain.map((ship) => ship.currentHp), <int>[19, 30]);
+    expect(result.friendMain.every((ship) => ship.currentHp == 30), isTrue);
+    expect(result.issues, isEmpty);
+  });
+
   test('applies shelling support damage to the enemy fleet', () {
     final result = BattleDamageParser().apply(
       data: <String, Object?>{
