@@ -559,10 +559,10 @@ final class _PoiBattleSimulator {
     int bestDamagePosition(List<BattleShipSnapshot> fleet) {
       var best = -1;
       var damage = -1;
-      for (var index = 0; index < fleet.length; index++) {
-        if (fleet[index].damageDealt > damage) {
-          best = index;
-          damage = fleet[index].damageDealt;
+      for (final ship in fleet) {
+        if (ship.damageDealt > damage) {
+          best = ship.position;
+          damage = ship.damageDealt;
         }
       }
       return best;
@@ -668,7 +668,7 @@ final class _PoiBattleSimulator {
     final used = List<int>.from(ship.usedDamageControlItemIds);
     if (ship.side == BattleSide.friend && hp == 0) {
       final item = _nextDamageControl(ship, used);
-      if (item == 42) hp = ship.maxHp ~/ 5;
+      if (item == 42) hp = (ship.maxHp ~/ 5).clamp(1, ship.maxHp);
       if (item == 43) hp = ship.maxHp;
       if (item != null) used.add(item);
     }
@@ -712,8 +712,8 @@ final class _PoiBattleSimulator {
       return BattleRank.e;
     }
     if (ours.sunk == 0) {
-      if (enemy.sunk == enemy.count) {
-        return ours.lost == 0 ? BattleRank.ss : BattleRank.s;
+      if (enemy.count > 0 && enemy.sunk == enemy.count) {
+        return ours.lost <= 0 ? BattleRank.ss : BattleRank.s;
       }
       if (enemy.sunk >= _halfSunk(enemy.count)) return BattleRank.a;
     }
@@ -760,7 +760,7 @@ final class _PoiBattleSimulator {
   }
 
   int _halfSunk(int count) =>
-      const <int>[0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 8][count.clamp(0, 12)];
+      const <int>[0, 1, 1, 2, 2, 3, 4, 4, 5, 6, 7, 7, 8][count.clamp(0, 12)];
   int _fleetRange(List<BattleShipSnapshot> fleet) => fleet.fold<int>(
     0,
     (range, ship) => ship.position >= range ? ship.position + 1 : range,

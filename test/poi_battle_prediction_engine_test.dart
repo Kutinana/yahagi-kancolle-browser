@@ -10,6 +10,8 @@ BattleShipSnapshot poiShip({
   required BattleSide side,
   required int position,
   required int hp,
+  int? initialHp,
+  int? maxHp,
   List<int> equipment = const <int>[],
   BattleFleetRole fleetRole = BattleFleetRole.main,
 }) => BattleShipSnapshot(
@@ -18,8 +20,8 @@ BattleShipSnapshot poiShip({
   side: side,
   fleetRole: fleetRole,
   position: position,
-  initialHp: hp,
-  maxHp: hp,
+  initialHp: initialHp ?? hp,
+  maxHp: maxHp ?? hp,
   currentHp: hp,
   equipmentMasterIds: equipment,
 );
@@ -670,6 +672,110 @@ void main() {
     );
     expect(prediction.issues, isEmpty);
   });
+
+  test('POI engine uses POI half-sunk thresholds for 9 to 11 enemies', () {
+    const cases = <int, int>{9: 5, 10: 6, 11: 6};
+    for (final entry in cases.entries) {
+      final engine = PoiBattlePredictionEngine(
+        friendMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.friend, position: 0, hp: 30),
+        ],
+        enemyMain: <BattleShipSnapshot>[
+          for (var position = 0; position < entry.key; position++)
+            poiShip(side: BattleSide.enemy, position: position, hp: 10),
+        ],
+      );
+      final damages = <num>[
+        0,
+        for (var position = 1; position < entry.key; position++)
+          position <= entry.value ? 10 : 0,
+      ];
+
+      final result = engine.append(
+        path: '/kcsapi/api_req_sortie/battle',
+        data: <String, Object?>{
+          'api_kouku': <String, Object?>{
+            'api_stage3': <String, Object?>{'api_edam': damages},
+          },
+        },
+      );
+
+      expect(
+        result.rank,
+        BattleRank.b,
+        reason: '${entry.key} enemies with ${entry.value} sunk is below A',
+      );
+    }
+  });
+
+  test('POI engine awards SS when goddess restores above opening HP', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(
+          side: BattleSide.friend,
+          position: 0,
+          hp: 20,
+          initialHp: 20,
+          maxHp: 30,
+          equipment: const <int>[43],
+        ),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_sortie/battle',
+      data: <String, Object?>{
+        'api_hougeki1': <String, Object?>{
+          'api_at_eflag': <int>[1, 0],
+          'api_at_list': <int>[0, 0],
+          'api_df_list': <Object?>[
+            <int>[0],
+            <int>[0],
+          ],
+          'api_damage': <Object?>[
+            <num>[20],
+            <num>[30],
+          ],
+        },
+      },
+    );
+
+    expect(result.friendMain.single.currentHp, 30);
+    expect(result.enemyMain.single.currentHp, 0);
+    expect(result.rank, BattleRank.ss);
+  });
+
+  test(
+    'POI engine damage control personnel always restores at least one HP',
+    () {
+      final engine = PoiBattlePredictionEngine(
+        friendMain: <BattleShipSnapshot>[
+          poiShip(
+            side: BattleSide.friend,
+            position: 0,
+            hp: 4,
+            equipment: const <int>[42],
+          ),
+        ],
+        enemyMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+        ],
+      );
+
+      final result = engine.append(
+        path: '/kcsapi/api_req_battle_midnight/battle',
+        data: _enemyNightDamage(4),
+      );
+
+      expect(result.friendMain.single.currentHp, 1);
+      expect(result.friendMain.single.usedDamageControlItemIds, const <int>[
+        42,
+      ]);
+    },
+  );
 }
 
 Map<String, Object?> _enemyNightDamage(num damage) => <String, Object?>{
