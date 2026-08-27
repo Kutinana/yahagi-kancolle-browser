@@ -470,7 +470,10 @@ git add test/battle_poi_corpus_test.dart tool/run_poi_battle_corpus.ps1
 git commit -m "test(战斗): 完善 POI 全量语料门禁（任务 4/4）"
 ```
 
-- [ ] **步骤 6：代码审查和合并前复验**
+- [x] **步骤 6：代码审查和合并前复验**
 
 对设计提交到最终实现提交做代码审查，修复所有 Critical 和 Important 问题。
 在功能分支和最终 `master` 合并结果上分别重新运行关键损管测试与全量战斗测试。
+
+结果：审查额外发现并修复跨引擎切换及预测执行失败导致的账本可信度缺口；功能
+分支与 `master` 均通过官方 POI 语料、全部战斗专项和完整 Flutter 测试。
