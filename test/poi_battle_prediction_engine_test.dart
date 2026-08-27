@@ -90,6 +90,45 @@ void main() {
     expect(second.friendMain.single.currentHp, 0);
   });
 
+  test(
+    'POI engine aggregates ordinary multi-hit damage before damage control',
+    () {
+      final engine = PoiBattlePredictionEngine(
+        friendMain: <BattleShipSnapshot>[
+          poiShip(
+            side: BattleSide.friend,
+            position: 0,
+            hp: 30,
+            equipment: const <int>[42],
+          ),
+        ],
+        enemyMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+        ],
+      );
+
+      final result = engine.append(
+        path: '/kcsapi/api_req_battle_midnight/battle',
+        data: <String, Object?>{
+          'api_hougeki': <String, Object?>{
+            'api_at_eflag': <int>[1],
+            'api_at_list': <int>[0],
+            'api_sp_list': <int>[3],
+            'api_df_list': <Object?>[
+              <int>[0, 0],
+            ],
+            'api_damage': <Object?>[
+              <num>[30, 1],
+            ],
+          },
+        },
+      );
+
+      expect(result.friendMain.single.currentHp, 6);
+      expect(result.friendMain.single.usedDamageControlItemIds, <int>[42]);
+    },
+  );
+
   test('POI engine attributes multi-ship special attack damage per hit', () {
     final engine = PoiBattlePredictionEngine(
       friendMain: <BattleShipSnapshot>[

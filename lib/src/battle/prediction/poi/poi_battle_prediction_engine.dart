@@ -296,34 +296,48 @@ final class PoiBattlePredictionEngine implements BattlePredictionEngine {
           ? _multiTargetAttackOrder(_int(attackTypes[row]), isNight: isNight)
           : null;
       var dealt = 0;
-      for (var hit = 0; hit < targets.length && hit < hits.length; hit++) {
-        final amount = _damage(hits[hit]);
-        if (amount == 0) continue;
-        if (attributeFriendDamage && !enemyAttack && attackOrder != null) {
-          var attacker = row < attackers.length ? _int(attackers[row]) : -1;
-          if (attacker >= 0) {
-            attacker += hit < attackOrder.length ? attackOrder[hit] : 0;
-            // poi-lib-battle mirrors this server-side combined-night index fix.
-            if (isNight &&
-                _friendEscort.isNotEmpty &&
-                attacker < _friendMain.length) {
-              attacker += _friendMain.length;
+      if (attackOrder == null) {
+        final amount = hits.fold<int>(0, (sum, hit) => sum + _damage(hit));
+        if (amount > 0 && targets.isNotEmpty) {
+          if (attributeFriendDamage && !enemyAttack) dealt = amount;
+          var position = _int(targets.first);
+          var escort = enemyAttack ? friendEscort : enemyEscort;
+          if (row >= flags.length) {
+            if (!enemyAttack && position >= mainFleetRange) {
+              position -= mainFleetRange;
             }
-            _addAbsoluteFriendDamage(attacker, amount);
-            if (isNight) _addNightDamage(attacker, amount);
+            escort = false;
           }
-        } else {
-          dealt += amount;
+          _damagePosition(enemyAttack, escort, position, amount);
         }
-        var position = _int(targets[hit]);
-        var escort = enemyAttack ? friendEscort : enemyEscort;
-        if (row >= flags.length) {
-          if (!enemyAttack && position >= mainFleetRange) {
-            position -= mainFleetRange;
+      } else {
+        for (var hit = 0; hit < targets.length && hit < hits.length; hit++) {
+          final amount = _damage(hits[hit]);
+          if (amount == 0) continue;
+          if (attributeFriendDamage && !enemyAttack) {
+            var attacker = row < attackers.length ? _int(attackers[row]) : -1;
+            if (attacker >= 0) {
+              attacker += hit < attackOrder.length ? attackOrder[hit] : 0;
+              // poi-lib-battle mirrors this server-side combined-night index fix.
+              if (isNight &&
+                  _friendEscort.isNotEmpty &&
+                  attacker < _friendMain.length) {
+                attacker += _friendMain.length;
+              }
+              _addAbsoluteFriendDamage(attacker, amount);
+              if (isNight) _addNightDamage(attacker, amount);
+            }
           }
-          escort = false;
+          var position = _int(targets[hit]);
+          var escort = enemyAttack ? friendEscort : enemyEscort;
+          if (row >= flags.length) {
+            if (!enemyAttack && position >= mainFleetRange) {
+              position -= mainFleetRange;
+            }
+            escort = false;
+          }
+          _damagePosition(enemyAttack, escort, position, amount);
         }
-        _damagePosition(enemyAttack, escort, position, amount);
       }
       if (attributeFriendDamage &&
           !enemyAttack &&
