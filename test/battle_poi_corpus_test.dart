@@ -26,18 +26,25 @@ Map<String, Object?> _loadUpstreamPoiOracle(Directory fixtureRoot) {
   const script = r'''
 const fs=require('fs'),path=require('path'),lib=require(process.argv[1]);
 const root=process.argv[2], out={};
+const isBattle=p=>!p.poi_path.endsWith('battleresult')&&
+  !p.poi_path.endsWith('battle_result')&&
+  (p.poi_path.includes('battle')||p.poi_path.includes('ld_shooting'));
 function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){
   const p=path.join(dir,e.name); if(e.isDirectory()) walk(p); else if(p.endsWith('.json')){
     const j=JSON.parse(fs.readFileSync(p,'utf8'));
-    const prediction={...j,packet:j.packet.filter(v=>
-      !v.poi_path.endsWith('battleresult')&&!v.poi_path.endsWith('battle_result'))};
-    const s=lib.Simulator.auto(new lib.Battle(prediction),{usePoiAPI:false});
     const hp=x=>(x||[]).filter(Boolean).map(v=>v.nowHP);
-    out[path.relative(root,p).replaceAll('\\','/')]={
-      friend:[...hp(s.mainFleet),...hp(s.escortFleet)],
-      enemy:[...hp(s.enemyFleet),...hp(s.enemyEscort)],
-      rank:s.result.rank,mvp:s.result.mvp
-    };
+    const packets=[],steps=[];
+    for(const packet of j.packet){
+      if(!isBattle(packet)) continue;
+      packets.push(packet);
+      const prediction={...j,packet:[...packets]};
+      const s=lib.Simulator.auto(new lib.Battle(prediction),{usePoiAPI:false});
+      steps.push({path:packet.poi_path,
+        friend:[...hp(s.mainFleet),...hp(s.escortFleet)],
+        enemy:[...hp(s.enemyFleet),...hp(s.enemyEscort)],
+        rank:s.result.rank,mvp:s.result.mvp});
+    }
+    out[path.relative(root,p).replaceAll('\\','/')]={steps};
   }
 }}
 walk(root); process.stdout.write(JSON.stringify(out));
@@ -52,23 +59,23 @@ walk(root); process.stdout.write(JSON.stringify(out));
   return _map(jsonDecode(result.stdout.toString()));
 }
 
-List<int> _predictedMvp(
-  List<BattleShipSnapshot> main,
-  List<BattleShipSnapshot> escort,
-) {
-  int best(List<BattleShipSnapshot> ships) {
-    var position = -1;
-    var damage = -1;
-    for (var index = 0; index < ships.length; index++) {
-      if (ships[index].damageDealt > damage) {
-        damage = ships[index].damageDealt;
-        position = index;
-      }
-    }
-    return position;
+List<int> _reportedMvp(BattlePrediction prediction) {
+  if (prediction.friendEscort.isEmpty) {
+    return <int>[
+      prediction.mvpPositions.isEmpty ? -1 : prediction.mvpPositions.first,
+      -1,
+    ];
   }
-
-  return <int>[best(main), best(escort)];
+  var main = -1;
+  var escort = -1;
+  for (final position in prediction.mvpPositions) {
+    if (position >= 6) {
+      escort = position - 6;
+    } else if (main < 0) {
+      main = position;
+    }
+  }
+  return <int>[main, escort];
 }
 
 List<BattleShipSnapshot> _friendFleet(Object? value, BattleFleetRole role) {
@@ -143,6 +150,15 @@ void main() {
     expect(files, hasLength(303));
     final upstream = _loadUpstreamPoiOracle(root);
     expect(upstream, hasLength(303));
+    var comparedPackets = 0;
+    var friendlyInfoPackets = 0;
+    var friendlyBattlePackets = 0;
+    var friendlyKoukuPackets = 0;
+    var combinedBattles = 0;
+    var nightToDayPackets = 0;
+    var supportPackets = 0;
+    var damageControlBattles = 0;
+    var sevenShipBattles = 0;
 
     for (final file in files) {
       final battle = _map(jsonDecode(file.readAsStringSync()));
@@ -156,6 +172,21 @@ void main() {
       YahagiBattlePredictionEngine? yahagiEngine;
       BattlePrediction? yahagiPrediction;
       BattleRank predictedRank = BattleRank.unknown;
+      final relative = file.path
+          .substring(root.path.length + 1)
+          .replaceAll('\\', '/');
+      final oracle = _map(upstream[relative]);
+      final oracleSteps = _list(oracle['steps']);
+      var oracleStep = 0;
+      final fleetType = _int(fleet['type']);
+      if (fleetType > 0) combinedBattles++;
+      if (_list(fleet['main']).length == 7) sevenShipBattles++;
+      if (<BattleShipSnapshot>[...friendMain, ...friendEscort].any(
+        (ship) =>
+            ship.equipmentMasterIds.any((item) => item == 42 || item == 43),
+      )) {
+        damageControlBattles++;
+      }
 
       for (final rawPacket in _list(battle['packet'])) {
         final packet = _map(rawPacket);
@@ -165,6 +196,14 @@ void main() {
           continue;
         }
         if (!path.contains('battle') && !path.contains('ld_shooting')) continue;
+        if (packet['api_friendly_info'] != null) friendlyInfoPackets++;
+        if (packet['api_friendly_battle'] != null) friendlyBattlePackets++;
+        if (packet['api_friendly_kouku'] != null) friendlyKoukuPackets++;
+        if (path.contains('night_to_day')) nightToDayPackets++;
+        if (_int(packet['api_support_flag']) > 0 ||
+            _int(packet['api_n_support_flag']) > 0) {
+          supportPackets++;
+        }
         if (enemyMain.isEmpty) {
           enemyMain = _enemyFleet(
             packet,
@@ -186,6 +225,7 @@ void main() {
           friendEscort: friendEscort,
           enemyMain: enemyMain,
           enemyEscort: enemyEscort,
+          fleetType: fleetType,
         );
         yahagiEngine ??= YahagiBattlePredictionEngine(
           friendMain: friendMain,
@@ -200,7 +240,38 @@ void main() {
         enemyMain = parsed.enemyMain;
         enemyEscort = parsed.enemyEscort;
         predictedRank = parsed.rank;
+        final oraclePacket = _map(oracleSteps[oracleStep]);
+        expect(oraclePacket['path'], path, reason: file.path);
+        expect(
+          <int>[
+            ...parsed.friendMain.map((ship) => ship.currentHp),
+            ...parsed.friendEscort.map((ship) => ship.currentHp),
+          ],
+          _list(oraclePacket['friend']).map(_int).toList(),
+          reason: '${file.path} packet $oracleStep friend HP differs from POI',
+        );
+        expect(
+          <int>[
+            ...parsed.enemyMain.map((ship) => ship.currentHp),
+            ...parsed.enemyEscort.map((ship) => ship.currentHp),
+          ],
+          _list(oraclePacket['enemy']).map(_int).toList(),
+          reason: '${file.path} packet $oracleStep enemy HP differs from POI',
+        );
+        expect(
+          parsed.rank.name.toUpperCase(),
+          oraclePacket['rank'],
+          reason: '${file.path} packet $oracleStep rank differs from POI',
+        );
+        expect(
+          _reportedMvp(parsed),
+          _list(oraclePacket['mvp']).map(_int).toList(),
+          reason: '${file.path} packet $oracleStep MVP differs from POI',
+        );
+        oracleStep++;
+        comparedPackets++;
       }
+      expect(oracleStep, oracleSteps.length, reason: file.path);
 
       for (final ship in <BattleShipSnapshot>[
         ...friendMain,
@@ -255,37 +326,6 @@ void main() {
           reason: '${file.path} final HP differs between engines',
         );
         expect(yahagi.rank, predictedRank, reason: '${file.path} rank differs');
-        final relative = file.path
-            .substring(root.path.length + 1)
-            .replaceAll('\\', '/');
-        final oracle = _map(upstream[relative]);
-        expect(
-          <int>[
-            ...friendMain.map((ship) => ship.currentHp),
-            ...friendEscort.map((ship) => ship.currentHp),
-          ],
-          _list(oracle['friend']).map(_int).toList(),
-          reason: '${file.path} friend HP differs from upstream POI',
-        );
-        expect(
-          <int>[
-            ...enemyMain.map((ship) => ship.currentHp),
-            ...enemyEscort.map((ship) => ship.currentHp),
-          ],
-          _list(oracle['enemy']).map(_int).toList(),
-          reason: '${file.path} enemy HP differs from upstream POI',
-        );
-        expect(
-          predictedRank.name.toUpperCase(),
-          oracle['rank'],
-          reason: '${file.path} rank differs from upstream POI',
-        );
-        expect(
-          _predictedMvp(friendMain, friendEscort),
-          _list(oracle['mvp']).map(_int).toList(),
-          reason: '${file.path} MVP differs from upstream POI',
-        );
-
         final sunk = <BattleShipSnapshot>[
           ...enemyMain,
           ...enemyEscort,
@@ -307,5 +347,14 @@ void main() {
         }
       }
     }
+    expect(comparedPackets, greaterThan(303));
+    // ignore: avoid_print
+    print(
+      'POI corpus coverage: files=${files.length}, packets=$comparedPackets, '
+      'combined=$combinedBattles, friendlyInfo=$friendlyInfoPackets, '
+      'friendlyBattle=$friendlyBattlePackets, friendlyKouku=$friendlyKoukuPackets, '
+      'nightToDay=$nightToDayPackets, support=$supportPackets, '
+      'damageControl=$damageControlBattles, sevenShip=$sevenShipBattles',
+    );
   });
 }

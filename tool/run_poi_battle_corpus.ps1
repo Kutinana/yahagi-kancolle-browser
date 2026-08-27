@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 
-$pinnedCommit = '5a62550a9ed563a7f7c4a1f171f02f2fa0084b0a'
+$pinnedCommit = 'bdedd245800484688913d6e8fd200c227a20acbf'
 $taskRoot = Join-Path ([System.IO.Path]::GetTempPath()) 'yahagi-poi-battle-corpus'
 $repository = Join-Path $taskRoot 'lib-battle'
 
