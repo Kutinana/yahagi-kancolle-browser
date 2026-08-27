@@ -12,6 +12,7 @@ BattleShipSnapshot poiShip({
   required int hp,
   int? initialHp,
   int? maxHp,
+  bool hpUnknown = false,
   List<int> equipment = const <int>[],
   BattleFleetRole fleetRole = BattleFleetRole.main,
 }) => BattleShipSnapshot(
@@ -24,6 +25,7 @@ BattleShipSnapshot poiShip({
   maxHp: maxHp ?? hp,
   currentHp: hp,
   equipmentMasterIds: equipment,
+  hpUnknown: hpUnknown,
 );
 
 void main() {
@@ -200,7 +202,7 @@ void main() {
         'api_active_deck': <int>[2, 1],
         'api_hougeki': <String, Object?>{
           'api_at_eflag': <int>[0],
-          'api_at_list': <int>[2],
+          'api_at_list': <int>[8],
           'api_sp_list': <int>[0],
           'api_df_list': <Object?>[
             <int>[0],
@@ -241,9 +243,13 @@ void main() {
           <String, Object?>{
             'api_stage3': <String, Object?>{
               'api_edam': <num>[-1, 40.9],
+              'api_ebak_flag': <int>[1],
+              'api_erai_flag': <int>[0],
             },
             'api_stage3_combined': <String, Object?>{
               'api_edam': <num>[-1, 20.9],
+              'api_ebak_flag': <int>[1],
+              'api_erai_flag': <int>[0],
             },
           },
         ],
@@ -695,7 +701,15 @@ void main() {
         path: '/kcsapi/api_req_sortie/battle',
         data: <String, Object?>{
           'api_kouku': <String, Object?>{
-            'api_stage3': <String, Object?>{'api_edam': damages},
+            'api_stage3': <String, Object?>{
+              'api_edam': damages,
+              'api_ebak_flag': <int>[
+                for (var position = 0; position < entry.key; position++) 1,
+              ],
+              'api_erai_flag': <int>[
+                for (var position = 0; position < entry.key; position++) 0,
+              ],
+            },
           },
         },
       );
@@ -776,6 +790,262 @@ void main() {
       ]);
     },
   );
+
+  test(
+    'POI engine uses absolute night targets instead of active deck hints',
+    () {
+      final engine = PoiBattlePredictionEngine(
+        fleetType: 1,
+        friendMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.friend, position: 0, hp: 30),
+        ],
+        friendEscort: <BattleShipSnapshot>[
+          poiShip(
+            side: BattleSide.friend,
+            fleetRole: BattleFleetRole.escort,
+            position: 0,
+            hp: 30,
+          ),
+        ],
+        enemyMain: <BattleShipSnapshot>[
+          poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+        ],
+      );
+
+      final result = engine.append(
+        path: '/kcsapi/api_req_combined_battle/ec_midnight_battle',
+        data: <String, Object?>{
+          'api_active_deck': <int>[2, 1],
+          'api_hougeki': <String, Object?>{
+            'api_at_eflag': <int>[1],
+            'api_at_list': <int>[0],
+            'api_df_list': <Object?>[
+              <int>[0],
+            ],
+            'api_damage': <Object?>[
+              <num>[8],
+            ],
+          },
+        },
+      );
+
+      expect(result.friendMain.single.currentHp, 22);
+      expect(result.friendEscort.single.currentHp, 30);
+    },
+  );
+
+  test('POI engine ignores aerial damage when both attack flags are zero', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_sortie/airbattle',
+      data: <String, Object?>{
+        'api_kouku': <String, Object?>{
+          'api_stage3': <String, Object?>{
+            'api_edam': <num>[12],
+            'api_ebak_flag': <int>[0],
+            'api_erai_flag': <int>[0],
+            'api_ecl_flag': <int>[0],
+          },
+        },
+      },
+    );
+
+    expect(result.enemyMain.single.currentHp, 30);
+  });
+
+  test('POI engine requires hit metadata for aerial and shelling support', () {
+    PoiBattlePredictionEngine engine() => PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    final aerial = engine().append(
+      path: '/kcsapi/api_req_sortie/battle',
+      data: <String, Object?>{
+        'api_support_flag': 1,
+        'api_support_info': <String, Object?>{
+          'api_support_airatack': <String, Object?>{
+            'api_stage3': <String, Object?>{
+              'api_edam': <num>[12],
+              'api_ebak_flag': <int>[0],
+              'api_erai_flag': <int>[0],
+              'api_ecl_flag': <int>[0],
+            },
+          },
+        },
+      },
+    );
+    final shelling = engine().append(
+      path: '/kcsapi/api_req_sortie/battle',
+      data: <String, Object?>{
+        'api_support_flag': 2,
+        'api_support_info': <String, Object?>{
+          'api_support_hourai': <String, Object?>{
+            'api_damage': <num>[12],
+            'api_cl_list': <int>[0],
+          },
+        },
+      },
+    );
+
+    expect(aerial.enemyMain.single.currentHp, 30);
+    expect(shelling.enemyMain.single.currentHp, 30);
+  });
+
+  test('POI engine marks unsupported battle paths as unconfirmed', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_combined_battle/future_battle_v2',
+      data: <String, Object?>{
+        'api_hougeki1': <String, Object?>{
+          'api_at_eflag': <int>[1],
+          'api_at_list': <int>[0],
+          'api_df_list': <Object?>[
+            <int>[0],
+          ],
+          'api_damage': <Object?>[
+            <num>[30],
+          ],
+        },
+      },
+    );
+
+    expect(result.friendMain.single.currentHp, 30);
+    expect(result.rank, BattleRank.unknown);
+    expect(result.issues.single.stage, 'path');
+  });
+
+  test('POI engine excludes enemies with hidden HP from rank calculation', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.friend, position: 0, hp: 30),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 10),
+        poiShip(side: BattleSide.enemy, position: 1, hp: 1, hpUnknown: true),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_sortie/battle',
+      data: <String, Object?>{
+        'api_hougeki1': <String, Object?>{
+          'api_at_eflag': <int>[0],
+          'api_at_list': <int>[0],
+          'api_df_list': <Object?>[
+            <int>[0],
+          ],
+          'api_damage': <Object?>[
+            <num>[10],
+          ],
+        },
+      },
+    );
+
+    expect(result.rank, BattleRank.ss);
+  });
+
+  test('POI engine executes night-to-day packets in night-first order', () {
+    final engine = PoiBattlePredictionEngine(
+      fleetType: 1,
+      friendMain: <BattleShipSnapshot>[
+        poiShip(
+          side: BattleSide.friend,
+          position: 0,
+          hp: 30,
+          equipment: const <int>[42, 43],
+        ),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    final result = engine.append(
+      path: '/kcsapi/api_req_combined_battle/ec_night_to_day',
+      data: <String, Object?>{
+        'api_n_hougeki1': <String, Object?>{
+          'api_at_eflag': <int>[1],
+          'api_at_list': <int>[0],
+          'api_df_list': <Object?>[
+            <int>[0],
+          ],
+          'api_damage': <Object?>[
+            <num>[6],
+          ],
+        },
+        'api_hougeki1': <String, Object?>{
+          'api_at_eflag': <int>[1],
+          'api_at_list': <int>[0],
+          'api_df_list': <Object?>[
+            <int>[0],
+          ],
+          'api_damage': <Object?>[
+            <num>[30],
+          ],
+        },
+      },
+    );
+
+    expect(result.friendMain.single.currentHp, 6);
+    expect(result.friendMain.single.usedDamageControlItemIds, const <int>[42]);
+  });
+
+  test('POI replay consumes duplicate damage control items one by one', () {
+    final engine = PoiBattlePredictionEngine(
+      friendMain: <BattleShipSnapshot>[
+        poiShip(
+          side: BattleSide.friend,
+          position: 0,
+          hp: 30,
+          equipment: const <int>[42, 42],
+        ),
+      ],
+      enemyMain: <BattleShipSnapshot>[
+        poiShip(side: BattleSide.enemy, position: 0, hp: 30),
+      ],
+    );
+
+    engine.append(
+      path: '/kcsapi/api_req_battle_midnight/battle',
+      data: _enemyNightDamage(30),
+    );
+    final second = engine.append(
+      path: '/kcsapi/api_req_battle_midnight/battle',
+      data: _enemyNightDamage(6),
+    );
+    final third = engine.append(
+      path: '/kcsapi/api_req_battle_midnight/battle',
+      data: _enemyNightDamage(6),
+    );
+
+    expect(second.friendMain.single.currentHp, 6);
+    expect(second.friendMain.single.usedDamageControlItemIds, const <int>[
+      42,
+      42,
+    ]);
+    expect(third.friendMain.single.currentHp, 0);
+  });
 }
 
 Map<String, Object?> _enemyNightDamage(num damage) => <String, Object?>{

@@ -177,6 +177,7 @@ class BattleShipSnapshot {
     this.equipmentMasterIds = const <int>[],
     this.usedDamageControlItemIds = const <int>[],
     this.isEscaped = false,
+    this.hpUnknown = false,
   });
 
   final int masterId;
@@ -194,6 +195,7 @@ class BattleShipSnapshot {
   final List<int> equipmentMasterIds;
   final List<int> usedDamageControlItemIds;
   final bool isEscaped;
+  final bool hpUnknown;
 
   bool get isSunk => currentHp <= 0;
   bool get isHeavilyDamaged => !isSunk && currentHp * 4 <= maxHp;
@@ -207,6 +209,7 @@ class BattleShipSnapshot {
     int? condition,
     List<int>? usedDamageControlItemIds,
     bool? isEscaped,
+    bool? hpUnknown,
   }) {
     return BattleShipSnapshot(
       masterId: masterId,
@@ -225,6 +228,7 @@ class BattleShipSnapshot {
       usedDamageControlItemIds:
           usedDamageControlItemIds ?? this.usedDamageControlItemIds,
       isEscaped: isEscaped ?? this.isEscaped,
+      hpUnknown: hpUnknown ?? this.hpUnknown,
     );
   }
 }

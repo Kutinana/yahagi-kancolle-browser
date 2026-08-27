@@ -112,16 +112,20 @@ final class _PoiBattleSimulator {
         (path == '/kcsapi/api_req_combined_battle/midnight_battle' &&
             fleetType >= 1 &&
             fleetType <= 3);
-    final active = _list(data['api_active_deck']);
-    final friendEscort = _atInt(active, 0) == 2;
-    final enemyEscort = _atInt(active, 1) == 2;
     if (_nightToDayPaths.contains(path)) {
-      _night(data, friendEscort: friendEscort, enemyEscort: enemyEscort);
+      _night(data);
       _day(data, path: path);
     } else if (_dayPaths.contains(path)) {
       _day(data, path: path);
     } else if (_nightPaths.contains(path)) {
-      _night(data, friendEscort: friendEscort, enemyEscort: enemyEscort);
+      _night(data);
+    } else {
+      _issues.add(
+        BattleParseIssue(
+          stage: 'path',
+          message: 'unsupported POI battle path: $path',
+        ),
+      );
     }
     return BattlePrediction(
       friendMain: List.unmodifiable(_friendMain),
@@ -254,35 +258,16 @@ final class _PoiBattleSimulator {
     _stage = 'api_friendly_kouku';
     final stage3 = _map(map['api_stage3']);
     if (stage3 != null) {
-      _damageArray(
-        _enemyMain,
-        _list(stage3['api_edam']),
-        main: _enemyMain,
-        escortFleet: _enemyEscort,
-      );
-      _damageArray(
-        _npcFriend,
-        _list(stage3['api_fdam']),
-        main: _npcFriend,
-        escortFleet: const <BattleShipSnapshot>[],
-      );
+      _aerialDamage(_enemyMain, stage3, enemyTarget: true);
+      _aerialDamage(_npcFriend, stage3, enemyTarget: false);
     }
     final combined = _map(map['api_stage3_combined']);
     if (combined != null) {
-      _damageArray(
-        _enemyEscort,
-        _list(combined['api_edam']),
-        main: _enemyEscort,
-        escortFleet: const <BattleShipSnapshot>[],
-      );
+      _aerialDamage(_enemyEscort, combined, enemyTarget: true);
     }
   }
 
-  void _night(
-    Map<String, Object?> data, {
-    required bool friendEscort,
-    required bool enemyEscort,
-  }) {
+  void _night(Map<String, Object?> data) {
     _support(
       data['api_n_support_info'],
       _int(data['api_n_support_flag']),
@@ -292,8 +277,8 @@ final class _PoiBattleSimulator {
       _shell(
         data[key],
         key,
-        friendEscort: friendEscort,
-        enemyEscort: enemyEscort,
+        friendEscort: false,
+        enemyEscort: false,
         isNight: true,
       );
     }
@@ -302,8 +287,8 @@ final class _PoiBattleSimulator {
     _shell(
       data['api_hougeki'],
       'api_hougeki',
-      friendEscort: friendEscort,
-      enemyEscort: enemyEscort,
+      friendEscort: false,
+      enemyEscort: false,
       isNight: true,
     );
   }
@@ -357,18 +342,40 @@ final class _PoiBattleSimulator {
     final map = _map(value);
     if (map == null) return;
     _stage = stage;
-    _arrayDamage(
-      _map(map['api_stage3']),
-      escort: false,
-      friendEscort: false,
-      enemyEscort: false,
+    final main = _map(map['api_stage3']);
+    if (main != null) {
+      _aerialDamage(_enemyMain, main, enemyTarget: true);
+      _aerialDamage(_friendMain, main, enemyTarget: false);
+    }
+    final combined = _map(map['api_stage3_combined']);
+    if (combined != null) {
+      _aerialDamage(_enemyEscort, combined, enemyTarget: true);
+      _aerialDamage(_friendEscort, combined, enemyTarget: false);
+    }
+  }
+
+  void _aerialDamage(
+    List<BattleShipSnapshot> fleet,
+    Map<String, Object?> stage3, {
+    required bool enemyTarget,
+  }) {
+    final damage = _list(stage3[enemyTarget ? 'api_edam' : 'api_fdam']);
+    final values = damage.isNotEmpty && _int(damage.first) < 0
+        ? damage.sublist(1)
+        : damage;
+    final bombing = _list(
+      stage3[enemyTarget ? 'api_ebak_flag' : 'api_fbak_flag'],
     );
-    _arrayDamage(
-      _map(map['api_stage3_combined']),
-      escort: true,
-      friendEscort: false,
-      enemyEscort: false,
+    final torpedo = _list(
+      stage3[enemyTarget ? 'api_erai_flag' : 'api_frai_flag'],
     );
+    for (var position = 0; position < values.length; position++) {
+      if (_atInt(bombing, position) <= 0 && _atInt(torpedo, position) <= 0) {
+        continue;
+      }
+      final amount = _damage(values[position]);
+      if (amount > 0) _receive(fleet, position, amount);
+    }
   }
 
   void _torpedo(
@@ -586,19 +593,34 @@ final class _PoiBattleSimulator {
     _stage = stage;
     if (flag == 1 || flag == 4) {
       final attack = _map(map['api_support_airatack']);
-      _damageArray(
-        _enemyMain,
-        _list(_map(attack?['api_stage3'])?['api_edam']),
-        main: _enemyMain,
-        escortFleet: _enemyEscort,
-      );
-    } else {
-      _damageArray(
-        _enemyMain,
-        _list(_map(map['api_support_hourai'])?['api_damage']),
-        main: _enemyMain,
-        escortFleet: _enemyEscort,
-      );
+      final stage3 = _map(attack?['api_stage3']);
+      if (stage3 == null) return;
+      final raw = _list(stage3['api_edam']);
+      final values = raw.isNotEmpty && _int(raw.first) < 0
+          ? raw.sublist(1)
+          : raw;
+      final bombing = _list(stage3['api_ebak_flag']);
+      final torpedo = _list(stage3['api_erai_flag']);
+      for (var position = 0; position < values.length; position++) {
+        if (_atInt(bombing, position) <= 0 && _atInt(torpedo, position) <= 0) {
+          continue;
+        }
+        _damagePosition(false, false, position, _damage(values[position]));
+      }
+      return;
+    }
+    if (flag == 2 || flag == 3) {
+      final hourai = _map(map['api_support_hourai']);
+      if (hourai == null) return;
+      final raw = _list(hourai['api_damage']);
+      final values = raw.isNotEmpty && _int(raw.first) < 0
+          ? raw.sublist(1)
+          : raw;
+      final hits = _list(hourai['api_cl_list']);
+      for (var position = 0; position < values.length; position++) {
+        if (_atInt(hits, position) <= 0) continue;
+        _damagePosition(false, false, position, _damage(values[position]));
+      }
     }
   }
 
@@ -715,7 +737,9 @@ final class _PoiBattleSimulator {
       if (enemy.count > 0 && enemy.sunk == enemy.count) {
         return ours.lost <= 0 ? BattleRank.ss : BattleRank.s;
       }
-      if (enemy.sunk >= _halfSunk(enemy.count)) return BattleRank.a;
+      if (enemy.count > 1 && enemy.sunk >= _halfSunk(enemy.count)) {
+        return BattleRank.a;
+      }
     }
     if (enemy.flagshipSunk && ours.sunk < enemy.sunk) return BattleRank.b;
     if (ours.count == 1 && ours.flagshipCritical) return BattleRank.d;
@@ -735,7 +759,8 @@ final class _PoiBattleSimulator {
     bool flagshipCritical,
   })
   _status(List<BattleShipSnapshot> ships) {
-    if (ships.isEmpty) {
+    final known = ships.where((ship) => !ship.hpUnknown).toList();
+    if (known.isEmpty) {
       return (
         count: 0,
         sunk: 0,
@@ -746,16 +771,18 @@ final class _PoiBattleSimulator {
         flagshipCritical: false,
       );
     }
-    final total = ships.fold<int>(0, (v, s) => v + s.initialHp);
-    final lost = ships.fold<int>(0, (v, s) => v + s.initialHp - s.currentHp);
+    final total = known.fold<int>(0, (v, s) => v + s.initialHp);
+    final lost = known.fold<int>(0, (v, s) => v + s.initialHp - s.currentHp);
+    final flagship = known.where((ship) => ship.position == 0).firstOrNull;
     return (
-      count: ships.length,
-      sunk: ships.where((s) => s.currentHp <= 0).length,
+      count: known.length,
+      sunk: known.where((s) => s.currentHp <= 0).length,
       lost: lost,
       total: total,
       rate: total == 0 ? 0 : lost * 100 ~/ total,
-      flagshipSunk: ships.first.currentHp <= 0,
-      flagshipCritical: ships.first.currentHp * 4 <= ships.first.maxHp,
+      flagshipSunk: flagship != null && flagship.currentHp <= 0,
+      flagshipCritical:
+          flagship != null && flagship.currentHp * 4 <= flagship.maxHp,
     );
   }
 
