@@ -609,6 +609,8 @@
   "newShipFallbackName": "艦娘 No.{id}",
   "@newShipFallbackName": {"placeholders": {"id": {"type": "int"}}},
   "newShipAlertTitle": "未保有艦娘を発見",
+  "newShipAlertBody": "{names}、ロックをお忘れなく",
+  "@newShipAlertBody": {"placeholders": {"names": {"type": "String"}}},
   "acknowledge": "了解",
   "shipName": "艦名",
   "shipType": "艦種",

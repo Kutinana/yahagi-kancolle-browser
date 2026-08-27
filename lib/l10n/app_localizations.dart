@@ -3359,6 +3359,12 @@ abstract class AppLocalizations {
   /// **'发现未持有舰娘'**
   String get newShipAlertTitle;
 
+  /// No description provided for @newShipAlertBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'{names}，请不要忘记上锁'**
+  String newShipAlertBody(String names);
+
   /// No description provided for @acknowledge.
   ///
   /// In zh, this message translates to:

@@ -358,7 +358,7 @@ Future<void> main() async {
           type: GameNotificationType.newShip,
           occurredAt: alert.occurredAt,
           title: l10n.newShipAlertTitle,
-          body: names,
+          body: l10n.newShipAlertBody(names),
         ),
       );
     },
@@ -1010,7 +1010,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         builder: (context) => AlertDialog(
           key: const Key('new-ship-alert-dialog'),
           title: Text(l10n.newShipAlertTitle),
-          content: Text(names.join('、')),
+          content: Text(l10n.newShipAlertBody(names.join('、'))),
           actions: [
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),

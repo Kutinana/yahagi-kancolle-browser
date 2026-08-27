@@ -1745,6 +1745,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newShipAlertTitle => '发现未持有舰娘';
 
   @override
+  String newShipAlertBody(String names) {
+    return '$names，请不要忘记上锁';
+  }
+
+  @override
   String get acknowledge => '知道了';
 
   @override
@@ -3953,6 +3958,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get newShipAlertTitle => '發現未持有艦娘';
+
+  @override
+  String newShipAlertBody(String names) {
+    return '$names，請不要忘記上鎖';
+  }
 
   @override
   String get acknowledge => '知道了';

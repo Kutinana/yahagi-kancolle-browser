@@ -1758,6 +1758,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get newShipAlertTitle => '未保有艦娘を発見';
 
   @override
+  String newShipAlertBody(String names) {
+    return '$names、ロックをお忘れなく';
+  }
+
+  @override
   String get acknowledge => '了解';
 
   @override

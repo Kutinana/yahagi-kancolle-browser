@@ -609,6 +609,8 @@
   "newShipFallbackName": "艦娘 No.{id}",
   "@newShipFallbackName": {"placeholders": {"id": {"type": "int"}}},
   "newShipAlertTitle": "發現未持有艦娘",
+  "newShipAlertBody": "{names}，請不要忘記上鎖",
+  "@newShipAlertBody": {"placeholders": {"names": {"type": "String"}}},
   "acknowledge": "知道了",
   "shipName": "艦名",
   "shipType": "艦種",
