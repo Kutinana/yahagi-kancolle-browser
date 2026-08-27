@@ -20,6 +20,8 @@ abstract final class GameCapturePathCatalog {
     '/kcsapi/api_req_air_corps/set_action',
     '/kcsapi/api_req_air_corps/supply',
     '/kcsapi/api_req_air_corps/change_name',
+    '/kcsapi/api_req_air_corps/cond_recovery',
+    '/kcsapi/api_port/airCorpsCondRecoveryWithTimer',
     '/kcsapi/api_req_hokyu/charge',
     '/kcsapi/api_req_kaisou/slotset',
     '/kcsapi/api_req_kaisou/slotset_ex',

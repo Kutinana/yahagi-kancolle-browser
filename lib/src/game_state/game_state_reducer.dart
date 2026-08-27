@@ -34,6 +34,7 @@ class GameStateReducer {
           event.path == '/kcsapi/api_req_nyukyo/speedchange' ||
           event.path == '/kcsapi/api_req_air_corps/set_action' ||
           event.path == '/kcsapi/api_req_air_corps/change_name' ||
+          event.path == '/kcsapi/api_port/airCorpsCondRecoveryWithTimer' ||
           event.path == '/kcsapi/api_req_quest/clearitemget' ||
           event.path == '/kcsapi/api_req_quest/stop',
     );
@@ -116,12 +117,15 @@ class GameStateReducer {
         origin,
       ),
       '/kcsapi/api_req_air_corps/set_plane' ||
-      '/kcsapi/api_req_air_corps/supply' => _updateLandBasePlanes(
+      '/kcsapi/api_req_air_corps/supply' ||
+      '/kcsapi/api_req_air_corps/cond_recovery' => _updateLandBasePlanes(
         state,
         _requiredMap(data, 'land-base planes'),
         event,
         origin,
       ),
+      '/kcsapi/api_port/airCorpsCondRecoveryWithTimer' =>
+        _updateLandBasePlanesIfPresent(state, data, event, origin),
       '/kcsapi/api_req_air_corps/change_deployment_base' =>
         _changeLandBaseDeployment(
           state,
@@ -1474,6 +1478,18 @@ class GameStateReducer {
       serverOrigin: origin,
       updatedAt: event.capturedAt,
     );
+  }
+
+  GameState _updateLandBasePlanesIfPresent(
+    GameState state,
+    Object? data,
+    CapturedApiEvent event,
+    String origin,
+  ) {
+    final planeData = _optionalMap(data);
+    return planeData == null
+        ? state
+        : _updateLandBasePlanes(state, planeData, event, origin);
   }
 
   GameState _changeLandBaseDeployment(

@@ -1384,7 +1384,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get nativeGameSurfaceSwitchRenderingModeHint =>
-      '当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式';
+      '当前设备暂不兼容此模式。请滚动左侧菜单，前往【设置 - 画面与声音】切换渲染模式。';
 
   @override
   String nativeGameSurfacePageInitializationFailed(

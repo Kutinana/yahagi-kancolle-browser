@@ -164,7 +164,10 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('native-game-surface-error')), findsOneWidget);
-    expect(find.text('当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式'), findsOneWidget);
+    expect(
+      find.text('当前设备暂不兼容此模式。请滚动左侧菜单，前往【设置 - 画面与声音】切换渲染模式。'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('manual fit resends native bounds before fitting the page', (

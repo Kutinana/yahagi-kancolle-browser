@@ -500,6 +500,109 @@ void main() {
       expect(state.landBases[2].name, '其他海域基地');
     });
 
+    test(
+      'land-base fatigue recovery APIs merge only returned plane fields',
+      () {
+        const initial = GameState(
+          landBases: <LandBaseState>[
+            LandBaseState(
+              areaId: 62,
+              baseId: 1,
+              name: '第一基地航空队',
+              squadrons: <LandBaseSquadronState>[
+                LandBaseSquadronState(
+                  squadronId: 1,
+                  state: 1,
+                  slotItemId: 101,
+                  currentCount: 18,
+                  maxCount: 18,
+                  condition: 3,
+                ),
+                LandBaseSquadronState(
+                  squadronId: 2,
+                  state: 1,
+                  slotItemId: 102,
+                  currentCount: 12,
+                  maxCount: 18,
+                  condition: 2,
+                ),
+              ],
+            ),
+            LandBaseState(
+              areaId: 62,
+              baseId: 2,
+              name: '第二基地航空队',
+              squadrons: <LandBaseSquadronState>[
+                LandBaseSquadronState(squadronId: 1, condition: 3),
+              ],
+            ),
+          ],
+        );
+
+        for (final path in <String>[
+          '/kcsapi/api_req_air_corps/cond_recovery',
+          '/kcsapi/api_port/airCorpsCondRecoveryWithTimer',
+        ]) {
+          final state = GameStateReducer().reduce(
+            initial,
+            kcsapiEvent(
+              path,
+              <String, Object?>{
+                'api_plane_info': <Object?>[
+                  <String, Object?>{'api_squadron_id': 1, 'api_cond': 1},
+                ],
+              },
+              requestParams: const <String, Object?>{
+                'api_area_id': '62',
+                'api_base_id': '1',
+              },
+            ),
+          );
+
+          final recovered = state.landBases.first;
+          expect(recovered.squadrons.first.condition, 1, reason: path);
+          expect(recovered.squadrons.first.slotItemId, 101, reason: path);
+          expect(recovered.squadrons.first.currentCount, 18, reason: path);
+          expect(recovered.squadrons.last.condition, 2, reason: path);
+          expect(
+            state.landBases.last.squadrons.single.condition,
+            3,
+            reason: path,
+          );
+        }
+      },
+    );
+
+    test('timer fatigue recovery tolerates a response without api_data', () {
+      const state = GameState(
+        landBases: <LandBaseState>[
+          LandBaseState(
+            areaId: 62,
+            baseId: 1,
+            name: '第一基地航空队',
+            squadrons: <LandBaseSquadronState>[
+              LandBaseSquadronState(squadronId: 1, condition: 3),
+            ],
+          ),
+        ],
+      );
+
+      final updated = GameStateReducer().reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_port/airCorpsCondRecoveryWithTimer',
+          null,
+          includeApiData: false,
+          requestParams: const <String, Object?>{
+            'api_area_id': '62',
+            'api_base_id': '1',
+          },
+        ),
+      );
+
+      expect(updated, same(state));
+    });
+
     test('land-base raid accepts nested JSON and port clears transient hp', () {
       final reducer = GameStateReducer();
       var state = const GameState(

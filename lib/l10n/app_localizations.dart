@@ -2693,7 +2693,7 @@ abstract class AppLocalizations {
   /// No description provided for @nativeGameSurfaceSwitchRenderingModeHint.
   ///
   /// In zh, this message translates to:
-  /// **'当前设备暂不兼容此模式，请前往【设置 - 画面与声音】切换渲染模式'**
+  /// **'当前设备暂不兼容此模式。请滚动左侧菜单，前往【设置 - 画面与声音】切换渲染模式。'**
   String get nativeGameSurfaceSwitchRenderingModeHint;
 
   /// No description provided for @nativeGameSurfacePageInitializationFailed.
