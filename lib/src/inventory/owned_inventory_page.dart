@@ -5,6 +5,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
+import '../fleet/equipment_type_icon.dart';
 import '../fleet/ship_portrait.dart';
 import '../fleet/ship_status_style.dart';
 import '../game_state/game_state.dart';
@@ -1559,15 +1560,10 @@ class _EquipmentIcon extends StatelessWidget {
           Positioned(
             left: 1,
             top: 1,
-            child: Image.asset(
-              'assets/images/slotitem/$iconId.png',
+            child: EquipmentTypeIconImage(
+              iconId: iconId,
               width: 23,
               height: 23,
-              errorBuilder: (context, error, stackTrace) => Image.asset(
-                'assets/images/slotitem/-1.png',
-                width: 23,
-                height: 23,
-              ),
             ),
           ),
           if (proficiency > 0 || (level != null && level > 0))

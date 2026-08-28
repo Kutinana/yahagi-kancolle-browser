@@ -45,4 +45,31 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  for (final entry in <int, String>{
+    59: 'assets/images/slotitem/159.png',
+    60: 'assets/images/slotitem/160.png',
+  }.entries) {
+    testWidgets('equipment icon ${entry.key} renders its bundled POI asset', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EquipmentTypeIconImage(
+            iconId: entry.key,
+            width: 16,
+            height: 16,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final assetNames = tester
+          .widgetList<Image>(find.byType(Image))
+          .map((image) => (image.image as AssetImage).assetName);
+      expect(assetNames, contains(entry.value));
+      expect(assetNames, isNot(contains('assets/images/slotitem/-1.png')));
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

@@ -444,6 +444,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('equipment rows use the bundled POI fallback icon', (
+    tester,
+  ) async {
+    final startEnvelope =
+        jsonDecode(start2Event.responseBody) as Map<String, Object?>;
+    final startData =
+        jsonDecode(jsonEncode(startEnvelope['api_data']))
+            as Map<String, Object?>;
+    final masterSlotItems = startData['api_mst_slotitem']! as List<Object?>;
+    final target = masterSlotItems.cast<Map<String, Object?>>().firstWhere(
+      (item) => item['api_id'] == 201,
+    );
+    target['api_type'] = <int>[1, 1, 1, 48, 0];
+
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(kcsapiEvent('/kcsapi/api_start2/getData', startData))
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const Key('equipment-name-row-201'));
+    final assetNames = tester
+        .widgetList<Image>(
+          find.descendant(of: row, matching: find.byType(Image)),
+        )
+        .map((image) => (image.image as AssetImage).assetName);
+    expect(assetNames, contains('assets/images/slotitem/148.png'));
+    expect(assetNames, isNot(contains('assets/images/slotitem/-1.png')));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('ship rows end with official and instance id columns', (
     tester,
   ) async {
