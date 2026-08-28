@@ -17,7 +17,7 @@ import 'browser/game_frame_rate_runtime_controller.dart';
 import 'browser/game_initial_address.dart';
 import 'browser/game_local_home.dart';
 import 'browser/game_page_alignment_script.dart';
-import 'browser/game_surface_detection_result.dart';
+import 'browser/game_presentation_state.dart';
 import 'browser/game_toolbar_controller.dart';
 import 'browser/game_webview_compatibility.dart';
 import 'browser/game_navigation_policy.dart';
@@ -810,7 +810,8 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
       ..addJavaScriptChannel(
         'YahagiPresentation',
         onMessageReceived: (message) {
-          if (message.message != 'game' && message.message != 'web') return;
+          final state = decodeGamePresentationState(message.message);
+          if (state == null || state == GamePresentationState.pending) return;
           // Re-read the current document instead of trusting a possibly stale
           // message that was queued immediately before a navigation.
           _synchronizeGamePresentation().catchError((Object _) {});
@@ -824,7 +825,6 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
             _pageReadiness.pageStarted();
             _navigationPolicy.onPageStarted(Uri.tryParse(url));
             _navigationEpoch += 1;
-            _releaseFixedCanvas().catchError((Object _) {});
             _frameRateRuntimeController?.onPageStarted();
             widget.controller.onPageStarted(url);
             widget.browserController.onPageStarted(url);
@@ -1099,44 +1099,41 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     );
     if (!_isCurrentNavigation(navigationEpoch)) return;
     await _applyGamePresentation(
-      isGameSurfaceDetectionResult(gameSurfaceResult),
+      decodeGamePresentationState(gameSurfaceResult),
       navigationEpoch,
     );
   }
 
   Future<void> _applyGamePresentation(
-    bool hasGameSurface,
+    GamePresentationState? state,
     int navigationEpoch,
   ) async {
     if (!_isCurrentNavigation(navigationEpoch)) return;
+    final action = state?.platformAction ?? GamePresentationPlatformAction.none;
+    if (action == GamePresentationPlatformAction.none) return;
     if (_webViewController.platform is AndroidWebViewController) {
-      if (hasGameSurface) {
-        await _startupCoordinator.waitForStage(
-          _scaleChannel.invokeMethod<void>('bindFixedCanvas', <String, Object>{
-            'contentWidth': 1200,
-            'contentHeight': 720,
-          }),
-        );
-      } else {
-        await _startupCoordinator.waitForStage(
-          _scaleChannel.invokeMethod<void>('releaseFixedCanvas'),
-        );
+      switch (action) {
+        case GamePresentationPlatformAction.bind:
+          await _startupCoordinator.waitForStage(
+            _scaleChannel.invokeMethod<void>(
+              'bindFixedCanvas',
+              <String, Object>{'contentWidth': 1200, 'contentHeight': 720},
+            ),
+          );
+        case GamePresentationPlatformAction.release:
+          await _startupCoordinator.waitForStage(
+            _scaleChannel.invokeMethod<void>('releaseFixedCanvas'),
+          );
+        case GamePresentationPlatformAction.none:
+          return;
       }
       if (!_isCurrentNavigation(navigationEpoch)) return;
     }
-    if (hasGameSurface) {
+    if (state == GamePresentationState.game) {
       await _startupCoordinator.waitForStage(
         _webViewController.runJavaScript('''
           if (window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();
         '''),
-      );
-    }
-  }
-
-  Future<void> _releaseFixedCanvas() async {
-    if (_webViewController.platform is AndroidWebViewController) {
-      await _startupCoordinator.waitForStage(
-        _scaleChannel.invokeMethod<void>('releaseFixedCanvas'),
       );
     }
   }
