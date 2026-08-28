@@ -9,6 +9,7 @@ import 'battle_models.dart';
 import 'battle_pills.dart';
 import 'land_base_raid_panel.dart';
 import 'official_enemy_preview.dart';
+import 'prophet_hp_bar.dart';
 
 class DetailedBattlePanel extends StatelessWidget {
   const DetailedBattlePanel({
@@ -508,14 +509,10 @@ class _BattleShipRow extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 2),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                minHeight: 6,
-                value: ratio,
-                color: hpBarColor,
-                backgroundColor: const Color(0xff263e4d),
-              ),
+            ProphetHpBar(
+              value: ratio,
+              color: hpBarColor,
+              backgroundColor: const Color(0xff263e4d),
             ),
           ],
         ),

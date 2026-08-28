@@ -12,6 +12,7 @@ import '../game_state/game_state.dart';
 import 'detailed_battle_panel.dart';
 import 'land_base_raid_panel.dart';
 import 'official_enemy_preview.dart';
+import 'prophet_hp_bar.dart';
 
 enum BattlePanelMode { compact, detailed }
 
@@ -631,14 +632,10 @@ class _CompactBarRow extends StatelessWidget {
       final hpBar = Opacity(
         key: pulsing ? Key('compact-damage-hp-bar-$keyName-$index') : null,
         opacity: opacity,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            minHeight: 6,
-            value: ratio,
-            color: hpBarColor,
-            backgroundColor: const Color(0xff263e4d),
-          ),
+        child: ProphetHpBar(
+          value: ratio,
+          color: hpBarColor,
+          backgroundColor: const Color(0xff263e4d),
         ),
       );
       final content = Column(

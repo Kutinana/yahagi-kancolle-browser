@@ -11,6 +11,7 @@ import 'package:yahagi_kancolle_browser/src/battle/live_battle_card.dart';
 import 'package:yahagi_kancolle_browser/src/battle/official_enemy_preview.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
+import 'package:yahagi_kancolle_browser/src/battle/prophet_hp_bar.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_portrait.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
@@ -1534,5 +1535,39 @@ void main() {
     expect(find.text('普通战斗'), findsOneWidget);
     expect(find.textContaining('1-1'), findsNothing);
     expect(find.byKey(const Key('navigation-friendly-fleets')), findsOneWidget);
+  });
+
+  testWidgets('compact prophet rows use threshold HP bars', (tester) async {
+    final controller = _createController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(mapStartEvent)
+      ..accept(dayBattleEvent);
+    await controller.idle;
+
+    await _pumpCard(tester, controller, compact: true);
+
+    final row = find.byKey(const Key('compact-bar-friend-0'));
+    expect(
+      find.descendant(of: row, matching: find.byType(ProphetHpBar)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('detailed prophet rows use threshold HP bars', (tester) async {
+    final controller = _createController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(mapStartEvent)
+      ..accept(dayBattleEvent);
+    await controller.idle;
+
+    await _pumpCard(tester, controller);
+
+    final row = find.byKey(const Key('battle-ship-friend-0'));
+    expect(
+      find.descendant(of: row, matching: find.byType(ProphetHpBar)),
+      findsOneWidget,
+    );
   });
 }
