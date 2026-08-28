@@ -18,5 +18,15 @@ void main() {
     expect(source, contains('it.width > 0 && it.height > 0'));
     expect(source, contains("window.dispatchEvent(new Event('resize'))"));
     expect(source, isNot(contains('reload()')));
+
+    final pageStartedStart = source.indexOf('override fun onPageStarted() {');
+    final pageStartedEnd = source.indexOf(
+      'override fun onPageFinished()',
+      pageStartedStart,
+    );
+    expect(pageStartedStart, greaterThanOrEqualTo(0));
+    expect(pageStartedEnd, greaterThan(pageStartedStart));
+    final pageStartedBody = source.substring(pageStartedStart, pageStartedEnd);
+    expect(pageStartedBody, isNot(contains('releaseFixedCanvasScaling')));
   });
 }

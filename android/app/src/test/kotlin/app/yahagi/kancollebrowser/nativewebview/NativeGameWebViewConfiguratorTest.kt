@@ -12,14 +12,16 @@ class NativeGameWebViewConfiguratorTest {
         val presentationStates = mutableListOf<Boolean>()
         val bridge = NativeGamePresentationBridge(presentationStates::add)
 
-        bridge.postMessage("web")
-        bridge.postMessage("web")
         bridge.postMessage("game")
         bridge.postMessage("game")
+        bridge.postMessage("pending")
+        bridge.postMessage("pending")
+        bridge.postMessage("game")
+        bridge.postMessage("web")
         bridge.postMessage("web")
         bridge.postMessage("ignored")
 
-        assertEquals(listOf(false, true, false), presentationStates)
+        assertEquals(listOf(true, true, false), presentationStates)
     }
 
     @Test

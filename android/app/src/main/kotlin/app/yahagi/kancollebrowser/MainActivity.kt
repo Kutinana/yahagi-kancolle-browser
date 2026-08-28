@@ -242,7 +242,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
                 }
 
                 override fun onPageStarted() {
-                    releaseFixedCanvasScaling(nativePresentationMethodResult)
+                    // Keep the current canvas binding until the new document is
+                    // positively classified as game or web by the injected script.
                 }
 
                 override fun onPageFinished() {

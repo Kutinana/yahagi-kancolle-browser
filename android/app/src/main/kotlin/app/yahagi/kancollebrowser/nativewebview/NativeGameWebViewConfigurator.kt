@@ -94,18 +94,18 @@ internal object NativeGameWebViewConfigurator {
 internal class NativeGamePresentationBridge(
     private val onPresentationStateChanged: (Boolean) -> Unit,
 ) {
-    private var lastPresentationState: Boolean? = null
+    private var lastPresentationState: String? = null
 
     @JavascriptInterface
     fun postMessage(message: String) {
-        val presentationState = when (message) {
-            "game" -> true
-            "web" -> false
-            else -> return
+        if (message != "game" && message != "web" && message != "pending") return
+        if (message == lastPresentationState) return
+        lastPresentationState = message
+        when (message) {
+            "game" -> onPresentationStateChanged(true)
+            "web" -> onPresentationStateChanged(false)
+            "pending" -> Unit
         }
-        if (presentationState == lastPresentationState) return
-        lastPresentationState = presentationState
-        onPresentationStateChanged(presentationState)
     }
 }
 
