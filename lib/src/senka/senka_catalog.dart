@@ -214,19 +214,19 @@ const _senkaServerNames = <String, String>{
   'w20': '柱島泊地',
 };
 
-String senkaServerName(String origin) {
+String senkaServerName(String origin, {String unknown = '未知服务器'}) {
   final uri = Uri.tryParse(origin);
   if (uri == null ||
       !const {'http', 'https'}.contains(uri.scheme) ||
       uri.host.isEmpty) {
-    return '未知服务器';
+    return unknown;
   }
   final host = uri.host;
   final validHost =
       RegExp(r'^w\d{2}[a-z]?$').hasMatch(host) ||
       RegExp(r'^w\d{2}[a-z]?\.kancolle-server\.com$').hasMatch(host);
-  if (!validHost) return '未知服务器';
+  if (!validHost) return unknown;
   final match = RegExp(r'^w(\d{2})').firstMatch(host);
-  if (match == null) return '未知服务器';
-  return _senkaServerNames['w${match.group(1)}'] ?? '未知服务器';
+  if (match == null) return unknown;
+  return _senkaServerNames['w${match.group(1)}'] ?? unknown;
 }

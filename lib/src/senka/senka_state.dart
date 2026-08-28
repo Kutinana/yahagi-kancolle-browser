@@ -232,12 +232,22 @@ class SenkaState {
     this.nickname = '',
     this.magic = 0,
     this.latestExperience,
+    this.unattributedExperienceSenka = 0,
+    this.unattributedEoSenka = 0,
+    this.eoTrackingInitialized = false,
     Map<String, SenkaDayRecord> days = const {},
     Map<int, SenkaRewardStatus> eoStatuses = const {},
     Map<int, SenkaRewardStatus> questStatuses = const {},
+    Set<int> recordedQuestIds = const {},
+    String? quarterlyQuestCycleKey,
+    String? annualQuestCycleKey,
     this.targetSenka = 0,
     this.calculatorCurrentSenka = 0,
+    this.calculatorLocalSenkaAtSet,
+    this.dailyTargetDateKey = '',
+    this.dailyProjectedSenkaAtStart = 0,
     Map<String, SenkaSortieStats> sortieStats = const {},
+    Map<String, Map<String, SenkaSortieStats>> sortieStatsByDay = const {},
     this.activeSortie,
     DateTime? latestSortieEventAt,
     DateTime? lastSortieStartAt,
@@ -250,8 +260,16 @@ class SenkaState {
   }) : days = Map.unmodifiable(Map.of(days)),
        eoStatuses = Map.unmodifiable(Map.of(eoStatuses)),
        questStatuses = Map.unmodifiable(Map.of(questStatuses)),
+       recordedQuestIds = Set.unmodifiable(recordedQuestIds),
+       quarterlyQuestCycleKey =
+           quarterlyQuestCycleKey ?? senkaQuarterlyCycleKey(monthKey) ?? '',
+       annualQuestCycleKey =
+           annualQuestCycleKey ?? senkaAnnualCycleKey(monthKey) ?? '',
        sortieStats = Map.unmodifiable(
          _normalizedSortieStats(sortieStats.values),
+       ),
+       sortieStatsByDay = Map.unmodifiable(
+         _normalizedSortieStatsByDay(sortieStatsByDay, monthKey),
        ),
        latestSortieEventAt = latestSortieEventAt?.toUtc(),
        lastSortieStartAt = lastSortieStartAt?.toUtc(),
@@ -276,12 +294,22 @@ class SenkaState {
   final String nickname;
   final int magic;
   final int? latestExperience;
+  final double unattributedExperienceSenka;
+  final double unattributedEoSenka;
+  final bool eoTrackingInitialized;
   final Map<String, SenkaDayRecord> days;
   final Map<int, SenkaRewardStatus> eoStatuses;
   final Map<int, SenkaRewardStatus> questStatuses;
+  final Set<int> recordedQuestIds;
+  final String quarterlyQuestCycleKey;
+  final String annualQuestCycleKey;
   final double targetSenka;
   final double calculatorCurrentSenka;
+  final double? calculatorLocalSenkaAtSet;
+  final String dailyTargetDateKey;
+  final double dailyProjectedSenkaAtStart;
   final Map<String, SenkaSortieStats> sortieStats;
+  final Map<String, Map<String, SenkaSortieStats>> sortieStatsByDay;
   final SenkaActiveSortie? activeSortie;
   final DateTime? latestSortieEventAt;
   final DateTime? lastSortieStartAt;
@@ -295,8 +323,31 @@ class SenkaState {
   SenkaDayRecord day(DateTime date) =>
       days[dateKey(date)] ?? const SenkaDayRecord();
 
+  Map<String, SenkaSortieStats> sortieStatsForDay(DateTime instant) =>
+      sortieStatsByDay[dateKey(senkaBusinessDate(instant))] ?? const {};
+
+  double get monthExperienceSenka =>
+      unattributedExperienceSenka +
+      days.values.fold(0, (sum, record) => sum + record.experience);
+
   double get monthRecorded =>
+      unattributedExperienceSenka +
+      unattributedEoSenka +
       days.values.fold(0, (sum, record) => sum + record.total);
+
+  double get unsettledSenka {
+    final playerHistory = rankingHistory['player'];
+    final latestPlayer = playerHistory == null || playerHistory.isEmpty
+        ? null
+        : playerHistory.last;
+    final baseline =
+        latestPlayer != null && latestPlayer.senka == calculatorCurrentSenka
+        ? latestPlayer.localSenkaAtCapture
+        : calculatorLocalSenkaAtSet ??
+              (calculatorCurrentSenka > 0 ? monthRecorded : 0);
+    final delta = monthRecorded - baseline;
+    return delta > 0 ? delta : 0;
+  }
 
   Set<int> get completedEoIds => {
     for (final entry in eoStatuses.entries)
@@ -378,14 +429,25 @@ class SenkaState {
     int? magic,
     int? latestExperience,
     bool clearLatestExperience = false,
+    double? unattributedExperienceSenka,
+    double? unattributedEoSenka,
+    bool? eoTrackingInitialized,
     Map<String, SenkaDayRecord>? days,
     Map<int, SenkaRewardStatus>? eoStatuses,
     Map<int, SenkaRewardStatus>? questStatuses,
+    Set<int>? recordedQuestIds,
+    String? quarterlyQuestCycleKey,
+    String? annualQuestCycleKey,
     Set<int>? completedEoIds,
     Set<int>? completedQuestIds,
     double? targetSenka,
     double? calculatorCurrentSenka,
+    double? calculatorLocalSenkaAtSet,
+    bool clearCalculatorLocalSenkaAtSet = false,
+    String? dailyTargetDateKey,
+    double? dailyProjectedSenkaAtStart,
     Map<String, SenkaSortieStats>? sortieStats,
+    Map<String, Map<String, SenkaSortieStats>>? sortieStatsByDay,
     SenkaActiveSortie? activeSortie,
     bool clearActiveSortie = false,
     DateTime? latestSortieEventAt,
@@ -418,13 +480,29 @@ class SenkaState {
       latestExperience: clearLatestExperience
           ? null
           : latestExperience ?? this.latestExperience,
+      unattributedExperienceSenka:
+          unattributedExperienceSenka ?? this.unattributedExperienceSenka,
+      unattributedEoSenka: unattributedEoSenka ?? this.unattributedEoSenka,
+      eoTrackingInitialized:
+          eoTrackingInitialized ?? this.eoTrackingInitialized,
       days: days ?? this.days,
       eoStatuses: nextEoStatuses,
       questStatuses: nextQuestStatuses,
+      recordedQuestIds: recordedQuestIds ?? this.recordedQuestIds,
+      quarterlyQuestCycleKey:
+          quarterlyQuestCycleKey ?? this.quarterlyQuestCycleKey,
+      annualQuestCycleKey: annualQuestCycleKey ?? this.annualQuestCycleKey,
       targetSenka: targetSenka ?? this.targetSenka,
       calculatorCurrentSenka:
           calculatorCurrentSenka ?? this.calculatorCurrentSenka,
+      calculatorLocalSenkaAtSet: clearCalculatorLocalSenkaAtSet
+          ? null
+          : calculatorLocalSenkaAtSet ?? this.calculatorLocalSenkaAtSet,
+      dailyTargetDateKey: dailyTargetDateKey ?? this.dailyTargetDateKey,
+      dailyProjectedSenkaAtStart:
+          dailyProjectedSenkaAtStart ?? this.dailyProjectedSenkaAtStart,
       sortieStats: sortieStats ?? this.sortieStats,
+      sortieStatsByDay: sortieStatsByDay ?? this.sortieStatsByDay,
       activeSortie: clearActiveSortie
           ? null
           : activeSortie ?? this.activeSortie,
@@ -449,6 +527,9 @@ class SenkaState {
     'nickname': nickname,
     'magic': magic,
     'latestExperience': latestExperience,
+    'unattributedExperienceSenka': unattributedExperienceSenka,
+    'unattributedEoSenka': unattributedEoSenka,
+    'eoTrackingInitialized': eoTrackingInitialized,
     'days': days.map((key, value) => MapEntry(key, value.toJson())),
     'eoStatuses': eoStatuses.map((key, value) => MapEntry('$key', value.name)),
     'questStatuses': questStatuses.map(
@@ -456,10 +537,22 @@ class SenkaState {
     ),
     'completedEoIds': completedEoIds.toList(),
     'completedQuestIds': completedQuestIds.toList(),
+    'recordedQuestIds': recordedQuestIds.toList(),
+    'quarterlyQuestCycleKey': quarterlyQuestCycleKey,
+    'annualQuestCycleKey': annualQuestCycleKey,
     'targetSenka': targetSenka,
     'calculatorCurrentSenka': calculatorCurrentSenka,
+    'calculatorLocalSenkaAtSet': calculatorLocalSenkaAtSet,
+    'dailyTargetDateKey': dailyTargetDateKey,
+    'dailyProjectedSenkaAtStart': dailyProjectedSenkaAtStart,
     'sortieStats': sortieStats.map(
       (key, value) => MapEntry(key, value.toJson()),
+    ),
+    'sortieStatsByDay': sortieStatsByDay.map(
+      (day, stats) => MapEntry(
+        day,
+        stats.map((key, value) => MapEntry(key, value.toJson())),
+      ),
     ),
     'activeSortie': activeSortie?.toJson(),
     'latestSortieEventAt': latestSortieEventAt?.toIso8601String(),
@@ -486,6 +579,10 @@ class SenkaState {
     final rawRanking = value['rankingHistory'];
     final rawSortieStats = value['sortieStats'];
     final sortieStats = _sortieStatsMap(rawSortieStats);
+    final sortieStatsByDay = _sortieStatsByDayMap(
+      value['sortieStatsByDay'],
+      monthKey,
+    );
     final latestSortieEventAt = _parsedUtcDateTime(
       value['latestSortieEventAt'],
     );
@@ -535,6 +632,18 @@ class SenkaState {
       latestExperience: value['latestExperience'] == null
           ? null
           : _int(value['latestExperience']),
+      unattributedExperienceSenka: _nonNegativeDouble(
+        value['unattributedExperienceSenka'],
+      ),
+      unattributedEoSenka: _nonNegativeDouble(value['unattributedEoSenka']),
+      eoTrackingInitialized:
+          value['eoTrackingInitialized'] == true ||
+          (!value.containsKey('eoTrackingInitialized') &&
+              (eoStatuses.isNotEmpty ||
+                  (rawDays is Map &&
+                      rawDays.values.any(
+                        (item) => SenkaDayRecord.fromJson(item).eo > 0,
+                      )))),
       days: rawDays is Map
           ? {
               for (final entry in rawDays.entries)
@@ -543,9 +652,24 @@ class SenkaState {
           : const {},
       eoStatuses: eoStatuses,
       questStatuses: questStatuses,
+      recordedQuestIds: _intSet(value['recordedQuestIds']),
+      quarterlyQuestCycleKey: '${value['quarterlyQuestCycleKey'] ?? ''}'.isEmpty
+          ? null
+          : '${value['quarterlyQuestCycleKey']}',
+      annualQuestCycleKey: '${value['annualQuestCycleKey'] ?? ''}'.isEmpty
+          ? null
+          : '${value['annualQuestCycleKey']}',
       targetSenka: _double(value['targetSenka']),
       calculatorCurrentSenka: _double(value['calculatorCurrentSenka']),
+      calculatorLocalSenkaAtSet: value['calculatorLocalSenkaAtSet'] == null
+          ? null
+          : _nonNegativeDouble(value['calculatorLocalSenkaAtSet']),
+      dailyTargetDateKey: _monthDateKey(value['dailyTargetDateKey'], monthKey),
+      dailyProjectedSenkaAtStart: _nonNegativeDouble(
+        value['dailyProjectedSenkaAtStart'],
+      ),
       sortieStats: sortieStats,
+      sortieStatsByDay: sortieStatsByDay,
       activeSortie: _activeSortie(
         value['activeSortie'],
         sortieStats,
@@ -582,11 +706,17 @@ class SenkaState {
       memberId: restored.memberId,
       nickname: restored.nickname,
       magic: restored.magic,
+      quarterlyQuestCycleKey: restored.quarterlyQuestCycleKey,
+      annualQuestCycleKey: restored.annualQuestCycleKey,
       questStatuses: {
         for (final entry in restored.questStatuses.entries)
           if (senkaQuestById(entry.key)?.category ==
               SenkaRewardCategory.oneTime)
             entry.key: entry.value,
+      },
+      recordedQuestIds: {
+        for (final id in restored.recordedQuestIds)
+          if (senkaQuestById(id)?.category == SenkaRewardCategory.oneTime) id,
       },
       favoriteSortieMapKeys: restored.favoriteSortieMapKeys,
       hiddenSortieMapKeys: restored.hiddenSortieMapKeys,
@@ -616,31 +746,59 @@ SenkaState migrateSenkaStateToMonth(SenkaState state, String monthKey) {
   if (previous != null && _compareSenkaMonths(next, previous) <= 0) {
     return state;
   }
-  final sameQuarter =
-      senkaQuarterlyCycleKey(state.monthKey) ==
-      senkaQuarterlyCycleKey(monthKey);
-  final sameAnnual =
-      senkaAnnualCycleKey(state.monthKey) == senkaAnnualCycleKey(monthKey);
-  final questStatuses = <int, SenkaRewardStatus>{};
-  for (final entry in state.questStatuses.entries) {
-    final item = senkaQuestById(entry.key);
-    if (item == null) continue;
-    final keep = switch (item.category) {
-      SenkaRewardCategory.eo => false,
-      SenkaRewardCategory.quarterly => sameQuarter,
-      SenkaRewardCategory.annual => sameAnnual,
-      SenkaRewardCategory.oneTime => true,
-    };
-    if (keep) questStatuses[entry.key] = entry.value;
-  }
   return SenkaState.forMonth(monthKey).copyWith(
     serverOrigin: state.serverOrigin,
     memberId: state.memberId,
     nickname: state.nickname,
     magic: state.magic,
-    questStatuses: questStatuses,
+    questStatuses: state.questStatuses,
+    recordedQuestIds: state.recordedQuestIds,
+    quarterlyQuestCycleKey: state.quarterlyQuestCycleKey,
+    annualQuestCycleKey: state.annualQuestCycleKey,
     favoriteSortieMapKeys: state.favoriteSortieMapKeys,
     hiddenSortieMapKeys: state.hiddenSortieMapKeys,
+  );
+}
+
+SenkaState migrateSenkaRewardCycles(SenkaState state, DateTime instant) {
+  final questMonthKey = currentQuestMonthKey(instant);
+  final quarterlyKey = senkaQuarterlyCycleKey(questMonthKey) ?? '';
+  final annualKey = senkaAnnualCycleKey(questMonthKey) ?? '';
+  if (state.quarterlyQuestCycleKey == quarterlyKey &&
+      state.annualQuestCycleKey == annualKey) {
+    return state;
+  }
+  final statuses = <int, SenkaRewardStatus>{};
+  for (final entry in state.questStatuses.entries) {
+    final item = senkaQuestById(entry.key);
+    if (item == null) continue;
+    final keep = switch (item.category) {
+      SenkaRewardCategory.eo => false,
+      SenkaRewardCategory.quarterly =>
+        state.quarterlyQuestCycleKey == quarterlyKey,
+      SenkaRewardCategory.annual => state.annualQuestCycleKey == annualKey,
+      SenkaRewardCategory.oneTime => true,
+    };
+    if (keep) statuses[entry.key] = entry.value;
+  }
+  final recordedQuestIds = <int>{};
+  for (final id in state.recordedQuestIds) {
+    final item = senkaQuestById(id);
+    if (item == null) continue;
+    final keep = switch (item.category) {
+      SenkaRewardCategory.eo => false,
+      SenkaRewardCategory.quarterly =>
+        state.quarterlyQuestCycleKey == quarterlyKey,
+      SenkaRewardCategory.annual => state.annualQuestCycleKey == annualKey,
+      SenkaRewardCategory.oneTime => true,
+    };
+    if (keep) recordedQuestIds.add(id);
+  }
+  return state.copyWith(
+    questStatuses: statuses,
+    recordedQuestIds: recordedQuestIds,
+    quarterlyQuestCycleKey: quarterlyKey,
+    annualQuestCycleKey: annualKey,
   );
 }
 
@@ -715,8 +873,16 @@ DateTime toJst(DateTime value) => value.toUtc().add(const Duration(hours: 9));
 DateTime senkaBusinessDate(DateTime value) =>
     toJst(value).subtract(const Duration(hours: 2));
 
+DateTime questBusinessDate(DateTime value) =>
+    toJst(value).subtract(const Duration(hours: 5));
+
 String currentSenkaMonthKey([DateTime? now]) {
   final date = senkaBusinessDate(now ?? DateTime.now().toUtc());
+  return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}';
+}
+
+String currentQuestMonthKey([DateTime? now]) {
+  final date = questBusinessDate(now ?? DateTime.now().toUtc());
   return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}';
 }
 
@@ -728,6 +894,11 @@ int _int(Object? value) =>
 
 double _double(Object? value) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
+double _nonNegativeDouble(Object? value) {
+  final parsed = _double(value);
+  return parsed.isFinite && parsed > 0 ? parsed : 0;
+}
 
 DateTime _storedDateTime(Object? value) =>
     DateTime.tryParse('${value ?? ''}')?.toUtc() ??
@@ -800,6 +971,49 @@ Map<String, SenkaSortieStats> _normalizedSortieStats(
     }
   }
   return result;
+}
+
+Map<String, Map<String, SenkaSortieStats>> _sortieStatsByDayMap(
+  Object? value,
+  String monthKey,
+) {
+  if (value is! Map) return <String, Map<String, SenkaSortieStats>>{};
+  return _normalizedSortieStatsByDay({
+    for (final entry in value.entries)
+      '${entry.key}': _sortieStatsMap(entry.value),
+  }, monthKey);
+}
+
+Map<String, Map<String, SenkaSortieStats>> _normalizedSortieStatsByDay(
+  Map<String, Map<String, SenkaSortieStats>> values,
+  String monthKey,
+) {
+  final result = <String, Map<String, SenkaSortieStats>>{};
+  for (final entry in values.entries) {
+    final day = _validDateKey(entry.key);
+    if (day == null || !day.startsWith('$monthKey-')) continue;
+    final stats = _normalizedSortieStats(entry.value.values);
+    if (stats.isNotEmpty) result[day] = Map.unmodifiable(stats);
+  }
+  return result;
+}
+
+String? _validDateKey(String value) {
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
+  if (match == null) return null;
+  final year = int.tryParse(match.group(1)!);
+  final month = int.tryParse(match.group(2)!);
+  final day = int.tryParse(match.group(3)!);
+  if (year == null || month == null || day == null) return null;
+  final parsed = DateTime.utc(year, month, day);
+  return parsed.year == year && parsed.month == month && parsed.day == day
+      ? value
+      : null;
+}
+
+String _monthDateKey(Object? value, String monthKey) {
+  final key = _validDateKey('$value');
+  return key != null && key.startsWith('$monthKey-') ? key : '';
 }
 
 Set<String> _mapKeySet(Object? value) {

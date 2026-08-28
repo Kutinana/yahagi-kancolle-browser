@@ -13,7 +13,7 @@ import '../improvement/improvement_planner_controller.dart';
 import '../logbook/logbook_page.dart';
 import '../quest/quest_center_page.dart';
 import '../settings/layout_settings_controller.dart';
-import '../senka/senka_page.dart' show SenkaCenterMode;
+import '../senka/senka_page.dart' show SenkaCenterMode, senkaCenterModeLabel;
 import '../senka/senka_state.dart';
 
 class WorkspaceContextHeader extends StatelessWidget {
@@ -424,6 +424,7 @@ class SenkaModeTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       key: const Key('senka-mode-tabs'),
       width: 360,
@@ -441,7 +442,7 @@ class SenkaModeTabs extends StatelessWidget {
               child: Semantics(
                 button: true,
                 selected: mode == value,
-                label: value.label,
+                label: senkaCenterModeLabel(l10n, value),
                 excludeSemantics: true,
                 child: Material(
                   key: Key('senka-tab-${value.name}'),
@@ -454,7 +455,7 @@ class SenkaModeTabs extends StatelessWidget {
                     onTap: () => onChanged(value),
                     child: Center(
                       child: Text(
-                        value.label,
+                        senkaCenterModeLabel(l10n, value),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

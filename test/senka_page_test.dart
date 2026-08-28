@@ -2,6 +2,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_calendar_view.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_calculator_view.dart';
@@ -127,6 +128,32 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('战果页结构文案跟随日文与繁中语言环境', (tester) async {
+    await pumpSenka(
+      tester,
+      controller,
+      const Size(844, 390),
+      locale: const Locale('ja'),
+    );
+    expect(find.text('戦果情報'), findsOneWidget);
+    expect(find.text('所属サーバー'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('senka-tab-calculator')));
+    await tester.pump();
+    expect(find.text('集計後増分'), findsOneWidget);
+    expect(find.text('利用可能日数（本日含む）'), findsOneWidget);
+
+    await pumpSenka(
+      tester,
+      controller,
+      const Size(844, 390),
+      locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+    );
+    await tester.tap(find.byKey(const Key('senka-tab-calendar')));
+    await tester.pump();
+    expect(find.text('2026年8月戰果日曆'), findsOneWidget);
+    expect(find.textContaining('本月素戰果'), findsOneWidget);
+  });
+
   testWidgets('SenkaPage 默认向子页传递未平移的 UTC instant', (tester) async {
     final before = DateTime.now().toUtc();
     await pumpSenkaWithoutNow(tester, controller, const Size(844, 390));
@@ -199,6 +226,45 @@ void main() {
     expect(find.text('海域明细'), findsNothing);
     expect(find.textContaining('到达率'), findsNothing);
     expect(find.textContaining('撤退'), findsNothing);
+  });
+
+  testWidgets('出击统计切到今日后仅显示今日数据', (tester) async {
+    final state = SenkaState.fromJson({
+      ...sampleState().toJson(),
+      'sortieStatsByDay': {
+        '2026-08-10': {
+          '1-1': const SenkaSortieStats(
+            areaId: 1,
+            mapNo: 1,
+            sorties: 2,
+            bossArrivals: 1,
+            sWins: 1,
+          ).toJson(),
+        },
+      },
+    });
+    final dailyController = SenkaController(
+      store: MemorySenkaStore(state),
+      now: () => DateTime.utc(2026, 8, 10, 3),
+    );
+    await dailyController.initialize();
+    addTearDown(dailyController.dispose);
+
+    await pumpSenka(tester, dailyController, const Size(1280, 680));
+    expect(find.byKey(const Key('senka-sortie-row-3-2')), findsOneWidget);
+
+    await tester.tap(find.text('今日'));
+    await tester.pump();
+
+    expect(find.text('今日出击'), findsOneWidget);
+    expect(find.byKey(const Key('senka-sortie-row-3-2')), findsNothing);
+    final todayRow = find.byKey(const Key('senka-sortie-row-1-1'));
+    for (final value in ['1-1', '1', '2', '1 / 0']) {
+      expect(
+        find.descendant(of: todayRow, matching: find.text(value)),
+        findsOneWidget,
+      );
+    }
   });
 
   testWidgets('统计数据行同字号同中线且操作按钮完整位于行内', (tester) async {
@@ -675,9 +741,9 @@ void main() {
     await pumpCalculator(tester, controller, const Size(1280, 680));
     expect(find.textContaining('距离目标还差'), findsOneWidget);
     final expected = [
-      ['已勾选 EO', '已勾选战果任务'],
+      ['计划 EO', '计划任务'],
       ['每日所需', '今日剩余'],
-      ['素战果', '剩余日数'],
+      ['结算后增量', '可用天数（含今日）'],
     ];
     for (var row = 0; row < expected.length; row++) {
       final first = tester.getRect(find.text(expected[row][0]));
@@ -1205,6 +1271,7 @@ Future<void> pumpSenka(
   Size size, {
   double textScale = 1,
   VoidCallback? onOpenSortieLog,
+  Locale? locale,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -1213,6 +1280,9 @@ Future<void> pumpSenka(
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark(useMaterial3: true),
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(
           context,
@@ -1248,6 +1318,8 @@ Future<void> pumpSenkaWithoutNow(
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark(useMaterial3: true),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Row(
         children: [
           const SizedBox(width: 58),
@@ -1273,6 +1345,8 @@ Future<void> pumpCalendar(
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark(useMaterial3: true),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: SenkaCalendarView(state: state, now: now, compact: false),
     ),
   );

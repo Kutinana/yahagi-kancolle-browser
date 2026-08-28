@@ -143,8 +143,17 @@ void main() {
           16: SenkaRewardStatus.completed,
         },
         questStatuses: const {947: SenkaRewardStatus.planned},
+        unattributedExperienceSenka: 12.34,
+        unattributedEoSenka: 75,
+        eoTrackingInitialized: true,
+        recordedQuestIds: const {947},
+        quarterlyQuestCycleKey: '2026-06',
+        annualQuestCycleKey: '2026-06',
         targetSenka: 3500,
         calculatorCurrentSenka: 1234.5,
+        calculatorLocalSenkaAtSet: 87.34,
+        dailyTargetDateKey: '2026-08-10',
+        dailyProjectedSenkaAtStart: 1280,
         sortieStats: const {
           '1-5': SenkaSortieStats(
             areaId: 1,
@@ -154,6 +163,17 @@ void main() {
             sWins: 8,
             aWins: 1,
           ),
+        },
+        sortieStatsByDay: const {
+          '2026-08-10': {
+            '1-5': SenkaSortieStats(
+              areaId: 1,
+              mapNo: 5,
+              sorties: 2,
+              bossArrivals: 1,
+              sWins: 1,
+            ),
+          },
         },
         favoriteSortieMapKeys: const {'1-5'},
         hiddenSortieMapKeys: const {'7-1'},
@@ -166,12 +186,22 @@ void main() {
       expect(restored.eoStatuses, original.eoStatuses);
       expect(restored.serverOrigin, original.serverOrigin);
       expect(restored.questStatuses, original.questStatuses);
+      expect(restored.unattributedExperienceSenka, 12.34);
+      expect(restored.unattributedEoSenka, 75);
+      expect(restored.eoTrackingInitialized, isTrue);
+      expect(restored.recordedQuestIds, {947});
+      expect(restored.quarterlyQuestCycleKey, '2026-06');
+      expect(restored.annualQuestCycleKey, '2026-06');
       expect(restored.targetSenka, 3500);
       expect(restored.calculatorCurrentSenka, 1234.5);
+      expect(restored.calculatorLocalSenkaAtSet, 87.34);
+      expect(restored.dailyTargetDateKey, '2026-08-10');
+      expect(restored.dailyProjectedSenkaAtStart, 1280);
       expect(restored.sortieStats['1-5']?.sorties, 12);
       expect(restored.sortieStats['1-5']?.bossArrivals, 10);
       expect(restored.sortieStats['1-5']?.sWins, 8);
       expect(restored.sortieStats['1-5']?.aWins, 1);
+      expect(restored.sortieStatsByDay['2026-08-10']?['1-5']?.sorties, 2);
       expect(restored.favoriteSortieMapKeys, {'1-5'});
       expect(restored.hiddenSortieMapKeys, {'7-1'});
     });
@@ -404,6 +434,7 @@ void main() {
             '947': 'planned',
             '949': 'completed',
           },
+          'recordedQuestIds': [854, 947, 949],
           'targetSenka': 3000,
           'calculatorCurrentSenka': 1200,
           'sortieStats': {
@@ -442,6 +473,7 @@ void main() {
         expect(state.nickname, '矢矧');
         expect(state.magic, 61);
         expect(state.questStatuses, {949: SenkaRewardStatus.completed});
+        expect(state.recordedQuestIds, {949});
         expect(state.favoriteSortieMapKeys, {'1-5'});
         expect(state.hiddenSortieMapKeys, {'7-1'});
         expect(state.latestExperience, isNull);
@@ -500,7 +532,9 @@ void main() {
 
   test('初始化加载当月档案并在事件处理后保存', () async {
     final store = MemorySenkaStore(
-      SenkaState.forMonth('2026-08').copyWith(memberId: 123),
+      SenkaState.forMonth(
+        '2026-08',
+      ).copyWith(memberId: 123, dailyTargetDateKey: '2026-08-10'),
     );
     final controller = SenkaController(
       store: store,
@@ -655,17 +689,10 @@ void main() {
     final store = MemorySenkaStore(
       SenkaState.forMonth('2026-08').copyWith(
         latestExperience: 15000000,
+        dailyTargetDateKey: '2026-08-20',
         days: const {
-          '2026-08-19': SenkaDayRecord(
-            experience: 12.34,
-            eo: 75,
-            quest: 80,
-          ),
-          '2026-08-20': SenkaDayRecord(
-            experience: 2.18,
-            eo: 100,
-            quest: 200,
-          ),
+          '2026-08-19': SenkaDayRecord(experience: 12.34, eo: 75, quest: 80),
+          '2026-08-20': SenkaDayRecord(experience: 2.18, eo: 100, quest: 200),
         },
         rankingHistory: {
           'player': [
@@ -727,7 +754,7 @@ void main() {
     expect(await controller.setBaseSenka(123.45), isTrue);
     expect(controller.monthBaseSenka, 123.45);
     expect(controller.state.day(DateTime(2026, 8, 19)).experience, 0);
-    expect(controller.state.day(DateTime(2026, 8, 20)).experience, 123.45);
+    expect(controller.state.day(DateTime(2026, 8, 20)).experience, 0);
     expect(controller.state.playerRankingRow.senkaDelta, 0);
     expect(store.saveCount, 2);
 
@@ -764,8 +791,6 @@ void main() {
     expect(store.saveCount, 1);
   });
 
-
-
   test('海域收藏和隐藏仅操作已有统计的规范 key 且互不排斥', () async {
     final store = MemorySenkaStore();
     final controller = SenkaController(
@@ -797,7 +822,9 @@ void main() {
   });
 
   test('同月初始化不产生多余保存', () async {
-    final store = MemorySenkaStore(SenkaState.forMonth('2026-08'));
+    final store = MemorySenkaStore(
+      SenkaState.forMonth('2026-08').copyWith(dailyTargetDateKey: '2026-08-10'),
+    );
     final controller = SenkaController(
       store: store,
       now: () => DateTime.utc(2026, 8, 10),
@@ -806,6 +833,33 @@ void main() {
     await controller.initialize();
 
     expect(store.saveCount, 0);
+  });
+
+  test('时间边界刷新会在二点切换月份并建立新的日初基准', () async {
+    var instant = DateTime.utc(2026, 8, 31, 12, 59);
+    final store = MemorySenkaStore(
+      SenkaState.forMonth('2026-08').copyWith(
+        memberId: 123,
+        dailyTargetDateKey: '2026-08-31',
+        dailyProjectedSenkaAtStart: 900,
+      ),
+    );
+    final controller = SenkaController(store: store, now: () => instant);
+    await controller.initialize();
+
+    instant = DateTime.utc(2026, 8, 31, 13);
+    controller.refreshForCurrentTime();
+    expect(controller.state.monthKey, '2026-08');
+
+    instant = DateTime.utc(2026, 8, 31, 17);
+    controller.refreshForCurrentTime();
+    await controller.idle;
+
+    expect(controller.state.monthKey, '2026-09');
+    expect(controller.state.dailyTargetDateKey, '2026-09-01');
+    expect(controller.state.dailyProjectedSenkaAtStart, 0);
+    expect(controller.state.memberId, 123);
+    expect(store.saveCount, 1);
   });
 
   test('同一时间捕获的多条数据依次入档不丢失', () async {
@@ -919,6 +973,7 @@ void main() {
 
     controller.setTargetSenka(100);
     await controller.idle;
+    expect(controller.hasPersistenceError, isTrue);
     controller.accept(
       event('/kcsapi/api_get_member/basic', {
         'api_member_id': 123,
@@ -931,6 +986,7 @@ void main() {
     expect(store.saveAttempts, 2);
     expect(store.saveCount, 1);
     expect(store.saved?.toJson(), controller.state.toJson());
+    expect(controller.hasPersistenceError, isFalse);
   });
 
   test('延迟保存交错仍由最终 revision 覆盖且次数确定', () async {
@@ -987,10 +1043,12 @@ void main() {
     );
 
     await controller.initialize();
+    expect(controller.hasPersistenceError, isTrue);
     controller.setTargetSenka(100);
     await controller.idle;
 
     expect(controller.state.targetSenka, 100);
+    expect(controller.hasPersistenceError, isFalse);
     expect(store.saveCount, 1);
     expect(store.saved?.toJson(), controller.state.toJson());
   });

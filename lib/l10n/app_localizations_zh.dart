@@ -285,6 +285,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get baseSenkaSaveFailed => '素战果保存失败，请重试';
 
   @override
+  String get senkaTodaySorties => '今日出击';
+
+  @override
   String get fleetBrief => '编队简报';
 
   @override
@@ -2216,6 +2219,199 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get landBaseRelocating => '配置转换中';
+
+  @override
+  String get senkaInfoTab => '战果信息';
+
+  @override
+  String get senkaCalendarTab => '战果日历';
+
+  @override
+  String get senkaCalculatorTab => '战果计算';
+
+  @override
+  String get senkaSaveFailedWarning => '战果数据保存失败，重启后可能丢失';
+
+  @override
+  String get senkaLatestRanking => '最新排名战果';
+
+  @override
+  String get senkaTarget => '目标战果';
+
+  @override
+  String senkaGap(String value) {
+    return '距离目标还差 $value 战果';
+  }
+
+  @override
+  String senkaOver(String value) {
+    return '已超出 $value 战果';
+  }
+
+  @override
+  String get senkaPlannedEo => '计划 EO';
+
+  @override
+  String get senkaPlannedQuest => '计划任务';
+
+  @override
+  String get senkaDailyRequired => '每日所需';
+
+  @override
+  String get senkaTodayRemaining => '今日剩余';
+
+  @override
+  String get senkaUnsettledDelta => '结算后增量';
+
+  @override
+  String get senkaAvailableDaysIncludingToday => '可用天数（含今日）';
+
+  @override
+  String get senkaProjected => '预计战果';
+
+  @override
+  String get senkaUnit => '战果';
+
+  @override
+  String senkaInputTitle(String label) {
+    return '填写$label';
+  }
+
+  @override
+  String get senkaInvalidNumber => '请输入有效数字';
+
+  @override
+  String get senkaPlannedEoReward => '计划 EO 战果奖励';
+
+  @override
+  String get senkaPlannedQuestReward => '计划任务战果奖励';
+
+  @override
+  String get senkaTotal => '合计';
+
+  @override
+  String get senkaEoRewards => 'EO 战果奖励';
+
+  @override
+  String get senkaQuarterlyQuests => '季度战果任务';
+
+  @override
+  String get senkaAnnualQuests => '年度战果任务';
+
+  @override
+  String get senkaOneTimeQuests => '单次战果任务';
+
+  @override
+  String get senkaRewardLegend =>
+      '黄色＋✕：计划放置，不计入预计战果，绿色＋✓：计划完成，计入预计战果，灰色＋○：已经完成，不再重复计算。';
+
+  @override
+  String get senkaRewardDeferred => '计划放置';
+
+  @override
+  String get senkaRewardPlanned => '计划完成（计预计）';
+
+  @override
+  String get senkaRewardCompleted => '已完成';
+
+  @override
+  String senkaCalendarTitle(int year, int month) {
+    return '$year年$month月战果日历';
+  }
+
+  @override
+  String senkaCalendarSummary(String recorded, String base) {
+    return '本月已记录 $recorded · 本月素战果 $base';
+  }
+
+  @override
+  String get senkaExperience => '经验';
+
+  @override
+  String get senkaQuest => '任务';
+
+  @override
+  String senkaCalendarCell(int year, int month, int day, String value) {
+    return '$year年$month月$day日，战果$value';
+  }
+
+  @override
+  String get senkaServer => '所在服务器';
+
+  @override
+  String get senkaRanking => '战果排名';
+
+  @override
+  String get senkaRank => '排名';
+
+  @override
+  String senkaUpdated(String time) {
+    return '更新：$time';
+  }
+
+  @override
+  String get senkaOrder => '顺位';
+
+  @override
+  String get senkaChange => '变化';
+
+  @override
+  String get senkaCurrent => '当前';
+
+  @override
+  String get senkaSortieStats => '出击海域统计';
+
+  @override
+  String get senkaLatestRecord => '最近记录';
+
+  @override
+  String get senkaMonthSorties => '本月出击';
+
+  @override
+  String get senkaBossArrivals => 'Boss 到达';
+
+  @override
+  String get senkaSWins => 'S 胜';
+
+  @override
+  String get senkaMonth => '本月';
+
+  @override
+  String get senkaToday => '今日';
+
+  @override
+  String get senkaShowHiddenAreas => '显示隐藏海域';
+
+  @override
+  String get senkaShowHidden => '显示已隐藏';
+
+  @override
+  String get senkaArea => '海域';
+
+  @override
+  String get senkaBoss => 'Boss';
+
+  @override
+  String get senkaSorties => '出击';
+
+  @override
+  String get senkaResult => 'S / A';
+
+  @override
+  String get senkaActions => '操作';
+
+  @override
+  String senkaFavoriteArea(String map) {
+    return '收藏海域 $map';
+  }
+
+  @override
+  String senkaHideArea(String map) {
+    return '隐藏海域 $map';
+  }
+
+  @override
+  String get senkaUnknownServer => '未知服务器';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2497,6 +2693,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get baseSenkaSaveFailed => '素戰果儲存失敗，請重試';
+
+  @override
+  String get senkaTodaySorties => '今日出擊';
 
   @override
   String get fleetBrief => '艦隊簡報';
@@ -4431,4 +4630,197 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get landBaseRelocating => '配置轉換中';
+
+  @override
+  String get senkaInfoTab => '戰果資訊';
+
+  @override
+  String get senkaCalendarTab => '戰果日曆';
+
+  @override
+  String get senkaCalculatorTab => '戰果計算';
+
+  @override
+  String get senkaSaveFailedWarning => '戰果資料儲存失敗，重新啟動後可能遺失';
+
+  @override
+  String get senkaLatestRanking => '最新排名戰果';
+
+  @override
+  String get senkaTarget => '目標戰果';
+
+  @override
+  String senkaGap(String value) {
+    return '距離目標還差 $value 戰果';
+  }
+
+  @override
+  String senkaOver(String value) {
+    return '已超出 $value 戰果';
+  }
+
+  @override
+  String get senkaPlannedEo => '計畫 EO';
+
+  @override
+  String get senkaPlannedQuest => '計畫任務';
+
+  @override
+  String get senkaDailyRequired => '每日所需';
+
+  @override
+  String get senkaTodayRemaining => '今日剩餘';
+
+  @override
+  String get senkaUnsettledDelta => '結算後增量';
+
+  @override
+  String get senkaAvailableDaysIncludingToday => '可用天數（含今日）';
+
+  @override
+  String get senkaProjected => '預計戰果';
+
+  @override
+  String get senkaUnit => '戰果';
+
+  @override
+  String senkaInputTitle(String label) {
+    return '填寫$label';
+  }
+
+  @override
+  String get senkaInvalidNumber => '請輸入有效數字';
+
+  @override
+  String get senkaPlannedEoReward => '計畫 EO 戰果獎勵';
+
+  @override
+  String get senkaPlannedQuestReward => '計畫任務戰果獎勵';
+
+  @override
+  String get senkaTotal => '合計';
+
+  @override
+  String get senkaEoRewards => 'EO 戰果獎勵';
+
+  @override
+  String get senkaQuarterlyQuests => '季度戰果任務';
+
+  @override
+  String get senkaAnnualQuests => '年度戰果任務';
+
+  @override
+  String get senkaOneTimeQuests => '單次戰果任務';
+
+  @override
+  String get senkaRewardLegend =>
+      '黃色＋✕：計畫擱置，不計入預計戰果；綠色＋✓：計畫完成，計入預計戰果；灰色＋○：已經完成，不再重複計算。';
+
+  @override
+  String get senkaRewardDeferred => '計畫擱置';
+
+  @override
+  String get senkaRewardPlanned => '計畫完成（計入預計）';
+
+  @override
+  String get senkaRewardCompleted => '已完成';
+
+  @override
+  String senkaCalendarTitle(int year, int month) {
+    return '$year年$month月戰果日曆';
+  }
+
+  @override
+  String senkaCalendarSummary(String recorded, String base) {
+    return '本月已記錄 $recorded · 本月素戰果 $base';
+  }
+
+  @override
+  String get senkaExperience => '經驗';
+
+  @override
+  String get senkaQuest => '任務';
+
+  @override
+  String senkaCalendarCell(int year, int month, int day, String value) {
+    return '$year年$month月$day日，戰果$value';
+  }
+
+  @override
+  String get senkaServer => '所在伺服器';
+
+  @override
+  String get senkaRanking => '戰果排名';
+
+  @override
+  String get senkaRank => '排名';
+
+  @override
+  String senkaUpdated(String time) {
+    return '更新：$time';
+  }
+
+  @override
+  String get senkaOrder => '順位';
+
+  @override
+  String get senkaChange => '變化';
+
+  @override
+  String get senkaCurrent => '目前';
+
+  @override
+  String get senkaSortieStats => '出擊海域統計';
+
+  @override
+  String get senkaLatestRecord => '最近記錄';
+
+  @override
+  String get senkaMonthSorties => '本月出擊';
+
+  @override
+  String get senkaBossArrivals => 'Boss 到達';
+
+  @override
+  String get senkaSWins => 'S 勝';
+
+  @override
+  String get senkaMonth => '本月';
+
+  @override
+  String get senkaToday => '今日';
+
+  @override
+  String get senkaShowHiddenAreas => '顯示隱藏海域';
+
+  @override
+  String get senkaShowHidden => '顯示已隱藏';
+
+  @override
+  String get senkaArea => '海域';
+
+  @override
+  String get senkaBoss => 'Boss';
+
+  @override
+  String get senkaSorties => '出擊';
+
+  @override
+  String get senkaResult => 'S / A';
+
+  @override
+  String get senkaActions => '操作';
+
+  @override
+  String senkaFavoriteArea(String map) {
+    return '收藏海域 $map';
+  }
+
+  @override
+  String senkaHideArea(String map) {
+    return '隱藏海域 $map';
+  }
+
+  @override
+  String get senkaUnknownServer => '未知伺服器';
 }

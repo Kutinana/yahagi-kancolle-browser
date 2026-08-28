@@ -289,6 +289,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get baseSenkaSaveFailed => '素戦果を保存できませんでした。もう一度お試しください';
 
   @override
+  String get senkaTodaySorties => '本日の出撃';
+
+  @override
   String get fleetBrief => '編成情報';
 
   @override
@@ -2239,4 +2242,197 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get landBaseRelocating => '配置転換中';
+
+  @override
+  String get senkaInfoTab => '戦果情報';
+
+  @override
+  String get senkaCalendarTab => '戦果カレンダー';
+
+  @override
+  String get senkaCalculatorTab => '戦果計算';
+
+  @override
+  String get senkaSaveFailedWarning => '戦果データを保存できませんでした。再起動すると失われる可能性があります';
+
+  @override
+  String get senkaLatestRanking => '最新順位戦果';
+
+  @override
+  String get senkaTarget => '目標戦果';
+
+  @override
+  String senkaGap(String value) {
+    return '目標まであと $value 戦果';
+  }
+
+  @override
+  String senkaOver(String value) {
+    return '目標を $value 戦果超過';
+  }
+
+  @override
+  String get senkaPlannedEo => '予定 EO';
+
+  @override
+  String get senkaPlannedQuest => '予定任務';
+
+  @override
+  String get senkaDailyRequired => '1日あたり必要';
+
+  @override
+  String get senkaTodayRemaining => '本日の残り';
+
+  @override
+  String get senkaUnsettledDelta => '集計後増分';
+
+  @override
+  String get senkaAvailableDaysIncludingToday => '利用可能日数（本日含む）';
+
+  @override
+  String get senkaProjected => '予想戦果';
+
+  @override
+  String get senkaUnit => '戦果';
+
+  @override
+  String senkaInputTitle(String label) {
+    return '$labelを入力';
+  }
+
+  @override
+  String get senkaInvalidNumber => '有効な数値を入力してください';
+
+  @override
+  String get senkaPlannedEoReward => '予定 EO 戦果報酬';
+
+  @override
+  String get senkaPlannedQuestReward => '予定任務戦果報酬';
+
+  @override
+  String get senkaTotal => '合計';
+
+  @override
+  String get senkaEoRewards => 'EO 戦果報酬';
+
+  @override
+  String get senkaQuarterlyQuests => 'クォータリー戦果任務';
+
+  @override
+  String get senkaAnnualQuests => 'イヤーリー戦果任務';
+
+  @override
+  String get senkaOneTimeQuests => '単発戦果任務';
+
+  @override
+  String get senkaRewardLegend =>
+      '黄＋✕：保留（予想に含めない）、緑＋✓：完了予定（予想に含める）、灰＋○：完了済み（重複計算しない）。';
+
+  @override
+  String get senkaRewardDeferred => '保留';
+
+  @override
+  String get senkaRewardPlanned => '完了予定（予想に計上）';
+
+  @override
+  String get senkaRewardCompleted => '完了済み';
+
+  @override
+  String senkaCalendarTitle(int year, int month) {
+    return '$year年$month月 戦果カレンダー';
+  }
+
+  @override
+  String senkaCalendarSummary(String recorded, String base) {
+    return '今月の記録 $recorded · 素戦果 $base';
+  }
+
+  @override
+  String get senkaExperience => '経験値';
+
+  @override
+  String get senkaQuest => '任務';
+
+  @override
+  String senkaCalendarCell(int year, int month, int day, String value) {
+    return '$year年$month月$day日、戦果$value';
+  }
+
+  @override
+  String get senkaServer => '所属サーバー';
+
+  @override
+  String get senkaRanking => '戦果ランキング';
+
+  @override
+  String get senkaRank => '順位';
+
+  @override
+  String senkaUpdated(String time) {
+    return '更新：$time';
+  }
+
+  @override
+  String get senkaOrder => '順位';
+
+  @override
+  String get senkaChange => '変化';
+
+  @override
+  String get senkaCurrent => '現在';
+
+  @override
+  String get senkaSortieStats => '出撃海域統計';
+
+  @override
+  String get senkaLatestRecord => '最終記録';
+
+  @override
+  String get senkaMonthSorties => '今月の出撃';
+
+  @override
+  String get senkaBossArrivals => 'Boss 到達';
+
+  @override
+  String get senkaSWins => 'S 勝利';
+
+  @override
+  String get senkaMonth => '今月';
+
+  @override
+  String get senkaToday => '今日';
+
+  @override
+  String get senkaShowHiddenAreas => '非表示海域を表示';
+
+  @override
+  String get senkaShowHidden => '非表示を表示';
+
+  @override
+  String get senkaArea => '海域';
+
+  @override
+  String get senkaBoss => 'Boss';
+
+  @override
+  String get senkaSorties => '出撃';
+
+  @override
+  String get senkaResult => 'S / A';
+
+  @override
+  String get senkaActions => '操作';
+
+  @override
+  String senkaFavoriteArea(String map) {
+    return '海域 $map をお気に入りにする';
+  }
+
+  @override
+  String senkaHideArea(String map) {
+    return '海域 $map を非表示にする';
+  }
+
+  @override
+  String get senkaUnknownServer => '不明なサーバー';
 }

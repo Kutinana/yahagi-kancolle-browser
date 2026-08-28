@@ -192,6 +192,19 @@ void main() {
       'landBaseActionAirDefense',
       'landBaseActionRest',
       'landBaseActionRetreat',
+      // These concise Senka table labels and the formatted update prefix use
+      // established game terminology shared by both Chinese scripts.
+      'senkaActions',
+      'senkaArea',
+      'senkaBoss',
+      'senkaDailyRequired',
+      'senkaFavoriteArea',
+      'senkaMonth',
+      'senkaRank',
+      'senkaResult',
+      'senkaRewardCompleted',
+      'senkaToday',
+      'senkaUpdated',
     };
     const reviewedJa = <String>{
       'appTitle',
@@ -238,6 +251,14 @@ void main() {
       'landBaseActionAirDefense',
       'landBaseActionRest',
       'landBaseActionRetreat',
+      // These concise Senka labels are established game terminology shared
+      // with Japanese; punctuation and placeholders are intentionally equal.
+      'senkaActions',
+      'senkaArea',
+      'senkaBoss',
+      'senkaResult',
+      'senkaToday',
+      'senkaUpdated',
     };
 
     Set<String> identical(String locale) {

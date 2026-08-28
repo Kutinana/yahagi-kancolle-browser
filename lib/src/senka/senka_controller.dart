@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../bridge/captured_api_event.dart';
 import '../game_state/game_api_event_pipeline.dart';
 import '../performance/frame_notification_coalescer.dart';
+import 'senka_calculation.dart';
 import 'senka_catalog.dart';
 import 'senka_reducer.dart';
 import 'senka_state.dart';
@@ -31,10 +32,11 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
   Future<void> _queue = Future<void>.value();
   int _revision = 0;
   bool _disposed = false;
+  Object? _persistenceError;
 
   SenkaState get state => _state;
-  double get monthBaseSenka =>
-      _state.days.values.fold(0, (sum, record) => sum + record.experience);
+  double get monthBaseSenka => _state.monthExperienceSenka;
+  bool get hasPersistenceError => _persistenceError != null;
   @override
   Future<void> get idle => _queue;
 
@@ -46,14 +48,30 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     final SenkaState? loaded;
     try {
       loaded = await store.load();
-    } catch (_) {
+    } catch (error) {
+      if (!_disposed && _revision == revisionAtStart) {
+        _persistenceError = error;
+        debugPrint('Senka persistence load failed: $error');
+        notifyListeners();
+      }
       return;
     }
-    if (_disposed || loaded == null || _revision != revisionAtStart) return;
-    final month = currentSenkaMonthKey(_now());
-    final migrated = migrateSenkaExperienceTracking(
+    if (_disposed || _revision != revisionAtStart) return;
+    final instant = _now();
+    if (loaded == null) {
+      _state = ensureSenkaDailyTarget(_state, instant);
+      _revision++;
+      notifyListeners();
+      return;
+    }
+    final month = currentSenkaMonthKey(instant);
+    final monthMigrated = migrateSenkaExperienceTracking(
       migrateSenkaStateToMonth(loaded, month),
     );
+    final rewardMigrated = migrateSenkaRewardCycles(monthMigrated, instant);
+    final migrated = identical(rewardMigrated, monthMigrated)
+        ? ensureSenkaDailyTarget(monthMigrated, instant)
+        : rebaseSenkaDailyTarget(monthMigrated, rewardMigrated, instant);
     _state = migrated;
     final revision = ++_revision;
     notifyListeners();
@@ -81,14 +99,16 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     if (senkaEoById(id) == null || _disposed) return;
     final values = Map<int, SenkaRewardStatus>.of(_state.eoStatuses);
     values[id] = (values[id] ?? SenkaRewardStatus.deferred).next;
-    _replace(_state.copyWith(eoStatuses: values));
+    final next = _state.copyWith(eoStatuses: values);
+    _replace(rebaseSenkaDailyTarget(_state, next, _now()));
   }
 
   void cycleQuestReward(int id) {
     if (senkaQuestById(id) == null || _disposed) return;
     final values = Map<int, SenkaRewardStatus>.of(_state.questStatuses);
     values[id] = (values[id] ?? SenkaRewardStatus.deferred).next;
-    _replace(_state.copyWith(questStatuses: values));
+    final next = _state.copyWith(questStatuses: values);
+    _replace(rebaseSenkaDailyTarget(_state, next, _now()));
   }
 
   void toggleEo(int id) => cycleEoReward(id);
@@ -99,7 +119,11 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
     if (!value.isFinite || _disposed) return;
     final normalized = value < 0 ? 0.0 : value;
     if (_state.calculatorCurrentSenka == normalized) return;
-    _replace(_state.copyWith(calculatorCurrentSenka: normalized));
+    final next = _state.copyWith(
+      calculatorCurrentSenka: normalized,
+      calculatorLocalSenkaAtSet: _state.monthRecorded,
+    );
+    _replace(rebaseSenkaDailyTarget(_state, next, _now()));
   }
 
   void setTargetSenka(double value) {
@@ -114,7 +138,6 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
   Future<bool> setBaseSenka(double value) async {
     if (!value.isFinite || value < 0 || _disposed) return false;
     final normalized = (value * 100).roundToDouble() / 100;
-    final businessDate = senkaBusinessDate(_now());
     final current = migrateSenkaStateToMonth(
       _state,
       currentSenkaMonthKey(_now()),
@@ -123,17 +146,30 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
       for (final entry in current.days.entries)
         entry.key: SenkaDayRecord(eo: entry.value.eo, quest: entry.value.quest),
     };
-    final key = dateKey(businessDate);
-    final today = days[key] ?? const SenkaDayRecord();
-    if (normalized > 0 || today.eo > 0 || today.quest > 0) {
-      days[key] = SenkaDayRecord(
-        experience: normalized,
-        eo: today.eo,
-        quest: today.quest,
-      );
+    final updated = current.copyWith(
+      days: days,
+      unattributedExperienceSenka: normalized,
+    );
+    final rebased = _rebaseLatestPlayerRanking(updated);
+    return _replaceForSettings(rebaseSenkaDailyTarget(_state, rebased, _now()));
+  }
+
+  void refreshForCurrentTime() {
+    if (_disposed) return;
+    final now = _now();
+    final monthMigrated = migrateSenkaStateToMonth(
+      _state,
+      currentSenkaMonthKey(now),
+    );
+    final rewardMigrated = migrateSenkaRewardCycles(monthMigrated, now);
+    final next = identical(rewardMigrated, monthMigrated)
+        ? ensureSenkaDailyTarget(monthMigrated, now)
+        : rebaseSenkaDailyTarget(monthMigrated, rewardMigrated, now);
+    if (identical(next, _state)) {
+      notifyListeners();
+      return;
     }
-    final updated = current.copyWith(days: days);
-    return _replaceForSettings(_rebaseLatestPlayerRanking(updated));
+    _replace(next);
   }
 
   void toggleSortieFavorite(String mapKey) {
@@ -188,12 +224,29 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
       (_) => operation(),
       onError: (Object _, StackTrace _) => operation(),
     );
-    _queue = scheduled.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    _queue = scheduled.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace _) {
+        debugPrint('Senka persistence failed: $error');
+      },
+    );
   }
 
   Future<void> _saveIfCurrent(SenkaState snapshot, int revision) async {
     if (revision != _revision) return;
-    await store.save(snapshot);
+    try {
+      await store.save(snapshot);
+      if (revision == _revision && _persistenceError != null) {
+        _persistenceError = null;
+        if (!_disposed) notifyListeners();
+      }
+    } catch (error, stackTrace) {
+      if (revision == _revision) {
+        _persistenceError = error;
+        if (!_disposed) notifyListeners();
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   @override
@@ -206,7 +259,9 @@ class SenkaController extends ChangeNotifier implements GameApiEventConsumer {
 
 SenkaState _rebaseLatestPlayerRanking(SenkaState state) {
   final playerHistory = state.rankingHistory['player'];
-  if (playerHistory == null || playerHistory.isEmpty) return state;
+  if (playerHistory == null || playerHistory.isEmpty) {
+    return state.copyWith(calculatorLocalSenkaAtSet: state.monthRecorded);
+  }
   final latest = playerHistory.last;
   final rankingHistory = <String, List<SenkaRankingSnapshot>>{
     for (final entry in state.rankingHistory.entries)
@@ -221,5 +276,8 @@ SenkaState _rebaseLatestPlayerRanking(SenkaState state) {
       localSenkaAtCapture: state.monthRecorded,
     ),
   ];
-  return state.copyWith(rankingHistory: rankingHistory);
+  return state.copyWith(
+    rankingHistory: rankingHistory,
+    calculatorLocalSenkaAtSet: state.monthRecorded,
+  );
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'senka_catalog.dart';
 import 'senka_controller.dart';
 import 'senka_state.dart';
@@ -10,11 +11,13 @@ class SenkaInfoView extends StatefulWidget {
     super.key,
     required this.state,
     required this.controller,
+    required this.now,
     required this.compact,
     this.onOpenSortieLog,
   });
   final SenkaState state;
   final SenkaController controller;
+  final DateTime now;
   final bool compact;
   final VoidCallback? onOpenSortieLog;
   @override
@@ -37,8 +40,12 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
         state: widget.state,
         compact: widget.compact,
       );
+      final sortieStats = timeFilter == 'today'
+          ? widget.state.sortieStatsForDay(widget.now)
+          : widget.state.sortieStats;
       final sorties = _SortiePanel(
         state: widget.state,
+        sortieStats: sortieStats,
         controller: widget.controller,
         compact: widget.compact,
         showHidden: showHidden,
@@ -99,7 +106,8 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
             SizedBox(
               key: const Key('senka-info-sorties'),
               height: _sortiePanelHeight(
-                widget.state,
+                sortieStats,
+                widget.state.hiddenSortieMapKeys,
                 showHidden,
                 widget.compact,
               ),
@@ -112,12 +120,14 @@ class _SenkaInfoViewState extends State<SenkaInfoView> {
   );
 }
 
-double _sortiePanelHeight(SenkaState state, bool showHidden, bool compact) {
-  final rowCount = state.sortieStats.values
-      .where(
-        (item) =>
-            showHidden || !state.hiddenSortieMapKeys.contains(item.mapKey),
-      )
+double _sortiePanelHeight(
+  Map<String, SenkaSortieStats> stats,
+  Set<String> hiddenMapKeys,
+  bool showHidden,
+  bool compact,
+) {
+  final rowCount = stats.values
+      .where((item) => showHidden || !hiddenMapKeys.contains(item.mapKey))
       .length;
   const panelHeaderHeight = 44.0;
   final subHeaderHeight = compact ? 26.0 : 34.0;
@@ -138,6 +148,7 @@ class _ServerOverview extends StatelessWidget {
   final bool compact;
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final current = state.playerRankingRow;
     return Material(
       color: senkaPanel,
@@ -159,7 +170,7 @@ class _ServerOverview extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '所在服务器',
+                    l10n.senkaServer,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -173,7 +184,10 @@ class _ServerOverview extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      senkaServerName(state.serverOrigin),
+                      senkaServerName(
+                        state.serverOrigin,
+                        unknown: l10n.senkaUnknownServer,
+                      ),
                       maxLines: 1,
                       style: TextStyle(
                         color: senkaText,
@@ -199,7 +213,7 @@ class _ServerOverview extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '战果',
+                        l10n.senkaUnit,
                         style: TextStyle(
                           color: senkaMuted,
                           fontSize: compact ? 11 : 13,
@@ -230,7 +244,7 @@ class _ServerOverview extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '排名',
+                        l10n.senkaRank,
                         style: TextStyle(
                           color: senkaMuted,
                           fontSize: compact ? 11 : 13,
@@ -273,12 +287,13 @@ class _RankingPanel extends StatelessWidget {
   final bool compact;
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final timeStr = senkaJstTimestamp(state.latestRankingUpdatedAt);
     return SenkaPanel(
-      title: '战果排名',
+      title: l10n.senkaRanking,
       compact: compact,
       trailing: Text(
-        '更新：$timeStr',
+        l10n.senkaUpdated(timeStr),
         style: TextStyle(
           color: senkaMuted,
           fontSize: compact ? 9 : 11,
@@ -290,7 +305,15 @@ class _RankingPanel extends StatelessWidget {
         padding: EdgeInsets.all(compact ? 4 : 8),
         child: Column(
           children: [
-            Expanded(child: _row('顺位', '战果', '变化', compact, header: true)),
+            Expanded(
+              child: _row(
+                l10n.senkaOrder,
+                l10n.senkaUnit,
+                l10n.senkaChange,
+                compact,
+                header: true,
+              ),
+            ),
             for (final rank in const [5, 20, 100, 501])
               Expanded(
                 key: Key('ranking-row-$rank'),
@@ -300,7 +323,7 @@ class _RankingPanel extends StatelessWidget {
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               child: Text(
-                '当前',
+                l10n.senkaCurrent,
                 style: TextStyle(
                   color: senkaMuted,
                   fontSize: compact ? 9 : 11,
@@ -350,7 +373,9 @@ class _RankingPanel extends StatelessWidget {
                   child: Text(
                     senkaInteger(row.rank),
                     key: const Key('player-rank'),
-                    style: _style(compact).copyWith(fontWeight: FontWeight.w800),
+                    style: _style(
+                      compact,
+                    ).copyWith(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -451,6 +476,7 @@ Color _rankColor(SenkaRankDirection direction) =>
 class _SortiePanel extends StatelessWidget {
   const _SortiePanel({
     required this.state,
+    required this.sortieStats,
     required this.controller,
     required this.compact,
     required this.showHidden,
@@ -461,6 +487,7 @@ class _SortiePanel extends StatelessWidget {
     this.onOpenSortieLog,
   });
   final SenkaState state;
+  final Map<String, SenkaSortieStats> sortieStats;
   final SenkaController controller;
   final bool compact;
   final bool showHidden;
@@ -472,8 +499,11 @@ class _SortiePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
     final rows =
-        state.sortieStats.values
+        sortieStats.values
             .where(
               (item) =>
                   showHidden ||
@@ -492,12 +522,12 @@ class _SortiePanel extends StatelessWidget {
     final totalS = rows.fold<int>(0, (sum, s) => sum + s.sWins);
 
     return SenkaPanel(
-      title: '出击海域统计',
+      title: l10n.senkaSortieStats,
       compact: compact,
       headerHeight: compact ? 34 : 44,
       trailing: Semantics(
         button: true,
-        label: '最近记录',
+        label: l10n.senkaLatestRecord,
         excludeSemantics: true,
         child: Material(
           color: Colors.transparent,
@@ -513,7 +543,7 @@ class _SortiePanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '最近记录',
+                l10n.senkaLatestRecord,
                 style: TextStyle(
                   color: senkaText,
                   fontSize: compact ? 10 : 12,
@@ -536,9 +566,15 @@ class _SortiePanel extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _summaryMetric('本月出击', '$totalSorties', compact),
-                _summaryMetric('Boss 到达', '$totalBoss', compact),
-                _summaryMetric('S 胜', '$totalS', compact),
+                _summaryMetric(
+                  timeFilter == 'today'
+                      ? l10n.senkaTodaySorties
+                      : l10n.senkaMonthSorties,
+                  '$totalSorties',
+                  compact,
+                ),
+                _summaryMetric(l10n.senkaBossArrivals, '$totalBoss', compact),
+                _summaryMetric(l10n.senkaSWins, '$totalS', compact),
               ],
             ),
           ),
@@ -558,13 +594,13 @@ class _SortiePanel extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _timeFilterButton(
-                        '本月',
+                        l10n.senkaMonth,
                         'month',
                         timeFilter == 'month',
                         compact,
                       ),
                       _timeFilterButton(
-                        '今日',
+                        l10n.senkaToday,
                         'today',
                         timeFilter == 'today',
                         compact,
@@ -574,7 +610,7 @@ class _SortiePanel extends StatelessWidget {
                 ),
                 const Spacer(),
                 Semantics(
-                  label: '显示隐藏海域',
+                  label: l10n.senkaShowHiddenAreas,
                   button: true,
                   toggled: showHidden,
                   excludeSemantics: true,
@@ -599,7 +635,7 @@ class _SortiePanel extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '显示已隐藏',
+                            l10n.senkaShowHidden,
                             style: TextStyle(
                               color: showHidden ? senkaText : senkaMuted,
                               fontSize: compact ? 10 : 12,
@@ -624,7 +660,13 @@ class _SortiePanel extends StatelessWidget {
               ),
             ),
             child: _sortieRow(
-              const ['海域', 'Boss', '出击', 'S / A', '操作'],
+              [
+                l10n.senkaArea,
+                l10n.senkaBoss,
+                l10n.senkaSorties,
+                l10n.senkaResult,
+                l10n.senkaActions,
+              ],
               compact,
               header: true,
             ),
@@ -634,11 +676,11 @@ class _SortiePanel extends StatelessWidget {
               child: ListView.builder(
                 itemCount: rows.length,
                 itemBuilder: (context, index) =>
-                    _sortieData(rows[index], index),
+                    _sortieData(rows[index], index, l10n),
               ),
             )
           else
-            for (var i = 0; i < rows.length; i++) _sortieData(rows[i], i),
+            for (var i = 0; i < rows.length; i++) _sortieData(rows[i], i, l10n),
         ],
       ),
     );
@@ -696,7 +738,7 @@ class _SortiePanel extends StatelessWidget {
     ),
   );
 
-  Widget _sortieData(SenkaSortieStats stats, int index) {
+  Widget _sortieData(SenkaSortieStats stats, int index, AppLocalizations l10n) {
     final isFavorite = state.favoriteSortieMapKeys.contains(stats.mapKey);
     final isHidden = state.hiddenSortieMapKeys.contains(stats.mapKey);
     final isEven = index % 2 == 0;
@@ -733,9 +775,9 @@ class _SortiePanel extends StatelessWidget {
                   Text(
                     stats.mapKey,
                     maxLines: 1,
-                    style: _sortieStyle(compact).copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: _sortieStyle(
+                      compact,
+                    ).copyWith(fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
@@ -781,11 +823,11 @@ class _SortiePanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Tooltip(
-                    message: '收藏海域 ${stats.mapKey}',
+                    message: l10n.senkaFavoriteArea(stats.mapKey),
                     child: Semantics(
                       button: true,
                       toggled: isFavorite,
-                      label: '收藏海域 ${stats.mapKey}',
+                      label: l10n.senkaFavoriteArea(stats.mapKey),
                       excludeSemantics: true,
                       child: SizedBox(
                         key: Key('senka-favorite-${stats.mapKey}'),
@@ -807,11 +849,11 @@ class _SortiePanel extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Tooltip(
-                    message: '隐藏海域 ${stats.mapKey}',
+                    message: l10n.senkaHideArea(stats.mapKey),
                     child: Semantics(
                       button: true,
                       toggled: isHidden,
-                      label: '隐藏海域 ${stats.mapKey}',
+                      label: l10n.senkaHideArea(stats.mapKey),
                       excludeSemantics: true,
                       child: SizedBox(
                         key: Key('senka-hide-${stats.mapKey}'),

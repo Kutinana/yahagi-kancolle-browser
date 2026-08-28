@@ -621,6 +621,12 @@ abstract class AppLocalizations {
   /// **'素战果保存失败，请重试'**
   String get baseSenkaSaveFailed;
 
+  /// No description provided for @senkaTodaySorties.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日出击'**
+  String get senkaTodaySorties;
+
   /// No description provided for @fleetBrief.
   ///
   /// In zh, this message translates to:
@@ -4221,6 +4227,354 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'配置转换中'**
   String get landBaseRelocating;
+
+  /// No description provided for @senkaInfoTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'战果信息'**
+  String get senkaInfoTab;
+
+  /// No description provided for @senkaCalendarTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'战果日历'**
+  String get senkaCalendarTab;
+
+  /// No description provided for @senkaCalculatorTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'战果计算'**
+  String get senkaCalculatorTab;
+
+  /// No description provided for @senkaSaveFailedWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'战果数据保存失败，重启后可能丢失'**
+  String get senkaSaveFailedWarning;
+
+  /// No description provided for @senkaLatestRanking.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新排名战果'**
+  String get senkaLatestRanking;
+
+  /// No description provided for @senkaTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标战果'**
+  String get senkaTarget;
+
+  /// No description provided for @senkaGap.
+  ///
+  /// In zh, this message translates to:
+  /// **'距离目标还差 {value} 战果'**
+  String senkaGap(String value);
+
+  /// No description provided for @senkaOver.
+  ///
+  /// In zh, this message translates to:
+  /// **'已超出 {value} 战果'**
+  String senkaOver(String value);
+
+  /// No description provided for @senkaPlannedEo.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划 EO'**
+  String get senkaPlannedEo;
+
+  /// No description provided for @senkaPlannedQuest.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划任务'**
+  String get senkaPlannedQuest;
+
+  /// No description provided for @senkaDailyRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日所需'**
+  String get senkaDailyRequired;
+
+  /// No description provided for @senkaTodayRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日剩余'**
+  String get senkaTodayRemaining;
+
+  /// No description provided for @senkaUnsettledDelta.
+  ///
+  /// In zh, this message translates to:
+  /// **'结算后增量'**
+  String get senkaUnsettledDelta;
+
+  /// No description provided for @senkaAvailableDaysIncludingToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用天数（含今日）'**
+  String get senkaAvailableDaysIncludingToday;
+
+  /// No description provided for @senkaProjected.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计战果'**
+  String get senkaProjected;
+
+  /// No description provided for @senkaUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'战果'**
+  String get senkaUnit;
+
+  /// No description provided for @senkaInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'填写{label}'**
+  String senkaInputTitle(String label);
+
+  /// No description provided for @senkaInvalidNumber.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效数字'**
+  String get senkaInvalidNumber;
+
+  /// No description provided for @senkaPlannedEoReward.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划 EO 战果奖励'**
+  String get senkaPlannedEoReward;
+
+  /// No description provided for @senkaPlannedQuestReward.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划任务战果奖励'**
+  String get senkaPlannedQuestReward;
+
+  /// No description provided for @senkaTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'合计'**
+  String get senkaTotal;
+
+  /// No description provided for @senkaEoRewards.
+  ///
+  /// In zh, this message translates to:
+  /// **'EO 战果奖励'**
+  String get senkaEoRewards;
+
+  /// No description provided for @senkaQuarterlyQuests.
+  ///
+  /// In zh, this message translates to:
+  /// **'季度战果任务'**
+  String get senkaQuarterlyQuests;
+
+  /// No description provided for @senkaAnnualQuests.
+  ///
+  /// In zh, this message translates to:
+  /// **'年度战果任务'**
+  String get senkaAnnualQuests;
+
+  /// No description provided for @senkaOneTimeQuests.
+  ///
+  /// In zh, this message translates to:
+  /// **'单次战果任务'**
+  String get senkaOneTimeQuests;
+
+  /// No description provided for @senkaRewardLegend.
+  ///
+  /// In zh, this message translates to:
+  /// **'黄色＋✕：计划放置，不计入预计战果，绿色＋✓：计划完成，计入预计战果，灰色＋○：已经完成，不再重复计算。'**
+  String get senkaRewardLegend;
+
+  /// No description provided for @senkaRewardDeferred.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划放置'**
+  String get senkaRewardDeferred;
+
+  /// No description provided for @senkaRewardPlanned.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划完成（计预计）'**
+  String get senkaRewardPlanned;
+
+  /// No description provided for @senkaRewardCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get senkaRewardCompleted;
+
+  /// No description provided for @senkaCalendarTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{year}年{month}月战果日历'**
+  String senkaCalendarTitle(int year, int month);
+
+  /// No description provided for @senkaCalendarSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月已记录 {recorded} · 本月素战果 {base}'**
+  String senkaCalendarSummary(String recorded, String base);
+
+  /// No description provided for @senkaExperience.
+  ///
+  /// In zh, this message translates to:
+  /// **'经验'**
+  String get senkaExperience;
+
+  /// No description provided for @senkaQuest.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get senkaQuest;
+
+  /// No description provided for @senkaCalendarCell.
+  ///
+  /// In zh, this message translates to:
+  /// **'{year}年{month}月{day}日，战果{value}'**
+  String senkaCalendarCell(int year, int month, int day, String value);
+
+  /// No description provided for @senkaServer.
+  ///
+  /// In zh, this message translates to:
+  /// **'所在服务器'**
+  String get senkaServer;
+
+  /// No description provided for @senkaRanking.
+  ///
+  /// In zh, this message translates to:
+  /// **'战果排名'**
+  String get senkaRanking;
+
+  /// No description provided for @senkaRank.
+  ///
+  /// In zh, this message translates to:
+  /// **'排名'**
+  String get senkaRank;
+
+  /// No description provided for @senkaUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新：{time}'**
+  String senkaUpdated(String time);
+
+  /// No description provided for @senkaOrder.
+  ///
+  /// In zh, this message translates to:
+  /// **'顺位'**
+  String get senkaOrder;
+
+  /// No description provided for @senkaChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'变化'**
+  String get senkaChange;
+
+  /// No description provided for @senkaCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前'**
+  String get senkaCurrent;
+
+  /// No description provided for @senkaSortieStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'出击海域统计'**
+  String get senkaSortieStats;
+
+  /// No description provided for @senkaLatestRecord.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近记录'**
+  String get senkaLatestRecord;
+
+  /// No description provided for @senkaMonthSorties.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月出击'**
+  String get senkaMonthSorties;
+
+  /// No description provided for @senkaBossArrivals.
+  ///
+  /// In zh, this message translates to:
+  /// **'Boss 到达'**
+  String get senkaBossArrivals;
+
+  /// No description provided for @senkaSWins.
+  ///
+  /// In zh, this message translates to:
+  /// **'S 胜'**
+  String get senkaSWins;
+
+  /// No description provided for @senkaMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月'**
+  String get senkaMonth;
+
+  /// No description provided for @senkaToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日'**
+  String get senkaToday;
+
+  /// No description provided for @senkaShowHiddenAreas.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示隐藏海域'**
+  String get senkaShowHiddenAreas;
+
+  /// No description provided for @senkaShowHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示已隐藏'**
+  String get senkaShowHidden;
+
+  /// No description provided for @senkaArea.
+  ///
+  /// In zh, this message translates to:
+  /// **'海域'**
+  String get senkaArea;
+
+  /// No description provided for @senkaBoss.
+  ///
+  /// In zh, this message translates to:
+  /// **'Boss'**
+  String get senkaBoss;
+
+  /// No description provided for @senkaSorties.
+  ///
+  /// In zh, this message translates to:
+  /// **'出击'**
+  String get senkaSorties;
+
+  /// No description provided for @senkaResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'S / A'**
+  String get senkaResult;
+
+  /// No description provided for @senkaActions.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作'**
+  String get senkaActions;
+
+  /// No description provided for @senkaFavoriteArea.
+  ///
+  /// In zh, this message translates to:
+  /// **'收藏海域 {map}'**
+  String senkaFavoriteArea(String map);
+
+  /// No description provided for @senkaHideArea.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏海域 {map}'**
+  String senkaHideArea(String map);
+
+  /// No description provided for @senkaUnknownServer.
+  ///
+  /// In zh, this message translates to:
+  /// **'未知服务器'**
+  String get senkaUnknownServer;
 }
 
 class _AppLocalizationsDelegate

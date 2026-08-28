@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'senka_state.dart';
 import 'senka_ui.dart';
 
@@ -36,6 +37,12 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final narrowWeekdays = MaterialLocalizations.of(context).narrowWeekdays;
+    final mondayFirstWeekdays = [
+      ...narrowWeekdays.skip(1),
+      narrowWeekdays.first,
+    ];
     final parsed = parseSenkaMonthKey(widget.state.monthKey);
     final currentDate = senkaBusinessDate(widget.now);
     final year = parsed?.year ?? currentDate.year;
@@ -48,10 +55,13 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
         : first;
     final record = widget.state.day(shownSelected);
     return SenkaPanel(
-      title: '$year年$month月战果日历',
+      title: l10n.senkaCalendarTitle(year, month),
       compact: widget.compact,
       trailing: Text(
-        '本月已记录 ${senkaNumber(widget.state.monthRecorded)}',
+        l10n.senkaCalendarSummary(
+          senkaNumber(widget.state.monthRecorded),
+          senkaNumber(widget.state.monthExperienceSenka),
+        ),
         style: TextStyle(
           color: senkaGold,
           fontSize: widget.compact ? 10 : 14,
@@ -68,7 +78,7 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
             child: Row(
               key: const Key('calendar-weekday-row'),
               children: [
-                for (final day in const ['一', '二', '三', '四', '五', '六', '日'])
+                for (final day in mondayFirstWeekdays)
                   Expanded(
                     child: Center(
                       child: Text(
@@ -123,9 +133,9 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
             ),
             child: Row(
               children: [
-                _detail('经验', record.experience),
+                _detail(l10n.senkaExperience, record.experience),
                 _detail('EO', record.eo),
-                _detail('任务', record.quest),
+                _detail(l10n.senkaQuest, record.quest),
               ],
             ),
           ),
@@ -153,7 +163,8 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
         date.year == selected.year &&
         date.month == selected.month &&
         date.day == selected.day;
-    final isToday = inMonth &&
+    final isToday =
+        inMonth &&
         date!.year == currentDate.year &&
         date.month == currentDate.month &&
         date.day == currentDate.day;
@@ -162,12 +173,12 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
     final displayValue = date == null
         ? ''
         : (isFuture && record.total == 0
-            ? '-'
-            : (record.total == 0
-                ? '0.0'
-                : record.total.toStringAsFixed(
-                    record.total * 10 % 1 == 0 ? 1 : 2,
-                  )));
+              ? '-'
+              : (record.total == 0
+                    ? '0.0'
+                    : record.total.toStringAsFixed(
+                        record.total * 10 % 1 == 0 ? 1 : 2,
+                      )));
 
     final Color backgroundColor = chosen
         ? const Color(0xff8a6628)
@@ -181,11 +192,11 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
         ? const Color(0xffffdc88)
         : (isFuture && record.total == 0 ? const Color(0xff627d8e) : senkaGold);
 
-    final Border? border = chosen
+    final Border border = chosen
         ? Border.all(color: const Color(0xffe4b34e), width: 1.5)
         : (isToday
-            ? Border.all(color: const Color(0xff8a6628), width: 1.5)
-            : Border.all(color: const Color(0xff1c3545), width: 1));
+              ? Border.all(color: const Color(0xff8a6628), width: 1.5)
+              : Border.all(color: const Color(0xff1c3545), width: 1));
 
     final cell = Material(
       key: Key(inMonth ? 'calendar-cell-$day' : 'calendar-cell-out-$slot'),
@@ -223,9 +234,7 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
                         fontSize: widget.compact ? 12 : 16,
                         fontWeight: FontWeight.w700,
                         height: 1.05,
-                        fontFeatures: const [
-                          FontFeature.tabularFigures(),
-                        ],
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                   ],
@@ -238,7 +247,9 @@ class _SenkaCalendarViewState extends State<SenkaCalendarView> {
     return Semantics(
       button: true,
       selected: chosen,
-      label: '$year年$month月$day日，战果${senkaNumber(record.total)}',
+      label: AppLocalizations.of(
+        context,
+      )!.senkaCalendarCell(year, month, day, senkaNumber(record.total)),
       excludeSemantics: true,
       child: cell,
     );

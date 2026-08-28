@@ -63,7 +63,7 @@ void main() {
     expect(state.day(DateTime(2026, 8, 19)).experience, closeTo(.7, 1e-9));
   });
 
-  test('地图信息自动同步九个 EO 并记录新增战果', () {
+  test('首次地图信息同步历史 EO 但不伪造今日记录', () {
     var state = SenkaState.forMonth('2026-08');
     state = reducer.reduce(
       state,
@@ -78,26 +78,98 @@ void main() {
 
     expect(state.completedEoIds, {15, 56});
     expect(state.completedSenka, 300);
-    expect(state.day(DateTime(2026, 8, 10)).eo, 300);
+    expect(state.day(DateTime(2026, 8, 10)).eo, 0);
+    expect(state.monthRecorded, 300);
     expect(senkaEoCatalog.map((item) => item.id), containsAll([15, 56, 75]));
+
+    state = reducer.reduce(
+      state,
+      apiEvent('/kcsapi/api_get_member/mapinfo', {
+        'api_map_info': [
+          {'api_id': 15, 'api_cleared': 1},
+          {'api_id': 56, 'api_cleared': 1},
+          {'api_id': 75, 'api_cleared': 1},
+        ],
+      }, atJst: DateTime(2026, 8, 11, 9)),
+    );
+
+    expect(state.day(DateTime(2026, 8, 11)).eo, 170);
+    expect(state.monthRecorded, 470);
   });
 
-  test('战果任务接口不自动改变玩家手动状态', () {
+  test('战果任务成功领取后自动完成并只入账一次', () {
     var state = SenkaState.forMonth('2026-08');
-    for (final quest in senkaQuestCatalog) {
-      state = reducer.reduce(
-        state,
-        apiEvent(
-          '/kcsapi/api_req_quest/clearitemget',
-          const {},
-          params: {'api_quest_id': '${quest.id}'},
-          atJst: DateTime(2026, 8, 11, 8),
-        ),
-      );
-    }
+    final event = apiEvent(
+      '/kcsapi/api_req_quest/clearitemget',
+      const {},
+      params: const {'api_quest_id': '284'},
+      atJst: DateTime(2026, 8, 11, 8),
+    );
+    state = reducer.reduce(state, event);
+    state = reducer.reduce(state, event);
 
-    expect(state.completedQuestIds, isEmpty);
-    expect(state.day(DateTime(2026, 8, 11)).quest, 0);
+    expect(state.completedQuestIds, contains(284));
+    expect(state.day(DateTime(2026, 8, 11)).quest, 80);
+    expect(state.unsettledSenka, 80);
+  });
+
+  test('排名解密优先保留可整除公约数的账号系数', () {
+    final state = reducer.reduce(
+      SenkaState.forMonth('2026-08').copyWith(memberId: 120, nickname: '本人'),
+      rankingEvent(
+        page: 1,
+        rows: [
+          rankingRow(rank: 1, senka: 1, nickname: '甲', magic: 36),
+          rankingRow(rank: 2, senka: 3, nickname: '乙', magic: 36),
+        ],
+        atJst: DateTime(2026, 8, 10, 15),
+      ),
+    );
+
+    expect(state.magic, 36);
+  });
+
+  test('旧排名事件不会覆盖更新的排名快照', () {
+    var state = SenkaState.forMonth(
+      '2026-08',
+    ).copyWith(memberId: 123, nickname: '矢矧');
+    state = reducer.reduce(
+      state,
+      rankingEvent(
+        page: 40,
+        rows: [rankingRow(rank: 390, senka: 1200, nickname: '矢矧')],
+        atJst: DateTime(2026, 8, 10, 15),
+      ),
+    );
+    state = reducer.reduce(
+      state,
+      rankingEvent(
+        page: 41,
+        rows: [rankingRow(rank: 400, senka: 1100, nickname: '矢矧')],
+        atJst: DateTime(2026, 8, 10, 14),
+      ),
+    );
+
+    expect(state.playerRankingRow.rank, 390);
+    expect(state.playerRankingRow.senka, 1200);
+    expect(state.latestRankingUpdatedAt, DateTime.utc(2026, 8, 10, 6));
+  });
+
+  test('排名页出现重名时不把他人误识别为当前玩家', () {
+    final state = reducer.reduce(
+      SenkaState.forMonth('2026-08').copyWith(memberId: 123, nickname: '同名提督'),
+      rankingEvent(
+        page: 40,
+        rows: [
+          rankingRow(rank: 391, senka: 1200, nickname: '同名提督'),
+          rankingRow(rank: 392, senka: 1190, nickname: '同名提督'),
+        ],
+        atJst: DateTime(2026, 8, 10, 15),
+      ),
+    );
+
+    expect(state.rankingHistory['player'], isNull);
+    expect(state.calculatorCurrentSenka, 0);
   });
 
   test('排名响应解密锚点和当前玩家并保留两次快照的变化', () {
@@ -189,7 +261,41 @@ void main() {
     expect(state.rankingRow(5).senka, 4755);
   });
 
-  test('当前玩家变化只包含可自动确认的经验与 EO 战果', () {
+  test('解密系数变化为旧系数倍数时用历史锚点选择新系数', () {
+    var state = SenkaState.forMonth(
+      '2026-08',
+    ).copyWith(memberId: 123, nickname: '矢矧');
+    state = reducer.reduce(
+      state,
+      rankingEvent(
+        page: 1,
+        rows: [
+          rankingRow(rank: 1, senka: 1000, nickname: '一位', magic: 31),
+          rankingRow(rank: 2, senka: 1001, nickname: '二位', magic: 31),
+          rankingRow(rank: 5, senka: 900, nickname: '五位', magic: 31),
+        ],
+        atJst: DateTime(2026, 8, 10, 15),
+      ),
+    );
+    state = reducer.reduce(
+      state,
+      rankingEvent(
+        page: 1,
+        rows: [
+          rankingRow(rank: 1, senka: 1010, nickname: '一位', magic: 62),
+          rankingRow(rank: 2, senka: 1011, nickname: '二位', magic: 62),
+          rankingRow(rank: 5, senka: 910, nickname: '五位', magic: 62),
+        ],
+        atJst: DateTime(2026, 8, 10, 16),
+      ),
+    );
+
+    expect(state.magic, 62);
+    expect(state.rankingRow(5).senka, 910);
+    expect(state.rankingRow(5).senkaDelta, 10);
+  });
+
+  test('当前玩家变化包含排名后自动确认的经验、EO 与任务战果', () {
     var state = SenkaState.forMonth(
       '2026-08',
     ).copyWith(memberId: 123, nickname: '矢矧', latestExperience: 100000);
@@ -225,7 +331,7 @@ void main() {
       ),
     );
 
-    expect(state.playerRankingRow.senkaDelta, closeTo(78.85, 0.0001));
+    expect(state.playerRankingRow.senkaDelta, closeTo(83.85, 0.0001));
   });
 
   test('同季度新月份保留季度、年度、单次状态并重置月度状态', () {
@@ -239,6 +345,7 @@ void main() {
         947: SenkaRewardStatus.completed,
         949: SenkaRewardStatus.planned,
       },
+      recordedQuestIds: const {854, 947, 949},
       favoriteSortieMapKeys: const {'1-5'},
       hiddenSortieMapKeys: const {'7-1'},
       targetSenka: 3000,
@@ -258,6 +365,7 @@ void main() {
     expect(next.monthKey, '2026-08');
     expect(next.completedEoIds, isEmpty);
     expect(next.questStatuses, old.questStatuses);
+    expect(next.recordedQuestIds, old.recordedQuestIds);
     expect(next.memberId, 123);
     expect(next.serverOrigin, old.serverOrigin);
     expect(next.favoriteSortieMapKeys, {'1-5'});
@@ -266,7 +374,7 @@ void main() {
     expect(next.calculatorCurrentSenka, 0);
   });
 
-  test('舰 C 季度任务按 3/6/9/12 月重置且年度任务按 6 月重置', () {
+  test('舰 C 季度和年度任务在重置月一日五点后才重置', () {
     SenkaState stateAt(String month) => SenkaState.forMonth(month).copyWith(
       questStatuses: const {
         854: SenkaRewardStatus.completed,
@@ -275,24 +383,64 @@ void main() {
       },
     );
 
-    SenkaState migrate(String from, int year, int month) => reducer.reduce(
-      stateAt(from),
+    SenkaState migrate(String from, int year, int month, int hour) =>
+        reducer.reduce(
+          stateAt(from),
+          apiEvent(
+            '/kcsapi/api_get_member/basic',
+            const {},
+            atJst: DateTime(year, month, 1, hour),
+          ),
+        );
+
+    expect(migrate('2026-02', 2026, 3, 3).questStatuses.keys, {854, 947, 949});
+    expect(migrate('2026-02', 2026, 3, 5).questStatuses.keys, {947, 949});
+    expect(migrate('2026-03', 2026, 4, 5).questStatuses.keys, {854, 947, 949});
+    expect(migrate('2026-05', 2026, 6, 3).questStatuses.keys, {854, 947, 949});
+    expect(migrate('2026-05', 2026, 6, 5).questStatuses.keys, {949});
+    expect(migrate('2026-12', 2027, 1, 5).questStatuses.keys, {854, 947, 949});
+
+    final annualMay = migrate('2026-05', 2026, 6, 5);
+    expect(annualMay.questStatuses.containsKey(947), isFalse);
+    final annualDecember = migrate('2026-12', 2027, 1, 5);
+    expect(annualDecember.questStatuses[947], SenkaRewardStatus.planned);
+
+    final quarterlyReset = migrateSenkaRewardCycles(
+      SenkaState.forMonth('2026-03').copyWith(
+        quarterlyQuestCycleKey: '2025-12',
+        annualQuestCycleKey: '2025-06',
+        recordedQuestIds: const {854, 947, 949},
+      ),
+      DateTime.utc(2026, 3, 1, 20),
+    );
+    expect(quarterlyReset.recordedQuestIds, {947, 949});
+
+    final annualReset = migrateSenkaRewardCycles(
+      SenkaState.forMonth('2026-06').copyWith(
+        quarterlyQuestCycleKey: '2026-03',
+        annualQuestCycleKey: '2025-06',
+        recordedQuestIds: const {854, 947, 949},
+      ),
+      DateTime.utc(2026, 6, 1, 20),
+    );
+    expect(annualReset.recordedQuestIds, {949});
+
+    final resetWithDailyTarget = reducer.reduce(
+      SenkaState.forMonth('2026-03').copyWith(
+        quarterlyQuestCycleKey: '2025-12',
+        calculatorCurrentSenka: 1000,
+        questStatuses: const {854: SenkaRewardStatus.planned},
+        dailyTargetDateKey: '2026-03-01',
+        dailyProjectedSenkaAtStart: 1350,
+      ),
       apiEvent(
         '/kcsapi/api_get_member/basic',
         const {},
-        atJst: DateTime(year, month, 1, 3),
+        atJst: DateTime(2026, 3, 1, 5),
       ),
     );
-
-    expect(migrate('2026-02', 2026, 3).questStatuses.keys, {947, 949});
-    expect(migrate('2026-03', 2026, 4).questStatuses.keys, {854, 947, 949});
-    expect(migrate('2026-05', 2026, 6).questStatuses.keys, {949});
-    expect(migrate('2026-12', 2027, 1).questStatuses.keys, {854, 947, 949});
-
-    final annualMay = migrate('2026-05', 2026, 6);
-    expect(annualMay.questStatuses.containsKey(947), isFalse);
-    final annualDecember = migrate('2026-12', 2027, 1);
-    expect(annualDecember.questStatuses[947], SenkaRewardStatus.planned);
+    expect(resetWithDailyTarget.questStatuses, isEmpty);
+    expect(resetWithDailyTarget.dailyProjectedSenkaAtStart, 1000);
   });
 
   test('非法旧 monthKey 不会按字典序永久拒绝有效新事件', () {
@@ -360,6 +508,66 @@ void main() {
   });
 
   group('真实出击统计', () {
+    test('出击按 02:00 战果日分别归档并继续累加本月数据', () {
+      var state = reducer.reduce(
+        SenkaState.forMonth('2026-08'),
+        sortieStart(
+          areaId: 1,
+          mapNo: 1,
+          nodeNo: 1,
+          bossCellNo: 5,
+          atJst: DateTime(2026, 8, 10, 1, 59),
+        ),
+      );
+      state = reducer.reduce(
+        state,
+        sortieStart(
+          areaId: 2,
+          mapNo: 1,
+          nodeNo: 1,
+          bossCellNo: 5,
+          atJst: DateTime(2026, 8, 10, 2),
+        ),
+      );
+
+      expect(state.sortieStats.keys, unorderedEquals(['1-1', '2-1']));
+      final storedDaily = state.toJson()['sortieStatsByDay'];
+      expect(storedDaily, isA<Map>());
+      final daily = storedDaily as Map;
+      expect((daily['2026-08-09'] as Map).keys, contains('1-1'));
+      expect((daily['2026-08-10'] as Map).keys, contains('2-1'));
+    });
+
+    test('旧存档中未完成的出击继续时补齐今日统计不变式', () {
+      final oldJson =
+          reducer
+              .reduce(
+                SenkaState.forMonth('2026-08'),
+                sortieStart(areaId: 7, mapNo: 5, nodeNo: 9, bossCellNo: 9),
+              )
+              .toJson()
+            ..remove('sortieStatsByDay');
+      var state = SenkaState.fromJson(oldJson);
+
+      state = reducer.reduce(
+        state,
+        apiEvent('/kcsapi/api_req_sortie/battleresult', {
+          'api_win_rank': 'S',
+        }, atJst: DateTime(2026, 8, 10, 10, 2)),
+      );
+
+      final today = state.sortieStatsForDay(DateTime.utc(2026, 8, 10, 3));
+      expect(today['7-5']?.sorties, 1);
+      expect(today['7-5']?.bossArrivals, 1);
+      expect(today['7-5']?.sWins, 1);
+      expect(
+        SenkaState.fromJson(
+          state.toJson(),
+        ).sortieStatsForDay(DateTime.utc(2026, 8, 10, 3))['7-5']?.sWins,
+        1,
+      );
+    });
+
     test('start 记录出击且 S/SS Boss 结果分别计入 S 胜', () {
       for (final rank in ['S', 'SS']) {
         var state = SenkaState.forMonth('2026-08');

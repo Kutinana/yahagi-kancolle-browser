@@ -120,6 +120,7 @@ abstract final class GameCapturePathCatalog {
     ...battleMap,
     ...battleRetreat,
     '/kcsapi/api_get_member/mapinfo',
+    '/kcsapi/api_req_quest/clearitemget',
     senkaRanking,
   };
 

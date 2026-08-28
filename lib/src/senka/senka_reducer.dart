@@ -1,6 +1,7 @@
 import '../bridge/captured_api_event.dart';
 import '../capture/game_capture_path_catalog.dart';
 import '../game_state/game_api_decoder.dart';
+import 'senka_calculation.dart';
 import 'senka_catalog.dart';
 import 'senka_state.dart';
 
@@ -38,6 +39,10 @@ class SenkaReducer {
     var current = migrateSenkaExperienceTracking(
       migrateSenkaStateToMonth(state, monthKey),
     );
+    final rewardMigrated = migrateSenkaRewardCycles(current, event.capturedAt);
+    current = identical(rewardMigrated, current)
+        ? ensureSenkaDailyTarget(current, event.capturedAt)
+        : rebaseSenkaDailyTarget(current, rewardMigrated, event.capturedAt);
     if (_isSortieLifecyclePath(event.path) &&
         current.latestSortieEventAt != null &&
         event.capturedAt.isBefore(current.latestSortieEventAt!)) {
@@ -81,6 +86,8 @@ class SenkaReducer {
     }
     if (event.path == '/kcsapi/api_get_member/mapinfo') {
       current = _mapInfo(current, map, event.capturedAt);
+    } else if (event.path == '/kcsapi/api_req_quest/clearitemget') {
+      current = _questClear(current, event, event.capturedAt);
     } else if (event.path == _rankingPath) {
       current = _ranking(current, map, event.capturedAt);
     }
@@ -171,8 +178,15 @@ class SenkaReducer {
       sorties: 1,
       bossArrivals: arrived ? 1 : 0,
     );
+    final dailyStats = _updatedDailySortieStats(
+      state,
+      active,
+      sorties: 1,
+      bossArrivals: arrived ? 1 : 0,
+    );
     return state.copyWith(
       sortieStats: stats,
+      sortieStatsByDay: dailyStats,
       activeSortie: active,
       latestSortieEventAt: capturedAt,
       lastSortieStartAt: capturedAt,
@@ -208,6 +222,11 @@ class SenkaReducer {
     }
     return state.copyWith(
       sortieStats: _updatedSortieStats(state, active, bossArrivals: 1),
+      sortieStatsByDay: _updatedDailySortieStats(
+        state,
+        active,
+        bossArrivals: 1,
+      ),
       activeSortie: nextActive.copyWith(bossArrived: true),
       latestSortieEventAt: capturedAt,
     );
@@ -234,8 +253,14 @@ class SenkaReducer {
       'A' => _updatedSortieStats(state, active, aWins: 1),
       _ => state.sortieStats,
     };
+    final dailyStats = switch (rank) {
+      'S' || 'SS' => _updatedDailySortieStats(state, active, sWins: 1),
+      'A' => _updatedDailySortieStats(state, active, aWins: 1),
+      _ => state.sortieStatsByDay,
+    };
     return state.copyWith(
       sortieStats: stats,
+      sortieStatsByDay: dailyStats,
       clearActiveSortie: true,
       latestSortieEventAt: capturedAt,
     );
@@ -259,6 +284,44 @@ class SenkaReducer {
       sWins: current.sWins + sWins,
       aWins: current.aWins + aWins,
     );
+    return result;
+  }
+
+  Map<String, Map<String, SenkaSortieStats>> _updatedDailySortieStats(
+    SenkaState state,
+    SenkaActiveSortie active, {
+    int sorties = 0,
+    int bossArrivals = 0,
+    int sWins = 0,
+    int aWins = 0,
+  }) {
+    final day = dateKey(senkaBusinessDate(active.startedAt));
+    final result = <String, Map<String, SenkaSortieStats>>{
+      for (final entry in state.sortieStatsByDay.entries)
+        entry.key: Map<String, SenkaSortieStats>.of(entry.value),
+    };
+    final currentDay = result[day] ?? <String, SenkaSortieStats>{};
+    final current =
+        currentDay[active.mapKey] ??
+        SenkaSortieStats(areaId: active.areaId, mapNo: active.mapNo);
+    final nextSWins = current.sWins + sWins;
+    final nextAWins = current.aWins + aWins;
+    final countedWins = nextSWins + nextAWins;
+    final incrementedBossArrivals = current.bossArrivals + bossArrivals;
+    final nextBossArrivals = incrementedBossArrivals < countedWins
+        ? countedWins
+        : incrementedBossArrivals;
+    final incrementedSorties = current.sorties + sorties;
+    final nextSorties = incrementedSorties < nextBossArrivals
+        ? nextBossArrivals
+        : incrementedSorties;
+    currentDay[active.mapKey] = current.copyWith(
+      sorties: nextSorties,
+      bossArrivals: nextBossArrivals,
+      sWins: nextSWins,
+      aWins: nextAWins,
+    );
+    result[day] = currentDay;
     return result;
   }
 
@@ -316,8 +379,39 @@ class SenkaReducer {
       0,
       (sum, id) => sum + (senkaEoById(id)?.senka ?? 0),
     );
-    final next = state.copyWith(completedEoIds: completed);
-    return gained == 0 ? next : _addDay(next, capturedAt, eo: gained);
+    var next = state.copyWith(
+      completedEoIds: completed,
+      eoTrackingInitialized: true,
+    );
+    if (gained == 0) return next;
+    if (!state.eoTrackingInitialized) {
+      next = next.copyWith(
+        unattributedEoSenka: state.unattributedEoSenka + gained,
+      );
+      return _rebaseLocalBaseline(next, gained);
+    }
+    return _addDay(next, capturedAt, eo: gained);
+  }
+
+  SenkaState _questClear(
+    SenkaState state,
+    CapturedApiEvent event,
+    DateTime capturedAt,
+  ) {
+    final id = _int(event.requestParams['api_quest_id']);
+    final quest = senkaQuestById(id);
+    if (quest == null) return state;
+    final statuses = Map<int, SenkaRewardStatus>.of(state.questStatuses)
+      ..[id] = SenkaRewardStatus.completed;
+    if (state.recordedQuestIds.contains(id)) {
+      return state.copyWith(questStatuses: statuses);
+    }
+    final recorded = Set<int>.of(state.recordedQuestIds)..add(id);
+    return _addDay(
+      state.copyWith(questStatuses: statuses, recordedQuestIds: recorded),
+      capturedAt,
+      quest: quest.senka.toDouble(),
+    );
   }
 
   SenkaState _ranking(
@@ -325,13 +419,15 @@ class SenkaReducer {
     Map<Object?, Object?> data,
     DateTime capturedAt,
   ) {
+    final latest = state.rankingUpdatedAt;
+    if (latest != null && !capturedAt.isAfter(latest)) return state;
     final rawList = data['api_list'];
     if (rawList is! List) return state;
     final refreshed = state.copyWith(rankingUpdatedAt: capturedAt);
     if (state.memberId <= 0) return refreshed;
     final rows = rawList.map(_map).whereType<Map<Object?, Object?>>().toList();
     if (rows.isEmpty) return refreshed;
-    final inferredMagic = _inferMagic(rows);
+    final inferredMagic = _inferMagic(state, rows);
     final decryptState = inferredMagic == null
         ? refreshed
         : refreshed.copyWith(magic: inferredMagic);
@@ -339,6 +435,14 @@ class SenkaReducer {
       for (final entry in state.rankingHistory.entries)
         entry.key: List<SenkaRankingSnapshot>.of(entry.value),
     };
+    final playerRows = state.nickname.isEmpty
+        ? const <Map<Object?, Object?>>[]
+        : rows
+              .where(
+                (row) => '${row['api_mtjmdcwtvhdr'] ?? ''}' == state.nickname,
+              )
+              .toList();
+    final playerRow = playerRows.length == 1 ? playerRows.single : null;
     final page = _int(data['api_disp_page']);
     double? playerSenka;
     for (final raw in rows) {
@@ -351,7 +455,7 @@ class SenkaReducer {
           page == (rank / 10).ceil()) {
         key = '$rank';
       }
-      if ('${raw['api_mtjmdcwtvhdr'] ?? ''}' == state.nickname) {
+      if (identical(raw, playerRow)) {
         key = 'player';
         playerSenka = senka;
       }
@@ -370,6 +474,9 @@ class SenkaReducer {
     return decryptState.copyWith(
       rankingHistory: history,
       calculatorCurrentSenka: playerSenka,
+      calculatorLocalSenkaAtSet: playerSenka == null
+          ? null
+          : state.monthRecorded,
     );
   }
 
@@ -381,7 +488,7 @@ class SenkaReducer {
     return value > 0 ? value : 0;
   }
 
-  int? _inferMagic(List<Map<Object?, Object?>> rows) {
+  int? _inferMagic(SenkaState state, List<Map<Object?, Object?>> rows) {
     if (rows.length < 2) return null;
     final factors = <int>[];
     for (final row in rows) {
@@ -396,11 +503,94 @@ class SenkaReducer {
     for (final factor in factors.skip(1)) {
       divisor = _gcd(divisor, factor);
     }
-    if (divisor > 9 && divisor < 99) return divisor;
-    for (var candidate = 99; candidate > 9; candidate--) {
-      if (divisor % candidate == 0) return candidate;
+    final candidates = <int>[
+      for (var candidate = 10; candidate <= 99; candidate++)
+        if (divisor % candidate == 0) candidate,
+    ];
+    final historicalCandidate = _magicFromHistory(state, rows, candidates);
+    if (historicalCandidate != null) return historicalCandidate;
+    final preferred = state.magic > 9
+        ? state.magic
+        : state.memberId > 0
+        ? _magicLeft[state.memberId % 10]
+        : 0;
+    if (preferred >= 10 && preferred <= 99 && divisor % preferred == 0) {
+      return preferred;
     }
-    return null;
+    return candidates.length == 1 ? candidates.single : null;
+  }
+
+  int? _magicFromHistory(
+    SenkaState state,
+    List<Map<Object?, Object?>> rows,
+    List<int> candidates,
+  ) {
+    if (candidates.length < 2) return null;
+    final scores = <(int, double, int)>[];
+    for (final candidate in candidates) {
+      var score = 0.0;
+      var matches = 0;
+      for (final row in rows) {
+        final rank = _int(row['api_mxltvkpyuklh']);
+        final encrypted = _int(row['api_wuhnhojjxmke']);
+        final nickname = '${row['api_mtjmdcwtvhdr'] ?? ''}';
+        final anchorHistory = state.rankingHistory['$rank'];
+        final playerHistory = nickname == state.nickname
+            ? state.rankingHistory['player']
+            : null;
+        final history = anchorHistory?.isNotEmpty == true
+            ? anchorHistory
+            : playerHistory;
+        if (rank <= 0 || encrypted <= 0 || history?.isNotEmpty != true) {
+          continue;
+        }
+        final decoded =
+            encrypted / _magicRight[rank % 13] / candidate - 73 - 18;
+        score += (decoded - history!.last.senka).abs();
+        matches++;
+      }
+      if (matches > 0) scores.add((candidate, score, matches));
+    }
+    if (scores.length < 2) return null;
+    scores.sort((left, right) {
+      final leftAverage = left.$2 / left.$3;
+      final rightAverage = right.$2 / right.$3;
+      return leftAverage.compareTo(rightAverage);
+    });
+    final bestAverage = scores.first.$2 / scores.first.$3;
+    final nextAverage = scores[1].$2 / scores[1].$3;
+    return nextAverage - bestAverage > 0.000001 ? scores.first.$1 : null;
+  }
+
+  SenkaState _rebaseLocalBaseline(SenkaState state, double gained) {
+    final playerHistory = state.rankingHistory['player'];
+    if (playerHistory == null || playerHistory.isEmpty) {
+      return state.copyWith(
+        calculatorLocalSenkaAtSet: state.calculatorCurrentSenka > 0
+            ? state.monthRecorded
+            : state.calculatorLocalSenkaAtSet,
+      );
+    }
+    final history = <String, List<SenkaRankingSnapshot>>{
+      for (final entry in state.rankingHistory.entries)
+        entry.key: List<SenkaRankingSnapshot>.of(entry.value),
+    };
+    final latest = playerHistory.last;
+    history['player'] = <SenkaRankingSnapshot>[
+      ...playerHistory.take(playerHistory.length - 1),
+      SenkaRankingSnapshot(
+        rank: latest.rank,
+        senka: latest.senka,
+        capturedAt: latest.capturedAt,
+        localSenkaAtCapture: latest.localSenkaAtCapture + gained,
+      ),
+    ];
+    return state.copyWith(
+      rankingHistory: history,
+      calculatorLocalSenkaAtSet:
+          (state.calculatorLocalSenkaAtSet ?? latest.localSenkaAtCapture) +
+          gained,
+    );
   }
 
   SenkaState _addDay(
