@@ -15,14 +15,9 @@ enum class GameFrameRateMode(val wireName: String) {
 }
 
 class GameFrameRateManager(
-    private val host: Host,
     private val bridge: GameFrameRateBridge,
     private val systemConstraints: GameFrameRateSystemConstraintSource,
 ) : MethodChannel.MethodCallHandler {
-    interface Host {
-        fun onFrameRateModeChanged(mode: GameFrameRateMode)
-    }
-
     @Volatile
     var mode: GameFrameRateMode = GameFrameRateMode.AUTO
         private set
@@ -54,7 +49,6 @@ class GameFrameRateManager(
                     requestedTarget = initialTarget
                     mode = requestedMode
                     configured = true
-                    host.onFrameRateModeChanged(mode)
                     result.success(null)
                 } catch (error: GameFrameRateBridgeException) {
                     result.error(error.code, error.message, null)

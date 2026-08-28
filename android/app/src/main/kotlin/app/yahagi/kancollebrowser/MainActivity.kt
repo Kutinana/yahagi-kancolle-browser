@@ -47,7 +47,6 @@ import app.yahagi.kancollebrowser.browser.GadgetBypassWebViewClient
 import app.yahagi.kancollebrowser.browser.FixedCanvasScalePolicy
 import app.yahagi.kancollebrowser.browser.GameFrameRateManager
 import app.yahagi.kancollebrowser.browser.GameFrameRateBridge
-import app.yahagi.kancollebrowser.browser.GameFrameRateMode
 import app.yahagi.kancollebrowser.browser.AndroidGameFrameRateSystemConstraints
 import app.yahagi.kancollebrowser.browser.AndroidGameFrameReloadBridge
 import app.yahagi.kancollebrowser.browser.GameFrameReloadManager
@@ -90,8 +89,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateManager.Host,
-    DiagnosticExportDirectoryHost {
+class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExportDirectoryHost {
     private var pendingNotificationPermissionResult: MethodChannel.Result? = null
     @Suppress("DEPRECATION")
     override fun getFlutterShellArgs(): FlutterShellArgs {
@@ -123,6 +121,12 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         }
         enableNativeActivityWebViewIfSelected()
         AppNotificationManager.initChannels(this)
+        applyPreferredUiRefreshRate()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyPreferredUiRefreshRate()
     }
 
     override fun onMultiWindowModeChanged(
@@ -144,6 +148,19 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         gameSurfaceRecoveryTrigger.onConfigurationChanged()
+        applyPreferredUiRefreshRate()
+    }
+
+    private fun applyPreferredUiRefreshRate() {
+        val refreshRates = window.decorView.display
+            ?.supportedModes
+            ?.map { mode -> mode.refreshRate }
+            .orEmpty()
+        val preferredRefreshRate = UiRefreshRatePolicy.highestSupported(refreshRates)
+        val attributes = window.attributes
+        if (attributes.preferredRefreshRate == preferredRefreshRate) return
+        attributes.preferredRefreshRate = preferredRefreshRate
+        window.attributes = attributes
     }
 
     private companion object {
@@ -570,7 +587,6 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         ).setMethodCallHandler(bypassManager)
 
         val frameRateManager = GameFrameRateManager(
-            this,
             GameFrameRateBridge(this),
             AndroidGameFrameRateSystemConstraints(this),
         )
@@ -812,14 +828,6 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, GameFrameRateM
         } else if (gameResourceCacheMode == GameResourceCacheMode.NONE) {
             restoreGadgetBypassClient()
             removeGadgetBypassLayoutListener()
-        }
-    }
-
-    override fun onFrameRateModeChanged(@Suppress("UNUSED_PARAMETER") mode: GameFrameRateMode) {
-        val attributes = window.attributes
-        if (attributes.preferredRefreshRate != 60f) {
-            attributes.preferredRefreshRate = 60f
-            window.attributes = attributes
         }
     }
 
