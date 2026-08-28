@@ -1,5 +1,5 @@
-bool isGameSurfaceDetectionResult(Object? result) {
-  if (result is bool) return result;
-  if (result is String) return result.trim().toLowerCase() == 'true';
-  return false;
-}
+import 'game_presentation_state.dart';
+
+@Deprecated('Use decodeGamePresentationState instead.')
+bool isGameSurfaceDetectionResult(Object? result) =>
+    decodeGamePresentationState(result) == GamePresentationState.game;
