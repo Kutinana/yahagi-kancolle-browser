@@ -141,13 +141,18 @@ const String gamePageAlignmentScript = r'''
   const isKancolleServerPage =
     host === 'kancolle-server.com' ||
     host.endsWith('.kancolle-server.com');
-  const isOfficialDmmGamePage =
+  const isCurrentDmmGamePage =
+    host === 'play.games.dmm.com' &&
+    (pathname === '/game/kancolle' || pathname === '/game/kancolle/');
+  const isLegacyDmmGamePage =
     (host === 'www.dmm.com' ||
       host === 'dmm.com' ||
       host === 'games.dmm.com') &&
-    pathname.includes('/netgame/social/-/gadgets/=/app_id=854854/');
+    (pathname === '/netgame/social/-/gadgets/=/app_id=854854' ||
+      pathname === '/netgame/social/-/gadgets/=/app_id=854854/');
   const isGamePage =
-    isOfficialDmmGamePage ||
+    isCurrentDmmGamePage ||
+    isLegacyDmmGamePage ||
     host === 'osapi.dmm.com' ||
     isKancolleServerPage;
   const isOoiBrowserPage =

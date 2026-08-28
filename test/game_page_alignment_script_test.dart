@@ -25,6 +25,24 @@ void main() {
     expect(gamePageAlignmentScript, isNot(contains('fetch(')));
   });
 
+  test('alignment recognizes the current DMM play URL exactly', () {
+    expect(gamePageAlignmentScript, contains("host === 'play.games.dmm.com'"));
+    expect(gamePageAlignmentScript, contains("pathname === '/game/kancolle'"));
+    expect(gamePageAlignmentScript, contains("pathname === '/game/kancolle/'"));
+    expect(
+      gamePageAlignmentScript,
+      isNot(contains("pathname.includes('/game/kancolle')")),
+    );
+    expect(
+      gamePageAlignmentScript,
+      isNot(
+        contains(
+          "pathname.includes('/netgame/social/-/gadgets/=/app_id=854854/')",
+        ),
+      ),
+    );
+  });
+
   test('alignment hides the DMM page shell around the game viewport', () {
     expect(gamePageAlignmentScript, contains('#spacing_top'));
     expect(gamePageAlignmentScript, contains('#ntg-recommend'));
