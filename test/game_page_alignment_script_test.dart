@@ -5,11 +5,17 @@ void main() {
   test('alignment pins the 1200 by 720 game frame without touching data', () {
     expect(
       gamePageAlignmentScript,
-      contains("location.pathname.includes('kancolle')"),
+      contains('/netgame/social/-/gadgets/=/app_id=854854/'),
     );
-    expect(gamePageAlignmentScript, contains('854854'));
-    expect(gamePageAlignmentScript, contains('osapi.dmm.com'));
-    expect(gamePageAlignmentScript, contains('/kcs'));
+    expect(gamePageAlignmentScript, contains("host === 'osapi.dmm.com'"));
+    expect(
+      gamePageAlignmentScript,
+      contains("host.endsWith('.kancolle-server.com')"),
+    );
+    expect(
+      gamePageAlignmentScript,
+      isNot(contains("pathname.includes('kancolle')")),
+    );
     expect(gamePageAlignmentScript, contains('#game_frame'));
     expect(gamePageAlignmentScript, contains('width: 1200px !important'));
     expect(gamePageAlignmentScript, contains('height: 720px !important'));
@@ -33,16 +39,21 @@ void main() {
     );
   });
 
-  test('alignment requires a real game surface and rejects login forms', () {
+  test('normal DMM account links cannot disable the game presentation', () {
     expect(gamePageAlignmentScript, contains('accounts.dmm.com'));
     expect(gamePageAlignmentScript, contains('isGamePage'));
     expect(gamePageAlignmentScript, contains('hasGameSurface'));
-    expect(gamePageAlignmentScript, contains("input[type=\"password\"]"));
-    expect(gamePageAlignmentScript, contains('document.links'));
-    expect(gamePageAlignmentScript, contains("href.includes('/login')"));
+    expect(gamePageAlignmentScript, isNot(contains('document.links')));
+    expect(gamePageAlignmentScript, isNot(contains("href.includes('/login')")));
+  });
+
+  test('game candidates remain pending until a visible surface exists', () {
+    expect(gamePageAlignmentScript, contains("return 'pending'"));
+    expect(gamePageAlignmentScript, contains('getBoundingClientRect()'));
+    expect(gamePageAlignmentScript, contains('element.isConnected'));
     expect(
       gamePageAlignmentScript,
-      contains('return shouldUseGamePresentation'),
+      contains("notifyPresentationState('pending')"),
     );
   });
 
@@ -100,13 +111,16 @@ void main() {
       gamePageAlignmentScript,
       contains("window.addEventListener('resize'"),
     );
-    expect(gamePageAlignmentScript, contains('notifyPresentationState(false)'));
+    expect(gamePageAlignmentScript, contains("notifyPresentationState('web')"));
   });
 
   test('alignment yields to an open DMM purchase dialog', () {
     expect(gamePageAlignmentScript, contains("dialog[open]"));
     expect(gamePageAlignmentScript, contains('hasBlockingPageDialog'));
-    expect(gamePageAlignmentScript, contains('!hasBlockingPageDialog()'));
+    expect(
+      gamePageAlignmentScript,
+      contains('isAccountPage || hasBlockingPageDialog()'),
+    );
   });
 
   test('alignment removes every game-only lock outside the game surface', () {
@@ -136,7 +150,11 @@ void main() {
     );
     expect(gamePageAlignmentScript, contains('new MutationObserver'));
     expect(gamePageAlignmentScript, contains('YahagiPresentation.postMessage'));
-    expect(gamePageAlignmentScript, contains("'game' : 'web'"));
+    expect(
+      gamePageAlignmentScript,
+      contains("notifyPresentationState('game')"),
+    );
+    expect(gamePageAlignmentScript, contains("notifyPresentationState('web')"));
   });
 
   test(

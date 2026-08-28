@@ -134,38 +134,53 @@ const String gamePageAlignmentScript = r'''
     delete window.__yahagiMobileAlignGame;
   };
 
-  const isGamePage =
-    location.pathname.includes('kancolle') ||
-    location.pathname.includes('854854') ||
-    location.hostname === 'osapi.dmm.com' ||
-    location.pathname.includes('/kcs');
+  const host = location.hostname.toLowerCase();
+  const pathname = location.pathname.toLowerCase();
   const isAccountPage =
-    location.hostname === 'accounts.dmm.com' ||
-    location.hostname === 'accounts.dmm.co.jp';
+    host === 'accounts.dmm.com' || host === 'accounts.dmm.co.jp';
+  const isKancolleServerPage =
+    host === 'kancolle-server.com' ||
+    host.endsWith('.kancolle-server.com');
+  const isOfficialDmmGamePage =
+    (host === 'www.dmm.com' ||
+      host === 'dmm.com' ||
+      host === 'games.dmm.com') &&
+    pathname.includes('/netgame/social/-/gadgets/=/app_id=854854/');
+  const isGamePage =
+    isOfficialDmmGamePage ||
+    host === 'osapi.dmm.com' ||
+    isKancolleServerPage;
   const isOoiBrowserPage =
     location.hostname === 'ooi.moe' && location.pathname === '/kancolle';
 
-  const hasAuthenticationControls = () =>
-    Boolean(
-      document.querySelector(
-        'input[type="password"], form[action*="/login"]',
-      ),
-    ) ||
-    Array.from(document.links).some((link) => {
-      const href = link.href.toLowerCase();
-      return href.includes('/login') || href.includes('accounts.dmm.');
-    });
+  const isVisibleElement = (element) => {
+    if (!element || !element.isConnected) return false;
+    const style = getComputedStyle(element);
+    if (
+      style.display === 'none' ||
+      style.visibility === 'hidden' ||
+      style.visibility === 'collapse'
+    ) {
+      return false;
+    }
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
 
   const hasBlockingPageDialog = () =>
-    Boolean(document.querySelector('dialog[open]'));
+    Array.from(document.querySelectorAll('dialog[open]')).some(
+      isVisibleElement,
+    );
 
   const hasStandaloneGameCanvas = () =>
     Array.from(document.querySelectorAll('canvas')).some(
-      (canvas) => canvas.width === 1200 && canvas.height === 720,
+      (canvas) =>
+        canvas.width === 1200 &&
+        canvas.height === 720 &&
+        isVisibleElement(canvas),
     );
 
-  const notifyPresentationState = (hasGameSurface) => {
-    const nextState = hasGameSurface ? 'game' : 'web';
+  const notifyPresentationState = (nextState) => {
     if (window.__yahagiMobilePresentationState === nextState) return;
     window.__yahagiMobilePresentationState = nextState;
     if (window.YahagiPresentation) {
@@ -287,28 +302,29 @@ const String gamePageAlignmentScript = r'''
     if (isOoiBrowserPage && hasOoiBrowserSurface) {
       cleanupGamePresentation();
       applyOoiBrowserPresentation();
-      notifyPresentationState(false);
-      return false;
+      notifyPresentationState('web');
+      return 'web';
     }
 
     cleanupOoiBrowserPresentation();
-    const hasGameSurface = Boolean(
-      document.querySelector('#game_frame, #game-container'),
-    ) || hasStandaloneGameCanvas();
-    const shouldUseGamePresentation =
-      isGamePage &&
-      !isAccountPage &&
-      hasGameSurface &&
-      !hasAuthenticationControls() &&
-      !hasBlockingPageDialog();
+    const hasGameSurface =
+      Array.from(
+        document.querySelectorAll('#game_frame, #game-container'),
+      ).some(isVisibleElement) || hasStandaloneGameCanvas();
 
-    if (shouldUseGamePresentation) {
-      applyGamePresentation();
-    } else {
+    if (!isGamePage || isAccountPage || hasBlockingPageDialog()) {
       cleanupGamePresentation();
+      notifyPresentationState('web');
+      return 'web';
     }
-    notifyPresentationState(shouldUseGamePresentation);
-    return shouldUseGamePresentation;
+    if (!hasGameSurface) {
+      notifyPresentationState('pending');
+      return 'pending';
+    }
+
+    applyGamePresentation();
+    notifyPresentationState('game');
+    return 'game';
   };
 
   window.__yahagiMobilePresentationObserver?.disconnect();
@@ -319,6 +335,8 @@ const String gamePageAlignmentScript = r'''
     window.__yahagiMobilePresentationObserver.observe(document.documentElement, {
       childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'hidden', 'style', 'width', 'height'],
     });
   }
 
