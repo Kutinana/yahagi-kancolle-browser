@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum GameFrameRateMode {
   automatic('auto'),
-  stable30('stable30');
+  stable60('stable60'),
+  stable30('stable30'),
+  highRefresh('highRefresh');
 
   const GameFrameRateMode(this.wireName);
 

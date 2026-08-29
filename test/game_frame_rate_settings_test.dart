@@ -14,6 +14,15 @@ void main() {
     expect(await store.loadMode(), GameFrameRateMode.automatic);
   });
 
+  test('offers automatic, stable 60, stable 30, and high refresh modes', () {
+    expect(GameFrameRateMode.values, <GameFrameRateMode>[
+      GameFrameRateMode.automatic,
+      GameFrameRateMode.stable60,
+      GameFrameRateMode.stable30,
+      GameFrameRateMode.highRefresh,
+    ]);
+  });
+
   test('migrates the old boolean preference to an enum value', () async {
     for (final entry in <bool, GameFrameRateMode>{
       true: GameFrameRateMode.automatic,
@@ -80,14 +89,18 @@ void main() {
       addTearDown(controller.dispose);
 
       await controller.attachPort(port);
+      await controller.setMode(GameFrameRateMode.stable60);
       await controller.setMode(GameFrameRateMode.stable30);
+      await controller.setMode(GameFrameRateMode.highRefresh);
 
       expect(port.configuredModes, <GameFrameRateMode>[
         GameFrameRateMode.automatic,
+        GameFrameRateMode.stable60,
         GameFrameRateMode.stable30,
+        GameFrameRateMode.highRefresh,
       ]);
-      expect(controller.mode, GameFrameRateMode.stable30);
-      expect(await store.loadMode(), GameFrameRateMode.stable30);
+      expect(controller.mode, GameFrameRateMode.highRefresh);
+      expect(await store.loadMode(), GameFrameRateMode.highRefresh);
     },
   );
 
