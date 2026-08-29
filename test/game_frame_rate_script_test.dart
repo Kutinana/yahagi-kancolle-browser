@@ -20,6 +20,14 @@ void main() {
     expect(script, isNot(contains('requestAnimationFrame=')));
   });
 
+  test('high refresh script uses uncapped CreateJS RAF', () {
+    final script = gameFrameRateApplyScript(GameFrameRateTarget.highRefresh);
+    expect(script, contains('createjs.Ticker'));
+    expect(script, contains('ticker.timingMode=ticker.RAF;'));
+    expect(script, isNot(contains('ticker.framerate=')));
+    expect(script, isNot(contains('requestAnimationFrame=')));
+  });
+
   test('measurement script returns null when CreateJS ticker is absent', () {
     expect(gameFrameRateMeasurementScript, contains('getMeasuredFPS'));
     expect(gameFrameRateMeasurementScript, contains('return null'));
@@ -29,6 +37,7 @@ void main() {
     final scripts = <String>[
       gameFrameRateApplyScript(GameFrameRateTarget.fps30),
       gameFrameRateApplyScript(GameFrameRateTarget.fps60),
+      gameFrameRateApplyScript(GameFrameRateTarget.highRefresh),
       gameFrameRateMeasurementScript,
     ];
     for (final script in scripts) {

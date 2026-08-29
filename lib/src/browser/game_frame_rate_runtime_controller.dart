@@ -5,7 +5,7 @@ import 'package:flutter/scheduler.dart';
 import '../settings/game_frame_rate_settings.dart';
 import 'game_frame_rate_policy.dart';
 
-enum GameFrameRateTarget { fps30, fps60 }
+enum GameFrameRateTarget { fps30, fps60, highRefresh }
 
 abstract interface class GameFrameRateRuntimePort {
   Future<void> apply(GameFrameRateTarget target);
@@ -115,7 +115,9 @@ final class GameFrameRateRuntimeController {
   }
 
   Future<void> _applyCurrentLifecycleTarget() =>
-      _foreground ? _applySelectedMode() : _applyBackgroundTarget();
+      !_foreground && settings.mode == GameFrameRateMode.automatic
+      ? _applyBackgroundTarget()
+      : _applySelectedMode();
 
   Future<void> _applyBackgroundTarget() async {
     if (_disposed || !_ready) return;
@@ -127,9 +129,11 @@ final class GameFrameRateRuntimeController {
   }
 
   Future<void> _applySelectedMode() async {
-    if (_disposed || !_ready || !_foreground) return;
+    if (_disposed || !_ready) return;
     final target = switch (settings.mode) {
       GameFrameRateMode.stable30 => GameFrameRateTarget.fps30,
+      GameFrameRateMode.stable60 => GameFrameRateTarget.fps60,
+      GameFrameRateMode.highRefresh => GameFrameRateTarget.highRefresh,
       GameFrameRateMode.automatic when policy.isLockedTo30 =>
         GameFrameRateTarget.fps30,
       GameFrameRateMode.automatic => GameFrameRateTarget.fps60,

@@ -83,6 +83,21 @@ void main() {
     _addUnstableFlutterWindow(policy);
     expect(policy.completeWindow(), FrameRateDecision.lock30);
   });
+
+  test('stable 60 and high refresh never auto-downgrade', () {
+    for (final mode in <GameFrameRateMode>[
+      GameFrameRateMode.stable60,
+      GameFrameRateMode.highRefresh,
+    ]) {
+      final policy = GameFrameRatePolicy(mode: mode);
+      for (var window = 0; window < 3; window++) {
+        _addUnstableCreateJsWindow(policy);
+        _addUnstableFlutterWindow(policy);
+        expect(policy.completeWindow(), FrameRateDecision.keep60);
+      }
+      expect(policy.isLockedTo30, isFalse);
+    }
+  });
 }
 
 void _addUnstableCreateJsWindow(GameFrameRatePolicy policy) {

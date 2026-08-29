@@ -58,7 +58,17 @@ final class GameFrameRatePolicy {
   }
 
   FrameRateDecision completeWindow() {
-    if (mode == GameFrameRateMode.stable30 || _lockedTo30) {
+    if (mode == GameFrameRateMode.stable30) {
+      resetWindow();
+      return FrameRateDecision.lock30;
+    }
+    if (mode != GameFrameRateMode.automatic) {
+      resetWindow();
+      _consecutiveUnstableWindows = 0;
+      _lockedTo30 = false;
+      return FrameRateDecision.keep60;
+    }
+    if (_lockedTo30) {
       resetWindow();
       return FrameRateDecision.lock30;
     }

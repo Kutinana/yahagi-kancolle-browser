@@ -96,6 +96,43 @@ void main() {
     expect(fixture.timer!.isActive, isFalse);
   });
 
+  test('manual modes always apply their exact target', () async {
+    final fixture = await _Fixture.create();
+    addTearDown(fixture.dispose);
+    await fixture.runtime.onPageReady();
+
+    await fixture.settings.setMode(GameFrameRateMode.stable60);
+    await fixture.runtime.idle;
+    await fixture.settings.setMode(GameFrameRateMode.highRefresh);
+    await fixture.runtime.idle;
+
+    expect(
+      fixture.port.appliedTargets,
+      containsAllInOrder(<GameFrameRateTarget>[
+        GameFrameRateTarget.fps60,
+        GameFrameRateTarget.highRefresh,
+      ]),
+    );
+    expect(fixture.timer!.isActive, isFalse);
+  });
+
+  test('manual modes are not lowered by app lifecycle changes', () async {
+    for (final entry in <GameFrameRateMode, GameFrameRateTarget>{
+      GameFrameRateMode.stable60: GameFrameRateTarget.fps60,
+      GameFrameRateMode.stable30: GameFrameRateTarget.fps30,
+      GameFrameRateMode.highRefresh: GameFrameRateTarget.highRefresh,
+    }.entries) {
+      final fixture = await _Fixture.create(initialMode: entry.key);
+      addTearDown(fixture.dispose);
+      await fixture.runtime.onPageReady();
+
+      fixture.runtime.onLifecycleChanged(AppLifecycleState.paused);
+      await fixture.runtime.idle;
+
+      expect(fixture.port.appliedTargets.last, entry.value);
+    }
+  });
+
   test('leaving the foreground lowers load and resume restores mode', () async {
     final fixture = await _Fixture.create();
     addTearDown(fixture.dispose);
@@ -142,9 +179,10 @@ final class _Fixture {
 
   static Future<_Fixture> create({
     List<double> measurements = const <double>[],
+    GameFrameRateMode initialMode = GameFrameRateMode.automatic,
   }) async {
     final settings = await GameFrameRateSettingsController.load(
-      MemoryGameFrameRateSettingsStore(),
+      MemoryGameFrameRateSettingsStore(initialMode),
     );
     final port = _FakeRuntimePort(measurements);
     final timerFactory = _FakeTimerFactory();
