@@ -2582,23 +2582,65 @@ abstract class AppLocalizations {
   /// **'自动'**
   String get gameFrameRateAutomatic;
 
-  /// No description provided for @gameFrameRatePowerSaving.
+  /// No description provided for @gameFrameRateStable60.
   ///
   /// In zh, this message translates to:
-  /// **'低耗'**
-  String get gameFrameRatePowerSaving;
+  /// **'60 帧'**
+  String get gameFrameRateStable60;
+
+  /// No description provided for @gameFrameRateStable60Desc.
+  ///
+  /// In zh, this message translates to:
+  /// **'始终以 60 FPS 运行，不自动降档。'**
+  String get gameFrameRateStable60Desc;
+
+  /// No description provided for @gameFrameRateStable30.
+  ///
+  /// In zh, this message translates to:
+  /// **'30 帧'**
+  String get gameFrameRateStable30;
+
+  /// No description provided for @gameFrameRateStable30Desc.
+  ///
+  /// In zh, this message translates to:
+  /// **'始终以 30 FPS 运行，降低耗电和发热。'**
+  String get gameFrameRateStable30Desc;
+
+  /// No description provided for @gameFrameRateHighRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高刷'**
+  String get gameFrameRateHighRefresh;
+
+  /// No description provided for @gameFrameRateHighRefreshDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除 60 FPS 限制，跟随屏幕刷新率运行，耗电和发热可能增加。'**
+  String get gameFrameRateHighRefreshDesc;
+
+  /// No description provided for @gameFrameRateHighRefreshDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启高刷模式？'**
+  String get gameFrameRateHighRefreshDialogTitle;
+
+  /// No description provided for @gameFrameRateHighRefreshDialogBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'高刷会修改游戏运行帧率，可能增加耗电、发热或引发动画异常，并存在未知的账号风险。请自行承担后果。'**
+  String get gameFrameRateHighRefreshDialogBody;
+
+  /// No description provided for @gameFrameRateHighRefreshDialogConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'了解风险并开启'**
+  String get gameFrameRateHighRefreshDialogConfirm;
 
   /// No description provided for @gameFrameRateAutomaticDesc.
   ///
   /// In zh, this message translates to:
   /// **'封顶 60 FPS；若持续不稳定、系统开启节能或设备发热，将自动降至 30 FPS。'**
   String get gameFrameRateAutomaticDesc;
-
-  /// No description provided for @gameFrameRatePowerSavingDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'固定 30 FPS，优先降低发热和耗电。'**
-  String get gameFrameRatePowerSavingDesc;
 
   /// No description provided for @gameFrameRateUnsupported.
   ///

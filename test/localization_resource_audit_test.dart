@@ -64,18 +64,21 @@ void main() {
     }
   });
 
-  test('all locales omit the removed high refresh setting', () {
-    const removedKeys = <String>{
+  test('all locales include the four frame-rate modes and warning', () {
+    const keys = <String>{
+      'gameFrameRateStable60',
+      'gameFrameRateStable60Desc',
+      'gameFrameRateStable30',
+      'gameFrameRateStable30Desc',
       'gameFrameRateHighRefresh',
       'gameFrameRateHighRefreshDesc',
+      'gameFrameRateHighRefreshDialogTitle',
+      'gameFrameRateHighRefreshDialogBody',
+      'gameFrameRateHighRefreshDialogConfirm',
     };
 
     for (final entry in resources.entries) {
-      expect(
-        _messageKeys(entry.value),
-        isNot(containsAll(removedKeys)),
-        reason: entry.key,
-      );
+      expect(_messageKeys(entry.value), containsAll(keys), reason: entry.key);
     }
   });
 
@@ -158,8 +161,8 @@ void main() {
       'diagnosticShareAction',
       // HTTP and its numeric status placeholder are protocol terminology.
       'kcwikiReportFailureHttp',
-      // “低耗”是简中和繁中统一采用的帧率档位产品名称。
-      'gameFrameRatePowerSaving',
+      // “高刷”是简中和繁中统一采用的帧率档位产品名称。
+      'gameFrameRateHighRefresh',
       // “升序/降序” are standard sorting terms in both Chinese scripts.
       'sortAscending',
       'sortDescending',

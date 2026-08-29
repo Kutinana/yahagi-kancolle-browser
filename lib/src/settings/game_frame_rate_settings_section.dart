@@ -35,16 +35,23 @@ class GameFrameRateSettingsSection extends StatelessWidget {
                   label: Text(l10n.gameFrameRateAutomatic),
                 ),
                 ButtonSegment<GameFrameRateMode>(
+                  value: GameFrameRateMode.stable60,
+                  label: Text(l10n.gameFrameRateStable60),
+                ),
+                ButtonSegment<GameFrameRateMode>(
                   value: GameFrameRateMode.stable30,
-                  label: Text(l10n.gameFrameRatePowerSaving),
+                  label: Text(l10n.gameFrameRateStable30),
+                ),
+                ButtonSegment<GameFrameRateMode>(
+                  value: GameFrameRateMode.highRefresh,
+                  label: Text(l10n.gameFrameRateHighRefresh),
                 ),
               ],
               selected: <GameFrameRateMode>{controller.mode},
               onSelectionChanged: controller.supported == false
                   ? null
-                  : (selection) {
-                      unawaited(controller.setMode(selection.single));
-                    },
+                  : (selection) =>
+                        unawaited(_selectMode(context, l10n, selection.single)),
             ),
             const SizedBox(height: 8),
             Text(
@@ -53,8 +60,12 @@ class GameFrameRateSettingsSection extends StatelessWidget {
                   : switch (controller.mode) {
                       GameFrameRateMode.automatic =>
                         l10n.gameFrameRateAutomaticDesc,
+                      GameFrameRateMode.stable60 =>
+                        l10n.gameFrameRateStable60Desc,
                       GameFrameRateMode.stable30 =>
-                        l10n.gameFrameRatePowerSavingDesc,
+                        l10n.gameFrameRateStable30Desc,
+                      GameFrameRateMode.highRefresh =>
+                        l10n.gameFrameRateHighRefreshDesc,
                     },
               style: Theme.of(
                 context,
@@ -64,5 +75,34 @@ class GameFrameRateSettingsSection extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _selectMode(
+    BuildContext context,
+    AppLocalizations l10n,
+    GameFrameRateMode mode,
+  ) async {
+    if (mode == controller.mode) return;
+    if (mode == GameFrameRateMode.highRefresh) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.gameFrameRateHighRefreshDialogTitle),
+          content: Text(l10n.gameFrameRateHighRefreshDialogBody),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.gameFrameRateHighRefreshDialogConfirm),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+    }
+    await controller.setMode(mode);
   }
 }

@@ -1321,14 +1321,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameFrameRateAutomatic => '自动';
 
   @override
-  String get gameFrameRatePowerSaving => '低耗';
+  String get gameFrameRateStable60 => '60 帧';
+
+  @override
+  String get gameFrameRateStable60Desc => '始终以 60 FPS 运行，不自动降档。';
+
+  @override
+  String get gameFrameRateStable30 => '30 帧';
+
+  @override
+  String get gameFrameRateStable30Desc => '始终以 30 FPS 运行，降低耗电和发热。';
+
+  @override
+  String get gameFrameRateHighRefresh => '高刷';
+
+  @override
+  String get gameFrameRateHighRefreshDesc =>
+      '解除 60 FPS 限制，跟随屏幕刷新率运行，耗电和发热可能增加。';
+
+  @override
+  String get gameFrameRateHighRefreshDialogTitle => '开启高刷模式？';
+
+  @override
+  String get gameFrameRateHighRefreshDialogBody =>
+      '高刷会修改游戏运行帧率，可能增加耗电、发热或引发动画异常，并存在未知的账号风险。请自行承担后果。';
+
+  @override
+  String get gameFrameRateHighRefreshDialogConfirm => '了解风险并开启';
 
   @override
   String get gameFrameRateAutomaticDesc =>
       '封顶 60 FPS；若持续不稳定、系统开启节能或设备发热，将自动降至 30 FPS。';
-
-  @override
-  String get gameFrameRatePowerSavingDesc => '固定 30 FPS，优先降低发热和耗电。';
 
   @override
   String get gameFrameRateUnsupported =>
@@ -3732,14 +3755,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameFrameRateAutomatic => '自動';
 
   @override
-  String get gameFrameRatePowerSaving => '低耗';
+  String get gameFrameRateStable60 => '60 幀';
+
+  @override
+  String get gameFrameRateStable60Desc => '始終以 60 FPS 運行，不自動降檔。';
+
+  @override
+  String get gameFrameRateStable30 => '30 幀';
+
+  @override
+  String get gameFrameRateStable30Desc => '始終以 30 FPS 運行，降低耗電和發熱。';
+
+  @override
+  String get gameFrameRateHighRefresh => '高刷';
+
+  @override
+  String get gameFrameRateHighRefreshDesc =>
+      '解除 60 FPS 限制，跟隨螢幕更新率運行，耗電和發熱可能增加。';
+
+  @override
+  String get gameFrameRateHighRefreshDialogTitle => '開啟高刷模式？';
+
+  @override
+  String get gameFrameRateHighRefreshDialogBody =>
+      '高刷會修改遊戲運行幀率，可能增加耗電、發熱或引發動畫異常，並存在未知的帳號風險。請自行承擔後果。';
+
+  @override
+  String get gameFrameRateHighRefreshDialogConfirm => '了解風險並開啟';
 
   @override
   String get gameFrameRateAutomaticDesc =>
       '上限為 60 FPS；若持續不穩定、系統開啟省電或裝置發熱，將自動降至 30 FPS。';
-
-  @override
-  String get gameFrameRatePowerSavingDesc => '固定 30 FPS，優先降低發熱與耗電。';
 
   @override
   String get gameFrameRateUnsupported =>
