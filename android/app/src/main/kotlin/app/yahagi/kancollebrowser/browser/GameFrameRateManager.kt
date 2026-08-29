@@ -6,7 +6,9 @@ import io.flutter.plugin.common.MethodChannel
 
 enum class GameFrameRateMode(val wireName: String) {
     AUTO("auto"),
-    STABLE_30("stable30");
+    STABLE_60("stable60"),
+    STABLE_30("stable30"),
+    HIGH_REFRESH("highRefresh");
 
     companion object {
         fun fromWireName(value: String?): GameFrameRateMode =
@@ -100,5 +102,7 @@ class GameFrameRateManager(
 private val GameFrameRateMode.initialTarget: GameFrameRateTarget
     get() = when (this) {
         GameFrameRateMode.STABLE_30 -> GameFrameRateTarget.FPS_30
-        GameFrameRateMode.AUTO -> GameFrameRateTarget.FPS_60
+        GameFrameRateMode.AUTO,
+        GameFrameRateMode.STABLE_60 -> GameFrameRateTarget.FPS_60
+        GameFrameRateMode.HIGH_REFRESH -> GameFrameRateTarget.HIGH_REFRESH
     }

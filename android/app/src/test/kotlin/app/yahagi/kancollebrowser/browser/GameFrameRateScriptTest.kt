@@ -9,7 +9,9 @@ class GameFrameRateScriptTest {
     @Test
     fun mapsWireModesAndFallsBackToAuto() {
         assertEquals(GameFrameRateMode.AUTO, GameFrameRateMode.fromWireName("auto"))
+        assertEquals(GameFrameRateMode.STABLE_60, GameFrameRateMode.fromWireName("stable60"))
         assertEquals(GameFrameRateMode.STABLE_30, GameFrameRateMode.fromWireName("stable30"))
+        assertEquals(GameFrameRateMode.HIGH_REFRESH, GameFrameRateMode.fromWireName("highRefresh"))
         assertEquals(GameFrameRateMode.AUTO, GameFrameRateMode.fromWireName("prefer60"))
         assertEquals(GameFrameRateMode.AUTO, GameFrameRateMode.fromWireName("future-mode"))
     }
@@ -25,8 +27,8 @@ class GameFrameRateScriptTest {
         assertTrue(script.contains("getMeasuredFPS"))
         assertTrue(script.contains("ticker.RAF_SYNCHED"))
         assertTrue(script.contains("ticker.TIMEOUT"))
-        assertFalse(script.contains("highRefresh"))
-        assertFalse(script.contains("ticker.RAF;"))
+        assertTrue(script.contains("highRefresh"))
+        assertTrue(script.contains("ticker.timingMode = ticker.RAF"))
         assertFalse(script.contains("fetch("))
         assertFalse(script.contains("XMLHttpRequest"))
         assertFalse(script.contains("dispatchEvent"))

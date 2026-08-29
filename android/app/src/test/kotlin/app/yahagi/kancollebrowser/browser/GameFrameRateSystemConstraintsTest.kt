@@ -52,6 +52,36 @@ class GameFrameRateSystemConstraintsTest {
     }
 
     @Test
+    fun stable60IgnoresSystemConstraints() {
+        assertEquals(
+            GameFrameRateTarget.FPS_60,
+            GameFrameRateSystemPolicy.effectiveTarget(
+                mode = GameFrameRateMode.STABLE_60,
+                requestedTarget = GameFrameRateTarget.FPS_60,
+                state = GameFrameRateSystemState(
+                    powerSaveEnabled = true,
+                    thermalStatus = PowerManager.THERMAL_STATUS_SEVERE,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun highRefreshIgnoresSystemConstraints() {
+        assertEquals(
+            GameFrameRateTarget.HIGH_REFRESH,
+            GameFrameRateSystemPolicy.effectiveTarget(
+                mode = GameFrameRateMode.HIGH_REFRESH,
+                requestedTarget = GameFrameRateTarget.HIGH_REFRESH,
+                state = GameFrameRateSystemState(
+                    powerSaveEnabled = true,
+                    thermalStatus = PowerManager.THERMAL_STATUS_SEVERE,
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun automaticModeKeepsTheRequested60TargetWithoutConstraints() {
         assertEquals(
             GameFrameRateTarget.FPS_60,

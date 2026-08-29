@@ -15,7 +15,8 @@ import org.json.JSONObject
 
 enum class GameFrameRateTarget(val wireName: String) {
     FPS_30("fps30"),
-    FPS_60("fps60");
+    FPS_60("fps60"),
+    HIGH_REFRESH("highRefresh");
 
     companion object {
         fun fromWireName(value: String?): GameFrameRateTarget? =
@@ -40,7 +41,12 @@ internal object GameFrameRateBridgeScript {
           const applyTarget = () => {
             const ticker = window.createjs && window.createjs.Ticker;
             if (!ticker) return false;
-            if (requestedTarget === 'fps30') {
+            if (requestedTarget === 'highRefresh') {
+              if (typeof ticker.RAF === 'undefined') return false;
+              if (ticker.timingMode !== ticker.RAF) {
+                ticker.timingMode = ticker.RAF;
+              }
+            } else if (requestedTarget === 'fps30') {
               if (ticker.framerate !== 30) ticker.framerate = 30;
               if (ticker.timingMode !== ticker.TIMEOUT) {
                 ticker.timingMode = ticker.TIMEOUT;
@@ -64,7 +70,8 @@ internal object GameFrameRateBridgeScript {
                 : event.data;
               if (data && (
                 data.target === 'fps30' ||
-                data.target === 'fps60'
+                data.target === 'fps60' ||
+                data.target === 'highRefresh'
               )) {
                 requestedTarget = data.target;
                 applyTarget();
