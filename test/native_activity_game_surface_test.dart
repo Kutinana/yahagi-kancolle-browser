@@ -421,6 +421,66 @@ void main() {
     expect(frameRatePort.appliedTargets.last, GameFrameRateTarget.fps60);
   });
 
+  testWidgets(
+    'native surface preserves manual modes across lifecycle changes',
+    (tester) async {
+      for (final entry in <GameFrameRateMode, GameFrameRateTarget>{
+        GameFrameRateMode.stable60: GameFrameRateTarget.fps60,
+        GameFrameRateMode.highRefresh: GameFrameRateTarget.highRefresh,
+      }.entries) {
+        final fixture = _SurfaceFixture();
+        final frameRateSettings = await GameFrameRateSettingsController.load(
+          MemoryGameFrameRateSettingsStore(entry.key),
+        );
+        final frameRatePort = _FakeNativeFrameRateRuntimePort();
+        addTearDown(() async {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          frameRateSettings.dispose();
+          await fixture.dispose();
+        });
+        await fixture.pump(
+          tester,
+          frameRateSettingsController: frameRateSettings,
+          frameRateRuntimePortFactory: () => frameRatePort,
+        );
+        await tester.pump();
+
+        fixture.port.addEvent(
+          _event(
+            'pageStarted',
+            generationId: 7,
+            url: 'https://osapi.dmm.com/game',
+          ),
+        );
+        fixture.port.addEvent(
+          _event(
+            'pageFinished',
+            generationId: 7,
+            url: 'https://osapi.dmm.com/game',
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
+        expect(frameRatePort.appliedTargets.last, entry.value);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        await tester.pump();
+        expect(frameRatePort.appliedTargets.last, entry.value);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(frameRatePort.appliedTargets.last, entry.value);
+      }
+    },
+  );
+
   testWidgets('native surface leaves the OOI mode choices untouched', (
     tester,
   ) async {
