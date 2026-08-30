@@ -37,6 +37,14 @@ class _FleetExportPageState extends State<FleetExportPage> {
     _exportText = _generateText();
   }
 
+  @override
+  void didUpdateWidget(covariant FleetExportPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.state.hasPortData && widget.state.hasPortData) {
+      _exportText = _generateText();
+    }
+  }
+
   String _generateText() => widget.state.hasPortData
       ? widget.exporter.exportJson(
           widget.state,

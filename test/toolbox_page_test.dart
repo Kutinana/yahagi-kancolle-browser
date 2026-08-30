@@ -70,6 +70,25 @@ void main() {
     },
   );
 
+  testWidgets('first port data replaces the waiting state automatically', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _testApp(const FleetExportPage(state: GameState())),
+    );
+    expect(find.text('等待母港数据'), findsOneWidget);
+
+    await tester.pumpWidget(
+      _testApp(
+        const FleetExportPage(
+          state: GameState(admiralLevel: 77, hasPortData: true),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('"hqlv":77'), findsOneWidget);
+  });
+
   testWidgets('copy writes the current text and reports success', (
     tester,
   ) async {
