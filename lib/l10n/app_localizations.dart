@@ -4617,6 +4617,114 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未知服务器'**
   String get senkaUnknownServer;
+
+  /// No description provided for @toolbox.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具箱'**
+  String get toolbox;
+
+  /// No description provided for @fleetExport.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰队导出'**
+  String get fleetExport;
+
+  /// No description provided for @otherTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get otherTools;
+
+  /// No description provided for @noro6.
+  ///
+  /// In zh, this message translates to:
+  /// **'noro6'**
+  String get noro6;
+
+  /// No description provided for @jervis.
+  ///
+  /// In zh, this message translates to:
+  /// **'Jervis'**
+  String get jervis;
+
+  /// No description provided for @exportToNoro6.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出至 noro6'**
+  String get exportToNoro6;
+
+  /// No description provided for @exportToJervis.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出至 Jervis'**
+  String get exportToJervis;
+
+  /// No description provided for @eventLandBasesOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅导出活动海域陆航'**
+  String get eventLandBasesOnly;
+
+  /// No description provided for @fleetExportText.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰队导出文本'**
+  String get fleetExportText;
+
+  /// No description provided for @deckBuilderV4.
+  ///
+  /// In zh, this message translates to:
+  /// **'DeckBuilder v4'**
+  String get deckBuilderV4;
+
+  /// No description provided for @refreshExportText.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get refreshExportText;
+
+  /// No description provided for @copyExportText.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制文本'**
+  String get copyExportText;
+
+  /// No description provided for @openInSystemBrowser.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用系统默认浏览器打开'**
+  String get openInSystemBrowser;
+
+  /// No description provided for @otherToolsComingSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他功能正在开发'**
+  String get otherToolsComingSoon;
+
+  /// No description provided for @otherToolsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'后续辅助工具会集中放在这里。'**
+  String get otherToolsHint;
+
+  /// No description provided for @externalFleetToolOpenFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法打开外部舰队工具，请检查是否已安装浏览器。'**
+  String get externalFleetToolOpenFailed;
+
+  /// No description provided for @fleetExportCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰队导出文本已复制。'**
+  String get fleetExportCopied;
+
+  /// No description provided for @fleetExportCopyFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制失败，请稍后重试。'**
+  String get fleetExportCopyFailed;
 }
 
 class _AppLocalizationsDelegate
