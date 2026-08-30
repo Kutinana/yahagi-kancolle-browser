@@ -457,4 +457,29 @@ void main() {
     await tester.tap(find.byKey(const Key('toolbox-mode-other')));
     expect(selectedMode, ToolboxMode.other);
   });
+
+  testWidgets('Japanese toolbox header fits a narrow workspace', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(300, 80);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      _localizedApp(
+        locale: const Locale('ja'),
+        home: const Scaffold(
+          body: WorkspaceContextHeader(
+            workspaceIndex: 10,
+            state: GameState(),
+            selectedFleetId: 1,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('toolbox-mode-tabs')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

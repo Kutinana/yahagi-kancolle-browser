@@ -330,6 +330,12 @@ List<String> normalizeWorkspaceMenuOrder(Iterable<String>? savedOrder) {
       normalized.add(id);
     }
   }
+  if (!normalized.contains('tools')) {
+    final settingsIndex = normalized.indexOf('settings');
+    if (settingsIndex >= 0) {
+      normalized.insert(settingsIndex, 'tools');
+    }
+  }
   for (final id in LayoutSettingsStore.defaultWorkspaceMenuOrder) {
     if (!normalized.contains(id)) normalized.add(id);
   }

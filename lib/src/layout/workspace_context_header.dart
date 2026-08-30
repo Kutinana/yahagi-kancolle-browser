@@ -323,23 +323,35 @@ class WorkspaceContextHeader extends StatelessWidget {
       );
     }
     if (workspaceIndex == 10) {
-      return Row(
-        children: [
-          Text(
-            l10n.toolbox,
-            key: const Key('workspace-title-tools'),
-            style: const TextStyle(
-              color: Color(0xffe0b25c),
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const Spacer(),
-          ToolboxModeTabs(
-            mode: toolboxMode,
-            onChanged: onToolboxModeChanged ?? (_) {},
-          ),
-        ],
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final showTitle = constraints.maxWidth >= 360;
+          return Row(
+            children: [
+              if (showTitle) ...[
+                Text(
+                  l10n.toolbox,
+                  key: const Key('workspace-title-tools'),
+                  style: const TextStyle(
+                    color: Color(0xffe0b25c),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: ToolboxModeTabs(
+                    mode: toolboxMode,
+                    onChanged: onToolboxModeChanged ?? (_) {},
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       );
     }
 

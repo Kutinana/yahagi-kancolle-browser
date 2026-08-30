@@ -34,7 +34,7 @@ class DeckBuilderExporter {
         ? state.landBases.where((base) => base.areaId >= 30)
         : state.landBases;
     var outputIndex = 1;
-    for (final base in landBases) {
+    for (final base in landBases.take(3)) {
       final items = <String, Object?>{};
       for (var index = 0; index < base.squadrons.length; index += 1) {
         final item = state.slotItems[base.squadrons[index].slotItemId];

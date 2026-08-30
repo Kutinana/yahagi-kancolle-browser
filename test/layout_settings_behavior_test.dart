@@ -122,6 +122,34 @@ void main() {
     },
   );
 
+  test(
+    'legacy complete menu inserts tools immediately before settings',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_workspace_menu_order': <String>[
+          'game',
+          'fleet',
+          'expedition',
+          'repair',
+          'construction',
+          'quests',
+          'senka',
+          'battle-records',
+          'owned-inventory',
+          'settings',
+        ],
+      });
+
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+
+      final toolsIndex = controller.workspaceMenuOrder.indexOf('tools');
+      expect(toolsIndex, controller.workspaceMenuOrder.indexOf('settings') - 1);
+      expect(controller.workspaceMenuOrder[toolsIndex - 1], 'owned-inventory');
+    },
+  );
+
   test('enhanced damage pulse defaults on and persists changes', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     var controller = await LayoutSettingsController.load(

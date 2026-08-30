@@ -1808,9 +1808,12 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             },
                           ),
                         if (_workspaceIndex == 10)
-                          ToolboxPage(
-                            state: widget.gameStateController.state,
-                            mode: _toolboxMode,
+                          AnimatedBuilder(
+                            animation: widget.gameStateController,
+                            builder: (context, _) => ToolboxPage(
+                              state: widget.gameStateController.state,
+                              mode: _toolboxMode,
+                            ),
                           ),
                       ],
                     ),

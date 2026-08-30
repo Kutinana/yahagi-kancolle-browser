@@ -130,12 +130,14 @@ void main() {
               LandBaseSquadronState(squadronId: 2, slotItemId: 602),
             ],
           ),
+          LandBaseState(areaId: 49, baseId: 1, name: 'Event C', actionKind: 1),
         ],
       );
 
       final eventOnly = const DeckBuilderExporter().exportMap(state);
 
-      expect(eventOnly.containsKey('a3'), isFalse);
+      expect((eventOnly['a3'] as Map)['mode'], 1);
+      expect(eventOnly.containsKey('a4'), isFalse);
       expect(eventOnly['a1'], <String, Object?>{
         'mode': 2,
         'items': <String, Object?>{
@@ -156,6 +158,7 @@ void main() {
       expect((all['a1'] as Map)['mode'], 1);
       expect((all['a2'] as Map)['mode'], 2);
       expect((all['a3'] as Map)['mode'], 0);
+      expect(all.containsKey('a4'), isFalse);
     });
   });
 }

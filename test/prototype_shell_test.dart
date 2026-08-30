@@ -183,7 +183,9 @@ void main() {
       _FakeScreenshotPort(),
     );
     final gameCaptureController = GameCaptureController();
-    final gameStateController = GameStateController();
+    final gameStateController = GameStateController(
+      reducer: _ToolboxStateReducer(),
+    );
     final battleController = BattleController(
       gameState: () => gameStateController.state,
     );
@@ -402,6 +404,18 @@ void main() {
     await tester.tap(find.byKey(const Key('workspace-nav-tools')));
     await tester.pumpAndSettle();
     expect(find.byType(ToolboxPage), findsOneWidget);
+    expect(find.text('等待母港数据'), findsOneWidget);
+    gameStateController.accept(
+      CapturedApiEvent(
+        path: '/toolbox-state-test',
+        responseBody: '{}',
+        source: CaptureSource.manual,
+        capturedAt: DateTime.utc(2026, 8, 31),
+      ),
+    );
+    await gameStateController.idle;
+    await tester.pumpAndSettle();
+    expect(find.textContaining('"hqlv":77'), findsOneWidget);
     await tester.tap(find.byKey(const Key('toolbox-mode-other')));
     await tester.pumpAndSettle();
     expect(find.text('其他功能正在开发'), findsOneWidget);
@@ -1094,6 +1108,12 @@ class _RepairNavigationReducer extends GameStateReducer {
     ],
     hasPortData: true,
   );
+}
+
+class _ToolboxStateReducer extends GameStateReducer {
+  @override
+  GameState reduce(GameState state, CapturedApiEvent event) =>
+      const GameState(admiralLevel: 77, hasPortData: true);
 }
 
 class _LifecycleProbe extends StatefulWidget {
