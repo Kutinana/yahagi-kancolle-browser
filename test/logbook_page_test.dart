@@ -611,13 +611,172 @@ void main() {
       find.byKey(const Key('logbook-table-sortie')),
     );
     expect(table.frozenColumnWidths, hasLength(1));
-    expect(table.scrollableColumnWidths, hasLength(12));
+    expect(table.scrollableColumnWidths, hasLength(16));
     expect(
       table.frozenColumnWidths.reduce((a, b) => a + b) +
           table.scrollableColumnWidths.reduce((a, b) => a + b),
-      greaterThanOrEqualTo(1376),
+      greaterThanOrEqualTo(1836),
     );
   });
+
+  testWidgets(
+    'sortie shows formation air state and separated heavy damage ships',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1400, 600);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+      await database.insertBattleRecord(
+        BattleRecord(
+          battle: const LiveBattle(
+            context: BattleContext(mapAreaId: 2, mapInfoNo: 3, node: 5),
+            friendFormation: 1,
+            enemyFormation: 5,
+            airSuperiority: '优势',
+            friendMain: [
+              BattleShipSnapshot(
+                masterId: 1,
+                name: '矢矧改二乙',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.main,
+                position: 0,
+                initialHp: 54,
+                maxHp: 54,
+                currentHp: 10,
+              ),
+              BattleShipSnapshot(
+                masterId: 2,
+                name: '雪风改二',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.main,
+                position: 1,
+                initialHp: 35,
+                maxHp: 35,
+                currentHp: 8,
+              ),
+            ],
+            friendEscort: [
+              BattleShipSnapshot(
+                masterId: 3,
+                name: '时雨改三特别作战型',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.escort,
+                position: 0,
+                initialHp: 36,
+                maxHp: 36,
+                currentHp: 9,
+              ),
+              BattleShipSnapshot(
+                masterId: 4,
+                name: '最上改二特航空巡洋舰',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.escort,
+                position: 1,
+                initialHp: 60,
+                maxHp: 60,
+                currentHp: 15,
+              ),
+            ],
+          ),
+          completedAt: DateTime.utc(2026, 8, 30, 12),
+        ),
+        mapName: '东部奥廖尔海',
+      );
+      final controller = BattleController(gameState: () => GameState.empty);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LogbookPage(battleController: controller, database: database),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final header in ['我方阵形', '敌方阵形', '制空状态', '大破舰娘']) {
+        expect(find.text(header), findsOneWidget);
+      }
+      expect(find.text('单纵阵'), findsOneWidget);
+      expect(find.text('单横阵'), findsOneWidget);
+      expect(find.text('优势'), findsOneWidget);
+      expect(find.text('矢矧改二乙、雪风改二、时雨改三特别作战型、最上改二特航空巡洋舰'), findsOneWidget);
+
+      final friendFormation = tester.widget<DecoratedBox>(
+        find.byKey(const Key('logbook-friend-formation-pill')),
+      );
+      final friendDecoration = friendFormation.decoration as BoxDecoration;
+      expect(friendDecoration.color, const Color(0xff183e38));
+      expect(friendDecoration.border!.top.color, const Color(0xff2f7469));
+      expect(
+        tester
+            .widget<Text>(
+              find.descendant(
+                of: find.byKey(const Key('logbook-friend-formation-pill')),
+                matching: find.text('单纵阵'),
+              ),
+            )
+            .style
+            ?.color,
+        const Color(0xff83d5c8),
+      );
+
+      final enemyFormation = tester.widget<DecoratedBox>(
+        find.byKey(const Key('logbook-enemy-formation-pill')),
+      );
+      final enemyDecoration = enemyFormation.decoration as BoxDecoration;
+      expect(enemyDecoration.color, const Color(0xff46211e));
+      expect(enemyDecoration.border!.top.color, const Color(0xffa0453a));
+      expect(
+        tester
+            .widget<Text>(
+              find.descendant(
+                of: find.byKey(const Key('logbook-enemy-formation-pill')),
+                matching: find.text('单横阵'),
+              ),
+            )
+            .style
+            ?.color,
+        const Color(0xffff8c78),
+      );
+
+      final airState = tester.widget<DecoratedBox>(
+        find.byKey(const Key('logbook-air-superiority-pill')),
+      );
+      final airDecoration = airState.decoration as BoxDecoration;
+      expect(airDecoration.color, const Color(0xff183e38));
+      expect(airDecoration.border!.top.color, const Color(0xff2f7469));
+      expect(
+        tester
+            .widget<Text>(
+              find.descendant(
+                of: find.byKey(const Key('logbook-air-superiority-pill')),
+                matching: find.text('优势'),
+              ),
+            )
+            .style
+            ?.color,
+        const Color(0xff83d5c8),
+      );
+
+      final table = tester.widget<FrozenDataTable>(
+        find.byKey(const Key('logbook-table-sortie')),
+      );
+      expect(table.scrollableColumnWidths, hasLength(16));
+      expect(table.scrollableColumnWidths.sublist(3, 7), const <double>[
+        96,
+        96,
+        102,
+        166,
+      ]);
+      expect(
+        table.rowHeights.first,
+        greaterThan(FrozenDataTable.minimumRowHeight),
+      );
+    },
+  );
 
   testWidgets('logbook keeps only the filter icon button', (tester) async {
     final database = await LogbookDatabase.openForTesting();

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../battle/battle_controller.dart';
+import '../battle/battle_pills.dart';
 import '../fleet/equipment_type_icon.dart';
 import '../fleet/header_resource_catalog.dart';
 import '../fleet/resource_trend_page.dart';
@@ -663,14 +664,29 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
           scrollableColumnWidths: spec.widths,
           scrollableHeaders: spec.headers,
           scrollableCells: (index) => spec.cells(rows[index]),
-          rowHeights: List<double>.filled(
-            rows.length,
-            FrozenDataTable.minimumRowHeight,
-          ),
+          rowHeights: [for (final row in rows) _rowHeight(row, context)],
           onEndReached: _loadMore,
         );
       },
     );
+  }
+
+  double _rowHeight(Map<String, dynamic> row, BuildContext context) {
+    if (widget.category != _LogbookCategory.sortie ||
+        row['record_type'] != 'battle') {
+      return FrozenDataTable.minimumRowHeight;
+    }
+    final label = _heavyDamageShipNames(row).join('、');
+    if (label.isEmpty) return FrozenDataTable.minimumRowHeight;
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: _heavyDamageTextStyle),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: 166 - 12);
+    final measuredHeight = painter.height + 12;
+    return measuredHeight > FrozenDataTable.minimumRowHeight
+        ? measuredHeight
+        : FrozenDataTable.minimumRowHeight;
   }
 
   List<double> get _frozenColumnWidths => switch (widget.category) {
@@ -717,7 +733,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       final scrollableWidth = availableWidth - 220;
       final baseWidth = widths.fold<double>(0, (sum, width) => sum + width);
       if (scrollableWidth > baseWidth) {
-        widths[4] += scrollableWidth - baseWidth;
+        widths[8] += scrollableWidth - baseWidth;
       }
       return _TableSpec(
         widths: widths,
@@ -783,11 +799,32 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
 
   _TableSpec get _tableSpec => switch (widget.category) {
     _LogbookCategory.sortie => _TableSpec(
-      widths: const [112, 90, 85, 68, 180, 120, 145, 220, 135, 135, 135, 135],
+      widths: const [
+        112,
+        90,
+        85,
+        96,
+        96,
+        102,
+        166,
+        68,
+        180,
+        120,
+        145,
+        220,
+        135,
+        135,
+        135,
+        135,
+      ],
       headers: [
         const _HeaderCell('时间'),
         const _HeaderCell('节点'),
         const _HeaderCell('状态'),
+        const _HeaderCell('我方阵形'),
+        const _HeaderCell('敌方阵形'),
+        const _HeaderCell('制空状态'),
+        const _HeaderCell('大破舰娘'),
         const _HeaderCell('评价'),
         const _HeaderCell('敌舰队'),
         const _HeaderCell('掉落'),
@@ -812,6 +849,16 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
                 ),
         ),
         _TextCell(_sortieStatus(row), strong: true),
+        _FormationCell(
+          formation: _rowInt(row['friend_formation']),
+          friendly: true,
+        ),
+        _FormationCell(
+          formation: _rowInt(row['enemy_formation']),
+          friendly: false,
+        ),
+        _AirSuperiorityCell(row),
+        _HeavyDamageCell(row),
         _RankCell('${row['rank']}'),
         _TextCell(
           ((row['map_area'] as int? ?? 0) == 0 &&
@@ -1101,6 +1148,141 @@ class _TextCell extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _FormationCell extends StatelessWidget {
+  const _FormationCell({required this.formation, required this.friendly});
+
+  final int formation;
+  final bool friendly;
+
+  @override
+  Widget build(BuildContext context) {
+    if (formation <= 0) return const _TextCell('-');
+    return _SortieSummaryPill(
+      pillKey: Key(
+        friendly
+            ? 'logbook-friend-formation-pill'
+            : 'logbook-enemy-formation-pill',
+      ),
+      label: formationLabel(formation),
+      background: friendly ? const Color(0xff183e38) : const Color(0xff46211e),
+      foreground: friendly ? const Color(0xff83d5c8) : const Color(0xffff8c78),
+      border: friendly ? const Color(0xff2f7469) : const Color(0xffa0453a),
+    );
+  }
+}
+
+class _AirSuperiorityCell extends StatelessWidget {
+  const _AirSuperiorityCell(this.row);
+
+  final Map<String, dynamic> row;
+
+  @override
+  Widget build(BuildContext context) {
+    if (row['record_type'] != 'battle') return const _TextCell('-');
+    final label = row['air_superiority']?.toString().trim();
+    final displayLabel = label == null || label.isEmpty ? '未知' : label;
+    final colors = airSuperiorityPillColors(displayLabel);
+    return _SortieSummaryPill(
+      pillKey: const Key('logbook-air-superiority-pill'),
+      label: displayLabel,
+      background: colors.background,
+      foreground: colors.foreground,
+      border: colors.border,
+    );
+  }
+}
+
+class _SortieSummaryPill extends StatelessWidget {
+  const _SortieSummaryPill({
+    required this.pillKey,
+    required this.label,
+    required this.background,
+    required this.foreground,
+    required this.border,
+  });
+
+  final Key pillKey;
+  final String label;
+  final Color background;
+  final Color foreground;
+  final Color border;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        key: pillKey,
+        decoration: BoxDecoration(
+          color: background,
+          border: Border.all(color: border),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: SizedBox(
+          height: 22,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(
+              child: Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+const _heavyDamageTextStyle = TextStyle(
+  color: Color(0xffff8c78),
+  fontSize: 12,
+  fontWeight: FontWeight.w900,
+  fontFeatures: [FontFeature.tabularFigures()],
+);
+
+class _HeavyDamageCell extends StatelessWidget {
+  const _HeavyDamageCell(this.row);
+
+  final Map<String, dynamic> row;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _heavyDamageShipNames(row).join('、');
+    if (label.isEmpty) return const _TextCell('-');
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(label, softWrap: true, style: _heavyDamageTextStyle),
+      ),
+    );
+  }
+}
+
+List<String> _heavyDamageShipNames(Map<String, dynamic> row) {
+  if (row['record_type'] != 'battle') return const <String>[];
+  final encoded = row['heavy_damage_ship_names_json']?.toString() ?? '[]';
+  try {
+    final decoded = jsonDecode(encoded);
+    if (decoded is! List) return const <String>[];
+    return decoded
+        .whereType<String>()
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toList(growable: false);
+  } catch (_) {
+    return const <String>[];
+  }
 }
 
 class _ResultCell extends StatelessWidget {
