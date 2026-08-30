@@ -93,4 +93,3 @@
 6. 检查 `git diff --check`、`git status --short` 和提交历史，确保未提交忽略夹具或无关文件。
 7. 如验证促成修复，提交：`test(工具箱): 完善舰队导出回归验证（任务 5/5）`。
 8. 使用 `verification-before-completion` 和 `finishing-a-development-branch` 完成最终核验与分支交付。
-
