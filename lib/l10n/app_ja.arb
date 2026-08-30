@@ -567,6 +567,12 @@
   "battleEnemyPreviewPortraitsDesc": "戦闘予測の詳細モードでのみ表示します。",
   "battleLastFormationHint": "前回選択した陣形を表示",
   "battleLastFormationHintDesc": "出撃マス到達時に、そのマスで前回使用した陣形を戦闘予測に表示します。",
+  "battleLastFormation": "前回：{formation}",
+  "@battleLastFormation": {
+    "placeholders": {
+      "formation": {"type": "String"}
+    }
+  },
   "improvementDatasetTitle": "改修計画データ",
   "improvementDatasetVersion": "データバージョン {version}",
   "@improvementDatasetVersion": {"placeholders": {"version": {"type": "String"}}},

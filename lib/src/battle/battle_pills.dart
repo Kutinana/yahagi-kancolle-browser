@@ -441,6 +441,24 @@ class MetaChip extends StatelessWidget {
   }
 }
 
+class LastFormationPill extends StatelessWidget {
+  const LastFormationPill({super.key, required this.formation});
+
+  final int formation;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    return MetaChip(
+      key: const Key('battle-last-formation-pill'),
+      label: l10n.battleLastFormation(formationLabel(formation)),
+      color: const Color(0xffffc95c),
+    );
+  }
+}
+
 class BattleRankBadge extends StatelessWidget {
   const BattleRankBadge({
     super.key,

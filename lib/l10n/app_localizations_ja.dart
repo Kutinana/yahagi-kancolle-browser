@@ -1643,6 +1643,11 @@ class AppLocalizationsJa extends AppLocalizations {
       '出撃マス到達時に、そのマスで前回使用した陣形を戦闘予測に表示します。';
 
   @override
+  String battleLastFormation(String formation) {
+    return '前回：$formation';
+  }
+
+  @override
   String get improvementDatasetTitle => '改修計画データ';
 
   @override

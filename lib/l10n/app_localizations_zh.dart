@@ -1631,6 +1631,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get battleLastFormationHintDesc => '到达出击节点时，在未卜先知中提示该点上次使用的阵形。';
 
   @override
+  String battleLastFormation(String formation) {
+    return '上次：$formation';
+  }
+
+  @override
   String get improvementDatasetTitle => '改修规划资料';
 
   @override
@@ -4069,6 +4074,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get battleLastFormationHintDesc => '抵達出擊節點時，在未卜先知中提示該點上次使用的陣形。';
+
+  @override
+  String battleLastFormation(String formation) {
+    return '上次：$formation';
+  }
 
   @override
   String get improvementDatasetTitle => '改修規劃資料';

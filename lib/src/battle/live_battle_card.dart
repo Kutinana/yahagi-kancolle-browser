@@ -24,6 +24,7 @@ class LiveBattleCard extends StatefulWidget {
     required this.onToggleCollapse,
     this.damagePulseMode = DamagePulseMode.enhanced,
     this.showEnemyPortraits = true,
+    this.showLastFormationHint = true,
   });
 
   final BattleController controller;
@@ -31,6 +32,7 @@ class LiveBattleCard extends StatefulWidget {
   final VoidCallback onToggleCollapse;
   final DamagePulseMode damagePulseMode;
   final bool showEnemyPortraits;
+  final bool showLastFormationHint;
 
   @override
   State<LiveBattleCard> createState() => _LiveBattleCardState();
@@ -93,12 +95,14 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
                   gameState: widget.controller.gameStateSnapshot,
                   damagePulseMode: widget.damagePulseMode,
                   showEnemyPortraits: widget.showEnemyPortraits,
+                  showLastFormationHint: widget.showLastFormationHint,
                 )
               else
                 _CompactBattlePanel(
                   battle: battle,
                   gameState: widget.controller.gameStateSnapshot,
                   damagePulseMode: widget.damagePulseMode,
+                  showLastFormationHint: widget.showLastFormationHint,
                 ),
             ],
           ),
@@ -188,11 +192,13 @@ class _CompactBattlePanel extends StatelessWidget {
     required this.battle,
     required this.gameState,
     required this.damagePulseMode,
+    required this.showLastFormationHint,
   });
 
   final LiveBattle battle;
   final GameState gameState;
   final DamagePulseMode damagePulseMode;
+  final bool showLastFormationHint;
 
   @override
   Widget build(BuildContext context) {
@@ -229,6 +235,8 @@ class _CompactBattlePanel extends StatelessWidget {
                 runSpacing: 4,
                 alignment: WrapAlignment.end,
                 children: <Widget>[
+                  if (showLastFormationHint && battle.lastFormation != null)
+                    LastFormationPill(formation: battle.lastFormation!),
                   if (battle.resourceChanges.isNotEmpty)
                     ResourceChangesPill(changes: battle.resourceChanges),
                   if (battle.rewardItems.isNotEmpty)

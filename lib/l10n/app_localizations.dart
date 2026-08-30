@@ -3167,6 +3167,12 @@ abstract class AppLocalizations {
   /// **'到达出击节点时，在未卜先知中提示该点上次使用的阵形。'**
   String get battleLastFormationHintDesc;
 
+  /// No description provided for @battleLastFormation.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次：{formation}'**
+  String battleLastFormation(String formation);
+
   /// No description provided for @improvementDatasetTitle.
   ///
   /// In zh, this message translates to:

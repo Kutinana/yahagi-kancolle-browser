@@ -18,12 +18,14 @@ class DetailedBattlePanel extends StatelessWidget {
     required this.gameState,
     this.damagePulseMode = DamagePulseMode.enhanced,
     this.showEnemyPortraits = true,
+    this.showLastFormationHint = true,
   });
 
   final LiveBattle battle;
   final GameState gameState;
   final DamagePulseMode damagePulseMode;
   final bool showEnemyPortraits;
+  final bool showLastFormationHint;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,10 @@ class DetailedBattlePanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (navigation)
-          _NavigationOverview(battle: battle)
+          _NavigationOverview(
+            battle: battle,
+            showLastFormationHint: showLastFormationHint,
+          )
         else
           _BattleOverview(battle: battle, gameState: gameState),
         if (navigation && enemyPreviewShips.isNotEmpty) ...[
@@ -144,9 +149,13 @@ class _FleetColumn extends StatelessWidget {
 }
 
 class _NavigationOverview extends StatelessWidget {
-  const _NavigationOverview({required this.battle});
+  const _NavigationOverview({
+    required this.battle,
+    required this.showLastFormationHint,
+  });
 
   final LiveBattle battle;
+  final bool showLastFormationHint;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +194,8 @@ class _NavigationOverview extends StatelessWidget {
               runSpacing: 4,
               alignment: WrapAlignment.end,
               children: [
+                if (showLastFormationHint && battle.lastFormation != null)
+                  LastFormationPill(formation: battle.lastFormation!),
                 if (battle.context.combinedFleetType != CombinedFleetType.none)
                   MetaChip(
                     label: battle.context.combinedFleetType.label,

@@ -7,6 +7,7 @@ import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_node_label_resolver.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_pills.dart';
 import 'package:yahagi_kancolle_browser/src/battle/detailed_battle_panel.dart';
+import 'package:yahagi_kancolle_browser/src/battle/formation_memory.dart';
 import 'package:yahagi_kancolle_browser/src/battle/live_battle_card.dart';
 import 'package:yahagi_kancolle_browser/src/battle/official_enemy_preview.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
@@ -19,13 +20,16 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
-BattleController _createController() {
+BattleController _createController({
+  FormationMemoryController? formationMemory,
+}) {
   final reducer = GameStateReducer();
   var state = reducer.reduce(GameState.empty, start2Event);
   state = reducer.reduce(state, portEvent);
   return BattleController(
     gameState: () => state,
     predictionExecutor: const _InlinePredictionExecutor(),
+    formationMemory: formationMemory,
   );
 }
 
@@ -100,6 +104,7 @@ Future<void> _pumpCard(
   bool compact = false,
   double? width,
   bool showEnemyPortraits = true,
+  bool showLastFormationHint = true,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -111,6 +116,7 @@ Future<void> _pumpCard(
             collapsed: false,
             onToggleCollapse: () {},
             showEnemyPortraits: showEnemyPortraits,
+            showLastFormationHint: showLastFormationHint,
           ),
         ),
       ),
@@ -423,6 +429,66 @@ void main() {
     expect(find.text('我方舰队'), findsOneWidget);
     expect(find.text('夕張'), findsOneWidget);
     expect(find.text('28 / 30'), findsOneWidget);
+  });
+
+  testWidgets('last formation appears in detailed and compact navigation', (
+    tester,
+  ) async {
+    final memory = await FormationMemoryController.load(
+      MemoryFormationMemoryStore(<String, int>{'1-1-1': 5}),
+    );
+    final controller = _createController(formationMemory: memory);
+    addTearDown(controller.dispose);
+    controller.accept(mapStartEvent);
+    await controller.idle;
+
+    await _pumpCard(tester, controller);
+
+    expect(find.byKey(const Key('battle-last-formation-pill')), findsOneWidget);
+    expect(find.text('上次：单横阵'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('battle-mode-compact')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('battle-last-formation-pill')), findsOneWidget);
+    expect(find.text('上次：单横阵'), findsOneWidget);
+  });
+
+  testWidgets('combined formation name appears in the navigation hint', (
+    tester,
+  ) async {
+    final memory = await FormationMemoryController.load(
+      MemoryFormationMemoryStore(<String, int>{'1-1-1': 14}),
+    );
+    final controller = _createController(formationMemory: memory);
+    addTearDown(controller.dispose);
+    controller.accept(mapStartEvent);
+    await controller.idle;
+
+    await _pumpCard(tester, controller);
+
+    expect(find.text('上次：第四警戒'), findsOneWidget);
+  });
+
+  testWidgets('last formation hint is hidden when disabled or battle starts', (
+    tester,
+  ) async {
+    final memory = await FormationMemoryController.load(
+      MemoryFormationMemoryStore(<String, int>{'1-1-1': 5}),
+    );
+    final controller = _createController(formationMemory: memory);
+    addTearDown(controller.dispose);
+    controller.accept(mapStartEvent);
+    await controller.idle;
+
+    await _pumpCard(tester, controller, showLastFormationHint: false);
+    expect(find.byKey(const Key('battle-last-formation-pill')), findsNothing);
+
+    controller.accept(dayBattleEvent);
+    await controller.idle;
+    await _pumpCard(tester, controller);
+
+    expect(find.byKey(const Key('battle-last-formation-pill')), findsNothing);
   });
 
   testWidgets('forecast omits the point suffix from mapped node labels', (
