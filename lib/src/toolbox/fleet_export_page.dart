@@ -195,7 +195,6 @@ class _FleetExportPageState extends State<FleetExportPage> {
                   key: const Key('fleet-export-text'),
                   style: const TextStyle(
                     color: Color(0xffc4d4dc),
-                    fontFamily: 'monospace',
                     fontSize: 12,
                     height: 1.45,
                   ),
