@@ -845,6 +845,7 @@
   "exportToNoro6": "noro6 へエクスポート",
   "exportToJervis": "Jervis へエクスポート",
   "eventLandBasesOnly": "イベント海域の基地航空隊のみ出力",
+  "landBaseExportLimitHint": "DeckBuilder は一度に最大3隊まで対応します。絞り込みを解除した場合は取得順の先頭3隊を出力します。",
   "fleetExportText": "艦隊エクスポートテキスト",
   "deckBuilderV4": "DeckBuilder v4",
   "refreshExportText": "更新",

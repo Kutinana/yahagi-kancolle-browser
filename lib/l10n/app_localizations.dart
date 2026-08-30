@@ -4666,6 +4666,12 @@ abstract class AppLocalizations {
   /// **'仅导出活动海域陆航'**
   String get eventLandBasesOnly;
 
+  /// No description provided for @landBaseExportLimitHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'DeckBuilder 每次最多支持 3 队；关闭筛选时按已捕获顺序导出前 3 队。'**
+  String get landBaseExportLimitHint;
+
   /// No description provided for @fleetExportText.
   ///
   /// In zh, this message translates to:

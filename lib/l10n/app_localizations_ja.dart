@@ -2484,6 +2484,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eventLandBasesOnly => 'イベント海域の基地航空隊のみ出力';
 
   @override
+  String get landBaseExportLimitHint =>
+      'DeckBuilder は一度に最大3隊まで対応します。絞り込みを解除した場合は取得順の先頭3隊を出力します。';
+
+  @override
   String get fleetExportText => '艦隊エクスポートテキスト';
 
   @override

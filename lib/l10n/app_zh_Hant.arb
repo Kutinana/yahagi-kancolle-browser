@@ -845,6 +845,7 @@
   "exportToNoro6": "匯出至 noro6",
   "exportToJervis": "匯出至 Jervis",
   "eventLandBasesOnly": "僅匯出活動海域陸航",
+  "landBaseExportLimitHint": "DeckBuilder 每次最多支援 3 隊；關閉篩選時依擷取順序匯出前 3 隊。",
   "fleetExportText": "艦隊匯出文字",
   "deckBuilderV4": "DeckBuilder v4",
   "refreshExportText": "重新整理",

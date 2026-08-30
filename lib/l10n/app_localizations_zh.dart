@@ -2461,6 +2461,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eventLandBasesOnly => '仅导出活动海域陆航';
 
   @override
+  String get landBaseExportLimitHint =>
+      'DeckBuilder 每次最多支持 3 队；关闭筛选时按已捕获顺序导出前 3 队。';
+
+  @override
   String get fleetExportText => '舰队导出文本';
 
   @override
@@ -4947,6 +4951,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get eventLandBasesOnly => '僅匯出活動海域陸航';
+
+  @override
+  String get landBaseExportLimitHint =>
+      'DeckBuilder 每次最多支援 3 隊；關閉篩選時依擷取順序匯出前 3 隊。';
 
   @override
   String get fleetExportText => '艦隊匯出文字';

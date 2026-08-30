@@ -144,6 +144,15 @@ class _FleetExportPageState extends State<FleetExportPage> {
                   },
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.landBaseExportLimitHint,
+                style: const TextStyle(
+                  color: Color(0xff8fa5b2),
+                  fontSize: 11,
+                  height: 1.35,
+                ),
+              ),
             ],
           ),
         );

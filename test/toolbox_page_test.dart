@@ -28,6 +28,10 @@ void main() {
     expect(find.text('导出至 noro6'), findsOneWidget);
     expect(find.text('导出至 Jervis'), findsOneWidget);
     expect(find.text('仅导出活动海域陆航'), findsOneWidget);
+    expect(
+      find.text('DeckBuilder 每次最多支持 3 队；关闭筛选时按已捕获顺序导出前 3 队。'),
+      findsOneWidget,
+    );
     expect(find.textContaining('"version":4'), findsOneWidget);
     expect(find.text('4 支'), findsNothing);
     expect(find.text('18 艘'), findsNothing);
