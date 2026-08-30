@@ -111,6 +111,7 @@ import 'src/settings/settings_page.dart';
 import 'src/settings/release_check_service.dart';
 import 'src/settings/startup_update_notice.dart';
 import 'src/settings/screen_awake_controller.dart';
+import 'src/toolbox/toolbox_page.dart';
 import 'src/settings/background_game_retention_controller.dart';
 import 'src/settings/battle_prediction_settings.dart';
 import 'src/settings/game_frame_rate_settings.dart';
@@ -962,6 +963,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   ConstructionCenterMode _constructionCenterMode =
       ConstructionCenterMode.construction;
   SenkaCenterMode _senkaCenterMode = SenkaCenterMode.info;
+  ToolboxMode _toolboxMode = ToolboxMode.fleetExport;
   BackgroundGameRetentionCoordinator? _backgroundGameRetentionCoordinator;
 
   @override
@@ -1383,6 +1385,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     senkaMode: _senkaCenterMode,
                                     onSenkaModeChanged: (mode) {
                                       setState(() => _senkaCenterMode = mode);
+                                    },
+                                    toolboxMode: _toolboxMode,
+                                    onToolboxModeChanged: (mode) {
+                                      setState(() => _toolboxMode = mode);
                                     },
                                   ),
                                 ),
@@ -1806,6 +1812,14 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                               _selectWorkspace(6);
                             },
                           ),
+                        if (_workspaceIndex == 10)
+                          AnimatedBuilder(
+                            animation: widget.gameStateController,
+                            builder: (context, _) => ToolboxPage(
+                              state: widget.gameStateController.state,
+                              mode: _toolboxMode,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -1952,6 +1966,12 @@ Map<String, _WorkspaceDestination> _workspaceDestinations(
     pageIndex: 7,
     icon: Icons.inventory_2_outlined,
     label: l10n.ownedInventory,
+  ),
+  'tools': _WorkspaceDestination(
+    id: 'tools',
+    pageIndex: 10,
+    icon: Icons.handyman_outlined,
+    label: l10n.toolbox,
   ),
   'settings': _WorkspaceDestination(
     id: 'settings',

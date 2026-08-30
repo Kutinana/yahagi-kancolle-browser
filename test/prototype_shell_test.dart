@@ -42,6 +42,7 @@ import 'package:yahagi_kancolle_browser/src/fleet/land_base_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/repair_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/logbook/logbook_page.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
+import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
@@ -199,7 +200,9 @@ void main() {
       _FakeScreenshotPort(),
     );
     final gameCaptureController = GameCaptureController();
-    final gameStateController = GameStateController();
+    final gameStateController = GameStateController(
+      reducer: _ToolboxStateReducer(),
+    );
     final battleController = BattleController(
       gameState: () => gameStateController.state,
     );
@@ -411,9 +414,28 @@ void main() {
       'workspace-nav-quests',
       'workspace-nav-senka',
       'workspace-nav-battle-records',
+      'workspace-nav-tools',
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget);
     }
+    await tester.tap(find.byKey(const Key('workspace-nav-tools')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ToolboxPage), findsOneWidget);
+    expect(find.text('等待母港数据'), findsOneWidget);
+    gameStateController.accept(
+      CapturedApiEvent(
+        path: '/toolbox-state-test',
+        responseBody: '{}',
+        source: CaptureSource.manual,
+        capturedAt: DateTime.utc(2026, 8, 31),
+      ),
+    );
+    await gameStateController.idle;
+    await tester.pumpAndSettle();
+    expect(find.textContaining('"hqlv":77'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('toolbox-mode-other')));
+    await tester.pumpAndSettle();
+    expect(find.text('其他功能正在开发'), findsOneWidget);
     gameCaptureController.dispose();
     gameStateController.dispose();
     battleController.dispose();
@@ -1103,6 +1125,12 @@ class _RepairNavigationReducer extends GameStateReducer {
     ],
     hasPortData: true,
   );
+}
+
+class _ToolboxStateReducer extends GameStateReducer {
+  @override
+  GameState reduce(GameState state, CapturedApiEvent event) =>
+      const GameState(admiralLevel: 77, hasPortData: true);
 }
 
 class _LifecycleProbe extends StatefulWidget {

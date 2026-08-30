@@ -65,6 +65,10 @@ void main() {
         controller.workspaceMenuOrder,
         LayoutSettingsStore.defaultWorkspaceMenuOrder,
       );
+      expect(
+        controller.workspaceMenuOrder,
+        containsAllInOrder(<String>['owned-inventory', 'tools', 'settings']),
+      );
 
       await controller.reorderWorkspaceMenu(0, 1);
       expect(controller.workspaceMenuOrder.take(2), <String>['fleet', 'game']);
@@ -114,6 +118,35 @@ void main() {
         controller.workspaceMenuOrder,
         hasLength(LayoutSettingsStore.defaultWorkspaceMenuOrder.length),
       );
+      expect(controller.workspaceMenuOrder, contains('tools'));
+    },
+  );
+
+  test(
+    'legacy complete menu inserts tools immediately before settings',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_workspace_menu_order': <String>[
+          'game',
+          'fleet',
+          'expedition',
+          'repair',
+          'construction',
+          'quests',
+          'senka',
+          'battle-records',
+          'owned-inventory',
+          'settings',
+        ],
+      });
+
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+
+      final toolsIndex = controller.workspaceMenuOrder.indexOf('tools');
+      expect(toolsIndex, controller.workspaceMenuOrder.indexOf('settings') - 1);
+      expect(controller.workspaceMenuOrder[toolsIndex - 1], 'owned-inventory');
     },
   );
 

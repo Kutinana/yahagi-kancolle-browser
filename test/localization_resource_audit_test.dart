@@ -210,6 +210,13 @@ void main() {
       'senkaRewardCompleted',
       'senkaToday',
       'senkaUpdated',
+      // Product names and the toolbox's generic labels intentionally keep
+      // the same established spelling in both Chinese scripts.
+      'toolbox',
+      'otherTools',
+      'noro6',
+      'jervis',
+      'deckBuilderV4',
     };
     const reviewedJa = <String>{
       'appTitle',
@@ -264,6 +271,10 @@ void main() {
       'senkaResult',
       'senkaToday',
       'senkaUpdated',
+      // Third-party product and interchange-format names are untranslated.
+      'noro6',
+      'jervis',
+      'deckBuilderV4',
     };
 
     Set<String> identical(String locale) {

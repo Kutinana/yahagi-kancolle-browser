@@ -832,7 +832,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get unknownProgress => '進行度不明';
 
   @override
-  String get waitingForPortData => '母港データ待機中';
+  String get waitingForPortData => '母港データを待っています';
 
   @override
   String get waitingForPortDataDescription => '母港に移動するかリロードすると更新されます';
@@ -2470,4 +2470,63 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get senkaUnknownServer => '不明なサーバー';
+
+  @override
+  String get toolbox => 'ツールボックス';
+
+  @override
+  String get fleetExport => '艦隊エクスポート';
+
+  @override
+  String get otherTools => 'その他';
+
+  @override
+  String get noro6 => 'noro6';
+
+  @override
+  String get jervis => 'Jervis';
+
+  @override
+  String get exportToNoro6 => 'noro6 へエクスポート';
+
+  @override
+  String get exportToJervis => 'Jervis へエクスポート';
+
+  @override
+  String get eventLandBasesOnly => 'イベント海域の基地航空隊のみ出力';
+
+  @override
+  String get landBaseExportLimitHint =>
+      'DeckBuilder は一度に最大3隊まで対応します。絞り込みを解除した場合は取得順の先頭3隊を出力します。';
+
+  @override
+  String get fleetExportText => '艦隊エクスポートテキスト';
+
+  @override
+  String get deckBuilderV4 => 'DeckBuilder v4';
+
+  @override
+  String get refreshExportText => '更新';
+
+  @override
+  String get copyExportText => 'テキストをコピー';
+
+  @override
+  String get openInSystemBrowser => 'システムの既定ブラウザーで開く';
+
+  @override
+  String get otherToolsComingSoon => 'その他の機能は開発中です';
+
+  @override
+  String get otherToolsHint => '今後の補助ツールはここに追加されます。';
+
+  @override
+  String get externalFleetToolOpenFailed =>
+      '外部艦隊ツールを開けません。ブラウザーがインストールされているか確認してください。';
+
+  @override
+  String get fleetExportCopied => '艦隊エクスポートテキストをコピーしました。';
+
+  @override
+  String get fleetExportCopyFailed => 'コピーできませんでした。しばらくしてからもう一度お試しください。';
 }

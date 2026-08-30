@@ -7,6 +7,7 @@ import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart
 import 'package:yahagi_kancolle_browser/src/quest/quest_center_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
+import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
 
 Widget _localizedApp({required Widget home, Locale? locale}) => MaterialApp(
   locale: locale,
@@ -425,5 +426,60 @@ void main() {
 
     await tester.tap(find.byKey(const Key('logbook-tab-expedition')));
     expect(selectedTab, 1);
+  });
+
+  testWidgets('toolbox puts its mode switch in the top right', (tester) async {
+    ToolboxMode? selectedMode;
+    await tester.pumpWidget(
+      _localizedApp(
+        home: Scaffold(
+          body: WorkspaceContextHeader(
+            workspaceIndex: 10,
+            state: const GameState(),
+            selectedFleetId: 1,
+            toolboxMode: ToolboxMode.fleetExport,
+            onToolboxModeChanged: (value) => selectedMode = value,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('workspace-title-tools')), findsOneWidget);
+    expect(find.text('工具箱'), findsOneWidget);
+    expect(find.byKey(const Key('toolbox-mode-tabs')), findsOneWidget);
+    expect(find.text('舰队导出'), findsOneWidget);
+    expect(find.text('其他'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('toolbox-mode-tabs'))).height,
+      38,
+    );
+
+    await tester.tap(find.byKey(const Key('toolbox-mode-other')));
+    expect(selectedMode, ToolboxMode.other);
+  });
+
+  testWidgets('Japanese toolbox header fits a narrow workspace', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(300, 80);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      _localizedApp(
+        locale: const Locale('ja'),
+        home: const Scaffold(
+          body: WorkspaceContextHeader(
+            workspaceIndex: 10,
+            state: GameState(),
+            selectedFleetId: 1,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('toolbox-mode-tabs')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

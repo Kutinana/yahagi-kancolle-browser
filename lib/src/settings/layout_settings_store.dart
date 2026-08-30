@@ -31,6 +31,7 @@ abstract class LayoutSettingsStore {
     'senka',
     'battle-records',
     'owned-inventory',
+    'tools',
     'settings',
   ];
 
@@ -327,6 +328,12 @@ List<String> normalizeWorkspaceMenuOrder(Iterable<String>? savedOrder) {
   for (final id in savedOrder ?? const <String>[]) {
     if (known.contains(id) && !normalized.contains(id)) {
       normalized.add(id);
+    }
+  }
+  if (!normalized.contains('tools')) {
+    final settingsIndex = normalized.indexOf('settings');
+    if (settingsIndex >= 0) {
+      normalized.insert(settingsIndex, 'tools');
     }
   }
   for (final id in LayoutSettingsStore.defaultWorkspaceMenuOrder) {

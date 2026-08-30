@@ -2446,6 +2446,64 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get senkaUnknownServer => '未知服务器';
+
+  @override
+  String get toolbox => '工具箱';
+
+  @override
+  String get fleetExport => '舰队导出';
+
+  @override
+  String get otherTools => '其他';
+
+  @override
+  String get noro6 => 'noro6';
+
+  @override
+  String get jervis => 'Jervis';
+
+  @override
+  String get exportToNoro6 => '导出至 noro6';
+
+  @override
+  String get exportToJervis => '导出至 Jervis';
+
+  @override
+  String get eventLandBasesOnly => '仅导出活动海域陆航';
+
+  @override
+  String get landBaseExportLimitHint =>
+      'DeckBuilder 每次最多支持 3 队；关闭筛选时按已捕获顺序导出前 3 队。';
+
+  @override
+  String get fleetExportText => '舰队导出文本';
+
+  @override
+  String get deckBuilderV4 => 'DeckBuilder v4';
+
+  @override
+  String get refreshExportText => '刷新';
+
+  @override
+  String get copyExportText => '复制文本';
+
+  @override
+  String get openInSystemBrowser => '使用系统默认浏览器打开';
+
+  @override
+  String get otherToolsComingSoon => '其他功能正在开发';
+
+  @override
+  String get otherToolsHint => '后续辅助工具会集中放在这里。';
+
+  @override
+  String get externalFleetToolOpenFailed => '无法打开外部舰队工具，请检查是否已安装浏览器。';
+
+  @override
+  String get fleetExportCopied => '舰队导出文本已复制。';
+
+  @override
+  String get fleetExportCopyFailed => '复制失败，请稍后重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3270,7 +3328,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get unknownProgress => '進度未知';
 
   @override
-  String get waitingForPortData => '等待母港數據';
+  String get waitingForPortData => '等待母港資料';
 
   @override
   String get waitingForPortDataDescription => '進入遊戲母港或刷新遊戲頁面後，這裡會自動更新';
@@ -4891,4 +4949,62 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get senkaUnknownServer => '未知伺服器';
+
+  @override
+  String get toolbox => '工具箱';
+
+  @override
+  String get fleetExport => '艦隊匯出';
+
+  @override
+  String get otherTools => '其他';
+
+  @override
+  String get noro6 => 'noro6';
+
+  @override
+  String get jervis => 'Jervis';
+
+  @override
+  String get exportToNoro6 => '匯出至 noro6';
+
+  @override
+  String get exportToJervis => '匯出至 Jervis';
+
+  @override
+  String get eventLandBasesOnly => '僅匯出活動海域陸航';
+
+  @override
+  String get landBaseExportLimitHint =>
+      'DeckBuilder 每次最多支援 3 隊；關閉篩選時依擷取順序匯出前 3 隊。';
+
+  @override
+  String get fleetExportText => '艦隊匯出文字';
+
+  @override
+  String get deckBuilderV4 => 'DeckBuilder v4';
+
+  @override
+  String get refreshExportText => '重新整理';
+
+  @override
+  String get copyExportText => '複製文字';
+
+  @override
+  String get openInSystemBrowser => '使用系統預設瀏覽器開啟';
+
+  @override
+  String get otherToolsComingSoon => '其他功能正在開發';
+
+  @override
+  String get otherToolsHint => '後續輔助工具會集中放在這裡。';
+
+  @override
+  String get externalFleetToolOpenFailed => '無法開啟外部艦隊工具，請確認是否已安裝瀏覽器。';
+
+  @override
+  String get fleetExportCopied => '艦隊匯出文字已複製。';
+
+  @override
+  String get fleetExportCopyFailed => '複製失敗，請稍後再試。';
 }
