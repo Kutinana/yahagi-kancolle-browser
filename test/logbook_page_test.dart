@@ -624,8 +624,10 @@ void main() {
     (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(1400, 600);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final database = await LogbookDatabase.openForTesting();
       addTearDown(database.close);
       await database.insertBattleRecord(
@@ -690,7 +692,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: LogbookPage(battleController: controller, database: database),
+            body: DefaultTextStyle.merge(
+              style: const TextStyle(height: 3),
+              child: LogbookPage(
+                battleController: controller,
+                database: database,
+              ),
+            ),
           ),
         ),
       );
@@ -698,6 +706,13 @@ void main() {
 
       for (final header in ['我方阵形', '敌方阵形', '制空状态', '大破舰娘']) {
         expect(find.text(header), findsOneWidget);
+      }
+      final summaryHeaders = [
+        for (final header in ['状态', '我方阵形', '敌方阵形', '制空状态', '大破舰娘', '评价'])
+          tester.getTopLeft(find.text(header)).dx,
+      ];
+      for (var index = 1; index < summaryHeaders.length; index++) {
+        expect(summaryHeaders[index], greaterThan(summaryHeaders[index - 1]));
       }
       expect(find.text('单纵阵'), findsOneWidget);
       expect(find.text('单横阵'), findsOneWidget);
@@ -771,12 +786,69 @@ void main() {
         102,
         166,
       ]);
-      expect(
-        table.rowHeights.first,
-        greaterThan(FrozenDataTable.minimumRowHeight),
-      );
+      expect(table.rowHeights.first, greaterThan(120));
+      expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('sortie malformed heavy damage JSON falls back to dash', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 600);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    for (var index = 0; index < 2; index++) {
+      await database.insertBattleRecord(
+        BattleRecord(
+          battle: const LiveBattle(
+            context: BattleContext(mapAreaId: 2, mapInfoNo: 3, node: 5),
+          ),
+          completedAt: DateTime.utc(2026, 8, 30, 12, index),
+        ),
+      );
+    }
+    final rawDatabase = await database.database;
+    final inserted = await database.getBattleRecords();
+    await rawDatabase.update(
+      'battle_logs',
+      {'heavy_damage_ship_names_json': '{not-json'},
+      where: 'id = ?',
+      whereArgs: [inserted[0]['id']],
+    );
+    await rawDatabase.update(
+      'battle_logs',
+      {'heavy_damage_ship_names_json': '["矢矧改二乙", 7]'},
+      where: 'id = ?',
+      whereArgs: [inserted[1]['id']],
+    );
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final table = tester.widget<FrozenDataTable>(
+      find.byKey(const Key('logbook-table-sortie')),
+    );
+    expect(table.rowHeights, everyElement(FrozenDataTable.minimumRowHeight));
+    for (var index = 0; index < 2; index++) {
+      await tester.pumpWidget(
+        MaterialApp(home: table.scrollableCells(index)[6]),
+      );
+      expect(find.text('-'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+  });
 
   testWidgets('logbook keeps only the filter icon button', (tester) async {
     final database = await LogbookDatabase.openForTesting();

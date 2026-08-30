@@ -27,6 +27,9 @@ enum _LogbookCategory {
   final String label;
 }
 
+const _heavyDamageColumnWidth = 166.0;
+const _heavyDamageHorizontalPadding = 6.0;
+
 class LogbookPage extends StatefulWidget {
   const LogbookPage({
     super.key,
@@ -679,14 +682,25 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
     final label = _heavyDamageShipNames(row).join('、');
     if (label.isEmpty) return FrozenDataTable.minimumRowHeight;
     final painter = TextPainter(
-      text: TextSpan(text: label, style: _heavyDamageTextStyle),
+      text: TextSpan(
+        text: label,
+        style: _effectiveHeavyDamageTextStyle(context),
+      ),
       textDirection: Directionality.of(context),
+      locale: Localizations.maybeLocaleOf(context),
       textScaler: MediaQuery.textScalerOf(context),
-    )..layout(maxWidth: 166 - 12);
-    final measuredHeight = painter.height + 12;
-    return measuredHeight > FrozenDataTable.minimumRowHeight
-        ? measuredHeight
-        : FrozenDataTable.minimumRowHeight;
+    );
+    try {
+      painter.layout(
+        maxWidth: _heavyDamageColumnWidth - _heavyDamageHorizontalPadding * 2,
+      );
+      final measuredHeight = painter.height + 12;
+      return measuredHeight > FrozenDataTable.minimumRowHeight
+          ? measuredHeight
+          : FrozenDataTable.minimumRowHeight;
+    } finally {
+      painter.dispose();
+    }
   }
 
   List<double> get _frozenColumnWidths => switch (widget.category) {
@@ -806,7 +820,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
         96,
         96,
         102,
-        166,
+        _heavyDamageColumnWidth,
         68,
         180,
         120,
@@ -1250,6 +1264,9 @@ const _heavyDamageTextStyle = TextStyle(
   fontFeatures: [FontFeature.tabularFigures()],
 );
 
+TextStyle _effectiveHeavyDamageTextStyle(BuildContext context) =>
+    DefaultTextStyle.of(context).style.merge(_heavyDamageTextStyle);
+
 class _HeavyDamageCell extends StatelessWidget {
   const _HeavyDamageCell(this.row);
 
@@ -1260,10 +1277,16 @@ class _HeavyDamageCell extends StatelessWidget {
     final label = _heavyDamageShipNames(row).join('、');
     if (label.isEmpty) return const _TextCell('-');
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _heavyDamageHorizontalPadding,
+      ),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(label, softWrap: true, style: _heavyDamageTextStyle),
+        child: Text(
+          label,
+          softWrap: true,
+          style: _effectiveHeavyDamageTextStyle(context),
+        ),
       ),
     );
   }
@@ -1275,11 +1298,14 @@ List<String> _heavyDamageShipNames(Map<String, dynamic> row) {
   try {
     final decoded = jsonDecode(encoded);
     if (decoded is! List) return const <String>[];
-    return decoded
-        .whereType<String>()
-        .map((name) => name.trim())
-        .where((name) => name.isNotEmpty)
-        .toList(growable: false);
+    final names = <String>[];
+    for (final value in decoded) {
+      if (value is! String) return const <String>[];
+      final name = value.trim();
+      if (name.isEmpty) return const <String>[];
+      names.add(name);
+    }
+    return names;
   } catch (_) {
     return const <String>[];
   }
