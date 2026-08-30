@@ -421,6 +421,7 @@ void main() {
     expect(rows.single['mvp_name'], '矢矧改二乙');
     expect(rows.single['escort_mvp_name'], '-');
     expect(rows.single['rank'], 's');
+    expect(rows.single['air_superiority'], '未知');
   });
 
   test(
@@ -433,6 +434,21 @@ void main() {
         BattleRecord(
           battle: const LiveBattle(
             context: BattleContext(mapAreaId: 2, mapInfoNo: 2, node: 5),
+            friendFormation: 1,
+            enemyFormation: 5,
+            airSuperiority: '优势',
+            friendMain: <BattleShipSnapshot>[
+              BattleShipSnapshot(
+                masterId: 1,
+                name: '矢矧改二乙',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.main,
+                position: 0,
+                initialHp: 54,
+                maxHp: 54,
+                currentHp: 13,
+              ),
+            ],
             rank: BattleRank.s,
             dropShipMasterId: 101,
             dropShipMasterIds: <int>[101, 102],
@@ -490,6 +506,10 @@ void main() {
       expect(rows.first['air_superiority'], '未知');
       expect(rows.first['heavy_damage_ship_names_json'], '[]');
       expect(rows.last['record_type'], 'battle');
+      expect(rows.last['friend_formation'], 1);
+      expect(rows.last['enemy_formation'], 5);
+      expect(rows.last['air_superiority'], '优势');
+      expect(rows.last['heavy_damage_ship_names_json'], '["矢矧改二乙"]');
       expect(rows.last['drop_ship_ids_json'], '[101,102]');
       expect(rows.last['reward_items_json'], contains('秋刀鱼'));
       expect(rows.last['reward_items_json'], contains('勋章'));
