@@ -565,6 +565,8 @@
   "battlePredictionNextBattle": "切换从下一场战斗开始生效。",
   "battleEnemyPreviewPortraits": "战前敌方立绘",
   "battleEnemyPreviewPortraitsDesc": "仅在未卜先知完整模式显示。",
+  "battleLastFormationHint": "显示上次选择的阵形",
+  "battleLastFormationHintDesc": "到达出击节点时，在未卜先知中提示该点上次使用的阵形。",
   "improvementDatasetTitle": "改修规划资料",
   "improvementDatasetVersion": "资料版本 {version}",
   "@improvementDatasetVersion": {"placeholders": {"version": {"type": "String"}}},

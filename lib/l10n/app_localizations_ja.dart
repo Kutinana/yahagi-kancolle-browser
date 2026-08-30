@@ -1636,6 +1636,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get battleEnemyPreviewPortraitsDesc => '戦闘予測の詳細モードでのみ表示します。';
 
   @override
+  String get battleLastFormationHint => '前回選択した陣形を表示';
+
+  @override
+  String get battleLastFormationHintDesc =>
+      '出撃マス到達時に、そのマスで前回使用した陣形を戦闘予測に表示します。';
+
+  @override
   String get improvementDatasetTitle => '改修計画データ';
 
   @override

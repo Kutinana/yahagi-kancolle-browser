@@ -3155,6 +3155,18 @@ abstract class AppLocalizations {
   /// **'仅在未卜先知完整模式显示。'**
   String get battleEnemyPreviewPortraitsDesc;
 
+  /// No description provided for @battleLastFormationHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示上次选择的阵形'**
+  String get battleLastFormationHint;
+
+  /// No description provided for @battleLastFormationHintDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'到达出击节点时，在未卜先知中提示该点上次使用的阵形。'**
+  String get battleLastFormationHintDesc;
+
   /// No description provided for @improvementDatasetTitle.
   ///
   /// In zh, this message translates to:

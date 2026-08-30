@@ -58,16 +58,16 @@ class BattlePredictionSettingsSection extends StatelessWidget
                 const SizedBox(height: 6),
                 Text(
                   l10n.battlePredictionRecommendation,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: const Color(0xff8195a5)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xff8195a5),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${controller.method == BattlePredictionMethod.poi ? l10n.battlePredictionHighAccuracyDesc : l10n.battlePredictionLightweightDesc}${l10n.battlePredictionNextBattle}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: const Color(0xff8195a5)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xff8195a5),
+                  ),
                 ),
               ],
             ),
@@ -79,6 +79,14 @@ class BattlePredictionSettingsSection extends StatelessWidget
             subtitle: l10n.battleEnemyPreviewPortraitsDesc,
             value: controller.enemyPortraitsEnabled,
             onChanged: controller.setEnemyPortraitsEnabled,
+          ),
+          const Divider(color: Color(0xff294052), height: 1),
+          buildSwitchTile(
+            title: l10n.battleLastFormationHint,
+            switchKey: const Key('battle-last-formation-hint'),
+            subtitle: l10n.battleLastFormationHintDesc,
+            value: controller.lastFormationHintEnabled,
+            onChanged: controller.setLastFormationHintEnabled,
           ),
         ],
       ),

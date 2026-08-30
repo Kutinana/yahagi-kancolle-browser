@@ -39,6 +39,21 @@ void main() {
     expect(await store.loadEnemyPortraitsEnabled(), isFalse);
   });
 
+  test('missing last formation hint setting defaults to enabled', () async {
+    final store = SharedPreferencesBattlePredictionSettingsStore();
+
+    expect(await store.loadLastFormationHintEnabled(), isTrue);
+  });
+
+  test('last formation hint setting loads a saved disabled value', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'battle.lastFormationHintEnabled': false,
+    });
+    final store = SharedPreferencesBattlePredictionSettingsStore();
+
+    expect(await store.loadLastFormationHintEnabled(), isFalse);
+  });
+
   test('controller persists both prediction methods', () async {
     final store = MemoryBattlePredictionSettingsStore();
     final controller = await BattlePredictionSettingsController.load(store);
@@ -69,5 +84,21 @@ void main() {
     await controller.setEnemyPortraitsEnabled(true);
     expect(controller.enemyPortraitsEnabled, isTrue);
     expect(await store.loadEnemyPortraitsEnabled(), isTrue);
+  });
+
+  test('controller persists last formation hint visibility', () async {
+    final store = MemoryBattlePredictionSettingsStore();
+    final controller = await BattlePredictionSettingsController.load(store);
+    addTearDown(controller.dispose);
+
+    expect(controller.lastFormationHintEnabled, isTrue);
+
+    await controller.setLastFormationHintEnabled(false);
+    expect(controller.lastFormationHintEnabled, isFalse);
+    expect(await store.loadLastFormationHintEnabled(), isFalse);
+
+    await controller.setLastFormationHintEnabled(true);
+    expect(controller.lastFormationHintEnabled, isTrue);
+    expect(await store.loadLastFormationHintEnabled(), isTrue);
   });
 }

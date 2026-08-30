@@ -38,6 +38,12 @@ void main() {
       isTrue,
     );
     expect(
+      tester
+          .widget<Switch>(find.byKey(const Key('battle-last-formation-hint')))
+          .value,
+      isTrue,
+    );
+    expect(
       find.text('按战斗模拟规则完整复演，预测更精确，但性能开销更高。切换从下一场战斗开始生效。'),
       findsOneWidget,
     );
@@ -47,15 +53,18 @@ void main() {
 
     expect(controller.method, BattlePredictionMethod.yahagi);
     expect(await store.load(), BattlePredictionMethod.yahagi);
-    expect(
-      find.text('使用轻量化预测逻辑，性能开销更低。切换从下一场战斗开始生效。'),
-      findsOneWidget,
-    );
+    expect(find.text('使用轻量化预测逻辑，性能开销更低。切换从下一场战斗开始生效。'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('battle-enemy-preview-portraits')));
     await tester.pump();
 
     expect(controller.enemyPortraitsEnabled, isFalse);
     expect(await store.loadEnemyPortraitsEnabled(), isFalse);
+
+    await tester.tap(find.byKey(const Key('battle-last-formation-hint')));
+    await tester.pump();
+
+    expect(controller.lastFormationHintEnabled, isFalse);
+    expect(await store.loadLastFormationHintEnabled(), isFalse);
   });
 }
