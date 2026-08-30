@@ -15,6 +15,8 @@ import '../quest/quest_center_page.dart';
 import '../settings/layout_settings_controller.dart';
 import '../senka/senka_page.dart' show SenkaCenterMode, senkaCenterModeLabel;
 import '../senka/senka_state.dart';
+import '../toolbox/toolbox_mode_tabs.dart';
+import '../toolbox/toolbox_page.dart';
 
 class WorkspaceContextHeader extends StatelessWidget {
   const WorkspaceContextHeader({
@@ -50,6 +52,8 @@ class WorkspaceContextHeader extends StatelessWidget {
     this.onConstructionModeChanged,
     this.senkaMode = SenkaCenterMode.info,
     this.onSenkaModeChanged,
+    this.toolboxMode = ToolboxMode.fleetExport,
+    this.onToolboxModeChanged,
     this.layoutSettingsController,
   });
 
@@ -84,6 +88,8 @@ class WorkspaceContextHeader extends StatelessWidget {
   final ValueChanged<ConstructionCenterMode>? onConstructionModeChanged;
   final SenkaCenterMode senkaMode;
   final ValueChanged<SenkaCenterMode>? onSenkaModeChanged;
+  final ToolboxMode toolboxMode;
+  final ValueChanged<ToolboxMode>? onToolboxModeChanged;
   final LayoutSettingsController? layoutSettingsController;
 
   @override
@@ -316,6 +322,26 @@ class WorkspaceContextHeader extends StatelessWidget {
         ],
       );
     }
+    if (workspaceIndex == 10) {
+      return Row(
+        children: [
+          Text(
+            l10n.toolbox,
+            key: const Key('workspace-title-tools'),
+            style: const TextStyle(
+              color: Color(0xffe0b25c),
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const Spacer(),
+          ToolboxModeTabs(
+            mode: toolboxMode,
+            onChanged: onToolboxModeChanged ?? (_) {},
+          ),
+        ],
+      );
+    }
 
     final page = _workspacePage(workspaceIndex, l10n);
     return Row(
@@ -351,6 +377,7 @@ class WorkspaceContextHeader extends StatelessWidget {
         6 => ('logbook', l10n.battleRecords),
         8 => ('settings', l10n.settings),
         9 => ('senka', l10n.senka),
+        10 => ('tools', l10n.toolbox),
         _ => ('unknown', ''),
       };
 

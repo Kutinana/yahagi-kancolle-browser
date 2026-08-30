@@ -51,6 +51,12 @@ void main() {
       );
       expect(restored.workspaceMenuOrder.take(2), <String>['fleet', 'game']);
 
+      final tools = find.byKey(const Key('workspace-nav-tools'));
+      expect(tools, findsOneWidget);
+      await tester.tap(tools);
+      await tester.pump();
+      expect(selectedPage, 10);
+
       await tester.tap(game);
       await tester.pump();
       expect(selectedPage, 0);

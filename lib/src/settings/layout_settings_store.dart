@@ -31,6 +31,7 @@ abstract class LayoutSettingsStore {
     'senka',
     'battle-records',
     'owned-inventory',
+    'tools',
     'settings',
   ];
 

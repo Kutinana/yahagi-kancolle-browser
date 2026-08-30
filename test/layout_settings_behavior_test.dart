@@ -65,6 +65,10 @@ void main() {
         controller.workspaceMenuOrder,
         LayoutSettingsStore.defaultWorkspaceMenuOrder,
       );
+      expect(
+        controller.workspaceMenuOrder,
+        containsAllInOrder(<String>['owned-inventory', 'tools', 'settings']),
+      );
 
       await controller.reorderWorkspaceMenu(0, 1);
       expect(controller.workspaceMenuOrder.take(2), <String>['fleet', 'game']);
@@ -114,6 +118,7 @@ void main() {
         controller.workspaceMenuOrder,
         hasLength(LayoutSettingsStore.defaultWorkspaceMenuOrder.length),
       );
+      expect(controller.workspaceMenuOrder, contains('tools'));
     },
   );
 

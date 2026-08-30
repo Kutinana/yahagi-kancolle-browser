@@ -42,6 +42,7 @@ import 'package:yahagi_kancolle_browser/src/fleet/land_base_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/repair_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/logbook/logbook_page.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
+import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
@@ -394,9 +395,16 @@ void main() {
       'workspace-nav-quests',
       'workspace-nav-senka',
       'workspace-nav-battle-records',
+      'workspace-nav-tools',
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget);
     }
+    await tester.tap(find.byKey(const Key('workspace-nav-tools')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ToolboxPage), findsOneWidget);
+    await tester.tap(find.byKey(const Key('toolbox-mode-other')));
+    await tester.pumpAndSettle();
+    expect(find.text('其他功能正在开发'), findsOneWidget);
     gameCaptureController.dispose();
     gameStateController.dispose();
     battleController.dispose();
