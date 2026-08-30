@@ -45,6 +45,23 @@ import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
+  test('startup restores formation memory and wires its display setting', () {
+    final source = File('lib/main.dart').readAsStringSync();
+
+    expect(source, contains('SharedPreferencesFormationMemoryStore()'));
+    expect(source, contains('formationMemory: formationMemoryController'));
+    expect(
+      source,
+      matches(
+        RegExp(
+          r'showLastFormationHint:\s*widget\s*'
+          r'\.battlePredictionSettingsController\s*'
+          r'\?\.lastFormationHintEnabled\s*\?\?\s*true',
+        ),
+      ),
+    );
+  });
+
   test('root workspace scaffold does not resize when the keyboard opens', () {
     final source = File('lib/main.dart').readAsStringSync();
     expect(

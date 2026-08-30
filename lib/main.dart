@@ -16,6 +16,7 @@ import 'src/battle/battle_damage_alert.dart';
 import 'src/battle/fcd_map_controller.dart';
 import 'src/battle/fcd_map_store.dart';
 import 'src/battle/fcd_map_update_service.dart';
+import 'src/battle/formation_memory.dart';
 import 'src/logbook/logbook_database.dart';
 import 'src/logbook/logbook_page.dart';
 import 'src/battle/live_battle_card.dart';
@@ -154,6 +155,9 @@ Future<void> main() async {
       await BattlePredictionSettingsController.load(
         SharedPreferencesBattlePredictionSettingsStore(),
       );
+  final formationMemoryController = await FormationMemoryController.load(
+    SharedPreferencesFormationMemoryStore(),
+  );
   final displayModeController = await DisplayModeController.load(
     SharedPreferencesDisplayModeStore(),
   );
@@ -290,6 +294,7 @@ Future<void> main() async {
         safetySettingsController.battleDamageVibrationEnabled,
     nodeLabelResolver: fcdMapController,
     predictionMethod: () => battlePredictionSettingsController.method,
+    formationMemory: formationMemoryController,
   );
   fcdMapController.addListener(battleController.refreshNodeLabel);
   final gameResourceManifestConsumer = GameResourceManifestConsumer(
@@ -2138,6 +2143,11 @@ class _InformationPanelState extends State<_InformationPanel> {
                     widget
                         .battlePredictionSettingsController
                         ?.enemyPortraitsEnabled ??
+                    true,
+                showLastFormationHint:
+                    widget
+                        .battlePredictionSettingsController
+                        ?.lastFormationHintEnabled ??
                     true,
                 damagePulseMode:
                     widget.layoutSettingsController.enhancedDamagePulse
