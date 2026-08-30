@@ -16,6 +16,7 @@ enum BattleDisplayStage { navigation, battle, result }
 const _unsetNodeDisplayLabel = Object();
 const _unsetLandBaseRaid = Object();
 const _unsetEnemyPreviewShips = Object();
+const _unsetLastFormation = Object();
 
 enum BattleRank {
   ss('SS'),
@@ -361,6 +362,7 @@ class LiveBattle {
     this.landBaseRaid,
     this.enemyPreviewShips,
     this.enemyPreviewCombined = false,
+    this.lastFormation,
   });
 
   final BattleContext context;
@@ -391,6 +393,7 @@ class LiveBattle {
   final LandBaseRaidResult? landBaseRaid;
   final List<EnemyPreviewShip>? enemyPreviewShips;
   final bool enemyPreviewCombined;
+  final int? lastFormation;
 
   List<BattleShipSnapshot> get friendShips =>
       List.unmodifiable(<BattleShipSnapshot>[...friendMain, ...friendEscort]);
@@ -433,6 +436,7 @@ class LiveBattle {
     Object? landBaseRaid = _unsetLandBaseRaid,
     Object? enemyPreviewShips = _unsetEnemyPreviewShips,
     bool? enemyPreviewCombined,
+    Object? lastFormation = _unsetLastFormation,
   }) {
     return LiveBattle(
       context: context ?? this.context,
@@ -463,6 +467,9 @@ class LiveBattle {
           ? this.enemyPreviewShips
           : enemyPreviewShips as List<EnemyPreviewShip>?,
       enemyPreviewCombined: enemyPreviewCombined ?? this.enemyPreviewCombined,
+      lastFormation: identical(lastFormation, _unsetLastFormation)
+          ? this.lastFormation
+          : lastFormation as int?,
     );
   }
 }

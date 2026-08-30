@@ -10,6 +10,7 @@ import '../game_state/game_api_decoder.dart';
 import '../game_state/game_api_event_pipeline.dart';
 import '../game_state/game_state.dart';
 import 'battle_damage_parser.dart';
+import 'formation_memory.dart';
 import 'battle_models.dart';
 import 'battle_node_label_resolver.dart';
 import 'battle_session.dart';
@@ -40,6 +41,7 @@ final class BattleController extends ChangeNotifier
     this.nodeLabelResolver = const EmptyBattleNodeLabelResolver(),
     FrameNotificationCoalescer? captureNotifications,
     BattlePredictionExecutor? predictionExecutor,
+    this.formationMemory,
   }) : _friendlyHpUpdater = onFriendlyHpUpdated,
        _damageParser = damageParser ?? BattleDamageParser(),
        _captureNotifications =
@@ -66,6 +68,7 @@ final class BattleController extends ChangeNotifier
   final BattlePredictionEngineFactory? yahagiEngineFactory;
   final int maxRecords;
   final BattleNodeLabelResolver nodeLabelResolver;
+  final FormationMemoryController? formationMemory;
   final List<BattleRecord> _records = <BattleRecord>[];
   final Set<int> _acceptedSequences = <int>{};
   final List<BattleSession> _recentSessions = <BattleSession>[];
@@ -209,6 +212,11 @@ final class BattleController extends ChangeNotifier
         enemyPreviewCombined: _officialEnemyPreviewCombined(map),
         rewardItems: _mapRewardItems(map),
         resourceChanges: _mapResourceChanges(map),
+        lastFormation: formationMemory?.formationFor(
+          mapAreaId: _context.mapAreaId,
+          mapInfoNo: _context.mapInfoNo,
+          node: _context.node,
+        ),
       );
       _archiveSession();
       _predictionEngine = null;
@@ -721,6 +729,20 @@ final class BattleController extends ChangeNotifier
       rewardItems: rewardItems,
     );
     _current = confirmed;
+    if (!confirmed.context.practice && formationMemory != null) {
+      unawaited(
+        formationMemory!
+            .remember(
+              mapAreaId: confirmed.context.mapAreaId,
+              mapInfoNo: confirmed.context.mapInfoNo,
+              node: confirmed.context.node,
+              formation: confirmed.friendFormation,
+            )
+            .catchError((Object error) {
+              debugPrint('节点阵形记录写入失败: $error');
+            }),
+      );
+    }
     final record = BattleRecord(
       battle: confirmed,
       completedAt: event.capturedAt,

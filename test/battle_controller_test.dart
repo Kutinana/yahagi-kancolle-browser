@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_damage_alert.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_node_label_resolver.dart';
+import 'package:yahagi_kancolle_browser/src/battle/formation_memory.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
@@ -13,6 +16,104 @@ import 'package:yahagi_kancolle_browser/src/performance/frame_notification_coale
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  group('formation memory', () {
+    late GameState state;
+
+    setUp(() {
+      final reducer = GameStateReducer();
+      state = reducer.reduce(GameState.empty, start2Event);
+      state = reducer.reduce(state, portEvent);
+    });
+
+    test(
+      'map navigation exposes the remembered formation for the node',
+      () async {
+        final memory = await FormationMemoryController.load(
+          MemoryFormationMemoryStore(<String, int>{'1-1-1': 5}),
+        );
+        final controller = BattleController(
+          gameState: () => state,
+          formationMemory: memory,
+        );
+        addTearDown(controller.dispose);
+
+        controller.accept(mapStartEvent);
+        await controller.idle;
+
+        expect(controller.current!.lastFormation, 5);
+      },
+    );
+
+    test('battle phase removes the remembered navigation formation', () async {
+      final memory = await FormationMemoryController.load(
+        MemoryFormationMemoryStore(<String, int>{'1-1-1': 5}),
+      );
+      final controller = BattleController(
+        gameState: () => state,
+        formationMemory: memory,
+      );
+      addTearDown(controller.dispose);
+
+      controller
+        ..accept(mapStartEvent)
+        ..accept(dayBattleEvent);
+      await controller.idle;
+
+      expect(controller.current!.lastFormation, isNull);
+    });
+
+    test('battle result remembers the confirmed friendly formation', () async {
+      final store = MemoryFormationMemoryStore();
+      final memory = await FormationMemoryController.load(store);
+      final controller = BattleController(
+        gameState: () => state,
+        formationMemory: memory,
+      );
+      addTearDown(controller.dispose);
+
+      controller
+        ..accept(mapStartEvent)
+        ..accept(dayBattleEvent)
+        ..accept(battleResultEvent);
+      await controller.idle;
+
+      expect(memory.formationFor(mapAreaId: 1, mapInfoNo: 1, node: 1), 1);
+      expect(store.saveCount, 1);
+    });
+
+    test('practice battle result does not update formation memory', () async {
+      final store = MemoryFormationMemoryStore(<String, int>{'1-1-1': 5});
+      final memory = await FormationMemoryController.load(store);
+      final controller = BattleController(
+        gameState: () => state,
+        formationMemory: memory,
+      );
+      addTearDown(controller.dispose);
+      final battleBody = jsonDecode(dayBattleEvent.responseBody) as Map;
+      final resultBody = jsonDecode(battleResultEvent.responseBody) as Map;
+
+      controller
+        ..accept(
+          kcsapiEvent(
+            '/kcsapi/api_req_practice/battle',
+            Map<String, Object?>.from(battleBody['api_data'] as Map),
+            sequence: 10001,
+          ),
+        )
+        ..accept(
+          kcsapiEvent(
+            '/kcsapi/api_req_practice/battle_result',
+            Map<String, Object?>.from(resultBody['api_data'] as Map),
+            sequence: 10002,
+          ),
+        );
+      await controller.idle;
+
+      expect(store.values, <String, int>{'1-1-1': 5});
+      expect(store.saveCount, 0);
+    });
+  });
+
   test('recovers after a prediction executor failure', () async {
     final reducer = GameStateReducer();
     var state = reducer.reduce(GameState.empty, start2Event);
