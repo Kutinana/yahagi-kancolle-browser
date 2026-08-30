@@ -186,6 +186,8 @@ void main() {
       'clearNewShipExclusions',
       'otherType',
       'acknowledge',
+      // “上次” is standard wording shared by both Chinese scripts.
+      'battleLastFormation',
       // “最小/最大” are standard range labels shared by both Chinese scripts.
       'minimumValue',
       'maximumValue',

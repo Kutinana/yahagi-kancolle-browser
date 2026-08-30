@@ -739,7 +739,7 @@ final class BattleController extends ChangeNotifier
               formation: confirmed.friendFormation,
             )
             .catchError((Object error) {
-              debugPrint('节点阵形记录写入失败: $error');
+              debugPrint('Failed to persist node formation memory: $error');
             }),
       );
     }
