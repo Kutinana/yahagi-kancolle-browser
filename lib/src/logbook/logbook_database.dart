@@ -118,7 +118,7 @@ final class RetirementLogEntry {
 }
 
 class LogbookDatabase extends ChangeNotifier {
-  static const int schemaVersion = 9;
+  static const int schemaVersion = 10;
   static final LogbookDatabase instance = LogbookDatabase._init();
 
   final Future<Database> Function()? _databaseOpener;
@@ -272,11 +272,15 @@ class LogbookDatabase extends ChangeNotifier {
         enemy_fleet_name TEXT NOT NULL,
         friend_fleet_state TEXT NOT NULL,
         enemy_fleet_state TEXT NOT NULL,
+        friend_formation INTEGER NOT NULL DEFAULT 0,
+        enemy_formation INTEGER NOT NULL DEFAULT 0,
+        air_superiority TEXT NOT NULL DEFAULT '未知',
+        heavy_damage_ship_names_json TEXT NOT NULL DEFAULT '[]',
         flagship_name TEXT NOT NULL DEFAULT '—',
         escort_flagship_name TEXT NOT NULL DEFAULT '—',
         mvp_name TEXT NOT NULL DEFAULT '—',
-        escort_mvp_name TEXT NOT NULL DEFAULT '—'
-        ,reward_items_json TEXT NOT NULL DEFAULT '[]'
+        escort_mvp_name TEXT NOT NULL DEFAULT '—',
+        reward_items_json TEXT NOT NULL DEFAULT '[]'
       )
     ''');
 
@@ -503,6 +507,20 @@ class LogbookDatabase extends ChangeNotifier {
       );
       await _createMapResourceTable(db);
     }
+    if (oldVersion < 10) {
+      await db.execute(
+        'ALTER TABLE battle_logs ADD COLUMN friend_formation INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE battle_logs ADD COLUMN enemy_formation INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        "ALTER TABLE battle_logs ADD COLUMN air_superiority TEXT NOT NULL DEFAULT '未知'",
+      );
+      await db.execute(
+        "ALTER TABLE battle_logs ADD COLUMN heavy_damage_ship_names_json TEXT NOT NULL DEFAULT '[]'",
+      );
+    }
   }
 
   /// Add a battle record to the log
@@ -551,6 +569,15 @@ class LogbookDatabase extends ChangeNotifier {
           '${battle.friendShips.where((s) => !s.isSunk).length}/${battle.friendShips.length}',
       'enemy_fleet_state':
           '${battle.enemyShips.where((s) => !s.isSunk).length}/${battle.enemyShips.length}',
+      'friend_formation': battle.friendFormation,
+      'enemy_formation': battle.enemyFormation,
+      'air_superiority': battle.airSuperiority ?? '未知',
+      'heavy_damage_ship_names_json': jsonEncode(
+        battle.friendShips
+            .where((ship) => ship.isHeavilyDamaged)
+            .map((ship) => ship.name)
+            .toList(),
+      ),
       'flagship_name': battle.friendMain.isEmpty
           ? '-'
           : battle.friendMain.first.name,
@@ -616,7 +643,9 @@ class LogbookDatabase extends ChangeNotifier {
           timestamp, map_area, map_no, map_name, node, node_label, node_type,
           map_difficulty, rank, drop_ship_id, drop_ship_ids_json,
           enemy_fleet_name,
-          friend_fleet_state, enemy_fleet_state, flagship_name,
+          friend_fleet_state, enemy_fleet_state,
+          friend_formation, enemy_formation, air_superiority,
+          heavy_damage_ship_names_json, flagship_name,
           escort_flagship_name, mvp_name, escort_mvp_name,
           reward_items_json,
           0 AS fuel_delta, 0 AS ammo_delta, 0 AS steel_delta,
@@ -631,7 +660,9 @@ class LogbookDatabase extends ChangeNotifier {
           map_difficulty, 'unknown' AS rank, NULL AS drop_ship_id,
           '[]' AS drop_ship_ids_json,
           '-' AS enemy_fleet_name, '-' AS friend_fleet_state,
-          '-' AS enemy_fleet_state, '-' AS flagship_name,
+          '-' AS enemy_fleet_state, 0 AS friend_formation,
+          0 AS enemy_formation, '未知' AS air_superiority,
+          '[]' AS heavy_damage_ship_names_json, '-' AS flagship_name,
           '-' AS escort_flagship_name, '-' AS mvp_name,
           '-' AS escort_mvp_name, reward_items_json,
           fuel_delta, ammo_delta, steel_delta, bauxite_delta, radar_reduced

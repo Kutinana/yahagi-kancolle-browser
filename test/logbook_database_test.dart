@@ -310,6 +310,76 @@ void main() {
     expect(rows.single['node_label'], 'Y');
   });
 
+  test(
+    'battle records persist formation air state and heavy damage ships',
+    () async {
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+
+      await database.insertBattleRecord(
+        BattleRecord(
+          battle: const LiveBattle(
+            context: BattleContext(mapAreaId: 1, mapInfoNo: 1, node: 1),
+            friendFormation: 1,
+            enemyFormation: 5,
+            airSuperiority: '优势',
+            friendMain: <BattleShipSnapshot>[
+              BattleShipSnapshot(
+                masterId: 1,
+                name: '矢矧改二乙',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.main,
+                position: 0,
+                initialHp: 54,
+                maxHp: 54,
+                currentHp: 13,
+              ),
+              BattleShipSnapshot(
+                masterId: 2,
+                name: '雪风改二',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.main,
+                position: 1,
+                initialHp: 35,
+                maxHp: 35,
+                currentHp: 35,
+              ),
+            ],
+            friendEscort: <BattleShipSnapshot>[
+              BattleShipSnapshot(
+                masterId: 3,
+                name: '能代改二',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.escort,
+                position: 0,
+                initialHp: 53,
+                maxHp: 53,
+                currentHp: 1,
+              ),
+              BattleShipSnapshot(
+                masterId: 4,
+                name: '霞改二',
+                side: BattleSide.friend,
+                fleetRole: BattleFleetRole.escort,
+                position: 1,
+                initialHp: 31,
+                maxHp: 31,
+                currentHp: 0,
+              ),
+            ],
+          ),
+          completedAt: DateTime(2026, 8, 31, 12),
+        ),
+      );
+
+      final rows = await database.getBattleRecords();
+      expect(rows.single['friend_formation'], 1);
+      expect(rows.single['enemy_formation'], 5);
+      expect(rows.single['air_superiority'], '优势');
+      expect(rows.single['heavy_damage_ship_names_json'], '["矢矧改二乙","能代改二"]');
+    },
+  );
+
   test('practice battle records store standardized values', () async {
     final database = await LogbookDatabase.openForTesting();
     addTearDown(database.close);
@@ -415,6 +485,10 @@ void main() {
       expect(rows.first['ammo_delta'], -30);
       expect(rows.first['node_label'], 'F');
       expect(rows.first['reward_items_json'], contains('家具箱（中）'));
+      expect(rows.first['friend_formation'], 0);
+      expect(rows.first['enemy_formation'], 0);
+      expect(rows.first['air_superiority'], '未知');
+      expect(rows.first['heavy_damage_ship_names_json'], '[]');
       expect(rows.last['record_type'], 'battle');
       expect(rows.last['drop_ship_ids_json'], '[101,102]');
       expect(rows.last['reward_items_json'], contains('秋刀鱼'));
@@ -505,6 +579,69 @@ void main() {
     expect(rows.single['enemy_fleet_name'], '旧记录');
     expect(rows.single['reward_items_json'], '[]');
     expect(tables.map((row) => row['name']), contains('map_resource_logs'));
+  });
+
+  test('upgrades v9 battle records with summary defaults', () async {
+    sqfliteFfiInit();
+    final directory = await Directory.systemTemp.createTemp(
+      'yahagi-logbook-v9-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final path = '${directory.path}${Platform.pathSeparator}logbook.db';
+    final oldDatabase = await databaseFactoryFfiNoIsolate.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 9,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE battle_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp INTEGER NOT NULL,
+              map_area INTEGER NOT NULL,
+              map_no INTEGER NOT NULL,
+              map_name TEXT NOT NULL DEFAULT '',
+              node INTEGER NOT NULL,
+              node_label TEXT NOT NULL DEFAULT '',
+              node_type INTEGER NOT NULL,
+              map_difficulty INTEGER NOT NULL DEFAULT 0,
+              rank TEXT NOT NULL,
+              drop_ship_id INTEGER,
+              drop_ship_ids_json TEXT NOT NULL DEFAULT '[]',
+              enemy_fleet_name TEXT NOT NULL,
+              friend_fleet_state TEXT NOT NULL,
+              enemy_fleet_state TEXT NOT NULL,
+              flagship_name TEXT NOT NULL DEFAULT '—',
+              escort_flagship_name TEXT NOT NULL DEFAULT '—',
+              mvp_name TEXT NOT NULL DEFAULT '—',
+              escort_mvp_name TEXT NOT NULL DEFAULT '—',
+              reward_items_json TEXT NOT NULL DEFAULT '[]'
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDatabase.insert('battle_logs', <String, Object?>{
+      'timestamp': 1,
+      'map_area': 1,
+      'map_no': 1,
+      'node': 1,
+      'node_type': '普通战斗',
+      'rank': 's',
+      'enemy_fleet_name': 'v9 旧记录',
+      'friend_fleet_state': '6/6',
+      'enemy_fleet_state': '0/6',
+    });
+    await oldDatabase.close();
+
+    final upgraded = await LogbookDatabase.openForTesting(path: path);
+    addTearDown(upgraded.close);
+    final rows = await upgraded.getBattleRecords();
+
+    expect(rows.single['enemy_fleet_name'], 'v9 旧记录');
+    expect(rows.single['friend_formation'], 0);
+    expect(rows.single['enemy_formation'], 0);
+    expect(rows.single['air_superiority'], '未知');
+    expect(rows.single['heavy_damage_ship_names_json'], '[]');
   });
 }
 
