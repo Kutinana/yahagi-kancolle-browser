@@ -423,17 +423,22 @@ class _TypeHeader extends StatelessWidget {
   final String name;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
-    child: Text(
-      name.isEmpty ? '其他' : name,
-      style: const TextStyle(
-        color: Color(0xff69d2cf),
-        fontSize: 11,
-        fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
+      child: Text(
+        name.isEmpty ? l10n.otherType : name,
+        style: const TextStyle(
+          color: Color(0xff69d2cf),
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _ShipRow extends StatelessWidget {
