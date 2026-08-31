@@ -135,6 +135,13 @@ class GameStateSerializer {
           'mapAreaId': v.mapAreaId,
         }),
       ),
+      'masterShipTypes': state.masterShipTypes.map(
+        (k, v) => MapEntry(k.toString(), {
+          'id': v.id,
+          'name': v.name,
+          'equipTypeIds': v.equipTypeIds.toList(),
+        }),
+      ),
       'masterShips': state.masterShips.map(
         (k, v) => MapEntry(k.toString(), {
           'id': v.id,
@@ -143,10 +150,38 @@ class GameStateSerializer {
           'afterShipId': v.afterShipId,
           'buildTimeMinutes': v.buildTimeMinutes,
           'sortNo': v.sortNo,
+          'classTypeId': v.classTypeId,
+          'equipTypeIds': v.equipTypeIds.toList(),
+          'limitedEquipmentIdsByType': v.limitedEquipmentIdsByType.map(
+            (typeId, equipmentIds) =>
+                MapEntry(typeId.toString(), equipmentIds.toList()),
+          ),
+        }),
+      ),
+      'masterSlotItems': state.masterSlotItems.map(
+        (k, v) => MapEntry(k.toString(), {
+          'id': v.id,
+          'name': v.name,
+          'sortNo': v.sortNo,
+          'type': v.type,
         }),
       ),
       'masterSlotItemTypes': state.masterSlotItemTypes.map(
         (key, value) => MapEntry(key.toString(), value),
+      ),
+      'expansionSlotEquipmentTypeIds': state.expansionSlotEquipmentTypeIds
+          .toList(),
+      'expansionSlotSpecialRules': state.expansionSlotSpecialRules.map(
+        (equipmentId, rule) => MapEntry(equipmentId.toString(), {
+          'equipmentMasterId': rule.equipmentMasterId,
+          'shipMasterIds': rule.shipMasterIds.toList(),
+          'classTypeIds': rule.classTypeIds.toList(),
+          'shipTypeIds': rule.shipTypeIds.toList(),
+          'minimumImprovement': rule.minimumImprovement,
+        }),
+      ),
+      'expansionSlotLimitsByShipId': state.expansionSlotLimitsByShipId.map(
+        (shipId, typeIds) => MapEntry(shipId.toString(), typeIds.toList()),
       ),
       'ships': state.ships.map(
         (k, v) => MapEntry(k.toString(), {
@@ -430,6 +465,22 @@ class GameStateSerializer {
         }
       }
 
+      final masterShipTypes = <int, MasterShipType>{};
+      final rawMasterShipTypes = map['masterShipTypes'];
+      if (rawMasterShipTypes is Map) {
+        for (final entry in rawMasterShipTypes.entries) {
+          final id = int.tryParse('${entry.key}');
+          final v = entry.value;
+          if (id != null && id > 0 && v is Map) {
+            masterShipTypes[id] = MasterShipType(
+              id: id,
+              name: _string(v['name']),
+              equipTypeIds: _positiveIntSet(v['equipTypeIds']),
+            );
+          }
+        }
+      }
+
       final masterShips = <int, MasterShip>{};
       final rawMasterShips = map['masterShips'];
       if (rawMasterShips is Map) {
@@ -444,6 +495,28 @@ class GameStateSerializer {
               afterShipId: _int(v['afterShipId']) ?? 0,
               buildTimeMinutes: _int(v['buildTimeMinutes']) ?? 0,
               sortNo: _int(v['sortNo']) ?? 0,
+              classTypeId: _int(v['classTypeId']) ?? 0,
+              equipTypeIds: _positiveIntSet(v['equipTypeIds']),
+              limitedEquipmentIdsByType: _positiveIntSetMap(
+                v['limitedEquipmentIdsByType'],
+              ),
+            );
+          }
+        }
+      }
+
+      final masterSlotItems = <int, MasterSlotItem>{};
+      final rawMasterSlotItems = map['masterSlotItems'];
+      if (rawMasterSlotItems is Map) {
+        for (final entry in rawMasterSlotItems.entries) {
+          final id = int.tryParse('${entry.key}');
+          final v = entry.value;
+          if (id != null && id > 0 && v is Map) {
+            masterSlotItems[id] = MasterSlotItem(
+              id: id,
+              name: _string(v['name']),
+              sortNo: _int(v['sortNo']) ?? 0,
+              type: _intList(v['type']),
             );
           }
         }
@@ -459,6 +532,32 @@ class GameStateSerializer {
           }
         }
       }
+
+      final expansionSlotEquipmentTypeIds = _positiveIntSet(
+        map['expansionSlotEquipmentTypeIds'],
+      );
+      final expansionSlotSpecialRules = <int, ExpansionSlotSpecialRule>{};
+      final rawExpansionSlotSpecialRules = map['expansionSlotSpecialRules'];
+      if (rawExpansionSlotSpecialRules is Map) {
+        for (final entry in rawExpansionSlotSpecialRules.entries) {
+          final equipmentMasterId = int.tryParse('${entry.key}');
+          final v = entry.value;
+          if (equipmentMasterId != null && equipmentMasterId > 0 && v is Map) {
+            expansionSlotSpecialRules[equipmentMasterId] =
+                ExpansionSlotSpecialRule(
+                  equipmentMasterId: equipmentMasterId,
+                  shipMasterIds: _positiveIntSet(v['shipMasterIds']),
+                  classTypeIds: _positiveIntSet(v['classTypeIds']),
+                  shipTypeIds: _positiveIntSet(v['shipTypeIds']),
+                  minimumImprovement: (_int(v['minimumImprovement']) ?? 0)
+                      .clamp(0, 10),
+                );
+          }
+        }
+      }
+      final expansionSlotLimitsByShipId = _positiveIntSetMap(
+        map['expansionSlotLimitsByShipId'],
+      );
 
       final ships = <int, OwnedShip>{};
       final rawShips = map['ships'];
@@ -507,8 +606,13 @@ class GameStateSerializer {
         constructionDocks: constructionDocks,
         landBases: landBases,
         masterMissions: masterMissions,
+        masterShipTypes: masterShipTypes,
         masterShips: masterShips,
+        masterSlotItems: masterSlotItems,
         masterSlotItemTypes: masterSlotItemTypes,
+        expansionSlotEquipmentTypeIds: expansionSlotEquipmentTypeIds,
+        expansionSlotSpecialRules: expansionSlotSpecialRules,
+        expansionSlotLimitsByShipId: expansionSlotLimitsByShipId,
         ships: ships,
         updatedAt: updatedAt != null
             ? DateTime.fromMillisecondsSinceEpoch(updatedAt)
@@ -561,5 +665,19 @@ class GameStateSerializer {
       return const <int>[];
     }
     return <int>[for (final item in value) _int(item) ?? 0];
+  }
+
+  static Set<int> _positiveIntSet(Object? value) =>
+      Set<int>.unmodifiable(_intList(value).where((item) => item > 0));
+
+  static Map<int, Set<int>> _positiveIntSetMap(Object? value) {
+    if (value is! Map) return const <int, Set<int>>{};
+    final result = <int, Set<int>>{};
+    for (final entry in value.entries) {
+      final id = int.tryParse('${entry.key}') ?? 0;
+      if (id <= 0 || entry.value is! List) continue;
+      result[id] = _positiveIntSet(entry.value);
+    }
+    return Map<int, Set<int>>.unmodifiable(result);
   }
 }

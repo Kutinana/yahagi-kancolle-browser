@@ -21,6 +21,71 @@ void main() {
     expect(restored.masterSlotItemTypes[1], '小口径主炮');
   });
 
+  test('equipment compatibility master data survives cache serialization', () {
+    const state = GameState(
+      masterShipTypes: <int, MasterShipType>{
+        2: MasterShipType(id: 2, name: '驱逐舰', equipTypeIds: <int>{1, 27}),
+      },
+      masterShips: <int, MasterShip>{
+        100: MasterShip(
+          id: 100,
+          name: '测试舰改',
+          shipTypeId: 2,
+          classTypeId: 47,
+          equipTypeIds: <int>{1, 27},
+          limitedEquipmentIdsByType: <int, Set<int>>{
+            27: <int>{268},
+          },
+        ),
+      },
+      masterSlotItems: <int, MasterSlotItem>{
+        268: MasterSlotItem(
+          id: 268,
+          name: '北方迷彩（＋北方装备）',
+          sortNo: 268,
+          type: <int>[3, 5, 27, 23, 0],
+        ),
+      },
+      expansionSlotEquipmentTypeIds: <int>{21, 27},
+      expansionSlotLimitsByShipId: <int, Set<int>>{
+        100: <int>{27},
+      },
+      expansionSlotSpecialRules: <int, ExpansionSlotSpecialRule>{
+        268: ExpansionSlotSpecialRule(
+          equipmentMasterId: 268,
+          shipMasterIds: <int>{100},
+          classTypeIds: <int>{47},
+          shipTypeIds: <int>{2},
+          minimumImprovement: 7,
+        ),
+      },
+    );
+
+    final restored = GameStateSerializer.deserialize(
+      GameStateSerializer.serialize(state),
+    );
+
+    expect(restored.masterShipTypes[2]?.equipTypeIds, <int>{1, 27});
+    expect(restored.masterShips[100]?.classTypeId, 47);
+    expect(restored.masterShips[100]?.equipTypeIds, <int>{1, 27});
+    expect(restored.masterShips[100]?.limitedEquipmentIdsByType[27], <int>{
+      268,
+    });
+    expect(restored.masterSlotItems[268]?.type, <int>[3, 5, 27, 23, 0]);
+    expect(restored.expansionSlotEquipmentTypeIds, <int>{21, 27});
+    expect(restored.expansionSlotLimitsByShipId[100], <int>{27});
+    expect(restored.expansionSlotSpecialRules[268]?.shipMasterIds, <int>{100});
+    expect(restored.expansionSlotSpecialRules[268]?.minimumImprovement, 7);
+  });
+
+  test('old cache defaults equipment compatibility rules to empty', () {
+    final restored = GameStateSerializer.deserialize('{"admiralLevel":120}');
+
+    expect(restored.expansionSlotEquipmentTypeIds, isEmpty);
+    expect(restored.expansionSlotLimitsByShipId, isEmpty);
+    expect(restored.expansionSlotSpecialRules, isEmpty);
+  });
+
   test('land-base cache keeps identity but drops sortie-only hp', () {
     const state = GameState(
       landBases: <LandBaseState>[
