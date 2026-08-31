@@ -78,6 +78,14 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     if (!identical(oldWidget.controller, widget.controller)) {
       oldWidget.controller.removeListener(_handleControllerChanged);
       _state = widget.controller.state;
+      if (_selectedEquipmentMasterId case final masterId?) {
+        final stillOwned = _state.slotItems.values.any(
+          (item) => item.masterSlotItemId == masterId,
+        );
+        if (!stillOwned || !_state.masterSlotItems.containsKey(masterId)) {
+          _selectedEquipmentMasterId = null;
+        }
+      }
       _inventoryDependencies = _InventoryDependencies.from(_state);
       _clearDerivedData();
       widget.controller.addListener(_handleControllerChanged);
@@ -105,9 +113,20 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
         .matchesEquipmentProjection(nextDependencies);
     final serverOriginChanged =
         _inventoryDependencies.serverOrigin != nextDependencies.serverOrigin;
+    final drawerChanged =
+        _selectedEquipmentMasterId != null &&
+        !_inventoryDependencies.matchesCompatibilityDrawer(nextDependencies);
+    final selectedEquipmentRemoved =
+        _selectedEquipmentMasterId != null &&
+        (!nextState.masterSlotItems.containsKey(_selectedEquipmentMasterId) ||
+            !nextState.slotItems.values.any(
+              (item) => item.masterSlotItemId == _selectedEquipmentMasterId,
+            ));
     if (!shipProjectionChanged &&
         !equipmentProjectionChanged &&
-        !serverOriginChanged) {
+        !serverOriginChanged &&
+        !drawerChanged &&
+        !selectedEquipmentRemoved) {
       return;
     }
 
@@ -115,11 +134,14 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     _inventoryDependencies = nextDependencies;
     if (shipProjectionChanged) _cachedShipRows = null;
     if (equipmentProjectionChanged) _cachedEquipmentGroups = null;
+    if (selectedEquipmentRemoved) _selectedEquipmentMasterId = null;
 
     final activeTableChanged = _showShips
         ? shipProjectionChanged || serverOriginChanged
         : equipmentProjectionChanged;
-    if (activeTableChanged) setState(() {});
+    if (activeTableChanged || drawerChanged || selectedEquipmentRemoved) {
+      setState(() {});
+    }
   }
 
   void _clearDerivedData() {
@@ -385,19 +407,21 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                           ),
                         ),
                         if (_selectedEquipmentMasterId case final masterId?)
-                          Positioned.fill(
-                            left: math.max(
-                              0,
-                              MediaQuery.sizeOf(context).width - 458,
+                          if (_state.masterSlotItems[masterId]
+                              case final equipment?)
+                            Positioned.fill(
+                              left: math.max(
+                                0,
+                                MediaQuery.sizeOf(context).width - 458,
+                              ),
+                              child: EquipmentCompatibilityDrawer(
+                                state: _state,
+                                equipment: equipment,
+                                onClose: () => setState(() {
+                                  _selectedEquipmentMasterId = null;
+                                }),
+                              ),
                             ),
-                            child: EquipmentCompatibilityDrawer(
-                              state: _state,
-                              equipment: _state.masterSlotItems[masterId]!,
-                              onClose: () => setState(() {
-                                _selectedEquipmentMasterId = null;
-                              }),
-                            ),
-                          ),
                       ],
                     ),
             ),
@@ -668,6 +692,10 @@ class _InventoryDependencies {
     required this.masterShips,
     required this.masterShipTypes,
     required this.masterSlotItems,
+    required this.expansionSlotEquipmentTypeIds,
+    required this.expansionSlotSpecialRules,
+    required this.expansionSlotLimitsByShipId,
+    required this.hasEquipmentCompatibilityData,
     required this.serverOrigin,
   });
 
@@ -679,6 +707,10 @@ class _InventoryDependencies {
         masterShips: state.masterShips,
         masterShipTypes: state.masterShipTypes,
         masterSlotItems: state.masterSlotItems,
+        expansionSlotEquipmentTypeIds: state.expansionSlotEquipmentTypeIds,
+        expansionSlotSpecialRules: state.expansionSlotSpecialRules,
+        expansionSlotLimitsByShipId: state.expansionSlotLimitsByShipId,
+        hasEquipmentCompatibilityData: state.hasEquipmentCompatibilityData,
         serverOrigin: state.serverOrigin,
       );
 
@@ -688,6 +720,10 @@ class _InventoryDependencies {
   final Object masterShips;
   final Object masterShipTypes;
   final Object masterSlotItems;
+  final Object expansionSlotEquipmentTypeIds;
+  final Object expansionSlotSpecialRules;
+  final Object expansionSlotLimitsByShipId;
+  final bool hasEquipmentCompatibilityData;
   final String serverOrigin;
 
   bool matchesShipProjection(_InventoryDependencies other) =>
@@ -703,6 +739,24 @@ class _InventoryDependencies {
       identical(slotItems, other.slotItems) &&
       identical(masterShips, other.masterShips) &&
       identical(masterSlotItems, other.masterSlotItems);
+
+  bool matchesCompatibilityDrawer(_InventoryDependencies other) =>
+      identical(ships, other.ships) &&
+      identical(fleets, other.fleets) &&
+      identical(slotItems, other.slotItems) &&
+      identical(masterShips, other.masterShips) &&
+      identical(masterShipTypes, other.masterShipTypes) &&
+      identical(masterSlotItems, other.masterSlotItems) &&
+      identical(
+        expansionSlotEquipmentTypeIds,
+        other.expansionSlotEquipmentTypeIds,
+      ) &&
+      identical(expansionSlotSpecialRules, other.expansionSlotSpecialRules) &&
+      identical(
+        expansionSlotLimitsByShipId,
+        other.expansionSlotLimitsByShipId,
+      ) &&
+      hasEquipmentCompatibilityData == other.hasEquipmentCompatibilityData;
 }
 
 class OwnedInventorySegmented extends StatelessWidget {

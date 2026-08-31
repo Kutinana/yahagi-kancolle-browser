@@ -884,5 +884,21 @@
   "@equipmentCompatibilityOwnedLevels": {"placeholders": {"levels": {"type": "String"}}},
   "equipmentCompatibilityFleetNumbers": "第 {numbers} 舰队",
   "@equipmentCompatibilityFleetNumbers": {"placeholders": {"numbers": {"type": "String"}}},
-  "equipmentCompatibilityEmpty": "没有符合条件的舰娘"
+  "equipmentCompatibilityEmpty": "没有符合条件的舰娘",
+  "equipmentCompatibilityOfficialId": "装备 ID {id}",
+  "@equipmentCompatibilityOfficialId": {"placeholders": {"id": {"type": "int"}}},
+  "equipmentCompatibilityOwnedCount": "持有数 {count}",
+  "@equipmentCompatibilityOwnedCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilityRegularCount": "普通槽 {count}",
+  "@equipmentCompatibilityRegularCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilityExpansionCount": "增设栏 {count}",
+  "@equipmentCompatibilityExpansionCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilitySource": "规则来源：游戏官方主数据",
+  "equipmentCompatibilityRulesWaiting": "装备规则数据等待更新",
+  "equipmentCompatibilityEmptyOwned": "当前没有持有可装备的舰娘",
+  "equipmentCompatibilityEmptyAll": "没有找到可装备的舰娘形态",
+  "equipmentCompatibilityCategory": "分类：{category}",
+  "@equipmentCompatibilityCategory": {"placeholders": {"category": {"type": "String"}}},
+  "equipmentCompatibilityShipClassId": "舰级 #{id}",
+  "@equipmentCompatibilityShipClassId": {"placeholders": {"id": {"type": "int"}}}
 }

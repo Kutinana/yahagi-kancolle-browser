@@ -2558,6 +2558,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get equipmentCompatibilityEmpty => '没有符合条件的舰娘';
+
+  @override
+  String equipmentCompatibilityOfficialId(int id) {
+    return '装备 ID $id';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedCount(int count) {
+    return '持有数 $count';
+  }
+
+  @override
+  String equipmentCompatibilityRegularCount(int count) {
+    return '普通槽 $count';
+  }
+
+  @override
+  String equipmentCompatibilityExpansionCount(int count) {
+    return '增设栏 $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySource => '规则来源：游戏官方主数据';
+
+  @override
+  String get equipmentCompatibilityRulesWaiting => '装备规则数据等待更新';
+
+  @override
+  String get equipmentCompatibilityEmptyOwned => '当前没有持有可装备的舰娘';
+
+  @override
+  String get equipmentCompatibilityEmptyAll => '没有找到可装备的舰娘形态';
+
+  @override
+  String equipmentCompatibilityCategory(String category) {
+    return '分类：$category';
+  }
+
+  @override
+  String equipmentCompatibilityShipClassId(int id) {
+    return '舰级 #$id';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5115,4 +5157,46 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get equipmentCompatibilityEmpty => '沒有符合條件的艦娘';
+
+  @override
+  String equipmentCompatibilityOfficialId(int id) {
+    return '裝備 ID $id';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedCount(int count) {
+    return '持有數量 $count';
+  }
+
+  @override
+  String equipmentCompatibilityRegularCount(int count) {
+    return '一般欄 $count';
+  }
+
+  @override
+  String equipmentCompatibilityExpansionCount(int count) {
+    return '增設欄 $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySource => '規則來源：遊戲官方主要資料';
+
+  @override
+  String get equipmentCompatibilityRulesWaiting => '正在等待裝備規則資料更新';
+
+  @override
+  String get equipmentCompatibilityEmptyOwned => '目前沒有持有可裝備的艦娘';
+
+  @override
+  String get equipmentCompatibilityEmptyAll => '找不到可裝備的艦娘形態';
+
+  @override
+  String equipmentCompatibilityCategory(String category) {
+    return '分類：$category';
+  }
+
+  @override
+  String equipmentCompatibilityShipClassId(int id) {
+    return '艦級 #$id';
+  }
 }

@@ -20,9 +20,11 @@ class EquipmentCompatibilityShipRow {
 }
 
 class EquipmentCompatibilityProjection {
-  const EquipmentCompatibilityProjection(this.state);
+  EquipmentCompatibilityProjection(this.state);
 
   final GameState state;
+  final Map<int, List<EquipmentCompatibilityShipRow>> _baseRowsByEquipmentId =
+      <int, List<EquipmentCompatibilityShipRow>>{};
 
   List<EquipmentCompatibilityShipRow> rows({
     required int equipmentMasterId,
@@ -31,6 +33,24 @@ class EquipmentCompatibilityProjection {
     EquipmentCompatibilitySlotFilter filter =
         EquipmentCompatibilitySlotFilter.all,
   }) {
+    final baseRows = _baseRowsByEquipmentId.putIfAbsent(
+      equipmentMasterId,
+      () => _buildBaseRows(equipmentMasterId),
+    );
+    final normalizedQuery = query.trim().toLowerCase();
+    return List<EquipmentCompatibilityShipRow>.unmodifiable(
+      baseRows.where((row) {
+        if (ownedOnly && row.ownedShips.isEmpty) return false;
+        if (normalizedQuery.isNotEmpty &&
+            !row.shipMaster.name.toLowerCase().contains(normalizedQuery)) {
+          return false;
+        }
+        return _matchesFilter(row.compatibility, filter);
+      }),
+    );
+  }
+
+  List<EquipmentCompatibilityShipRow> _buildBaseRows(int equipmentMasterId) {
     final ownedByMasterId = <int, List<OwnedShip>>{};
     for (final ship in state.ships.values) {
       ownedByMasterId.putIfAbsent(ship.masterId, () => <OwnedShip>[]).add(ship);
@@ -42,23 +62,16 @@ class EquipmentCompatibilityProjection {
       });
     }
 
-    final normalizedQuery = query.trim().toLowerCase();
     final service = EquipmentCompatibilityService(state);
     final result = <EquipmentCompatibilityShipRow>[];
     for (final master in state.masterShips.values) {
       if (master.id > 1500 || master.name.isEmpty) continue;
       final ownedShips = ownedByMasterId[master.id] ?? const <OwnedShip>[];
-      if (ownedOnly && ownedShips.isEmpty) continue;
-      if (normalizedQuery.isNotEmpty &&
-          !master.name.toLowerCase().contains(normalizedQuery)) {
-        continue;
-      }
       final compatibility = service.resolve(
         shipMasterId: master.id,
         equipmentMasterId: equipmentMasterId,
       );
       if (compatibility == null || !compatibility.canEquip) continue;
-      if (!_matchesFilter(compatibility, filter)) continue;
 
       result.add(
         EquipmentCompatibilityShipRow(

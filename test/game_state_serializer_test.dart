@@ -59,6 +59,7 @@ void main() {
           minimumImprovement: 7,
         ),
       },
+      hasEquipmentCompatibilityData: true,
     );
 
     final restored = GameStateSerializer.deserialize(
@@ -76,6 +77,7 @@ void main() {
     expect(restored.expansionSlotLimitsByShipId[100], <int>{27});
     expect(restored.expansionSlotSpecialRules[268]?.shipMasterIds, <int>{100});
     expect(restored.expansionSlotSpecialRules[268]?.minimumImprovement, 7);
+    expect(restored.hasEquipmentCompatibilityData, isTrue);
   });
 
   test('old cache defaults equipment compatibility rules to empty', () {
@@ -84,6 +86,7 @@ void main() {
     expect(restored.expansionSlotEquipmentTypeIds, isEmpty);
     expect(restored.expansionSlotLimitsByShipId, isEmpty);
     expect(restored.expansionSlotSpecialRules, isEmpty);
+    expect(restored.hasEquipmentCompatibilityData, isFalse);
   });
 
   test('land-base cache keeps identity but drops sortie-only hp', () {

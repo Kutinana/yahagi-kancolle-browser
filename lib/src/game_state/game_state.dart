@@ -906,6 +906,7 @@ class GameState {
     this.expansionSlotEquipmentTypeIds = const <int>{},
     this.expansionSlotSpecialRules = const <int, ExpansionSlotSpecialRule>{},
     this.expansionSlotLimitsByShipId = const <int, Set<int>>{},
+    this.hasEquipmentCompatibilityData = false,
     this.masterMissions = const <int, MasterMission>{},
     this.masterMapInfos = const <int, MasterMapInfo>{},
     this.masterMapAreas = const <int, String>{},
@@ -957,6 +958,7 @@ class GameState {
   final Set<int> expansionSlotEquipmentTypeIds;
   final Map<int, ExpansionSlotSpecialRule> expansionSlotSpecialRules;
   final Map<int, Set<int>> expansionSlotLimitsByShipId;
+  final bool hasEquipmentCompatibilityData;
   final Map<int, MasterMission> masterMissions;
   final Map<int, MasterMapInfo> masterMapInfos;
   final Map<int, String> masterMapAreas;
@@ -1061,6 +1063,7 @@ class GameState {
     Set<int>? expansionSlotEquipmentTypeIds,
     Map<int, ExpansionSlotSpecialRule>? expansionSlotSpecialRules,
     Map<int, Set<int>>? expansionSlotLimitsByShipId,
+    bool? hasEquipmentCompatibilityData,
     Map<int, MasterMission>? masterMissions,
     Map<int, MasterMapInfo>? masterMapInfos,
     Map<int, String>? masterMapAreas,
@@ -1103,6 +1106,8 @@ class GameState {
           expansionSlotSpecialRules ?? this.expansionSlotSpecialRules,
       expansionSlotLimitsByShipId:
           expansionSlotLimitsByShipId ?? this.expansionSlotLimitsByShipId,
+      hasEquipmentCompatibilityData:
+          hasEquipmentCompatibilityData ?? this.hasEquipmentCompatibilityData,
       masterMissions: masterMissions ?? this.masterMissions,
       masterMapInfos: masterMapInfos ?? this.masterMapInfos,
       masterMapAreas: masterMapAreas ?? this.masterMapAreas,

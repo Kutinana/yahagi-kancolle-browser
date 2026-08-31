@@ -66,7 +66,7 @@ void main() {
     ],
   );
 
-  const projection = EquipmentCompatibilityProjection(state);
+  final projection = EquipmentCompatibilityProjection(state);
 
   test('all rows keep remodel forms separate and exclude abyssal ships', () {
     final rows = projection.rows(equipmentMasterId: 10);

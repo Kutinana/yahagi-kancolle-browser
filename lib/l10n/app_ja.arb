@@ -884,5 +884,21 @@
   "@equipmentCompatibilityOwnedLevels": {"placeholders": {"levels": {"type": "String"}}},
   "equipmentCompatibilityFleetNumbers": "第 {numbers} 艦隊",
   "@equipmentCompatibilityFleetNumbers": {"placeholders": {"numbers": {"type": "String"}}},
-  "equipmentCompatibilityEmpty": "条件に一致する艦娘はいません"
+  "equipmentCompatibilityEmpty": "条件に一致する艦娘はいません",
+  "equipmentCompatibilityOfficialId": "装備 ID {id}",
+  "@equipmentCompatibilityOfficialId": {"placeholders": {"id": {"type": "int"}}},
+  "equipmentCompatibilityOwnedCount": "保有数 {count}",
+  "@equipmentCompatibilityOwnedCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilityRegularCount": "通常枠 {count}",
+  "@equipmentCompatibilityRegularCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilityExpansionCount": "補強増設 {count}",
+  "@equipmentCompatibilityExpansionCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilitySource": "ルール出典：ゲーム公式マスターデータ",
+  "equipmentCompatibilityRulesWaiting": "装備ルールの更新を待っています",
+  "equipmentCompatibilityEmptyOwned": "装備可能な保有艦娘はいません",
+  "equipmentCompatibilityEmptyAll": "装備可能な艦娘形態が見つかりません",
+  "equipmentCompatibilityCategory": "分類：{category}",
+  "@equipmentCompatibilityCategory": {"placeholders": {"category": {"type": "String"}}},
+  "equipmentCompatibilityShipClassId": "艦級 #{id}",
+  "@equipmentCompatibilityShipClassId": {"placeholders": {"id": {"type": "int"}}}
 }

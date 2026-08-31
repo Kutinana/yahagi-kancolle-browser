@@ -37,7 +37,7 @@ class EquipmentCompatibilityService {
         (whitelist == null || whitelist.contains(equipmentMasterId));
 
     final generalExpansionAllowed =
-        categoryAllowed &&
+        regularSlotAllowed &&
         state.expansionSlotEquipmentTypeIds.contains(typeId) &&
         !(state.expansionSlotLimitsByShipId[shipMasterId]?.contains(typeId) ??
             false);

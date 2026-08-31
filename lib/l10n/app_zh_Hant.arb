@@ -884,5 +884,21 @@
   "@equipmentCompatibilityOwnedLevels": {"placeholders": {"levels": {"type": "String"}}},
   "equipmentCompatibilityFleetNumbers": "第 {numbers} 艦隊",
   "@equipmentCompatibilityFleetNumbers": {"placeholders": {"numbers": {"type": "String"}}},
-  "equipmentCompatibilityEmpty": "沒有符合條件的艦娘"
+  "equipmentCompatibilityEmpty": "沒有符合條件的艦娘",
+  "equipmentCompatibilityOfficialId": "裝備 ID {id}",
+  "@equipmentCompatibilityOfficialId": {"placeholders": {"id": {"type": "int"}}},
+  "equipmentCompatibilityOwnedCount": "持有數量 {count}",
+  "@equipmentCompatibilityOwnedCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilityRegularCount": "一般欄 {count}",
+  "@equipmentCompatibilityRegularCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilityExpansionCount": "增設欄 {count}",
+  "@equipmentCompatibilityExpansionCount": {"placeholders": {"count": {"type": "int"}}},
+  "equipmentCompatibilitySource": "規則來源：遊戲官方主要資料",
+  "equipmentCompatibilityRulesWaiting": "正在等待裝備規則資料更新",
+  "equipmentCompatibilityEmptyOwned": "目前沒有持有可裝備的艦娘",
+  "equipmentCompatibilityEmptyAll": "找不到可裝備的艦娘形態",
+  "equipmentCompatibilityCategory": "分類：{category}",
+  "@equipmentCompatibilityCategory": {"placeholders": {"category": {"type": "String"}}},
+  "equipmentCompatibilityShipClassId": "艦級 #{id}",
+  "@equipmentCompatibilityShipClassId": {"placeholders": {"id": {"type": "int"}}}
 }

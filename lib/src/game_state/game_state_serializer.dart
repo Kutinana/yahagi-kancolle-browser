@@ -183,6 +183,7 @@ class GameStateSerializer {
       'expansionSlotLimitsByShipId': state.expansionSlotLimitsByShipId.map(
         (shipId, typeIds) => MapEntry(shipId.toString(), typeIds.toList()),
       ),
+      'hasEquipmentCompatibilityData': state.hasEquipmentCompatibilityData,
       'ships': state.ships.map(
         (k, v) => MapEntry(k.toString(), {
           'id': v.id,
@@ -613,6 +614,8 @@ class GameStateSerializer {
         expansionSlotEquipmentTypeIds: expansionSlotEquipmentTypeIds,
         expansionSlotSpecialRules: expansionSlotSpecialRules,
         expansionSlotLimitsByShipId: expansionSlotLimitsByShipId,
+        hasEquipmentCompatibilityData:
+            map['hasEquipmentCompatibilityData'] == true,
         ships: ships,
         updatedAt: updatedAt != null
             ? DateTime.fromMillisecondsSinceEpoch(updatedAt)

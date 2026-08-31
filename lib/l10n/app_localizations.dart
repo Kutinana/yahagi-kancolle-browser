@@ -4833,6 +4833,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'没有符合条件的舰娘'**
   String get equipmentCompatibilityEmpty;
+
+  /// No description provided for @equipmentCompatibilityOfficialId.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备 ID {id}'**
+  String equipmentCompatibilityOfficialId(int id);
+
+  /// No description provided for @equipmentCompatibilityOwnedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'持有数 {count}'**
+  String equipmentCompatibilityOwnedCount(int count);
+
+  /// No description provided for @equipmentCompatibilityRegularCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'普通槽 {count}'**
+  String equipmentCompatibilityRegularCount(int count);
+
+  /// No description provided for @equipmentCompatibilityExpansionCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'增设栏 {count}'**
+  String equipmentCompatibilityExpansionCount(int count);
+
+  /// No description provided for @equipmentCompatibilitySource.
+  ///
+  /// In zh, this message translates to:
+  /// **'规则来源：游戏官方主数据'**
+  String get equipmentCompatibilitySource;
+
+  /// No description provided for @equipmentCompatibilityRulesWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备规则数据等待更新'**
+  String get equipmentCompatibilityRulesWaiting;
+
+  /// No description provided for @equipmentCompatibilityEmptyOwned.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有持有可装备的舰娘'**
+  String get equipmentCompatibilityEmptyOwned;
+
+  /// No description provided for @equipmentCompatibilityEmptyAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到可装备的舰娘形态'**
+  String get equipmentCompatibilityEmptyAll;
+
+  /// No description provided for @equipmentCompatibilityCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类：{category}'**
+  String equipmentCompatibilityCategory(String category);
+
+  /// No description provided for @equipmentCompatibilityShipClassId.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰级 #{id}'**
+  String equipmentCompatibilityShipClassId(int id);
 }
 
 class _AppLocalizationsDelegate

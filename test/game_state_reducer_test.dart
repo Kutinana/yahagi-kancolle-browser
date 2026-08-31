@@ -215,6 +215,7 @@ void main() {
       expect(state.expansionSlotSpecialRules[124]?.classTypeIds, <int>{47});
       expect(state.expansionSlotSpecialRules[124]?.shipTypeIds, <int>{2});
       expect(state.expansionSlotSpecialRules[124]?.minimumImprovement, 7);
+      expect(state.hasEquipmentCompatibilityData, isTrue);
     });
 
     test('material update changes only resources', () {

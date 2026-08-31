@@ -16,6 +16,16 @@ void main() {
             27: <int>{268},
           },
         ),
+        101: MasterShip(
+          id: 101,
+          name: '白名单试验舰',
+          shipTypeId: 2,
+          classTypeId: 47,
+          equipTypeIds: <int>{27},
+          limitedEquipmentIdsByType: <int, Set<int>>{
+            27: <int>{268},
+          },
+        ),
         200: MasterShip(
           id: 200,
           name: '普通驱逐舰',
@@ -91,6 +101,13 @@ void main() {
     expect(result?.canEquipInRegularSlot, isTrue);
     expect(result?.canEquipInExpansionSlot, isTrue);
     expect(result?.expansionSlotMinimumImprovement, 0);
+  });
+
+  test('general expansion category still honors an equipment whitelist', () {
+    final rejected = service.resolve(shipMasterId: 101, equipmentMasterId: 269);
+
+    expect(rejected?.canEquipInRegularSlot, isFalse);
+    expect(rejected?.canEquipInExpansionSlot, isFalse);
   });
 
   test('special expansion rule restores a limited category with stars', () {

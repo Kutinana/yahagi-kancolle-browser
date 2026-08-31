@@ -2582,4 +2582,46 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get equipmentCompatibilityEmpty => '条件に一致する艦娘はいません';
+
+  @override
+  String equipmentCompatibilityOfficialId(int id) {
+    return '装備 ID $id';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedCount(int count) {
+    return '保有数 $count';
+  }
+
+  @override
+  String equipmentCompatibilityRegularCount(int count) {
+    return '通常枠 $count';
+  }
+
+  @override
+  String equipmentCompatibilityExpansionCount(int count) {
+    return '補強増設 $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySource => 'ルール出典：ゲーム公式マスターデータ';
+
+  @override
+  String get equipmentCompatibilityRulesWaiting => '装備ルールの更新を待っています';
+
+  @override
+  String get equipmentCompatibilityEmptyOwned => '装備可能な保有艦娘はいません';
+
+  @override
+  String get equipmentCompatibilityEmptyAll => '装備可能な艦娘形態が見つかりません';
+
+  @override
+  String equipmentCompatibilityCategory(String category) {
+    return '分類：$category';
+  }
+
+  @override
+  String equipmentCompatibilityShipClassId(int id) {
+    return '艦級 #$id';
+  }
 }

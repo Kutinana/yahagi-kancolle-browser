@@ -1080,6 +1080,11 @@ class GameStateReducer {
     final expansionSlotLimitsByShipId = _parseExpansionSlotLimits(
       _optionalMap(data['api_mst_equip_limit_exslot']),
     );
+    final hasEquipmentCompatibilityData =
+        data['api_mst_equip_ship'] is Map &&
+        data['api_mst_equip_exslot'] is List &&
+        data['api_mst_equip_exslot_ship'] is Map &&
+        data['api_mst_equip_limit_exslot'] is Map;
     final portraitData = <int, ({String? fileName, String? version})>{};
     for (final value in _optionalList(data['api_mst_shipgraph'])) {
       final item = _optionalMap(value);
@@ -1146,6 +1151,7 @@ class GameStateReducer {
       expansionSlotEquipmentTypeIds: expansionSlotEquipmentTypeIds,
       expansionSlotSpecialRules: expansionSlotSpecialRules,
       expansionSlotLimitsByShipId: expansionSlotLimitsByShipId,
+      hasEquipmentCompatibilityData: hasEquipmentCompatibilityData,
       masterMissions: _parseMasterMissions(
         _optionalList(data['api_mst_mission']),
       ),

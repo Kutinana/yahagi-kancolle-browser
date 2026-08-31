@@ -174,17 +174,23 @@ class _FrozenDataTableState extends State<FrozenDataTable> {
       ),
     );
 
-    Widget interactiveRow(int index, Widget child) {
+    Widget interactiveRow(
+      int index,
+      Widget child, {
+      required bool exposeButtonSemantics,
+    }) {
       final onTap = widget.onRowTap;
       if (onTap == null) return child;
+      final tappable = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onTap(index),
+        child: child,
+      );
+      if (!exposeButtonSemantics) return tappable;
       return Semantics(
         button: true,
         selected: widget.selectedRowIndex == index,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onTap(index),
-          child: child,
-        ),
+        child: tappable,
       );
     }
 
@@ -272,6 +278,7 @@ class _FrozenDataTableState extends State<FrozenDataTable> {
                                     : const Color(0xff0d2330),
                                 strongTrailingBorder: true,
                               ),
+                              exposeButtonSemantics: true,
                             ),
                           ),
                         ),
@@ -318,6 +325,7 @@ class _FrozenDataTableState extends State<FrozenDataTable> {
                                               ? const Color(0xff173f4c)
                                               : Colors.transparent,
                                         ),
+                                        exposeButtonSemantics: false,
                                       ),
                                     ),
                               ),

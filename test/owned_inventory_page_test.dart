@@ -466,6 +466,13 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('12.7cm 连装炮'), findsWidgets);
+      expect(find.text('装备 ID 201'), findsOneWidget);
+      expect(find.text('分类：主炮'), findsOneWidget);
+      expect(find.text('持有数 2'), findsOneWidget);
+      expect(find.text('普通槽 3'), findsOneWidget);
+      expect(find.text('增设栏 1'), findsOneWidget);
+      expect(find.text('规则来源：游戏官方主数据'), findsOneWidget);
+      expect(find.textContaining('舰级 #34'), findsOneWidget);
       expect(
         find.byKey(const Key('equipment-compatibility-tab-owned')),
         findsOneWidget,
@@ -483,6 +490,34 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('★+4'), findsOneWidget);
+      expect(find.textContaining('第 1、2 舰队'), findsOneWidget);
+
+      controller.accept(
+        kcsapiEvent(
+          '/kcsapi/api_req_hensei/change',
+          null,
+          includeApiData: false,
+          requestParams: const <String, Object?>{
+            'api_id': '1',
+            'api_ship_idx': '1',
+            'api_ship_id': '-1',
+          },
+        ),
+      );
+      await controller.idle;
+      await tester.pump();
+      expect(find.textContaining('第 2 舰队'), findsOneWidget);
+      expect(find.textContaining('第 1、2 舰队'), findsNothing);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-drawer')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('equipment-name-row-201')));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('equipment-name-row-202')));
       await tester.pumpAndSettle();
@@ -494,6 +529,24 @@ void main() {
 
       await tester.tap(find.byKey(const Key('equipment-compatibility-close')));
       await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-drawer')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('equipment-name-row-201')));
+      await tester.pumpAndSettle();
+      controller.accept(
+        kcsapiEvent(
+          '/kcsapi/api_req_kousyou/destroyitem2',
+          const <String, Object?>{},
+          requestParams: const <String, Object?>{
+            'api_slotitem_ids': '7001,7003',
+          },
+        ),
+      );
+      await controller.idle;
+      await tester.pump();
       expect(
         find.byKey(const Key('equipment-compatibility-drawer')),
         findsNothing,
@@ -561,9 +614,39 @@ void main() {
         '不存在',
       );
       await tester.pump();
-      expect(find.text('没有符合条件的舰娘'), findsOneWidget);
+      expect(find.text('没有找到可装备的舰娘形态'), findsOneWidget);
     },
   );
+
+  testWidgets('compatibility drawer distinguishes unavailable rule data', (
+    tester,
+  ) async {
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showShips: false,
+            showSectionControl: false,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('equipment-name-row-201')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('装备规则数据等待更新'), findsOneWidget);
+    expect(find.text('没有找到可装备的舰娘形态'), findsNothing);
+  });
 
   testWidgets('equipment rows use the bundled POI fallback icon', (
     tester,
@@ -2079,12 +2162,15 @@ Future<GameStateController> _equipmentCompatibilityController() async {
     ..['api_sortno'] = 52
     ..['api_name'] = '白雪';
   ships.add(unownedShip);
+  startData['api_mst_equip_ship'] = <String, Object?>{};
+  startData['api_mst_equip_exslot'] = <Object?>[];
   startData['api_mst_equip_exslot_ship'] = <String, Object?>{
     '201': <String, Object?>{
       'api_ship_ids': <String, Object?>{'101': 1},
       'api_req_level': 4,
     },
   };
+  startData['api_mst_equip_limit_exslot'] = <String, Object?>{};
 
   final controller = GameStateController();
   controller
