@@ -1071,6 +1071,15 @@ class GameStateReducer {
       _optionalList(data['api_mst_stype']),
     );
     final shipEquipOverrides = _optionalMap(data['api_mst_equip_ship']);
+    final expansionSlotEquipmentTypeIds = Set<int>.unmodifiable(
+      _intList(data['api_mst_equip_exslot']).where((id) => id > 0),
+    );
+    final expansionSlotSpecialRules = _parseExpansionSlotSpecialRules(
+      _optionalMap(data['api_mst_equip_exslot_ship']),
+    );
+    final expansionSlotLimitsByShipId = _parseExpansionSlotLimits(
+      _optionalMap(data['api_mst_equip_limit_exslot']),
+    );
     final portraitData = <int, ({String? fileName, String? version})>{};
     for (final value in _optionalList(data['api_mst_shipgraph'])) {
       final item = _optionalMap(value);
@@ -1096,12 +1105,10 @@ class GameStateReducer {
       final portrait = portraitData[id];
       final shipTypeId = _asInt(item['api_stype']);
       final shipOverride = _optionalMap(shipEquipOverrides?['$id']);
+      final shipOverrideTypes = _optionalMap(shipOverride?['api_equip_type']);
       final equipTypeIds = shipOverride == null
           ? shipTypes[shipTypeId]?.equipTypeIds ?? const <int>{}
-          : _positiveIntKeys(
-              _optionalMap(shipOverride['api_equip_type']),
-              requireEnabledValue: false,
-            );
+          : _positiveIntKeys(shipOverrideTypes, requireEnabledValue: false);
       final antiSubRange = _optionalList(item['api_tais']);
       ships[id] = MasterShip(
         id: id,
@@ -1119,6 +1126,9 @@ class GameStateReducer {
         buildTimeMinutes: _asInt(item['api_buildtime']),
         baseAntiSub: antiSubRange.isEmpty ? 0 : _asInt(antiSubRange.first),
         equipTypeIds: equipTypeIds,
+        limitedEquipmentIdsByType: _parseLimitedEquipmentIdsByType(
+          shipOverrideTypes,
+        ),
         portraitFileName: portrait?.fileName,
         portraitVersion: portrait?.version,
       );
@@ -1133,6 +1143,9 @@ class GameStateReducer {
       masterSlotItemTypes: _parseIdNameMap(
         _optionalList(data['api_mst_slotitem_equiptype']),
       ),
+      expansionSlotEquipmentTypeIds: expansionSlotEquipmentTypeIds,
+      expansionSlotSpecialRules: expansionSlotSpecialRules,
+      expansionSlotLimitsByShipId: expansionSlotLimitsByShipId,
       masterMissions: _parseMasterMissions(
         _optionalList(data['api_mst_mission']),
       ),
@@ -1869,6 +1882,64 @@ class GameStateReducer {
       );
     }
     return result;
+  }
+
+  Map<int, Set<int>> _parseLimitedEquipmentIdsByType(
+    Map<String, Object?>? values,
+  ) {
+    if (values == null) return const <int, Set<int>>{};
+    final result = <int, Set<int>>{};
+    for (final entry in values.entries) {
+      final typeId = int.tryParse(entry.key) ?? 0;
+      if (typeId <= 0 || entry.value is! List) continue;
+      final equipmentIds = Set<int>.unmodifiable(
+        _intList(entry.value).where((id) => id > 0),
+      );
+      result[typeId] = equipmentIds;
+    }
+    return Map<int, Set<int>>.unmodifiable(result);
+  }
+
+  Map<int, ExpansionSlotSpecialRule> _parseExpansionSlotSpecialRules(
+    Map<String, Object?>? values,
+  ) {
+    if (values == null) return const <int, ExpansionSlotSpecialRule>{};
+    final result = <int, ExpansionSlotSpecialRule>{};
+    for (final entry in values.entries) {
+      final equipmentMasterId = int.tryParse(entry.key) ?? 0;
+      final rule = _optionalMap(entry.value);
+      if (equipmentMasterId <= 0 || rule == null) continue;
+      result[equipmentMasterId] = ExpansionSlotSpecialRule(
+        equipmentMasterId: equipmentMasterId,
+        shipMasterIds: _positiveIntKeys(
+          _optionalMap(rule['api_ship_ids']),
+          requireEnabledValue: false,
+        ),
+        classTypeIds: _positiveIntKeys(
+          _optionalMap(rule['api_ctypes']),
+          requireEnabledValue: false,
+        ),
+        shipTypeIds: _positiveIntKeys(
+          _optionalMap(rule['api_stypes']),
+          requireEnabledValue: false,
+        ),
+        minimumImprovement: _asInt(rule['api_req_level']).clamp(0, 10),
+      );
+    }
+    return Map<int, ExpansionSlotSpecialRule>.unmodifiable(result);
+  }
+
+  Map<int, Set<int>> _parseExpansionSlotLimits(Map<String, Object?>? values) {
+    if (values == null) return const <int, Set<int>>{};
+    final result = <int, Set<int>>{};
+    for (final entry in values.entries) {
+      final shipMasterId = int.tryParse(entry.key) ?? 0;
+      if (shipMasterId <= 0 || entry.value is! List) continue;
+      result[shipMasterId] = Set<int>.unmodifiable(
+        _intList(entry.value).where((id) => id > 0),
+      );
+    }
+    return Map<int, Set<int>>.unmodifiable(result);
   }
 
   Map<int, String> _parseIdNameMap(List<Object?> values) {

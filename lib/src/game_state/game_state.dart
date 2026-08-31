@@ -39,6 +39,22 @@ class MasterShipType {
   final Set<int> equipTypeIds;
 }
 
+class ExpansionSlotSpecialRule {
+  const ExpansionSlotSpecialRule({
+    required this.equipmentMasterId,
+    this.shipMasterIds = const <int>{},
+    this.classTypeIds = const <int>{},
+    this.shipTypeIds = const <int>{},
+    this.minimumImprovement = 0,
+  });
+
+  final int equipmentMasterId;
+  final Set<int> shipMasterIds;
+  final Set<int> classTypeIds;
+  final Set<int> shipTypeIds;
+  final int minimumImprovement;
+}
+
 class MasterShip {
   const MasterShip({
     required this.id,
@@ -56,6 +72,7 @@ class MasterShip {
     this.buildTimeMinutes = 0,
     this.baseAntiSub = 0,
     this.equipTypeIds = const <int>{},
+    this.limitedEquipmentIdsByType = const <int, Set<int>>{},
     this.portraitFileName,
     this.portraitVersion,
   });
@@ -75,6 +92,7 @@ class MasterShip {
   final int buildTimeMinutes;
   final int baseAntiSub;
   final Set<int> equipTypeIds;
+  final Map<int, Set<int>> limitedEquipmentIdsByType;
   final String? portraitFileName;
   final String? portraitVersion;
 
@@ -95,6 +113,7 @@ class MasterShip {
       buildTimeMinutes: buildTimeMinutes,
       baseAntiSub: baseAntiSub,
       equipTypeIds: equipTypeIds,
+      limitedEquipmentIdsByType: limitedEquipmentIdsByType,
       portraitFileName: portraitFileName ?? this.portraitFileName,
       portraitVersion: portraitVersion ?? this.portraitVersion,
     );
@@ -884,6 +903,9 @@ class GameState {
     this.masterShips = const <int, MasterShip>{},
     this.masterSlotItems = const <int, MasterSlotItem>{},
     this.masterSlotItemTypes = const <int, String>{},
+    this.expansionSlotEquipmentTypeIds = const <int>{},
+    this.expansionSlotSpecialRules = const <int, ExpansionSlotSpecialRule>{},
+    this.expansionSlotLimitsByShipId = const <int, Set<int>>{},
     this.masterMissions = const <int, MasterMission>{},
     this.masterMapInfos = const <int, MasterMapInfo>{},
     this.masterMapAreas = const <int, String>{},
@@ -932,6 +954,9 @@ class GameState {
   final Map<int, MasterShip> masterShips;
   final Map<int, MasterSlotItem> masterSlotItems;
   final Map<int, String> masterSlotItemTypes;
+  final Set<int> expansionSlotEquipmentTypeIds;
+  final Map<int, ExpansionSlotSpecialRule> expansionSlotSpecialRules;
+  final Map<int, Set<int>> expansionSlotLimitsByShipId;
   final Map<int, MasterMission> masterMissions;
   final Map<int, MasterMapInfo> masterMapInfos;
   final Map<int, String> masterMapAreas;
@@ -1033,6 +1058,9 @@ class GameState {
     Map<int, MasterShip>? masterShips,
     Map<int, MasterSlotItem>? masterSlotItems,
     Map<int, String>? masterSlotItemTypes,
+    Set<int>? expansionSlotEquipmentTypeIds,
+    Map<int, ExpansionSlotSpecialRule>? expansionSlotSpecialRules,
+    Map<int, Set<int>>? expansionSlotLimitsByShipId,
     Map<int, MasterMission>? masterMissions,
     Map<int, MasterMapInfo>? masterMapInfos,
     Map<int, String>? masterMapAreas,
@@ -1069,6 +1097,12 @@ class GameState {
       masterShips: masterShips ?? this.masterShips,
       masterSlotItems: masterSlotItems ?? this.masterSlotItems,
       masterSlotItemTypes: masterSlotItemTypes ?? this.masterSlotItemTypes,
+      expansionSlotEquipmentTypeIds:
+          expansionSlotEquipmentTypeIds ?? this.expansionSlotEquipmentTypeIds,
+      expansionSlotSpecialRules:
+          expansionSlotSpecialRules ?? this.expansionSlotSpecialRules,
+      expansionSlotLimitsByShipId:
+          expansionSlotLimitsByShipId ?? this.expansionSlotLimitsByShipId,
       masterMissions: masterMissions ?? this.masterMissions,
       masterMapInfos: masterMapInfos ?? this.masterMapInfos,
       masterMapAreas: masterMapAreas ?? this.masterMapAreas,

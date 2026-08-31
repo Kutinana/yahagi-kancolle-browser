@@ -165,6 +165,58 @@ void main() {
       expect(state.masterShips[702]?.equipTypeIds, isNot(contains(24)));
     });
 
+    test('start2 preserves regular and expansion slot equipment rules', () {
+      final state = GameStateReducer().reduce(
+        GameState.empty,
+        kcsapiEvent('/kcsapi/api_start2/getData', <String, Object?>{
+          'api_mst_stype': <Object?>[
+            <String, Object?>{
+              'api_id': 2,
+              'api_name': '驱逐舰',
+              'api_equip_type': <String, Object?>{'1': 1, '27': 1},
+            },
+          ],
+          'api_mst_equip_ship': <String, Object?>{
+            '100': <String, Object?>{
+              'api_equip_type': <String, Object?>{
+                '1': null,
+                '27': <int>[268],
+              },
+            },
+          },
+          'api_mst_equip_exslot': <int>[21, 27],
+          'api_mst_equip_exslot_ship': <String, Object?>{
+            '124': <String, Object?>{
+              'api_ship_ids': <String, Object?>{'100': 1},
+              'api_ctypes': <String, Object?>{'47': 1},
+              'api_stypes': <String, Object?>{'2': 1},
+              'api_req_level': 7,
+            },
+          },
+          'api_mst_equip_limit_exslot': <String, Object?>{
+            '100': <int>[27],
+          },
+          'api_mst_ship': <Object?>[
+            <String, Object?>{
+              'api_id': 100,
+              'api_name': '测试舰改',
+              'api_stype': 2,
+              'api_ctype': 47,
+            },
+          ],
+          'api_mst_slotitem': <Object?>[],
+        }),
+      );
+
+      expect(state.masterShips[100]?.limitedEquipmentIdsByType[27], <int>{268});
+      expect(state.expansionSlotEquipmentTypeIds, <int>{21, 27});
+      expect(state.expansionSlotLimitsByShipId[100], <int>{27});
+      expect(state.expansionSlotSpecialRules[124]?.shipMasterIds, <int>{100});
+      expect(state.expansionSlotSpecialRules[124]?.classTypeIds, <int>{47});
+      expect(state.expansionSlotSpecialRules[124]?.shipTypeIds, <int>{2});
+      expect(state.expansionSlotSpecialRules[124]?.minimumImprovement, 7);
+    });
+
     test('material update changes only resources', () {
       final reducer = GameStateReducer();
       final initial = reducer.reduce(
