@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/resource_trend_page.dart';
@@ -787,6 +788,75 @@ void main() {
         166,
       ]);
       expect(table.rowHeights.first, greaterThan(120));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'sortie localizes persisted air states without changing their pill colors',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1400, 1000);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+      const persistedStates = <String>['未知', '均衡', '确保', '优势', '劣势', '丧失'];
+      for (var index = 0; index < persistedStates.length; index++) {
+        await database.insertBattleRecord(
+          BattleRecord(
+            battle: LiveBattle(
+              context: const BattleContext(mapAreaId: 2, mapInfoNo: 3, node: 5),
+              airSuperiority: persistedStates[index],
+            ),
+            completedAt: DateTime.utc(2026, 8, 30, 12, index),
+          ),
+        );
+      }
+      final controller = BattleController(gameState: () => GameState.empty);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ja'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: LogbookPage(battleController: controller, database: database),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final label in <String>[
+        '不明',
+        '航空均衡',
+        '制空権確保',
+        '航空優勢',
+        '航空劣勢',
+        '制空権喪失',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      for (final persisted in persistedStates) {
+        expect(find.text(persisted), findsNothing);
+      }
+
+      BoxDecoration decorationFor(String label) =>
+          tester
+                  .widget<DecoratedBox>(
+                    find.ancestor(
+                      of: find.text(label),
+                      matching: find.byKey(
+                        const Key('logbook-air-superiority-pill'),
+                      ),
+                    ),
+                  )
+                  .decoration
+              as BoxDecoration;
+
+      expect(decorationFor('制空権確保').color, const Color(0xff183e38));
+      expect(decorationFor('航空劣勢').color, const Color(0xff46211e));
       expect(tester.takeException(), isNull);
     },
   );

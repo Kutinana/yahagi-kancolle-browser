@@ -2098,6 +2098,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get logbookAirSuperiority => '制空状態';
 
   @override
+  String get airSuperiorityParity => '航空均衡';
+
+  @override
+  String get airSuperioritySecured => '制空権確保';
+
+  @override
+  String get airSuperiorityAdvantage => '航空優勢';
+
+  @override
+  String get airSuperiorityDisadvantage => '航空劣勢';
+
+  @override
+  String get airSuperiorityLost => '制空権喪失';
+
+  @override
   String get logbookHeavyDamageShips => '大破艦娘';
 
   @override

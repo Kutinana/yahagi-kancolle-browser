@@ -2080,6 +2080,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get logbookAirSuperiority => '制空状态';
 
   @override
+  String get airSuperiorityParity => '均衡';
+
+  @override
+  String get airSuperioritySecured => '确保';
+
+  @override
+  String get airSuperiorityAdvantage => '优势';
+
+  @override
+  String get airSuperiorityDisadvantage => '劣势';
+
+  @override
+  String get airSuperiorityLost => '丧失';
+
+  @override
   String get logbookHeavyDamageShips => '大破舰娘';
 
   @override
@@ -4572,6 +4587,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get logbookAirSuperiority => '制空狀態';
+
+  @override
+  String get airSuperiorityParity => '均衡';
+
+  @override
+  String get airSuperioritySecured => '確保';
+
+  @override
+  String get airSuperiorityAdvantage => '優勢';
+
+  @override
+  String get airSuperiorityDisadvantage => '劣勢';
+
+  @override
+  String get airSuperiorityLost => '喪失';
 
   @override
   String get logbookHeavyDamageShips => '大破艦娘';

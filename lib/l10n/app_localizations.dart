@@ -3993,6 +3993,36 @@ abstract class AppLocalizations {
   /// **'制空状态'**
   String get logbookAirSuperiority;
 
+  /// No description provided for @airSuperiorityParity.
+  ///
+  /// In zh, this message translates to:
+  /// **'均衡'**
+  String get airSuperiorityParity;
+
+  /// No description provided for @airSuperioritySecured.
+  ///
+  /// In zh, this message translates to:
+  /// **'确保'**
+  String get airSuperioritySecured;
+
+  /// No description provided for @airSuperiorityAdvantage.
+  ///
+  /// In zh, this message translates to:
+  /// **'优势'**
+  String get airSuperiorityAdvantage;
+
+  /// No description provided for @airSuperiorityDisadvantage.
+  ///
+  /// In zh, this message translates to:
+  /// **'劣势'**
+  String get airSuperiorityDisadvantage;
+
+  /// No description provided for @airSuperiorityLost.
+  ///
+  /// In zh, this message translates to:
+  /// **'丧失'**
+  String get airSuperiorityLost;
+
   /// No description provided for @logbookHeavyDamageShips.
   ///
   /// In zh, this message translates to:

@@ -8,6 +8,7 @@ import '../battle/battle_pills.dart';
 import '../fleet/equipment_type_icon.dart';
 import '../fleet/header_resource_catalog.dart';
 import '../fleet/resource_trend_page.dart';
+import '../game_state/combat_state.dart';
 import '../game_state/game_state.dart';
 import '../widgets/filter_controls.dart';
 import '../widgets/frozen_data_table.dart';
@@ -1196,10 +1197,8 @@ class _AirSuperiorityCell extends StatelessWidget {
   Widget build(BuildContext context) {
     if (row['record_type'] != 'battle') return const _TextCell('-');
     final label = row['air_superiority']?.toString().trim();
-    final displayLabel = label == null || label.isEmpty
-        ? AppLocalizations.of(context)!.statusUnknown
-        : label;
-    final colors = airSuperiorityPillColors(displayLabel);
+    final displayLabel = _localizedAirSuperiorityLabel(context, label);
+    final colors = airSuperiorityPillColors(label ?? '');
     return _SortieSummaryPill(
       pillKey: const Key('logbook-air-superiority-pill'),
       label: displayLabel,
@@ -1208,6 +1207,29 @@ class _AirSuperiorityCell extends StatelessWidget {
       border: colors.border,
     );
   }
+}
+
+String _localizedAirSuperiorityLabel(BuildContext context, String? label) {
+  final l10n =
+      AppLocalizations.of(context) ??
+      lookupAppLocalizations(const Locale('zh'));
+  final normalized = label == null || label.isEmpty ? -1 : _airStateCode(label);
+  return switch (normalized) {
+    -1 => l10n.statusUnknown,
+    0 => l10n.airSuperiorityParity,
+    1 => l10n.airSuperioritySecured,
+    2 => l10n.airSuperiorityAdvantage,
+    3 => l10n.airSuperiorityDisadvantage,
+    4 => l10n.airSuperiorityLost,
+    _ => label ?? l10n.statusUnknown,
+  };
+}
+
+int? _airStateCode(String label) {
+  for (final entry in kAirSuperiorityLabels.entries) {
+    if (entry.value == label) return entry.key;
+  }
+  return null;
 }
 
 class _SortieSummaryPill extends StatelessWidget {

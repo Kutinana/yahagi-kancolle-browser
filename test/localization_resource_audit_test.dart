@@ -135,6 +135,8 @@ void main() {
       'highSpeed',
       'lowSpeed',
       'airStateLabel',
+      // 均衡 is the established air-state term in both Chinese scripts.
+      'airSuperiorityParity',
       'back',
       'dropLabel',
       'item',
