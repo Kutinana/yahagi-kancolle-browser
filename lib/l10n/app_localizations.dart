@@ -3975,6 +3975,30 @@ abstract class AppLocalizations {
   /// **'资源节点'**
   String get logbookResourceNode;
 
+  /// No description provided for @logbookFriendFormation.
+  ///
+  /// In zh, this message translates to:
+  /// **'我方阵形'**
+  String get logbookFriendFormation;
+
+  /// No description provided for @logbookEnemyFormation.
+  ///
+  /// In zh, this message translates to:
+  /// **'敌方阵形'**
+  String get logbookEnemyFormation;
+
+  /// No description provided for @logbookAirSuperiority.
+  ///
+  /// In zh, this message translates to:
+  /// **'制空状态'**
+  String get logbookAirSuperiority;
+
+  /// No description provided for @logbookHeavyDamageShips.
+  ///
+  /// In zh, this message translates to:
+  /// **'大破舰娘'**
+  String get logbookHeavyDamageShips;
+
   /// No description provided for @gameConnectorTitle.
   ///
   /// In zh, this message translates to:

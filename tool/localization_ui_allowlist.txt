@@ -1,5 +1,6 @@
 # JSON-encoded exact entries: "relative/source/path.dart|reviewed literal"
 # Only original game data and internal diagnostics belong here.
+"lib/src/logbook/logbook_database.dart|未知"
 "lib/src/quest/quest_translation_fallbacks.dart|“佐世保之时雨”练度提升任务：编成包含驱逐舰“时雨”以及第二十七驱逐队（白露、有明、夕暮）至少1艘僚舰的演习舰队，"
 "lib/src/quest/quest_translation_fallbacks.dart|在今天之内取得5次以上演习【S评价】胜利！“佐世保之时雨”演习开始！"
 "lib/src/quest/quest_translation_fallbacks.dart|【期间限定任务】登陆船团护卫演习"

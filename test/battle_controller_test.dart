@@ -1448,20 +1448,6 @@ final class _ThrowingPredictionExecutor implements BattlePredictionExecutor {
   }
 }
 
-BattlePredictionEngineFactory _fixedEngineFactory(BattleRank rank) =>
-    ({
-      required friendMain,
-      required friendEscort,
-      required enemyMain,
-      required enemyEscort,
-    }) => _FixedRankEngine(
-      rank: rank,
-      friendMain: friendMain,
-      friendEscort: friendEscort,
-      enemyMain: enemyMain,
-      enemyEscort: enemyEscort,
-    );
-
 GameState _strikingForceStateWithCombinedFleet() {
   final ships = <int, OwnedShip>{
     101: const OwnedShip(

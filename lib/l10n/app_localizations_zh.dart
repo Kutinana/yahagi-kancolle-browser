@@ -2071,6 +2071,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get logbookResourceNode => '资源节点';
 
   @override
+  String get logbookFriendFormation => '我方阵形';
+
+  @override
+  String get logbookEnemyFormation => '敌方阵形';
+
+  @override
+  String get logbookAirSuperiority => '制空状态';
+
+  @override
+  String get logbookHeavyDamageShips => '大破舰娘';
+
+  @override
   String get gameConnectorTitle => '游戏连接';
 
   @override
@@ -4551,6 +4563,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get logbookResourceNode => '資源節點';
+
+  @override
+  String get logbookFriendFormation => '我方陣形';
+
+  @override
+  String get logbookEnemyFormation => '敵方陣形';
+
+  @override
+  String get logbookAirSuperiority => '制空狀態';
+
+  @override
+  String get logbookHeavyDamageShips => '大破艦娘';
 
   @override
   String get gameConnectorTitle => '遊戲連線';

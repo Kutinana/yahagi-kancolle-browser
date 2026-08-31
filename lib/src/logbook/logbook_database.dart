@@ -8,6 +8,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../battle/battle_models.dart';
 import '../game_state/game_state.dart';
 
+const String _unknownAirSuperiority = '未知';
+
 enum LogbookChangeCategory {
   battle,
   resource,
@@ -274,7 +276,7 @@ class LogbookDatabase extends ChangeNotifier {
         enemy_fleet_state TEXT NOT NULL,
         friend_formation INTEGER NOT NULL DEFAULT 0,
         enemy_formation INTEGER NOT NULL DEFAULT 0,
-        air_superiority TEXT NOT NULL DEFAULT '未知',
+        air_superiority TEXT NOT NULL DEFAULT '$_unknownAirSuperiority',
         heavy_damage_ship_names_json TEXT NOT NULL DEFAULT '[]',
         flagship_name TEXT NOT NULL DEFAULT '—',
         escort_flagship_name TEXT NOT NULL DEFAULT '—',
@@ -515,7 +517,7 @@ class LogbookDatabase extends ChangeNotifier {
         'ALTER TABLE battle_logs ADD COLUMN enemy_formation INTEGER NOT NULL DEFAULT 0',
       );
       await db.execute(
-        "ALTER TABLE battle_logs ADD COLUMN air_superiority TEXT NOT NULL DEFAULT '未知'",
+        "ALTER TABLE battle_logs ADD COLUMN air_superiority TEXT NOT NULL DEFAULT '$_unknownAirSuperiority'",
       );
       await db.execute(
         "ALTER TABLE battle_logs ADD COLUMN heavy_damage_ship_names_json TEXT NOT NULL DEFAULT '[]'",
@@ -571,7 +573,7 @@ class LogbookDatabase extends ChangeNotifier {
           '${battle.enemyShips.where((s) => !s.isSunk).length}/${battle.enemyShips.length}',
       'friend_formation': battle.friendFormation,
       'enemy_formation': battle.enemyFormation,
-      'air_superiority': battle.airSuperiority ?? '未知',
+      'air_superiority': battle.airSuperiority ?? _unknownAirSuperiority,
       'heavy_damage_ship_names_json': jsonEncode(
         battle.friendShips
             .where((ship) => ship.isHeavilyDamaged)
@@ -661,7 +663,7 @@ class LogbookDatabase extends ChangeNotifier {
           '[]' AS drop_ship_ids_json,
           '-' AS enemy_fleet_name, '-' AS friend_fleet_state,
           '-' AS enemy_fleet_state, 0 AS friend_formation,
-          0 AS enemy_formation, '未知' AS air_superiority,
+          0 AS enemy_formation, '$_unknownAirSuperiority' AS air_superiority,
           '[]' AS heavy_damage_ship_names_json, '-' AS flagship_name,
           '-' AS escort_flagship_name, '-' AS mvp_name,
           '-' AS escort_mvp_name, reward_items_json,

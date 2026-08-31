@@ -835,10 +835,10 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
         const _HeaderCell('时间'),
         const _HeaderCell('节点'),
         const _HeaderCell('状态'),
-        const _HeaderCell('我方阵形'),
-        const _HeaderCell('敌方阵形'),
-        const _HeaderCell('制空状态'),
-        const _HeaderCell('大破舰娘'),
+        _HeaderCell(_l10n.logbookFriendFormation),
+        _HeaderCell(_l10n.logbookEnemyFormation),
+        _HeaderCell(_l10n.logbookAirSuperiority),
+        _HeaderCell(_l10n.logbookHeavyDamageShips),
         const _HeaderCell('评价'),
         const _HeaderCell('敌舰队'),
         const _HeaderCell('掉落'),
@@ -1196,7 +1196,9 @@ class _AirSuperiorityCell extends StatelessWidget {
   Widget build(BuildContext context) {
     if (row['record_type'] != 'battle') return const _TextCell('-');
     final label = row['air_superiority']?.toString().trim();
-    final displayLabel = label == null || label.isEmpty ? '未知' : label;
+    final displayLabel = label == null || label.isEmpty
+        ? AppLocalizations.of(context)!.statusUnknown
+        : label;
     final colors = airSuperiorityPillColors(displayLabel);
     return _SortieSummaryPill(
       pillKey: const Key('logbook-air-superiority-pill'),

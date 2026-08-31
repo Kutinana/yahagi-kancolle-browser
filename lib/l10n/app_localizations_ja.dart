@@ -2089,6 +2089,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get logbookResourceNode => '資源マス';
 
   @override
+  String get logbookFriendFormation => '味方陣形';
+
+  @override
+  String get logbookEnemyFormation => '敵陣形';
+
+  @override
+  String get logbookAirSuperiority => '制空状態';
+
+  @override
+  String get logbookHeavyDamageShips => '大破艦娘';
+
+  @override
   String get gameConnectorTitle => 'ゲーム接続';
 
   @override
