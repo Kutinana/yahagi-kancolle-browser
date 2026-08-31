@@ -42,7 +42,8 @@ void main() {
         ),
       );
 
-      // Battle result with api_escape (escape ship index 8 = escort ship 2 = shipId 202, tow index 9 = escort ship 3 = shipId 203)
+      // The API may include multiple retreat candidates. POI treats only the
+      // first escape/tow entry as the pair the player actually selected.
       state = reducer.reduce(
         state,
         kcsapiEvent(
@@ -52,7 +53,7 @@ void main() {
             'api_escape_flag': 1,
             'api_escape': <String, Object?>{
               'api_escape_idx': <int>[8],
-              'api_tow_idx': <int>[9],
+              'api_tow_idx': <int>[9, 10, 11],
             },
           },
         ),
@@ -159,6 +160,82 @@ void main() {
         expect(state.combatState.escapedShipIds, <int>{203, 202});
       },
     );
+
+    test('keeps supporting scalar escape and tow indices', () {
+      var state = GameState.empty.copyWith(
+        fleets: const <Fleet>[
+          Fleet(
+            id: 1,
+            name: '主力',
+            shipIds: <int>[101, 102, 103, 104, 105, 106],
+          ),
+          Fleet(
+            id: 2,
+            name: '随伴',
+            shipIds: <int>[201, 202, 203, 204, 205, 206],
+          ),
+        ],
+        combinedFleetType: CombinedFleetType.carrierTaskForce,
+        combatState: const CombatState(
+          sortieFleetId: 1,
+          mapArea: 60,
+          mapInfo: 1,
+          currentNode: 5,
+        ),
+      );
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_combined_battle/battleresult',
+          <String, Object?>{
+            'api_win_rank': 'S',
+            'api_escape_flag': 1,
+            'api_escape': <String, Object?>{
+              'api_escape_idx': 8,
+              'api_tow_idx': 9,
+            },
+          },
+        ),
+      );
+
+      expect(state.combatState.pendingEscapeShipIds, <int>[202, 203]);
+    });
+
+    test('deduplicates an escape and tow index that resolve to one ship', () {
+      var state = GameState.empty.copyWith(
+        fleets: const <Fleet>[
+          Fleet(
+            id: 1,
+            name: '主力',
+            shipIds: <int>[101, 102, 103, 104, 105, 106],
+          ),
+          Fleet(
+            id: 2,
+            name: '随伴',
+            shipIds: <int>[201, 202, 203, 204, 205, 206],
+          ),
+        ],
+        combinedFleetType: CombinedFleetType.carrierTaskForce,
+        combatState: const CombatState(sortieFleetId: 1),
+      );
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_combined_battle/battleresult',
+          <String, Object?>{
+            'api_escape_flag': 1,
+            'api_escape': <String, Object?>{
+              'api_escape_idx': <int>[8],
+              'api_tow_idx': <int>[8],
+            },
+          },
+        ),
+      );
+
+      expect(state.combatState.pendingEscapeShipIds, <int>[202]);
+    });
 
     test(
       'BattleController updates current LiveBattle on goback_port',
@@ -668,8 +745,8 @@ void main() {
           }),
         );
 
-        // idx 1 -> fleet 3 first ship, idx 7 -> fleet 3 seventh ship.
-        expect(state.combatState.pendingEscapeShipIds, <int>[301, 307]);
+        // Both entries are candidates; only idx 1 was actually selected.
+        expect(state.combatState.pendingEscapeShipIds, <int>[301]);
       },
     );
 

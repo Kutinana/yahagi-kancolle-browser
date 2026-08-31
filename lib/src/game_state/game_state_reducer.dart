@@ -2438,13 +2438,19 @@ class GameStateReducer {
           _optionalMap(decodedEscape) ?? _optionalMap(data['api_escape']);
       final rawEscape = escapeObj?['api_escape_idx'] ?? data['api_escape_idx'];
       final rawTow = escapeObj?['api_tow_idx'] ?? data['api_tow_idx'];
-      final indices = <int>[..._intList(rawEscape), ..._intList(rawTow)];
-      if (indices.isEmpty) {
-        final singleEscape = _asInt(rawEscape);
-        if (singleEscape > 0) indices.add(singleEscape);
-        final singleTow = _asInt(rawTow);
-        if (singleTow > 0) indices.add(singleTow);
+
+      int firstPositiveIndex(Object? raw) {
+        for (final value in _intList(raw)) {
+          if (value > 0) return value;
+        }
+        return _asInt(raw);
       }
+
+      final indices = <int>[];
+      final escapeIndex = firstPositiveIndex(rawEscape);
+      final towIndex = firstPositiveIndex(rawTow);
+      if (escapeIndex > 0) indices.add(escapeIndex);
+      if (towIndex > 0) indices.add(towIndex);
 
       final requestedDeckId = _asInt(event.requestParams['api_deck_id']);
       final battleDeckId = _asInt(data['api_deck_id']);
@@ -2485,7 +2491,7 @@ class GameStateReducer {
           }
         }
       }
-      pendingEscape = shipIds;
+      pendingEscape = shipIds.toSet().toList(growable: false);
     }
 
     return state.copyWith(
