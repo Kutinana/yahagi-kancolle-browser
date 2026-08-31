@@ -155,6 +155,14 @@ test('equipment compatibility rules survive cache serialization', () {
 
 规则对象转换为仅包含字符串键、整数和数组的 JSON。读取时使用现有 `_int`/`_string` 辅助函数，缺失字段回退为空集合，错误条目逐项忽略。
 
+同时补齐离线判定必需的现有主数据缓存：
+
+- `masterShipTypes` 的名称与 `equipTypeIds`；
+- `masterShips` 的 `classTypeId`、`equipTypeIds` 与 `limitedEquipmentIdsByType`；
+- `masterSlotItems` 的名称、排序号和完整 `type` 数组。
+
+序列化测试必须先证明这些字段当前会丢失，再实现恢复逻辑。否则新增规则在离线状态下没有足够输入完成判定。
+
 - [ ] **步骤 4：运行测试验证通过并提交**
 
 运行：`flutter test test/game_state_serializer_test.dart`
