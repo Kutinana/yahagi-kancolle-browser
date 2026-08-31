@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/poi/poi_battle_prediction_engine.dart';
-import 'package:yahagi_kancolle_browser/src/battle/prediction/yahagi_battle_prediction_engine.dart';
 
 Map<String, Object?> _map(Object? value) => value is Map
     ? value.map((key, child) => MapEntry(key.toString(), child))
@@ -169,8 +168,6 @@ void main() {
       var enemyEscort = <BattleShipSnapshot>[];
       Map<String, Object?>? resultPacket;
       PoiBattlePredictionEngine? engine;
-      YahagiBattlePredictionEngine? yahagiEngine;
-      BattlePrediction? yahagiPrediction;
       BattleRank predictedRank = BattleRank.unknown;
       final relative = file.path
           .substring(root.path.length + 1)
@@ -227,14 +224,7 @@ void main() {
           enemyEscort: enemyEscort,
           fleetType: fleetType,
         );
-        yahagiEngine ??= YahagiBattlePredictionEngine(
-          friendMain: friendMain,
-          friendEscort: friendEscort,
-          enemyMain: enemyMain,
-          enemyEscort: enemyEscort,
-        );
         final parsed = engine.append(path: path, data: packet);
-        yahagiPrediction = yahagiEngine.append(path: path, data: packet);
         friendMain = parsed.friendMain;
         friendEscort = parsed.friendEscort;
         enemyMain = parsed.enemyMain;
@@ -309,23 +299,6 @@ void main() {
           reason:
               '${file.path} friend=${friendShips.map((ship) => '${ship.initialHp}/${ship.currentHp}').join(',')}',
         );
-        final yahagi = yahagiPrediction!;
-        expect(
-          <int>[
-            ...yahagi.friendMain.map((ship) => ship.currentHp),
-            ...yahagi.friendEscort.map((ship) => ship.currentHp),
-            ...yahagi.enemyMain.map((ship) => ship.currentHp),
-            ...yahagi.enemyEscort.map((ship) => ship.currentHp),
-          ],
-          <int>[
-            ...friendMain.map((ship) => ship.currentHp),
-            ...friendEscort.map((ship) => ship.currentHp),
-            ...enemyMain.map((ship) => ship.currentHp),
-            ...enemyEscort.map((ship) => ship.currentHp),
-          ],
-          reason: '${file.path} final HP differs between engines',
-        );
-        expect(yahagi.rank, predictedRank, reason: '${file.path} rank differs');
         final allEnemyHpKnown =
             enemyShips.isNotEmpty &&
             enemyShips.every((ship) => !ship.hpUnknown && ship.maxHp > 0);

@@ -1,5 +1,11 @@
-import '../battle_damage_parser.dart';
 import '../battle_models.dart';
+
+class BattleParseIssue {
+  const BattleParseIssue({required this.stage, required this.message});
+
+  final String stage;
+  final String message;
+}
 
 abstract interface class BattlePredictionEngine {
   BattlePrediction append({

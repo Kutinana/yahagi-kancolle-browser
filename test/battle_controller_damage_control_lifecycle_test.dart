@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_damage_alert.dart';
-import 'package:yahagi_kancolle_browser/src/battle/battle_damage_parser.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_engine.dart';
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
