@@ -2510,6 +2510,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fleetExportCopyFailed => '复制失败，请稍后重试。';
+
+  @override
+  String equipmentCompatibilitySummary(int owned, int all) {
+    return '可装备：持有 $owned／全部 $all';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedTab(int count) {
+    return '持有舰娘 $count';
+  }
+
+  @override
+  String equipmentCompatibilityAllTab(int count) {
+    return '全部舰娘 $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySearchHint => '搜索舰娘';
+
+  @override
+  String get equipmentCompatibilityAllSlots => '全部槽位';
+
+  @override
+  String get equipmentCompatibilityRegularSlot => '普通槽';
+
+  @override
+  String get equipmentCompatibilityExpansionSlot => '增设栏';
+
+  @override
+  String get equipmentCompatibilityBothSlots => '普通槽＋增设栏';
+
+  @override
+  String equipmentCompatibilityExpansionRequirement(int level) {
+    return '增设栏需 ★+$level';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedLevels(String levels) {
+    return 'Lv.$levels';
+  }
+
+  @override
+  String equipmentCompatibilityFleetNumbers(String numbers) {
+    return '第 $numbers 舰队';
+  }
+
+  @override
+  String get equipmentCompatibilityEmpty => '没有符合条件的舰娘';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5019,4 +5067,52 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fleetExportCopyFailed => '複製失敗，請稍後再試。';
+
+  @override
+  String equipmentCompatibilitySummary(int owned, int all) {
+    return '可裝備：持有 $owned／全體 $all';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedTab(int count) {
+    return '持有艦娘 $count';
+  }
+
+  @override
+  String equipmentCompatibilityAllTab(int count) {
+    return '全體艦娘 $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySearchHint => '搜尋艦娘';
+
+  @override
+  String get equipmentCompatibilityAllSlots => '所有欄位';
+
+  @override
+  String get equipmentCompatibilityRegularSlot => '一般裝備欄';
+
+  @override
+  String get equipmentCompatibilityExpansionSlot => '增設裝備欄';
+
+  @override
+  String get equipmentCompatibilityBothSlots => '一般欄＋增設欄';
+
+  @override
+  String equipmentCompatibilityExpansionRequirement(int level) {
+    return '增設欄需要 ★+$level';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedLevels(String levels) {
+    return '等級 $levels';
+  }
+
+  @override
+  String equipmentCompatibilityFleetNumbers(String numbers) {
+    return '第 $numbers 艦隊';
+  }
+
+  @override
+  String get equipmentCompatibilityEmpty => '沒有符合條件的艦娘';
 }

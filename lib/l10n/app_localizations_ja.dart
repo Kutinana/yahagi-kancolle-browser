@@ -2534,4 +2534,52 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get fleetExportCopyFailed => 'コピーできませんでした。しばらくしてからもう一度お試しください。';
+
+  @override
+  String equipmentCompatibilitySummary(int owned, int all) {
+    return '装備可能：保有 $owned／全艦娘 $all';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedTab(int count) {
+    return '保有艦娘 $count';
+  }
+
+  @override
+  String equipmentCompatibilityAllTab(int count) {
+    return '全艦娘 $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySearchHint => '艦娘を検索';
+
+  @override
+  String get equipmentCompatibilityAllSlots => '全スロット';
+
+  @override
+  String get equipmentCompatibilityRegularSlot => '通常スロット';
+
+  @override
+  String get equipmentCompatibilityExpansionSlot => '補強増設';
+
+  @override
+  String get equipmentCompatibilityBothSlots => '通常＋補強増設';
+
+  @override
+  String equipmentCompatibilityExpansionRequirement(int level) {
+    return '補強増設は ★+$level 以上';
+  }
+
+  @override
+  String equipmentCompatibilityOwnedLevels(String levels) {
+    return 'Lv. $levels';
+  }
+
+  @override
+  String equipmentCompatibilityFleetNumbers(String numbers) {
+    return '第 $numbers 艦隊';
+  }
+
+  @override
+  String get equipmentCompatibilityEmpty => '条件に一致する艦娘はいません';
 }

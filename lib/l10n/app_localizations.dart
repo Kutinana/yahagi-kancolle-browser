@@ -4761,6 +4761,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'复制失败，请稍后重试。'**
   String get fleetExportCopyFailed;
+
+  /// No description provided for @equipmentCompatibilitySummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'可装备：持有 {owned}／全部 {all}'**
+  String equipmentCompatibilitySummary(int owned, int all);
+
+  /// No description provided for @equipmentCompatibilityOwnedTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'持有舰娘 {count}'**
+  String equipmentCompatibilityOwnedTab(int count);
+
+  /// No description provided for @equipmentCompatibilityAllTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部舰娘 {count}'**
+  String equipmentCompatibilityAllTab(int count);
+
+  /// No description provided for @equipmentCompatibilitySearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索舰娘'**
+  String get equipmentCompatibilitySearchHint;
+
+  /// No description provided for @equipmentCompatibilityAllSlots.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部槽位'**
+  String get equipmentCompatibilityAllSlots;
+
+  /// No description provided for @equipmentCompatibilityRegularSlot.
+  ///
+  /// In zh, this message translates to:
+  /// **'普通槽'**
+  String get equipmentCompatibilityRegularSlot;
+
+  /// No description provided for @equipmentCompatibilityExpansionSlot.
+  ///
+  /// In zh, this message translates to:
+  /// **'增设栏'**
+  String get equipmentCompatibilityExpansionSlot;
+
+  /// No description provided for @equipmentCompatibilityBothSlots.
+  ///
+  /// In zh, this message translates to:
+  /// **'普通槽＋增设栏'**
+  String get equipmentCompatibilityBothSlots;
+
+  /// No description provided for @equipmentCompatibilityExpansionRequirement.
+  ///
+  /// In zh, this message translates to:
+  /// **'增设栏需 ★+{level}'**
+  String equipmentCompatibilityExpansionRequirement(int level);
+
+  /// No description provided for @equipmentCompatibilityOwnedLevels.
+  ///
+  /// In zh, this message translates to:
+  /// **'Lv.{levels}'**
+  String equipmentCompatibilityOwnedLevels(String levels);
+
+  /// No description provided for @equipmentCompatibilityFleetNumbers.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {numbers} 舰队'**
+  String equipmentCompatibilityFleetNumbers(String numbers);
+
+  /// No description provided for @equipmentCompatibilityEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有符合条件的舰娘'**
+  String get equipmentCompatibilityEmpty;
 }
 
 class _AppLocalizationsDelegate

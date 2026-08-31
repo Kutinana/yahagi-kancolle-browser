@@ -14,6 +14,7 @@ import '../new_ship/new_ship_reminder_controller.dart';
 import '../widgets/frozen_data_table.dart';
 import 'owned_inventory_projection.dart';
 import 'owned_inventory_sort_state.dart';
+import 'equipment_compatibility_drawer.dart';
 import 'unowned_inventory_projection.dart';
 
 class OwnedInventoryPage extends StatefulWidget {
@@ -57,6 +58,7 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   List<ShipInventoryRow>? _cachedShipRows;
   List<EquipmentInventoryGroup>? _cachedEquipmentGroups;
   final _equipmentRowHeightCache = _EquipmentRowHeightCache();
+  int? _selectedEquipmentMasterId;
 
   bool get _showShips => widget.showShips ?? _localShowShips;
   bool get _showOwned => widget.showOwned ?? _localShowOwned;
@@ -143,13 +145,21 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
 
   void _changeSection(bool value) {
     if (widget.showShips == null) {
-      setState(() => _localShowShips = value);
+      setState(() {
+        _localShowShips = value;
+        if (value) _selectedEquipmentMasterId = null;
+      });
     }
     widget.onSectionChanged?.call(value);
   }
 
   void _changeOwnership(bool value) {
-    if (widget.showOwned == null) setState(() => _localShowOwned = value);
+    if (widget.showOwned == null) {
+      setState(() {
+        _localShowOwned = value;
+        if (!value) _selectedEquipmentMasterId = null;
+      });
+    }
     widget.onOwnershipChanged?.call(value);
   }
 
@@ -279,9 +289,7 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                 values: EquipmentInventoryCategory.values,
                 selected: _unownedEquipmentCategory,
                 resultCount: unownedEquipmentRows.length,
-                resultKey: const Key(
-                  'unowned-equipment-filter-result-count',
-                ),
+                resultKey: const Key('unowned-equipment-filter-result-count'),
                 actionLabel: l10n.resetFilter,
                 actionIcon: Icons.restore,
                 actionKey: const Key('unowned-equipment-filter-reset'),
@@ -360,12 +368,37 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                       onSort: _tapShipSort,
                       onLongPressSort: _longPressShipSort,
                     )
-                  : _EquipmentInventoryTable(
-                      groups: equipmentGroups,
-                      rowHeightCache: _equipmentRowHeightCache,
-                      sortState: _equipmentSortState,
-                      onSort: _tapEquipmentSort,
-                      onLongPressSort: _longPressEquipmentSort,
+                  : Stack(
+                      children: [
+                        Positioned.fill(
+                          child: _EquipmentInventoryTable(
+                            groups: equipmentGroups,
+                            rowHeightCache: _equipmentRowHeightCache,
+                            sortState: _equipmentSortState,
+                            selectedEquipmentMasterId:
+                                _selectedEquipmentMasterId,
+                            onEquipmentTap: (masterId) => setState(() {
+                              _selectedEquipmentMasterId = masterId;
+                            }),
+                            onSort: _tapEquipmentSort,
+                            onLongPressSort: _longPressEquipmentSort,
+                          ),
+                        ),
+                        if (_selectedEquipmentMasterId case final masterId?)
+                          Positioned.fill(
+                            left: math.max(
+                              0,
+                              MediaQuery.sizeOf(context).width - 458,
+                            ),
+                            child: EquipmentCompatibilityDrawer(
+                              state: _state,
+                              equipment: _state.masterSlotItems[masterId]!,
+                              onClose: () => setState(() {
+                                _selectedEquipmentMasterId = null;
+                              }),
+                            ),
+                          ),
+                      ],
                     ),
             ),
           ],
@@ -512,9 +545,7 @@ class _UnownedEquipmentView extends StatelessWidget {
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              for (final row in rows) _UnownedEquipmentCard(row: row),
-            ],
+            children: [for (final row in rows) _UnownedEquipmentCard(row: row)],
           ),
         ),
       ),
@@ -1180,12 +1211,16 @@ class _EquipmentInventoryTable extends StatefulWidget {
     required this.groups,
     required this.rowHeightCache,
     required this.sortState,
+    required this.selectedEquipmentMasterId,
+    required this.onEquipmentTap,
     required this.onSort,
     required this.onLongPressSort,
   });
   final List<EquipmentInventoryGroup> groups;
   final _EquipmentRowHeightCache rowHeightCache;
   final EquipmentInventorySortState sortState;
+  final int? selectedEquipmentMasterId;
+  final ValueChanged<int> onEquipmentTap;
   final ValueChanged<EquipmentInventorySortField> onSort;
   final ValueChanged<EquipmentInventorySortField> onLongPressSort;
 
@@ -1263,6 +1298,10 @@ class _EquipmentInventoryTableState extends State<_EquipmentInventoryTable> {
       key: const Key('owned-inventory-table-equipment'),
       keyPrefix: 'owned-inventory',
       rowHeights: rowHeights,
+      selectedRowIndex: groups.indexWhere(
+        (group) => group.master.id == widget.selectedEquipmentMasterId,
+      ),
+      onRowTap: (index) => widget.onEquipmentTap(groups[index].master.id),
       frozenColumnWidths: const <double>[230],
       frozenHeaders: <Widget>[
         sortableHeader(EquipmentInventorySortField.name, l10n.equipmentName),

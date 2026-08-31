@@ -12,6 +12,8 @@ class FrozenDataTable extends StatefulWidget {
     required this.rowHeights,
     this.keyPrefix = 'frozen-table',
     this.onEndReached,
+    this.onRowTap,
+    this.selectedRowIndex,
   }) : assert(frozenColumnWidths.length == frozenHeaders.length),
        assert(scrollableColumnWidths.length == scrollableHeaders.length);
 
@@ -27,6 +29,8 @@ class FrozenDataTable extends StatefulWidget {
   final List<double> rowHeights;
   final String keyPrefix;
   final VoidCallback? onEndReached;
+  final ValueChanged<int>? onRowTap;
+  final int? selectedRowIndex;
 
   @override
   State<FrozenDataTable> createState() => _FrozenDataTableState();
@@ -170,6 +174,20 @@ class _FrozenDataTableState extends State<FrozenDataTable> {
       ),
     );
 
+    Widget interactiveRow(int index, Widget child) {
+      final onTap = widget.onRowTap;
+      if (onTap == null) return child;
+      return Semantics(
+        button: true,
+        selected: widget.selectedRowIndex == index,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onTap(index),
+          child: child,
+        ),
+      );
+    }
+
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
       child: ClipRRect(
@@ -243,12 +261,17 @@ class _FrozenDataTableState extends State<FrozenDataTable> {
                               ? (index, dimensions) => widget.rowHeights[index]
                               : null,
                           itemBuilder: (context, index) => RepaintBoundary(
-                            child: row(
-                              widget.frozenCells(index),
-                              widget.frozenColumnWidths,
-                              widget.rowHeights[index],
-                              background: const Color(0xff0d2330),
-                              strongTrailingBorder: true,
+                            child: interactiveRow(
+                              index,
+                              row(
+                                widget.frozenCells(index),
+                                widget.frozenColumnWidths,
+                                widget.rowHeights[index],
+                                background: widget.selectedRowIndex == index
+                                    ? const Color(0xff173f4c)
+                                    : const Color(0xff0d2330),
+                                strongTrailingBorder: true,
+                              ),
                             ),
                           ),
                         ),
@@ -284,11 +307,17 @@ class _FrozenDataTableState extends State<FrozenDataTable> {
                                     : null,
                                 itemBuilder: (context, index) =>
                                     RepaintBoundary(
-                                      child: row(
-                                        widget.scrollableCells(index),
-                                        widget.scrollableColumnWidths,
-                                        widget.rowHeights[index],
-                                        background: Colors.transparent,
+                                      child: interactiveRow(
+                                        index,
+                                        row(
+                                          widget.scrollableCells(index),
+                                          widget.scrollableColumnWidths,
+                                          widget.rowHeights[index],
+                                          background:
+                                              widget.selectedRowIndex == index
+                                              ? const Color(0xff173f4c)
+                                              : Colors.transparent,
+                                        ),
                                       ),
                                     ),
                               ),

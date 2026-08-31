@@ -79,10 +79,7 @@ void main() {
       );
       expect(clearIcon, findsOneWidget);
       expect(tester.widget<Icon>(clearIcon).size, 19);
-      expect(
-        tester.widget<Icon>(clearIcon).color,
-        const Color(0xffffc85a),
-      );
+      expect(tester.widget<Icon>(clearIcon).color, const Color(0xffffc85a));
       expect(tester.getSize(clearExclusions), const Size(34, 28));
       expect(
         tester
@@ -145,10 +142,7 @@ void main() {
     final hint = find.byKey(const Key('unowned-ship-reminder-hint'));
     expect(hint, findsOneWidget);
     final hintText = tester.widget<Text>(hint);
-    expect(
-      hintText.data,
-      '获得未勾选的舰娘时，将正常提醒并震动；勾选的舰娘则不会提醒。',
-    );
+    expect(hintText.data, '获得未勾选的舰娘时，将正常提醒并震动；勾选的舰娘则不会提醒。');
     expect(hintText.style?.fontSize, 12);
     expect(hintText.style?.color, const Color(0xff8ba2af));
     expect(tester.takeException(), isNull);
@@ -443,6 +437,133 @@ void main() {
     expect(find.textContaining('12.7cm'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'equipment row opens, replaces, and closes compatibility drawer',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1100, 700);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final controller = await _equipmentCompatibilityController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh'),
+          home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('equipment-name-row-201')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('equipment-compatibility-drawer')),
+        findsOneWidget,
+      );
+      expect(find.text('12.7cm 连装炮'), findsWidgets);
+      expect(
+        find.byKey(const Key('equipment-compatibility-tab-owned')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('equipment-compatibility-tab-all')),
+        findsOneWidget,
+      );
+      expect(find.text('普通槽＋增设栏'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('equipment-compatibility-ship-102')),
+          matching: find.text('普通槽'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('★+4'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('equipment-name-row-202')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-drawer')),
+        findsOneWidget,
+      );
+      expect(find.text('零式水上侦察机'), findsWidgets);
+
+      await tester.tap(find.byKey(const Key('equipment-compatibility-close')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-drawer')),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
+    'compatibility drawer adapts to narrow screens and filters rows',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(360, 640);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = await _equipmentCompatibilityController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: OwnedInventoryPage(
+              controller: controller,
+              showShips: false,
+              showSectionControl: false,
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('equipment-name-row-201')));
+      await tester.pumpAndSettle();
+
+      final drawer = find.byKey(const Key('equipment-compatibility-drawer'));
+      expect(drawer, findsOneWidget);
+      expect(tester.getSize(drawer).width, lessThanOrEqualTo(340));
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-103')),
+        findsNothing,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-tab-all')),
+      );
+      await tester.pump();
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-103')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-filter-expansion')),
+      );
+      await tester.pump();
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-101')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-102')),
+        findsNothing,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('equipment-compatibility-search')),
+        '不存在',
+      );
+      await tester.pump();
+      expect(find.text('没有符合条件的舰娘'), findsOneWidget);
+    },
+  );
 
   testWidgets('equipment rows use the bundled POI fallback icon', (
     tester,
@@ -1938,4 +2059,38 @@ void main() {
     expect(tester.widget(tableFinder), same(initialTable));
     expect(tester.takeException(), isNull);
   });
+}
+
+Future<GameStateController> _equipmentCompatibilityController() async {
+  final startEnvelope =
+      jsonDecode(start2Event.responseBody) as Map<String, Object?>;
+  final startData =
+      jsonDecode(jsonEncode(startEnvelope['api_data'])) as Map<String, Object?>;
+  for (final entry in startData['api_mst_stype']! as List<Object?>) {
+    (entry! as Map<String, Object?>)['api_equip_type'] = <String, Object?>{
+      '1': 1,
+      '10': 1,
+      '14': 1,
+    };
+  }
+  final ships = startData['api_mst_ship']! as List<Object?>;
+  final unownedShip = jsonDecode(jsonEncode(ships[1])) as Map<String, Object?>
+    ..['api_id'] = 103
+    ..['api_sortno'] = 52
+    ..['api_name'] = '白雪';
+  ships.add(unownedShip);
+  startData['api_mst_equip_exslot_ship'] = <String, Object?>{
+    '201': <String, Object?>{
+      'api_ship_ids': <String, Object?>{'101': 1},
+      'api_req_level': 4,
+    },
+  };
+
+  final controller = GameStateController();
+  controller
+    ..accept(kcsapiEvent('/kcsapi/api_start2/getData', startData))
+    ..accept(portEvent)
+    ..accept(slotItemEvent);
+  await controller.idle;
+  return controller;
 }
