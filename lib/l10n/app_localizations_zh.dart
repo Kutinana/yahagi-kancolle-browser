@@ -1598,31 +1598,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get battlePredictionSection => '战斗预测';
 
   @override
-  String get battlePredictionEngine => '战斗预测引擎';
-
-  @override
-  String get battlePredictionRecommendation => '推荐使用增强模式，可获得更完整的战斗预测结果。';
-
-  @override
-  String get battlePredictionHighAccuracy => '增强模式';
-
-  @override
-  String get battlePredictionLightweight => '轻量模式';
-
-  @override
-  String get battlePredictionHighAccuracyDesc => '按战斗模拟规则完整复演，预测更精确，但性能开销更高。';
-
-  @override
-  String get battlePredictionLightweightDesc => '使用轻量化预测逻辑，性能开销更低。';
-
-  @override
-  String get battlePredictionNextBattle => '切换从下一场战斗开始生效。';
-
-  @override
   String get battleEnemyPreviewPortraits => '战前敌方立绘';
 
   @override
-  String get battleEnemyPreviewPortraitsDesc => '仅在未卜先知完整模式显示。';
+  String get battleEnemyPreviewPortraitsDesc => '在未卜先知中显示战前敌方立绘。';
 
   @override
   String get battleLastFormationHint => '显示上次选择的阵形';
@@ -4101,31 +4080,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get battlePredictionSection => '戰鬥預測';
 
   @override
-  String get battlePredictionEngine => '戰鬥預測引擎';
-
-  @override
-  String get battlePredictionRecommendation => '建議使用增強模式，可獲得更完整的戰鬥預測結果。';
-
-  @override
-  String get battlePredictionHighAccuracy => '增強模式';
-
-  @override
-  String get battlePredictionLightweight => '輕量模式';
-
-  @override
-  String get battlePredictionHighAccuracyDesc => '依照戰鬥模擬規則完整重演，預測更精確，但效能開銷較高。';
-
-  @override
-  String get battlePredictionLightweightDesc => '使用輕量化預測邏輯，效能開銷較低。';
-
-  @override
-  String get battlePredictionNextBattle => '切換將從下一場戰鬥開始生效。';
-
-  @override
   String get battleEnemyPreviewPortraits => '戰前敵方立繪';
 
   @override
-  String get battleEnemyPreviewPortraitsDesc => '僅在未卜先知完整模式顯示。';
+  String get battleEnemyPreviewPortraitsDesc => '在未卜先知中顯示戰前敵方立繪。';
 
   @override
   String get battleLastFormationHint => '顯示上次選擇的陣形';

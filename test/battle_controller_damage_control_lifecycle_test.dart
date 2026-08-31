@@ -9,7 +9,6 @@ import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
-import 'package:yahagi_kancolle_browser/src/settings/battle_prediction_settings.dart';
 
 void main() {
   test('does not reuse damage control on the next node', () async {
@@ -274,91 +273,6 @@ void main() {
     ]);
     expect(controller.current!.friendEscort, isEmpty);
   });
-
-  test(
-    'does not inject the POI sortie ledger into the Yahagi engine',
-    () async {
-      final state = damageControlState(const <OwnedSlotItem>[
-        OwnedSlotItem(instanceId: 501, masterSlotItemId: 42),
-      ]);
-      var method = BattlePredictionMethod.poi;
-      List<int>? yahagiOpeningUsedItems;
-      final published = <Map<int, int>>[];
-      final controller = BattleController(
-        gameState: () => state,
-        onFriendlyHpUpdated: (hpByShipId, _) => published.add(hpByShipId),
-        predictionMethod: () => method,
-        yahagiEngineFactory:
-            ({
-              required friendMain,
-              required friendEscort,
-              required enemyMain,
-              required enemyEscort,
-            }) {
-              yahagiOpeningUsedItems = List<int>.from(
-                friendMain.single.usedDamageControlItemIds,
-              );
-              return EchoPredictionEngine(
-                friendMain: friendMain,
-                friendEscort: friendEscort,
-                enemyMain: enemyMain,
-                enemyEscort: enemyEscort,
-              );
-            },
-      );
-      addTearDown(controller.dispose);
-
-      controller
-        ..accept(
-          apiEvent(
-            '/kcsapi/api_req_map/start',
-            mapData,
-            sequence: 41,
-            requestParams: const <String, Object?>{'api_deck_id': '1'},
-          ),
-        )
-        ..accept(
-          apiEvent(
-            '/kcsapi/api_req_sortie/battle',
-            lethalBattle(30, openingHp: 30),
-            sequence: 42,
-          ),
-        );
-      await controller.idle;
-      expect(controller.current!.friendMain.single.currentHp, 6);
-
-      method = BattlePredictionMethod.yahagi;
-      controller
-        ..accept(apiEvent('/kcsapi/api_req_map/next', mapData, sequence: 43))
-        ..accept(
-          apiEvent(
-            '/kcsapi/api_req_sortie/battle',
-            lethalBattle(6, openingHp: 6),
-            sequence: 44,
-          ),
-        );
-      await controller.idle;
-
-      expect(yahagiOpeningUsedItems, isEmpty);
-
-      published.clear();
-      method = BattlePredictionMethod.poi;
-      controller
-        ..accept(apiEvent('/kcsapi/api_req_map/next', mapData, sequence: 45))
-        ..accept(
-          apiEvent(
-            '/kcsapi/api_req_sortie/battle',
-            lethalBattle(6, openingHp: 6),
-            sequence: 46,
-          ),
-        );
-      await controller.idle;
-
-      expect(controller.session!.isConfirmed, isFalse);
-      expect(controller.current!.rank, BattleRank.unknown);
-      expect(published, isEmpty);
-    },
-  );
 
   test('prediction failure makes later POI nodes untrusted', () async {
     final state = damageControlState(const <OwnedSlotItem>[

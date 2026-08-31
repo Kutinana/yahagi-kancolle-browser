@@ -9,7 +9,6 @@ import '../game_state/combat_state.dart';
 import '../game_state/game_api_decoder.dart';
 import '../game_state/game_api_event_pipeline.dart';
 import '../game_state/game_state.dart';
-import 'battle_damage_parser.dart';
 import 'formation_memory.dart';
 import 'battle_models.dart';
 import 'battle_node_label_resolver.dart';
@@ -18,8 +17,6 @@ import 'sortie_damage_control_ledger.dart';
 import 'prediction/battle_prediction_engine.dart';
 import 'prediction/battle_prediction_executor.dart';
 import 'prediction/poi/poi_battle_prediction_engine.dart';
-import 'prediction/yahagi_battle_prediction_engine.dart';
-import '../settings/battle_prediction_settings.dart';
 import '../logbook/logbook_database.dart';
 import '../logbook/expedition_log_catalog.dart';
 import '../performance/frame_notification_coalescer.dart';
@@ -29,21 +26,17 @@ final class BattleController extends ChangeNotifier
     implements GameApiEventConsumer {
   BattleController({
     required this.gameState,
-    BattleDamageParser? damageParser,
     void Function(Map<int, int> hpByShipId, DateTime capturedAt)?
     onFriendlyHpUpdated,
     this.damageAlertPort,
     this.battleDamageVibrationEnabled,
-    this.predictionMethod,
     this.poiEngineFactory,
-    this.yahagiEngineFactory,
     this.maxRecords = 100,
     this.nodeLabelResolver = const EmptyBattleNodeLabelResolver(),
     FrameNotificationCoalescer? captureNotifications,
     BattlePredictionExecutor? predictionExecutor,
     this.formationMemory,
   }) : _friendlyHpUpdater = onFriendlyHpUpdated,
-       _damageParser = damageParser ?? BattleDamageParser(),
        _captureNotifications =
            captureNotifications ?? FrameNotificationCoalescer(),
        _predictionExecutor =
@@ -58,14 +51,11 @@ final class BattleController extends ChangeNotifier
   final GameState Function() gameState;
   void Function(Map<int, int> hpByShipId, DateTime capturedAt)?
   _friendlyHpUpdater;
-  final BattleDamageParser _damageParser;
   final FrameNotificationCoalescer _captureNotifications;
   final BattlePredictionExecutor _predictionExecutor;
   final BattleDamageAlertPort? damageAlertPort;
   final bool Function()? battleDamageVibrationEnabled;
-  final BattlePredictionMethod Function()? predictionMethod;
   final BattlePredictionEngineFactory? poiEngineFactory;
-  final BattlePredictionEngineFactory? yahagiEngineFactory;
   final int maxRecords;
   final BattleNodeLabelResolver nodeLabelResolver;
   final FormationMemoryController? formationMemory;
@@ -77,7 +67,6 @@ final class BattleController extends ChangeNotifier
   BattleContext _context = const BattleContext();
   BattleSession? _session;
   BattlePredictionEngine? _predictionEngine;
-  BattlePredictionMethod? _predictionEngineMethod;
   final SortieDamageControlLedger _sortieDamageControls =
       SortieDamageControlLedger();
   LiveBattle? _current;
@@ -146,7 +135,6 @@ final class BattleController extends ChangeNotifier
         _captureNotifications.schedule(notifyListeners);
       } catch (error) {
         if (_battlePaths.contains(event.path) &&
-            _predictionEngineMethod == BattlePredictionMethod.poi &&
             _sortieDamageControls.isActive) {
           _sortieDamageControls.markUntrusted(
             'battle prediction failed before damage-control synchronization',
@@ -170,7 +158,6 @@ final class BattleController extends ChangeNotifier
       _archiveSession();
       _session = null;
       _predictionEngine = null;
-      _predictionEngineMethod = null;
       _sortieDamageControls.endSortie();
       return;
     }
@@ -220,7 +207,6 @@ final class BattleController extends ChangeNotifier
       );
       _archiveSession();
       _predictionEngine = null;
-      _predictionEngineMethod = null;
       _session = BattleSession(
         id: '${event.sequence}:${_context.mapAreaId}-${_context.mapInfoNo}-${_context.node}',
         context: _context,
@@ -491,9 +477,7 @@ final class BattleController extends ChangeNotifier
     );
 
     if (_predictionEngine == null) {
-      final method = predictionMethod?.call() ?? BattlePredictionMethod.poi;
-      _predictionEngineMethod = method;
-      if (!practice && method == BattlePredictionMethod.poi) {
+      if (!practice) {
         if (!_sortieDamageControls.isActive) {
           _sortieDamageControls.beginSortie(
             trusted: false,
@@ -501,7 +485,6 @@ final class BattleController extends ChangeNotifier
           );
         }
         _predictionEngine = _createPredictionEngine(
-          method: method,
           friendMain: _sortieDamageControls.seedFleet(friendMain),
           friendEscort: _sortieDamageControls.seedFleet(friendEscort),
           enemyMain: enemyMain,
@@ -509,20 +492,12 @@ final class BattleController extends ChangeNotifier
         );
       } else {
         _predictionEngine = _createPredictionEngine(
-          method: method,
           friendMain: friendMain,
           friendEscort: friendEscort,
           enemyMain: enemyMain,
           enemyEscort: enemyEscort,
         );
       }
-    }
-    if (!practice &&
-        _predictionEngineMethod != BattlePredictionMethod.poi &&
-        _sortieDamageControls.isActive) {
-      _sortieDamageControls.markUntrusted(
-        'sortie contains a battle predicted by another engine',
-      );
     }
     final appendResult = await _predictionExecutor.append(
       engine: _predictionEngine!,
@@ -531,7 +506,7 @@ final class BattleController extends ChangeNotifier
     );
     _predictionEngine = appendResult.engine;
     final parsed = appendResult.prediction;
-    if (!practice && _predictionEngineMethod == BattlePredictionMethod.poi) {
+    if (!practice) {
       if (parsed.issues.isEmpty && _sortieDamageControls.isTrusted) {
         _sortieDamageControls.synchronize(
           ships: <BattleShipSnapshot>[
@@ -626,20 +601,15 @@ final class BattleController extends ChangeNotifier
   }
 
   bool get _hasUntrustedPoiLedger =>
-      _predictionEngineMethod == BattlePredictionMethod.poi &&
-      _sortieDamageControls.isActive &&
-      !_sortieDamageControls.isTrusted;
+      _sortieDamageControls.isActive && !_sortieDamageControls.isTrusted;
 
   BattlePredictionEngine _createPredictionEngine({
-    required BattlePredictionMethod method,
     required List<BattleShipSnapshot> friendMain,
     required List<BattleShipSnapshot> friendEscort,
     required List<BattleShipSnapshot> enemyMain,
     required List<BattleShipSnapshot> enemyEscort,
   }) {
-    final factory = method == BattlePredictionMethod.poi
-        ? poiEngineFactory
-        : yahagiEngineFactory;
+    final factory = poiEngineFactory;
     if (factory != null) {
       return factory(
         friendMain: friendMain,
@@ -648,22 +618,13 @@ final class BattleController extends ChangeNotifier
         enemyEscort: enemyEscort,
       );
     }
-    return switch (method) {
-      BattlePredictionMethod.poi => PoiBattlePredictionEngine(
-        friendMain: friendMain,
-        friendEscort: friendEscort,
-        enemyMain: enemyMain,
-        enemyEscort: enemyEscort,
-        fleetType: _context.combinedFleetType.apiValue,
-      ),
-      BattlePredictionMethod.yahagi => YahagiBattlePredictionEngine(
-        friendMain: friendMain,
-        friendEscort: friendEscort,
-        enemyMain: enemyMain,
-        enemyEscort: enemyEscort,
-        damageParser: _damageParser,
-      ),
-    };
+    return PoiBattlePredictionEngine(
+      friendMain: friendMain,
+      friendEscort: friendEscort,
+      enemyMain: enemyMain,
+      enemyEscort: enemyEscort,
+      fleetType: _context.combinedFleetType.apiValue,
+    );
   }
 
   void _applyResult(Map<String, Object?> data, CapturedApiEvent event) {

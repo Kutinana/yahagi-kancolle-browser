@@ -1,12 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum BattlePredictionMethod { poi, yahagi }
-
 abstract interface class BattlePredictionSettingsStore {
-  Future<BattlePredictionMethod> load();
-
-  Future<void> save(BattlePredictionMethod method);
+  Future<void> initialize();
 
   Future<bool> loadEnemyPortraitsEnabled();
 
@@ -19,27 +15,16 @@ abstract interface class BattlePredictionSettingsStore {
 
 final class SharedPreferencesBattlePredictionSettingsStore
     implements BattlePredictionSettingsStore {
-  static const String _key = 'battle.predictionMethod';
+  static const String _legacyPredictionMethodKey = 'battle.predictionMethod';
   static const String _enemyPortraitsKey =
       'battle.enemyPreviewPortraitsEnabled';
   static const String _lastFormationHintKey = 'battle.lastFormationHintEnabled';
 
   @override
-  Future<BattlePredictionMethod> load() async {
-    final value = (await SharedPreferences.getInstance()).getString(_key);
-    return BattlePredictionMethod.values.firstWhere(
-      (method) => method.name == value,
-      orElse: () => BattlePredictionMethod.poi,
+  Future<void> initialize() async {
+    await (await SharedPreferences.getInstance()).remove(
+      _legacyPredictionMethodKey,
     );
-  }
-
-  @override
-  Future<void> save(BattlePredictionMethod method) async {
-    final saved = await (await SharedPreferences.getInstance()).setString(
-      _key,
-      method.name,
-    );
-    if (!saved) throw StateError('battle prediction setting was not saved');
   }
 
   @override
@@ -80,22 +65,15 @@ final class SharedPreferencesBattlePredictionSettingsStore
 final class MemoryBattlePredictionSettingsStore
     implements BattlePredictionSettingsStore {
   MemoryBattlePredictionSettingsStore([
-    this._method = BattlePredictionMethod.poi,
     this._enemyPortraitsEnabled = true,
     this._lastFormationHintEnabled = true,
   ]);
 
-  BattlePredictionMethod _method;
   bool _enemyPortraitsEnabled;
   bool _lastFormationHintEnabled;
 
   @override
-  Future<BattlePredictionMethod> load() async => _method;
-
-  @override
-  Future<void> save(BattlePredictionMethod method) async {
-    _method = method;
-  }
+  Future<void> initialize() async {}
 
   @override
   Future<bool> loadEnemyPortraitsEnabled() async => _enemyPortraitsEnabled;
@@ -119,11 +97,9 @@ final class BattlePredictionSettingsController extends ChangeNotifier {
   BattlePredictionSettingsController._(this._store);
 
   final BattlePredictionSettingsStore _store;
-  BattlePredictionMethod _method = BattlePredictionMethod.poi;
   bool _enemyPortraitsEnabled = true;
   bool _lastFormationHintEnabled = true;
 
-  BattlePredictionMethod get method => _method;
   bool get enemyPortraitsEnabled => _enemyPortraitsEnabled;
   bool get lastFormationHintEnabled => _lastFormationHintEnabled;
 
@@ -131,18 +107,15 @@ final class BattlePredictionSettingsController extends ChangeNotifier {
     BattlePredictionSettingsStore store,
   ) async {
     final controller = BattlePredictionSettingsController._(store);
-    controller._method = await store.load();
+    try {
+      await store.initialize();
+    } catch (_) {
+      // A stale engine preference must never block the remaining settings.
+    }
     controller._enemyPortraitsEnabled = await store.loadEnemyPortraitsEnabled();
     controller._lastFormationHintEnabled = await store
         .loadLastFormationHintEnabled();
     return controller;
-  }
-
-  Future<void> setMethod(BattlePredictionMethod method) async {
-    if (_method == method) return;
-    await _store.save(method);
-    _method = method;
-    notifyListeners();
   }
 
   Future<void> setEnemyPortraitsEnabled(bool enabled) async {

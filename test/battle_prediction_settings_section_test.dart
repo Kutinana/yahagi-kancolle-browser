@@ -5,7 +5,7 @@ import 'package:yahagi_kancolle_browser/src/settings/battle_prediction_settings.
 import 'package:yahagi_kancolle_browser/src/settings/battle_prediction_settings_section.dart';
 
 void main() {
-  testWidgets('defaults to POI and persists a Yahagi selection', (
+  testWidgets('shows only POI display options and persists both switches', (
     tester,
   ) async {
     final store = MemoryBattlePredictionSettingsStore();
@@ -23,12 +23,10 @@ void main() {
       ),
     );
 
-    final segmented = tester.widget<SegmentedButton<BattlePredictionMethod>>(
-      find.byKey(const Key('battle-prediction-method')),
-    );
-    expect(segmented.selected, <BattlePredictionMethod>{
-      BattlePredictionMethod.poi,
-    });
+    expect(find.byType(SegmentedButton), findsNothing);
+    expect(find.text('增强模式'), findsNothing);
+    expect(find.text('轻量模式'), findsNothing);
+    expect(find.byType(Switch), findsNWidgets(2));
     expect(
       tester
           .widget<Switch>(
@@ -43,17 +41,7 @@ void main() {
           .value,
       isTrue,
     );
-    expect(
-      find.text('按战斗模拟规则完整复演，预测更精确，但性能开销更高。切换从下一场战斗开始生效。'),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.text('轻量模式'));
-    await tester.pump();
-
-    expect(controller.method, BattlePredictionMethod.yahagi);
-    expect(await store.load(), BattlePredictionMethod.yahagi);
-    expect(find.text('使用轻量化预测逻辑，性能开销更低。切换从下一场战斗开始生效。'), findsOneWidget);
+    expect(find.text('在未卜先知中显示战前敌方立绘。'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('battle-enemy-preview-portraits')));
     await tester.pump();

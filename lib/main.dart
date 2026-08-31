@@ -294,7 +294,6 @@ Future<void> main() async {
     battleDamageVibrationEnabled: () =>
         safetySettingsController.battleDamageVibrationEnabled,
     nodeLabelResolver: fcdMapController,
-    predictionMethod: () => battlePredictionSettingsController.method,
     formationMemory: formationMemoryController,
   );
   fcdMapController.addListener(battleController.refreshNodeLabel);

@@ -10,7 +10,6 @@ import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
-import 'package:yahagi_kancolle_browser/src/settings/battle_prediction_settings.dart';
 import 'package:yahagi_kancolle_browser/src/performance/frame_notification_coalescer.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
@@ -243,16 +242,29 @@ void main() {
     expect(alerts.alerts, isEmpty);
   });
 
-  test('locks the selected prediction engine for one battle session', () async {
+  test('creates only the POI engine for every battle session', () async {
     final reducer = GameStateReducer();
     var state = reducer.reduce(GameState.empty, start2Event);
     state = reducer.reduce(state, portEvent);
-    var method = BattlePredictionMethod.poi;
+    var poiFactoryCalls = 0;
     final controller = BattleController(
       gameState: () => state,
-      predictionMethod: () => method,
-      poiEngineFactory: _fixedEngineFactory(BattleRank.a),
-      yahagiEngineFactory: _fixedEngineFactory(BattleRank.b),
+      poiEngineFactory:
+          ({
+            required friendMain,
+            required friendEscort,
+            required enemyMain,
+            required enemyEscort,
+          }) {
+            poiFactoryCalls += 1;
+            return _FixedRankEngine(
+              rank: BattleRank.a,
+              friendMain: friendMain,
+              friendEscort: friendEscort,
+              enemyMain: enemyMain,
+              enemyEscort: enemyEscort,
+            );
+          },
     );
     addTearDown(controller.dispose);
 
@@ -262,7 +274,6 @@ void main() {
     await controller.idle;
     expect(controller.current!.rank, BattleRank.a);
 
-    method = BattlePredictionMethod.yahagi;
     controller.accept(nightBattleEvent);
     await controller.idle;
     expect(controller.current!.rank, BattleRank.a);
@@ -286,7 +297,85 @@ void main() {
         }, sequence: 981),
       );
     await controller.idle;
-    expect(controller.current!.rank, BattleRank.b);
+    expect(controller.current!.rank, BattleRank.a);
+    expect(poiFactoryCalls, 2);
+  });
+
+  test('NPC friendly attacks never reduce or publish friendly HP', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer.reduce(state, portEvent);
+    final published = <Map<int, int>>[];
+    final controller = BattleController(
+      gameState: () => state,
+      onFriendlyHpUpdated: (hpByShipId, _) => published.add(hpByShipId),
+    );
+    addTearDown(controller.dispose);
+
+    controller
+      ..accept(mapStartEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_req_sortie/battle', <String, Object?>{
+          'api_deck_id': 1,
+          'api_f_nowhps': <int>[30, 15],
+          'api_f_maxhps': <int>[30, 15],
+          'api_e_nowhps': <int>[50],
+          'api_e_maxhps': <int>[50],
+          'api_ship_ke': <int>[501],
+          'api_friendly_info': <String, Object?>{
+            'api_ship_id': <int>[1001],
+            'api_ship_lv': <int>[90],
+            'api_nowhps': <int>[40],
+            'api_maxhps': <int>[40],
+          },
+          'api_friendly_kouku': <String, Object?>{
+            'api_stage3': <String, Object?>{
+              'api_edam': <num>[12],
+              'api_ebak_flag': <int>[1],
+              'api_erai_flag': <int>[0],
+              'api_ecl_flag': <int>[1],
+              'api_fdam': <num>[9],
+              'api_fbak_flag': <int>[1],
+              'api_frai_flag': <int>[0],
+              'api_fcl_flag': <int>[1],
+            },
+          },
+        }, sequence: 982),
+      );
+    await controller.idle;
+
+    expect(controller.current!.enemyMain.single.currentHp, 38);
+
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_req_battle_midnight/battle', <String, Object?>{
+        'api_friendly_info': <String, Object?>{
+          'api_ship_id': <int>[1001],
+          'api_ship_lv': <int>[90],
+          'api_nowhps': <int>[40],
+          'api_maxhps': <int>[40],
+        },
+        'api_friendly_battle': <String, Object?>{
+          'api_hougeki': <String, Object?>{
+            'api_at_list': <int>[0],
+            'api_sp_list': <int>[0],
+            'api_df_list': <Object?>[
+              <int>[0],
+            ],
+            'api_damage': <Object?>[
+              <num>[12],
+            ],
+          },
+        },
+      }, sequence: 983),
+    );
+    await controller.idle;
+
+    expect(controller.current!.friendMain.map((ship) => ship.currentHp), <int>[
+      30,
+      15,
+    ]);
+    expect(controller.current!.enemyMain.single.currentHp, 26);
+    expect(published.last, <int, int>{9001: 30, 9002: 15});
   });
   test('map response creates a navigation snapshot before battle', () async {
     final reducer = GameStateReducer();

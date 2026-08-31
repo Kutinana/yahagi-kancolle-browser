@@ -1608,32 +1608,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get battlePredictionSection => '戦闘予測';
 
   @override
-  String get battlePredictionEngine => '戦闘予測エンジン';
-
-  @override
-  String get battlePredictionRecommendation => 'より詳細な予測結果を得るには高精度モードを推奨します。';
-
-  @override
-  String get battlePredictionHighAccuracy => '高精度モード';
-
-  @override
-  String get battlePredictionLightweight => '軽量モード';
-
-  @override
-  String get battlePredictionHighAccuracyDesc =>
-      '戦闘シミュレーションの規則に沿って再現するため高精度ですが、処理負荷が高くなります。';
-
-  @override
-  String get battlePredictionLightweightDesc => '簡易予測ロジックを使用し、処理負荷を抑えます。';
-
-  @override
-  String get battlePredictionNextBattle => '変更は次の戦闘から反映されます。';
-
-  @override
   String get battleEnemyPreviewPortraits => '戦闘前の敵艦画像';
 
   @override
-  String get battleEnemyPreviewPortraitsDesc => '戦闘予測の詳細モードでのみ表示します。';
+  String get battleEnemyPreviewPortraitsDesc => '戦闘予測に戦闘前の敵艦画像を表示します。';
 
   @override
   String get battleLastFormationHint => '前回選択した陣形を表示';

@@ -3101,48 +3101,6 @@ abstract class AppLocalizations {
   /// **'战斗预测'**
   String get battlePredictionSection;
 
-  /// No description provided for @battlePredictionEngine.
-  ///
-  /// In zh, this message translates to:
-  /// **'战斗预测引擎'**
-  String get battlePredictionEngine;
-
-  /// No description provided for @battlePredictionRecommendation.
-  ///
-  /// In zh, this message translates to:
-  /// **'推荐使用增强模式，可获得更完整的战斗预测结果。'**
-  String get battlePredictionRecommendation;
-
-  /// No description provided for @battlePredictionHighAccuracy.
-  ///
-  /// In zh, this message translates to:
-  /// **'增强模式'**
-  String get battlePredictionHighAccuracy;
-
-  /// No description provided for @battlePredictionLightweight.
-  ///
-  /// In zh, this message translates to:
-  /// **'轻量模式'**
-  String get battlePredictionLightweight;
-
-  /// No description provided for @battlePredictionHighAccuracyDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'按战斗模拟规则完整复演，预测更精确，但性能开销更高。'**
-  String get battlePredictionHighAccuracyDesc;
-
-  /// No description provided for @battlePredictionLightweightDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'使用轻量化预测逻辑，性能开销更低。'**
-  String get battlePredictionLightweightDesc;
-
-  /// No description provided for @battlePredictionNextBattle.
-  ///
-  /// In zh, this message translates to:
-  /// **'切换从下一场战斗开始生效。'**
-  String get battlePredictionNextBattle;
-
   /// No description provided for @battleEnemyPreviewPortraits.
   ///
   /// In zh, this message translates to:
@@ -3152,7 +3110,7 @@ abstract class AppLocalizations {
   /// No description provided for @battleEnemyPreviewPortraitsDesc.
   ///
   /// In zh, this message translates to:
-  /// **'仅在未卜先知完整模式显示。'**
+  /// **'在未卜先知中显示战前敌方立绘。'**
   String get battleEnemyPreviewPortraitsDesc;
 
   /// No description provided for @battleLastFormationHint.

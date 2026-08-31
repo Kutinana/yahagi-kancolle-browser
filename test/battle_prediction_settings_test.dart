@@ -9,19 +9,16 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  test('missing prediction setting defaults to POI', () async {
-    final store = SharedPreferencesBattlePredictionSettingsStore();
-
-    expect(await store.load(), BattlePredictionMethod.poi);
-  });
-
-  test('unknown prediction setting defaults to POI', () async {
+  test('loading settings removes the legacy prediction method', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
-      'battle.predictionMethod': 'future-engine',
+      'battle.predictionMethod': 'yahagi',
     });
     final store = SharedPreferencesBattlePredictionSettingsStore();
+    final controller = await BattlePredictionSettingsController.load(store);
+    addTearDown(controller.dispose);
 
-    expect(await store.load(), BattlePredictionMethod.poi);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.containsKey('battle.predictionMethod'), isFalse);
   });
 
   test('missing enemy portrait setting defaults to enabled', () async {
@@ -52,22 +49,6 @@ void main() {
     final store = SharedPreferencesBattlePredictionSettingsStore();
 
     expect(await store.loadLastFormationHintEnabled(), isFalse);
-  });
-
-  test('controller persists both prediction methods', () async {
-    final store = MemoryBattlePredictionSettingsStore();
-    final controller = await BattlePredictionSettingsController.load(store);
-    addTearDown(controller.dispose);
-
-    expect(controller.method, BattlePredictionMethod.poi);
-
-    await controller.setMethod(BattlePredictionMethod.yahagi);
-    expect(controller.method, BattlePredictionMethod.yahagi);
-    expect(await store.load(), BattlePredictionMethod.yahagi);
-
-    await controller.setMethod(BattlePredictionMethod.poi);
-    expect(controller.method, BattlePredictionMethod.poi);
-    expect(await store.load(), BattlePredictionMethod.poi);
   });
 
   test('controller persists enemy portrait visibility', () async {
@@ -101,4 +82,34 @@ void main() {
     expect(controller.lastFormationHintEnabled, isTrue);
     expect(await store.loadLastFormationHintEnabled(), isTrue);
   });
+
+  test('legacy cleanup failure does not block display settings', () async {
+    final controller = await BattlePredictionSettingsController.load(
+      _FailingLegacyCleanupStore(),
+    );
+    addTearDown(controller.dispose);
+
+    expect(controller.enemyPortraitsEnabled, isFalse);
+    expect(controller.lastFormationHintEnabled, isFalse);
+  });
+}
+
+final class _FailingLegacyCleanupStore
+    implements BattlePredictionSettingsStore {
+  @override
+  Future<void> initialize() async {
+    throw StateError('legacy cleanup failed');
+  }
+
+  @override
+  Future<bool> loadEnemyPortraitsEnabled() async => false;
+
+  @override
+  Future<bool> loadLastFormationHintEnabled() async => false;
+
+  @override
+  Future<void> saveEnemyPortraitsEnabled(bool enabled) async {}
+
+  @override
+  Future<void> saveLastFormationHintEnabled(bool enabled) async {}
 }

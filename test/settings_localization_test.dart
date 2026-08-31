@@ -38,7 +38,9 @@ void main() {
     expect(find.text('聲音'), findsNothing);
   });
 
-  testWidgets('battle prediction settings render in Japanese', (tester) async {
+  testWidgets('POI display settings render in Japanese without mode labels', (
+    tester,
+  ) async {
     final controller = await BattlePredictionSettingsController.load(
       MemoryBattlePredictionSettingsStore(),
     );
@@ -51,9 +53,10 @@ void main() {
       ),
     );
 
-    expect(find.text('戦闘予測エンジン'), findsOneWidget);
-    expect(find.text('高精度モード'), findsOneWidget);
-    expect(find.text('軽量モード'), findsOneWidget);
+    expect(find.text('戦闘前の敵艦画像'), findsOneWidget);
+    expect(find.text('前回選択した陣形を表示'), findsOneWidget);
+    expect(find.text('高精度モード'), findsNothing);
+    expect(find.text('軽量モード'), findsNothing);
     expect(find.text('战斗预测引擎'), findsNothing);
   });
 }
