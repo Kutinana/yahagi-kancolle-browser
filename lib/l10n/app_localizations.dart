@@ -4936,6 +4936,12 @@ abstract class AppLocalizations {
   /// **'使用当前旗舰'**
   String get developmentUseFlagship;
 
+  /// No description provided for @developmentFlagshipUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前旗舰没有可用的开发池，已保留原选择'**
+  String get developmentFlagshipUnsupported;
+
   /// No description provided for @developmentSelectPool.
   ///
   /// In zh, this message translates to:

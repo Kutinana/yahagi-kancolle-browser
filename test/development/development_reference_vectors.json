@@ -1,0 +1,5828 @@
+{
+  "source_commit": "d065120",
+  "vectors": [
+    {
+      "targets": [
+        1
+      ],
+      "results": [
+        {
+          "pool_key": "水雷系-大淀#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "水雷系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "水雷系-意驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "水雷系-德驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "水雷系-神风级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "水雷系-天津风#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "炮战系-内华达#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "炮战系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 90.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 90.0
+        },
+        {
+          "pool_key": "水雷系-大淀#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 90.0
+        },
+        {
+          "pool_key": "水雷系-意驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 90.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 90.0
+        },
+        {
+          "pool_key": "水雷系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 90.0
+        },
+        {
+          "pool_key": "空母系-日向改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 88.0
+        },
+        {
+          "pool_key": "水雷系-神风级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 88.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "空母系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "空母系-萨拉、大黄蜂#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "空母系-列克星敦#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "空母系-二航战#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "空母系-大凤#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "空母系-大凤改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "空母系-塔斯特#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "空母系-齐柏林#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "水雷系-德驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 84.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 84.0
+        },
+        {
+          "pool_key": "水雷系-海伦娜#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 84.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 84.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 82.0
+        },
+        {
+          "pool_key": "空母系-方舟#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 82.0
+        },
+        {
+          "pool_key": "水雷系-川内改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 80.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 80.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 80.0
+        },
+        {
+          "pool_key": "水雷系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 80.0
+        },
+        {
+          "pool_key": "水雷系-大淀#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 80.0
+        },
+        {
+          "pool_key": "水雷系-神通改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "水雷系-意驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "潜水系-Scamp、Salmon#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "水雷系-德驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            10,
+            11
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "潜水系-潜水母舰#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "潜水系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            11,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "潜水系-Scamp、Salmon#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "潜水系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "潜水系-潜水母舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 60.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        2
+      ],
+      "results": [
+        {
+          "pool_key": "水雷系-天津风#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-大淀#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-德驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 60.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "水雷系-神风级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-意驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-大淀#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-神风级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-德驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-意驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 48.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 48.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 48.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 46.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 76.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "炮战系-内华达#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "炮战系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "空母系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "空母系-日向改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 80.0
+        },
+        {
+          "pool_key": "空母系-大凤#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-二航战#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-萨拉、大黄蜂#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-大凤改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-齐柏林#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-塔斯特#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-列克星敦#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 78.0
+        },
+        {
+          "pool_key": "空母系-方舟#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            21,
+            20,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-川内改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "水雷系-大淀#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "水雷系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-海伦娜#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-神通改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-意驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-德驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            20,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 50.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        3
+      ],
+      "results": [
+        {
+          "pool_key": "空母系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-天津风#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-意驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-德驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-大淀#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 46.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 46.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 44.0
+        },
+        {
+          "pool_key": "空母系-日向改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "空母系-萨拉、大黄蜂#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "空母系-塔斯特#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "空母系-大凤改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "空母系-大凤#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "空母系-二航战#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "空母系-列克星敦#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "空母系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "空母系-齐柏林#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "空母系-方舟#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "水雷系-神风级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "水雷系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-大淀#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-意驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-德驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-神风级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 74.0
+        },
+        {
+          "pool_key": "炮战系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "炮战系-内华达#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            10,
+            30,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            31,
+            30,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-川内改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-海伦娜#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-神通改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-大淀#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-意驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 48.0
+        },
+        {
+          "pool_key": "水雷系-德驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            10,
+            30,
+            31
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 48.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        4
+      ],
+      "results": [
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "炮战系-内华达#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "炮战系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "水雷系-大淀#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "水雷系-天津风#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "水雷系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-意驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-德驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 60.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 60.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "水雷系-神风级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "炮战系-内华达#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "炮战系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-天津风#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 46.0
+        },
+        {
+          "pool_key": "水雷系-大淀#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "水雷系-德驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-意驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-神风级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 34.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "水雷系-大淀#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "水雷系-意驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "水雷系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-神风级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "水雷系-德驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 62.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 60.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "潜水系-Scamp、Salmon#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "潜水系-Scamp、Salmon#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "潜水系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "潜水系-潜水母舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "潜水系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "潜水系-潜水母舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            20,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            20,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 34.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 86.0
+        },
+        {
+          "pool_key": "炮战系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 84.0
+        },
+        {
+          "pool_key": "炮战系-内华达#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 84.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 84.0
+        },
+        {
+          "pool_key": "潜水系-Scamp、Salmon#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 72.0
+        },
+        {
+          "pool_key": "潜水系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "潜水系-潜水母舰#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            20,
+            10,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "炮战系-厌战英勇#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 70.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "炮战系-北安普敦#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "炮战系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 68.0
+        },
+        {
+          "pool_key": "炮战系-意#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-大淀#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 44.0
+        },
+        {
+          "pool_key": "水雷系-意驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "水雷系-川内改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-海伦娜#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-神通改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-德驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            10,
+            21
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 34.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        5
+      ],
+      "results": [
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 48.0
+        },
+        {
+          "pool_key": "炮战系-内华达#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 44.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 44.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 44.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "炮战系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "炮战系-内华达#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "炮战系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 50.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 34.0
+        },
+        {
+          "pool_key": "水雷系-神风级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "水雷系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "水雷系-德驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-大淀#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-意驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-天津风#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-德驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-大淀#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-意驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 24.0
+        },
+        {
+          "pool_key": "水雷系-神风级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 24.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 22.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            20,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 22.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            51,
+            50,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 56.0
+        },
+        {
+          "pool_key": "炮战系-厌战英勇#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "炮战系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "炮战系-北安普敦#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "炮战系-比叡改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 54.0
+        },
+        {
+          "pool_key": "炮战系-意#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "水雷系-川内改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-大淀#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-海伦娜#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-神通改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-意驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-德驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 24.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            20,
+            50,
+            51
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 22.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        6
+      ],
+      "results": [
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "炮战系-内华达#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "炮战系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "炮战系-内华达#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 60.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 60.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 60.0
+        },
+        {
+          "pool_key": "炮战系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 58.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 48.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 42.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 4.0,
+          "failure_rate": 66.0
+        },
+        {
+          "pool_key": "水雷系-天津风#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 34.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-大淀#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-意驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-德驱#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-其它#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 24.0
+        },
+        {
+          "pool_key": "水雷系-神风级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 24.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#3",
+          "pool_type": "fuelSteel",
+          "resources": [
+            10,
+            30,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 22.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 64.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "水雷系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "水雷系-神风级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-德驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-意驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-大淀#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 34.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            41,
+            40,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 34.0
+        },
+        {
+          "pool_key": "炮战系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            30,
+            40,
+            41
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "炮战系-北安普敦#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            30,
+            40,
+            41
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            30,
+            40,
+            41
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            30,
+            40,
+            41
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "炮战系-厌战英勇#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            30,
+            40,
+            41
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 52.0
+        },
+        {
+          "pool_key": "炮战系-意#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            30,
+            40,
+            41
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 50.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        7
+      ],
+      "results": [
+        {
+          "pool_key": "炮战系-金刚级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 44.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "炮战系-内华达#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 38.0
+        },
+        {
+          "pool_key": "炮战系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 34.0
+        },
+        {
+          "pool_key": "炮战系-厌战英勇#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "炮战系-北安普敦#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "炮战系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "炮战系-比叡改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "炮战系-意#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 46.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "水雷系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-吹雪级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-睦月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-神风级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "水雷系-大淀#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-意驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-德驱#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 24.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            151,
+            150,
+            10
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 24.0
+        },
+        {
+          "pool_key": "水雷系-川内改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 16.0
+        },
+        {
+          "pool_key": "水雷系-秋月级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 16.0
+        },
+        {
+          "pool_key": "水雷系-大淀#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "水雷系-海伦娜#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "水雷系-海防舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "水雷系-阿贺野级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "水雷系-神通改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "水雷系-山汐丸#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "水雷系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "水雷系-意驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 12.0
+        },
+        {
+          "pool_key": "水雷系-其它驱逐舰#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 12.0
+        },
+        {
+          "pool_key": "水雷系-灯泡宗谷、南极宗谷#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 12.0
+        },
+        {
+          "pool_key": "水雷系-德驱#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "水雷系-吹白雪改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            100,
+            150,
+            151
+          ],
+          "target_rate": 2.0,
+          "failure_rate": 10.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        8
+      ],
+      "results": [
+        {
+          "pool_key": "炮战系-金刚级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            201,
+            200,
+            10
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 36.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            201,
+            200,
+            10
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 32.0
+        },
+        {
+          "pool_key": "炮战系-黎塞留级#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            201,
+            200,
+            10
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 30.0
+        },
+        {
+          "pool_key": "炮战系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            201,
+            200,
+            10
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 28.0
+        },
+        {
+          "pool_key": "炮战系-内华达#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            201,
+            200,
+            10
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 26.0
+        },
+        {
+          "pool_key": "炮战系-大和级(大和改二重除外)#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            120,
+            200,
+            201
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 24.0
+        },
+        {
+          "pool_key": "炮战系-厌战英勇#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            120,
+            200,
+            201
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 22.0
+        },
+        {
+          "pool_key": "炮战系-金刚级#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            120,
+            200,
+            201
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 22.0
+        },
+        {
+          "pool_key": "炮战系-北安普敦#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            120,
+            200,
+            201
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 22.0
+        },
+        {
+          "pool_key": "炮战系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            120,
+            200,
+            201
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 22.0
+        },
+        {
+          "pool_key": "炮战系-意#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            120,
+            200,
+            201
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "炮战系-比叡改二#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            120,
+            200,
+            201
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#2",
+          "pool_type": "ammunition",
+          "resources": [
+            10,
+            201,
+            200,
+            10
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 40.0
+        },
+        {
+          "pool_key": "炮战系-纳尔逊罗德尼#1",
+          "pool_type": "bauxite",
+          "resources": [
+            10,
+            120,
+            200,
+            201
+          ],
+          "target_rate": 6.0,
+          "failure_rate": 24.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        168
+      ],
+      "results": [
+        {
+          "pool_key": "空母系-日向改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-方舟#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-萨拉、大黄蜂#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-列克星敦#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-大凤#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-大凤改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-塔斯特#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-齐柏林#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-二航战#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 18.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-日向改#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-伊势改#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-方舟#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-萨拉、大黄蜂#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-列克星敦#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-五航改二(甲)#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-塔斯特#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-齐柏林#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-其它#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 10.0
+        },
+        {
+          "pool_key": "空母系-二航战#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-大凤#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-大凤改#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#1",
+          "pool_type": "bauxite",
+          "resources": [
+            240,
+            260,
+            10,
+            261
+          ],
+          "target_rate": 8.0,
+          "failure_rate": 6.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        168,
+        1
+      ],
+      "results": [
+        {
+          "pool_key": "空母系-日向改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-方舟#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-萨拉、大黄蜂#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-列克星敦#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-大凤#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-大凤改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-塔斯特#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-齐柏林#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 20.0
+        },
+        {
+          "pool_key": "空母系-二航战#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 18.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            10,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 10.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        168,
+        2
+      ],
+      "results": [
+        {
+          "pool_key": "空母系-日向改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-方舟#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-萨拉、大黄蜂#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-列克星敦#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-大凤#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-大凤改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-塔斯特#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-齐柏林#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 14.0
+        },
+        {
+          "pool_key": "空母系-二航战#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 12.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            20,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 4.0
+        }
+      ]
+    },
+    {
+      "targets": [
+        168,
+        3
+      ],
+      "results": [
+        {
+          "pool_key": "空母系-日向改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-方舟#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-萨拉、大黄蜂#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-列克星敦#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-大凤#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-大凤改#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-塔斯特#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-齐柏林#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-其它#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 8.0
+        },
+        {
+          "pool_key": "空母系-二航战#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 14.0,
+          "failure_rate": 6.0
+        },
+        {
+          "pool_key": "空母系-陆军、特务宗谷#2",
+          "pool_type": "ammunition",
+          "resources": [
+            240,
+            260,
+            30,
+            250
+          ],
+          "target_rate": 10.0,
+          "failure_rate": 2.0
+        }
+      ]
+    }
+  ]
+}

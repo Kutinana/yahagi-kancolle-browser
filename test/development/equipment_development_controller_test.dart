@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/development/development_repository.dart';
@@ -16,12 +17,21 @@ void main() {
       await controller.initialize(_stateWithFlagship(101));
       expect(controller.selectedPoolKey, 'carrier-akagi#1');
 
+      controller.selectPool('carrier-akagi#1');
+      controller.updateGameState(_stateWithFlagship(202));
+      expect(controller.selectedPoolKey, 'carrier-akagi#1');
+
       controller.selectPool('gunnery-other#3');
       controller.updateGameState(_stateWithFlagship(202));
       expect(controller.selectedPoolKey, 'gunnery-other#3');
 
       controller.useCurrentFlagship();
       expect(controller.selectedPoolKey, 'torpedo-sendai#2');
+
+      controller.selectPool('gunnery-other#3');
+      controller.updateGameState(_stateWithFlagship(303));
+      expect(controller.useCurrentFlagship(), isFalse);
+      expect(controller.selectedPoolKey, 'gunnery-other#3');
     },
   );
 
@@ -46,11 +56,35 @@ void main() {
     controller.toggleTarget(7);
     expect(controller.targets, {7});
     expect(controller.recipes, isNotEmpty);
+    expect(controller.filteredEquipment.map((item) => item.id), contains(9));
+    expect(controller.enabledEquipment, isNot(contains(9)));
 
     controller.setEquipmentSearch('雷达');
     expect(controller.filteredEquipment.map((item) => item.id), [8]);
     controller.setEquipmentTypeFilter(1);
     expect(controller.filteredEquipment, isEmpty);
+  });
+
+  test('default recipe ordering preserves calculator tie breakers', () async {
+    final controller = EquipmentDevelopmentController(
+      repository: _repository(),
+    );
+    await controller.initialize(_stateWithFlagship(101));
+    controller.toggleTarget(7);
+
+    expect(controller.recipes.first.poolKey, 'gunnery-other#3');
+  });
+
+  test('finishing a delayed load after dispose is harmless', () async {
+    final source = Completer<String>();
+    final controller = EquipmentDevelopmentController(
+      repository: DevelopmentRepository(loadString: (_) => source.future),
+    );
+    final loading = controller.initialize(_stateWithFlagship(101));
+    controller.dispose();
+
+    source.complete(jsonEncode(_snapshot()));
+    await expectLater(loading, completes);
   });
 
   test('repository failure leaves a retryable error state', () async {
@@ -87,6 +121,7 @@ GameState _stateWithFlagship(int masterId) => GameState(
   masterSlotItems: const {
     7: MasterSlotItem(id: 7, name: '测试主炮', type: [0, 0, 1]),
     8: MasterSlotItem(id: 8, name: '测试雷达', type: [0, 0, 12]),
+    9: MasterSlotItem(id: 9, name: '测试爆雷', type: [0, 0, 15]),
   },
 );
 
@@ -99,9 +134,9 @@ Map<String, Object?> _snapshot() => {
     'hashes': {'pool': 'hash'},
   },
   'summary': {
-    'pool_count': 3,
-    'selectable_pool_count': 3,
-    'equipment_count': 2,
+    'pool_count': 4,
+    'selectable_pool_count': 4,
+    'equipment_count': 3,
     'negative_pool_count': 0,
     'minimum_resource_pool_count': 0,
   },
@@ -118,11 +153,18 @@ Map<String, Object?> _snapshot() => {
       'type_id': 12,
       'minimum_resources': [10, 10, 10, 10],
     },
+    {
+      'id': 9,
+      'name': '爆雷',
+      'type_id': 15,
+      'minimum_resources': [10, 10, 10, 10],
+    },
   ],
   'pools': [
     _pool('carrier-akagi#1', 'carrier-akagi', 1, [101], {'7': 2, '8': 1}),
     _pool('torpedo-sendai#2', 'torpedo-sendai', 2, [202], {'7': 2, '8': 1}),
-    _pool('gunnery-other#3', 'gunnery-other', 3, [101, 202], {'7': 2, '8': 1}),
+    _pool('gunnery-other#3', 'gunnery-other', 3, [101, 202], {'7': 2}),
+    _pool('depth-charge#1', 'depth-charge', 1, [303], {'9': 2}),
   ],
   'secretaries': [
     {'ship_id': 101, 'pool_key': 'carrier-akagi#1'},

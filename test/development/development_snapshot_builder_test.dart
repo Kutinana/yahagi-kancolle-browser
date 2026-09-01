@@ -38,7 +38,7 @@ void main() {
       {
         'api_id': 7,
         'api_name': '测试主炮',
-          'api_type': [0, 0, 1, 5, 0],
+        'api_type': [0, 0, 1, 5, 0],
         'api_broken': [1, 2, 3, 4],
       },
       {

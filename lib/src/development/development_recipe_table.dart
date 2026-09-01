@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'development_dataset.dart';
 import 'development_recipe_calculator.dart';
+import 'development_resources.dart';
 import 'equipment_development_controller.dart';
 
 class DevelopmentRecipeTable extends StatelessWidget {
@@ -35,15 +36,19 @@ class DevelopmentRecipeTable extends StatelessWidget {
         _RecipeHeader(controller: controller),
         const SizedBox(height: 6),
         for (var index = 0; index < controller.recipes.length; index++)
-          _RecipeRow(
-            key: Key('development-recipe-row-$index'),
-            index: index,
-            recipe: controller.recipes[index],
-            pool: controller
-                .dataset
-                ?.poolsByKey[controller.recipes[index].poolKey],
-            locale: locale,
-            onApply: () => controller.applyRecipe(controller.recipes[index]),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 7),
+            child: _RecipeRow(
+              key: Key('development-recipe-row-$index'),
+              index: index,
+              recipe: controller.recipes[index],
+              pool: controller
+                  .dataset
+                  ?.poolsByKey[controller.recipes[index].poolKey],
+              applied: controller.isRecipeApplied(controller.recipes[index]),
+              locale: locale,
+              onApply: () => controller.applyRecipe(controller.recipes[index]),
+            ),
           ),
       ],
     );
@@ -125,81 +130,106 @@ class _RecipeRow extends StatelessWidget {
     required this.pool,
     required this.locale,
     required this.onApply,
+    required this.applied,
   });
   final int index;
   final DevelopmentRecipeResult recipe;
   final DevelopmentPoolRecord? pool;
   final Locale locale;
   final VoidCallback onApply;
+  final bool applied;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 7),
-      padding: const EdgeInsets.fromLTRB(10, 9, 6, 9),
-      decoration: BoxDecoration(
-        color: const Color(0xff0d2532),
-        border: Border.all(color: const Color(0xff294b5d)),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      selected: applied,
+      button: true,
+      child: Material(
+        color: applied ? const Color(0xff3b301d) : const Color(0xff0d2532),
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: applied ? const Color(0xffffc85a) : const Color(0xff294b5d),
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: InkWell(
+          onTap: onApply,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 9, 6, 9),
+            child: Row(
               children: [
-                Text(
-                  pool?.label(locale) ?? recipe.poolKey,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xffd9e7ee),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pool?.label(locale) ?? recipe.poolKey,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xffd9e7ee),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        _poolTypeLabel(l10n, recipe.poolType),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xff84a6b6),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 7,
+                        runSpacing: 4,
+                        children: [
+                          _Metric(
+                            icon: Icons.local_gas_station,
+                            value: '${recipe.resources.fuel}',
+                          ),
+                          _Metric(
+                            icon: Icons.grain,
+                            value: '${recipe.resources.ammo}',
+                          ),
+                          _Metric(
+                            icon: Icons.hexagon_outlined,
+                            value: '${recipe.resources.steel}',
+                          ),
+                          _Metric(
+                            icon: Icons.landscape_outlined,
+                            value: '${recipe.resources.bauxite}',
+                          ),
+                          _Metric(
+                            icon: Icons.track_changes,
+                            value: '${_rate(recipe.targetRate)}%',
+                            accent: true,
+                          ),
+                          _Metric(
+                            icon: Icons.close,
+                            value: '${_rate(recipe.failureRate)}%',
+                          ),
+                          _Metric(
+                            icon: Icons.functions,
+                            value: '${recipe.totalResources}',
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 5),
-                Wrap(
-                  spacing: 7,
-                  runSpacing: 4,
-                  children: [
-                    _Metric(
-                      icon: Icons.local_gas_station,
-                      value: '${recipe.resources.fuel}',
-                    ),
-                    _Metric(
-                      icon: Icons.grain,
-                      value: '${recipe.resources.ammo}',
-                    ),
-                    _Metric(
-                      icon: Icons.hexagon_outlined,
-                      value: '${recipe.resources.steel}',
-                    ),
-                    _Metric(
-                      icon: Icons.landscape_outlined,
-                      value: '${recipe.resources.bauxite}',
-                    ),
-                    _Metric(
-                      icon: Icons.track_changes,
-                      value: '${_rate(recipe.targetRate)}%',
-                      accent: true,
-                    ),
-                    _Metric(
-                      icon: Icons.close,
-                      value: '${_rate(recipe.failureRate)}%',
-                    ),
-                  ],
+                IconButton(
+                  key: Key('development-apply-recipe-$index'),
+                  tooltip: l10n.developmentApplyRecipe,
+                  onPressed: onApply,
+                  icon: const Icon(Icons.input, color: Color(0xffffc85a)),
                 ),
               ],
             ),
           ),
-          IconButton(
-            key: Key('development-apply-recipe-$index'),
-            tooltip: l10n.developmentApplyRecipe,
-            onPressed: onApply,
-            icon: const Icon(Icons.input, color: Color(0xffffc85a)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -257,3 +287,10 @@ class _EmptyRecipes extends StatelessWidget {
 String _rate(double value) => value == value.roundToDouble()
     ? '${value.round()}'
     : value.toStringAsFixed(1);
+
+String _poolTypeLabel(AppLocalizations l10n, DevelopmentPoolType type) =>
+    switch (type) {
+      DevelopmentPoolType.bauxite => l10n.developmentPoolBauxite,
+      DevelopmentPoolType.ammunition => l10n.developmentPoolAmmunition,
+      DevelopmentPoolType.fuelSteel => l10n.developmentPoolFuelSteel,
+    };

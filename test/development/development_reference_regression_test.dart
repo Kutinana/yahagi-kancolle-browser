@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,7 @@ import 'package:yahagi_kancolle_browser/src/development/development_recipe_calcu
 
 void main() {
   late DevelopmentDataset dataset;
+  late List<Object?> vectors;
 
   setUpAll(() async {
     dataset = DevelopmentDataset.fromJsonString(
@@ -13,6 +15,15 @@ void main() {
         'assets/data/development/development_snapshot.json',
       ).readAsString(),
     );
+    final fixture =
+        jsonDecode(
+              await File(
+                'test/development/development_reference_vectors.json',
+              ).readAsString(),
+            )
+            as Map<String, Object?>;
+    expect(fixture['source_commit'], 'd065120');
+    vectors = fixture['vectors']! as List<Object?>;
   });
 
   const cases = <_ReferenceCase>[
@@ -52,6 +63,28 @@ void main() {
         reference.sumFailure,
       );
       expect(results.every((item) => item.targetRate > 0), isTrue);
+
+      final expected = vectors.cast<Map<String, Object?>>().singleWhere(
+        (vector) =>
+            (vector['targets']! as List<Object?>)
+                .cast<int>()
+                .toSet()
+                .containsAll(reference.targets) &&
+            reference.targets.containsAll(
+              (vector['targets']! as List<Object?>).cast<int>(),
+            ),
+      );
+      final normalized = [
+        for (final result in results)
+          <String, Object?>{
+            'pool_key': result.poolKey,
+            'pool_type': result.poolType.name,
+            'resources': result.resources.values,
+            'target_rate': result.targetRate,
+            'failure_rate': result.failureRate,
+          },
+      ];
+      expect(normalized, expected['results']);
     });
   }
 }

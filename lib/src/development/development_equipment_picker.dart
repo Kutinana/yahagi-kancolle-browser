@@ -78,7 +78,9 @@ class _DevelopmentEquipmentPicker extends StatelessWidget {
                   key: const Key('development-search-button'),
                   tooltip: l10n.developmentSearchEquipment,
                   heroTag: 'development-search',
-                  backgroundColor: const Color(0xffb98530),
+                  backgroundColor: controller.equipmentSearch.isEmpty
+                      ? const Color(0xff315365)
+                      : const Color(0xffb98530),
                   foregroundColor: const Color(0xff08151d),
                   onPressed: () => _showSearchDialog(context, controller),
                   child: const Icon(Icons.search),
@@ -140,6 +142,9 @@ class _DevelopmentEquipmentPicker extends StatelessWidget {
                         final selected = controller.targets.contains(
                           equipment.id,
                         );
+                        final enabled =
+                            selected ||
+                            controller.enabledEquipment.contains(equipment.id);
                         return Card(
                           color: selected
                               ? const Color(0xff3b301d)
@@ -147,7 +152,10 @@ class _DevelopmentEquipmentPicker extends StatelessWidget {
                           margin: const EdgeInsets.only(bottom: 6),
                           child: ListTile(
                             key: Key('development-equipment-${equipment.id}'),
-                            onTap: () => controller.toggleTarget(equipment.id),
+                            enabled: enabled,
+                            onTap: enabled
+                                ? () => controller.toggleTarget(equipment.id)
+                                : null,
                             leading: EquipmentTypeIconImage(
                               iconId: equipment.iconId,
                               width: 36,
@@ -185,23 +193,48 @@ Future<void> _showSearchDialog(
   BuildContext context,
   EquipmentDevelopmentController controller,
 ) async {
-  final l10n = AppLocalizations.of(context)!;
-  final textController = TextEditingController(
-    text: controller.equipmentSearch,
-  );
   final value = await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) =>
+        _DevelopmentSearchDialog(initialValue: controller.equipmentSearch),
+  );
+  if (value != null) controller.setEquipmentSearch(value.trim());
+}
+
+class _DevelopmentSearchDialog extends StatefulWidget {
+  const _DevelopmentSearchDialog({required this.initialValue});
+  final String initialValue;
+
+  @override
+  State<_DevelopmentSearchDialog> createState() =>
+      _DevelopmentSearchDialogState();
+}
+
+class _DevelopmentSearchDialogState extends State<_DevelopmentSearchDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialValue,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
       key: const Key('development-search-dialog'),
       title: Text(l10n.developmentSearchEquipment),
       content: TextField(
-        controller: textController,
+        controller: _controller,
         autofocus: true,
         decoration: InputDecoration(
           hintText: l10n.developmentSearchHint,
           prefixIcon: const Icon(Icons.search),
         ),
-        onSubmitted: (value) => Navigator.pop(context, value),
+        onSubmitted: (value) => Navigator.pop(context, value.trim()),
       ),
       actions: [
         TextButton(
@@ -209,12 +242,10 @@ Future<void> _showSearchDialog(
           child: Text(l10n.cancel),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, textController.text),
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
           child: Text(l10n.confirm),
         ),
       ],
-    ),
-  );
-  textController.dispose();
-  if (value != null) controller.setEquipmentSearch(value);
+    );
+  }
 }

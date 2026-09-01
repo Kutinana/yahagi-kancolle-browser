@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'development_snapshot_builder.dart';
 
 const _repository = 'https://github.com/SkywalkerJi/kc-development-tools';
+const _authorizedCommit = 'd065120';
 
 Future<void> main(List<String> arguments) async {
   try {
@@ -46,6 +47,12 @@ Future<void> main(List<String> arguments) async {
     if (commit.isEmpty) {
       throw StateError(
         'Git returned an empty commit for ${sourceDirectory.path}',
+      );
+    }
+    if (commit != _authorizedCommit) {
+      throw StateError(
+        'Source commit $commit does not match authorized commit '
+        '$_authorizedCommit',
       );
     }
     final timeResult = await Process.run('git', [

@@ -2651,6 +2651,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get developmentUseFlagship => '現在の旗艦を使用';
 
   @override
+  String get developmentFlagshipUnsupported =>
+      '現在の旗艦に対応する開発プールがないため、元の選択を維持しました';
+
+  @override
   String get developmentSelectPool => '秘書艦タイプ';
 
   @override

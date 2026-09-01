@@ -43,6 +43,7 @@ import 'package:yahagi_kancolle_browser/src/fleet/repair_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/logbook/logbook_page.dart';
 import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
+import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
@@ -458,7 +459,7 @@ void main() {
       find.byKey(const Key('toolbox-mode-equipmentDevelopment')),
     );
     await tester.pump();
-    expect(find.text('装备开发'), findsOneWidget);
+    expect(find.byType(EquipmentDevelopmentPage), findsOneWidget);
     gameCaptureController.dispose();
     gameStateController.dispose();
     battleController.dispose();

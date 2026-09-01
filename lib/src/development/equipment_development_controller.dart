@@ -35,6 +35,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
       DevelopmentRecipeSortField.targetRate;
   bool _sortAscending = false;
   String? _lastAppliedRecipeKey;
+  bool _disposed = false;
 
   DevelopmentDataset? get dataset => _dataset;
   bool get isLoading => _loading;
@@ -51,6 +52,10 @@ class EquipmentDevelopmentController extends ChangeNotifier {
   DevelopmentRecipeSortField get recipeSort => _recipeSort;
   bool get sortAscending => _sortAscending;
   bool get followsCurrentFlagship => !_manualPoolSelection;
+
+  bool isRecipeApplied(DevelopmentRecipeResult recipe) =>
+      _lastAppliedRecipeKey ==
+      '${recipe.poolKey}:${recipe.resources.values.join(',')}';
 
   DevelopmentPoolRecord? get selectedPool {
     final key = _selectedPoolKey;
@@ -83,9 +88,6 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     if (data == null) return const [];
     final query = _equipmentSearch.trim().toLowerCase();
     final output = data.equipment.values.where((item) {
-      if (!_enabledEquipment.contains(item.id) && !_targets.contains(item.id)) {
-        return false;
-      }
       if (_equipmentTypeFilter != null && item.typeId != _equipmentTypeFilter) {
         return false;
       }
@@ -96,8 +98,8 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     output.sort((left, right) {
       final byType = left.typeId.compareTo(right.typeId);
       if (byType != 0) return byType;
-      final byName = equipmentName(left).compareTo(equipmentName(right));
-      return byName != 0 ? byName : left.id.compareTo(right.id);
+      final byIcon = left.iconId.compareTo(right.iconId);
+      return byIcon != 0 ? byIcon : left.id.compareTo(right.id);
     });
     return output;
   }
@@ -119,13 +121,15 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     notifyListeners();
     try {
       _dataset = await repository.load();
+      if (_disposed) return;
       _selectAutomaticPool();
       _recompute();
     } on Object catch (error) {
+      if (_disposed) return;
       _error = error;
     } finally {
       _loading = false;
-      notifyListeners();
+      _notifyListeners();
     }
   }
 
@@ -138,20 +142,22 @@ class EquipmentDevelopmentController extends ChangeNotifier {
 
   void selectPool(String key) {
     final pool = _dataset?.poolsByKey[key];
-    if (pool == null || !pool.isSelectable || key == _selectedPoolKey) return;
+    if (pool == null || !pool.isSelectable) return;
+    final changed = key != _selectedPoolKey;
     _selectedPoolKey = key;
     _manualPoolSelection = true;
     _lastAppliedRecipeKey = null;
-    _recompute();
+    if (changed) _recompute();
     notifyListeners();
   }
 
-  void useCurrentFlagship() {
+  bool useCurrentFlagship() {
+    if (!_selectAutomaticPool(fallbackToFirst: false)) return false;
     _manualPoolSelection = false;
-    _selectAutomaticPool();
     _lastAppliedRecipeKey = null;
     _recompute();
     notifyListeners();
+    return true;
   }
 
   void commitResources(DevelopmentResources value) {
@@ -213,16 +219,23 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _selectAutomaticPool() {
+  bool _selectAutomaticPool({bool fallbackToFirst = true}) {
     final data = _dataset;
-    if (data == null) return;
+    if (data == null) return false;
     final flagshipId = currentFlagshipMasterId;
     final matched = flagshipId == null
         ? null
         : data.secretaries[flagshipId]?.poolKey;
-    _selectedPoolKey =
-        matched ??
-        (data.selectablePools.isEmpty ? null : data.selectablePools.first.key);
+    if (matched != null) {
+      _selectedPoolKey = matched;
+      return true;
+    }
+    if (fallbackToFirst && _selectedPoolKey == null) {
+      _selectedPoolKey = data.selectablePools.isEmpty
+          ? null
+          : data.selectablePools.first.key;
+    }
+    return false;
   }
 
   void _recompute() {
@@ -252,8 +265,9 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     final sorted = _recipes.toList();
     int compare(DevelopmentRecipeResult left, DevelopmentRecipeResult right) {
       final comparison = switch (_recipeSort) {
-        DevelopmentRecipeSortField.targetRate => left.targetRate.compareTo(
-          right.targetRate,
+        DevelopmentRecipeSortField.targetRate => _compareTargetRate(
+          left,
+          right,
         ),
         DevelopmentRecipeSortField.totalResources =>
           left.totalResources.compareTo(right.totalResources),
@@ -267,5 +281,27 @@ class EquipmentDevelopmentController extends ChangeNotifier {
 
     sorted.sort(compare);
     _recipes = List.unmodifiable(sorted);
+  }
+
+  int _compareTargetRate(
+    DevelopmentRecipeResult left,
+    DevelopmentRecipeResult right,
+  ) {
+    final byRate = left.targetRate.compareTo(right.targetRate);
+    if (byRate != 0) return byRate;
+    if ((left.totalResources - right.totalResources).abs() > 1) {
+      return -left.totalResources.compareTo(right.totalResources);
+    }
+    return left.failureRate.compareTo(right.failureRate);
+  }
+
+  void _notifyListeners() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

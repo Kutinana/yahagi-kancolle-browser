@@ -2627,6 +2627,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developmentUseFlagship => '使用当前旗舰';
 
   @override
+  String get developmentFlagshipUnsupported => '当前旗舰没有可用的开发池，已保留原选择';
+
+  @override
   String get developmentSelectPool => '秘书舰类型';
 
   @override
@@ -5323,6 +5326,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developmentUseFlagship => '使用當前旗艦';
+
+  @override
+  String get developmentFlagshipUnsupported => '當前旗艦沒有可用的開發池，已保留原選擇';
 
   @override
   String get developmentSelectPool => '秘書艦類型';

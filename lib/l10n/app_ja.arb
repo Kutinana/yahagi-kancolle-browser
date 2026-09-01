@@ -910,6 +910,7 @@
   "developmentCommandTitle": "開発指揮卓",
   "developmentCurrentFlagship": "現在の旗艦",
   "developmentUseFlagship": "現在の旗艦を使用",
+  "developmentFlagshipUnsupported": "現在の旗艦に対応する開発プールがないため、元の選択を維持しました",
   "developmentSelectPool": "秘書艦タイプ",
   "developmentCurrentRecipe": "現在のレシピ",
   "developmentTargetEquipment": "目標装備",

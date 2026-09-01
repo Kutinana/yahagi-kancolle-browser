@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../fleet/equipment_type_icon.dart';
 import '../game_state/game_state.dart';
+import '../widgets/top_notice.dart';
 import 'development_equipment_picker.dart';
 import 'development_pool_matcher.dart';
 import 'development_projection.dart';
@@ -229,7 +231,15 @@ class _CommandCard extends StatelessWidget {
                 label: Text(
                   '${l10n.developmentCurrentFlagship}: ${controller.currentFlagshipName ?? l10n.noValue}',
                 ),
-                onPressed: controller.useCurrentFlagship,
+                onPressed: () {
+                  if (!controller.useCurrentFlagship()) {
+                    TopNotice.show(
+                      context,
+                      message: l10n.developmentFlagshipUnsupported,
+                      tone: TopNoticeTone.error,
+                    );
+                  }
+                },
                 side: BorderSide(
                   color: controller.followsCurrentFlagship
                       ? const Color(0xffd5a44b)
@@ -299,7 +309,7 @@ class _CommandCard extends StatelessWidget {
   }
 }
 
-class _ResourceInput extends StatelessWidget {
+class _ResourceInput extends StatefulWidget {
   const _ResourceInput({
     required this.label,
     required this.value,
@@ -310,19 +320,73 @@ class _ResourceInput extends StatelessWidget {
   final ValueChanged<int> onCommit;
 
   @override
+  State<_ResourceInput> createState() => _ResourceInputState();
+}
+
+class _ResourceInputState extends State<_ResourceInput> {
+  late final TextEditingController _textController;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController = TextEditingController(text: '${widget.value}');
+    _focusNode = FocusNode()..addListener(_handleFocus);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ResourceInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value &&
+        (!_focusNode.hasFocus ||
+            _textController.text == '${oldWidget.value}')) {
+      _setText(widget.value);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode
+      ..removeListener(_handleFocus)
+      ..dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  void _handleFocus() {
+    if (_focusNode.hasFocus) return;
+    final parsed = int.tryParse(_textController.text);
+    final normalized = parsed == null ? widget.value : parsed.clamp(10, 300);
+    _setText(normalized);
+    if (normalized != widget.value) widget.onCommit(normalized);
+  }
+
+  void _setText(int value) {
+    _textController.value = TextEditingValue(
+      text: '$value',
+      selection: TextSelection.collapsed(offset: '$value'.length),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) => SizedBox(
     width: 92,
     child: TextFormField(
-      key: ValueKey('$label-$value'),
-      initialValue: '$value',
+      key: Key('development-resource-${widget.label}'),
+      controller: _textController,
+      focusNode: _focusNode,
       keyboardType: TextInputType.number,
       textInputAction: TextInputAction.done,
-      onFieldSubmitted: (text) {
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: (text) {
         final parsed = int.tryParse(text);
-        if (parsed != null) onCommit(parsed);
+        if (parsed != null && parsed >= 10 && parsed <= 300) {
+          widget.onCommit(parsed);
+        }
       },
+      onFieldSubmitted: (_) => _focusNode.unfocus(),
       decoration: InputDecoration(
-        labelText: label,
+        labelText: widget.label,
         isDense: true,
         filled: true,
         fillColor: const Color(0xff0a202b),
@@ -403,13 +467,17 @@ class _EquipmentGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
+    final totalRate = items.fold<double>(
+      0,
+      (sum, item) => sum + item.totalRate,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '$title  ${items.length}',
+            '$title  ${_rate(totalRate)}%',
             style: TextStyle(
               color: accent,
               fontSize: 12,
@@ -435,6 +503,7 @@ class _EquipmentGroup extends StatelessWidget {
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       EquipmentTypeIconImage(
                         iconId: item.equipment.iconId,
@@ -443,15 +512,29 @@ class _EquipmentGroup extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Flexible(
-                        child: Text(
-                          controller.equipmentName(item.equipment),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              controller.equipmentName(item.equipment),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              item.equipment.minimumResources.values.join('/'),
+                              key: Key('development-minimum-${item.id}'),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xff7895a3),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '${_rate(item.totalRate)}%',
+                        _rateDetails(item),
+                        key: Key('development-rate-details-${item.id}'),
                         style: TextStyle(
                           color: accent,
                           fontWeight: FontWeight.w800,
@@ -528,3 +611,12 @@ String _poolTypeLabel(AppLocalizations l10n, DevelopmentPoolType type) =>
 String _rate(double value) => value == value.roundToDouble()
     ? '${value.round()}'
     : value.toStringAsFixed(1);
+
+String _rateDetails(DevelopmentEquipmentProjection item) {
+  if (item.rateDetails.length <= 1 && item.totalRate != 0) {
+    return '${_rate(item.totalRate)}%';
+  }
+  return item.rateDetails
+      .map((rate) => '${rate > 0 ? '+' : ''}${_rate(rate)}%')
+      .join(' ');
+}
