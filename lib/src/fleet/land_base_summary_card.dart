@@ -3,6 +3,7 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
+import '../settings/battle_status_effect_settings.dart';
 import 'dashboard_card.dart';
 import 'equipment_type_icon.dart';
 import 'fleet_ship_status_capsule.dart';
@@ -19,13 +20,13 @@ class LandBaseSummaryCard extends StatefulWidget {
     required this.controller,
     required this.collapsed,
     required this.onToggleCollapse,
-    this.damagePulseMode = DamagePulseMode.enhanced,
+    this.damagePulseMode = DamagePulseFilter.all,
   });
 
   final GameStateController controller;
   final bool collapsed;
   final VoidCallback onToggleCollapse;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
 
   @override
   State<LandBaseSummaryCard> createState() => _LandBaseSummaryCardState();
@@ -202,12 +203,12 @@ class LandBaseAirGroupRow extends StatelessWidget {
     super.key,
     required this.state,
     required this.base,
-    this.damagePulseMode = DamagePulseMode.enhanced,
+    this.damagePulseMode = DamagePulseFilter.all,
   });
 
   final GameState state;
   final LandBaseState base;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
 
   String get _keySuffix => '${base.areaId}-${base.baseId}';
 
@@ -320,12 +321,13 @@ class LandBaseAirGroupRow extends StatelessWidget {
                         ShipHpFrame(
                           key: Key('land-base-portrait-hp-frame-$_keySuffix'),
                           shipId: base.areaId * 10 + base.baseId,
-                          ratio: hpRatio,
+                          currentHp: currentHp,
+                          maxHp: maximumHp,
                           color: shipHpBarColor(
                             hpRatio,
                             isZeroHp: currentHp <= 0,
                           ),
-                          mode: damagePulseMode,
+                          filter: damagePulseMode,
                           strokeWidth: 2,
                         ),
                         if (fatigue != LandBaseFatigueLevel.none)

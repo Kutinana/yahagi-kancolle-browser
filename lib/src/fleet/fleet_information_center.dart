@@ -23,6 +23,7 @@ import '../improvement/improvement_planner_controller.dart';
 import '../improvement/improvement_planner_view.dart';
 import '../performance/second_tick_scope.dart';
 import '../settings/layout_settings_store.dart';
+import '../settings/battle_status_effect_settings.dart';
 import 'expedition_summary_card.dart'
     show ExpeditionSummaryMode, ExpeditionModeSelector;
 import 'fleet_air_power_details.dart';
@@ -49,7 +50,8 @@ class FleetInformationCenter extends StatefulWidget {
     this.onFleetSelected,
     this.expeditionMode,
     this.onExpeditionModeChanged,
-    this.damagePulseMode = DamagePulseMode.enhanced,
+    this.damagePulseMode = DamagePulseFilter.all,
+    this.moraleSparkleEnabled = true,
     this.clock,
     this.constructionMode = ConstructionCenterMode.construction,
     this.improvementController,
@@ -68,7 +70,8 @@ class FleetInformationCenter extends StatefulWidget {
   final ValueChanged<int>? onFleetSelected;
   final ExpeditionSummaryMode? expeditionMode;
   final ValueChanged<ExpeditionSummaryMode>? onExpeditionModeChanged;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
+  final bool moraleSparkleEnabled;
   final DateTime Function()? clock;
   final ConstructionCenterMode constructionMode;
   final ImprovementPlannerController? improvementController;
@@ -131,6 +134,7 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
                         now: now,
                         selectedFleetId: _selectedFleetId,
                         damagePulseMode: widget.damagePulseMode,
+                        moraleSparkleEnabled: widget.moraleSparkleEnabled,
                         onFleetSelected: (id) {
                           setState(() => _selectedFleetId = id);
                         },
@@ -268,6 +272,7 @@ class _FleetView extends StatefulWidget {
     required this.now,
     required this.selectedFleetId,
     required this.damagePulseMode,
+    required this.moraleSparkleEnabled,
     required this.onFleetSelected,
     required this.showContextHeader,
     required this.moraleRecoveryTimerController,
@@ -280,7 +285,8 @@ class _FleetView extends StatefulWidget {
   final DateTime? nosakiSparkleStartedAt;
   final DateTime now;
   final int selectedFleetId;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
+  final bool moraleSparkleEnabled;
   final ValueChanged<int> onFleetSelected;
   final bool showContextHeader;
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
@@ -441,6 +447,8 @@ class _FleetViewState extends State<_FleetView> {
                                 repairStatuses: repairStatuses,
                                 selectedShipId: selectedShip!.id,
                                 damagePulseMode: widget.damagePulseMode,
+                                moraleSparkleEnabled:
+                                    widget.moraleSparkleEnabled,
                                 onSelected: (shipId) {
                                   setState(() {
                                     _selectedShipId = shipId;
@@ -542,6 +550,7 @@ class _FleetRosterPanel extends StatefulWidget {
     required this.repairStatuses,
     required this.selectedShipId,
     required this.damagePulseMode,
+    required this.moraleSparkleEnabled,
     required this.onSelected,
   });
 
@@ -549,7 +558,8 @@ class _FleetRosterPanel extends StatefulWidget {
   final List<OwnedShip> ships;
   final Map<int, ShipRepairStatus> repairStatuses;
   final int selectedShipId;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
+  final bool moraleSparkleEnabled;
   final ValueChanged<int> onSelected;
 
   @override
@@ -594,6 +604,7 @@ class _FleetRosterPanelState extends State<_FleetRosterPanel>
                   repairStatus: widget.repairStatuses[ship.id],
                   selected: ship.id == widget.selectedShipId,
                   damagePulseMode: widget.damagePulseMode,
+                  moraleSparkleEnabled: widget.moraleSparkleEnabled,
                   sparklePulse: _sparklePulse,
                   onTap: () => widget.onSelected(ship.id),
                 );
@@ -613,6 +624,7 @@ class _FleetRosterShipCapsule extends StatelessWidget {
     required this.repairStatus,
     required this.selected,
     required this.damagePulseMode,
+    required this.moraleSparkleEnabled,
     required this.sparklePulse,
     required this.onTap,
   });
@@ -621,7 +633,8 @@ class _FleetRosterShipCapsule extends StatelessWidget {
   final OwnedShip ship;
   final ShipRepairStatus? repairStatus;
   final bool selected;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
+  final bool moraleSparkleEnabled;
   final Animation<double> sparklePulse;
   final VoidCallback onTap;
 
@@ -702,19 +715,21 @@ class _FleetRosterShipCapsule extends StatelessWidget {
                 ShipHpFrame(
                   key: Key('fleet-hp-outer-frame-${ship.id}'),
                   shipId: ship.id,
-                  ratio: repairStatus == ShipRepairStatus.retreat
-                      ? 0.0
-                      : hpRatio,
+                  currentHp: repairStatus == ShipRepairStatus.retreat
+                      ? 0
+                      : ship.currentHp,
+                  maxHp: ship.maxHp,
                   color: repairStatus == ShipRepairStatus.retreat
                       ? yahagiStatusZeroHp
                       : shipHpBarColor(hpRatio, isZeroHp: ship.currentHp <= 0),
-                  mode: damagePulseMode,
+                  filter: damagePulseMode,
                 ),
                 ShipMoraleMark(
                   key: Key('fleet-morale-mark-${ship.id}'),
                   shipId: ship.id,
                   value: ship.condition,
                   sparklePulse: sparklePulse,
+                  sparkleEnabled: moraleSparkleEnabled,
                   repairLabel: repairStatus?.label,
                   layout: ShipMoraleMarkLayout.detail,
                 ),

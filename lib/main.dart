@@ -55,7 +55,7 @@ import 'src/diagnostics/diagnostic_settings_store.dart';
 import 'src/diagnostics/diagnostic_storage.dart';
 import 'src/development/development_repository.dart';
 import 'src/fleet/fleet_information_center.dart';
-import 'src/fleet/ship_status_style.dart';
+import 'src/settings/battle_status_effect_settings.dart';
 import 'src/fleet/anchorage_repair_navigation.dart';
 import 'src/fleet/anchorage_repair_view.dart';
 import 'src/fleet/fleet_summary_card.dart';
@@ -673,6 +673,7 @@ class YahagiApp extends StatelessWidget {
     return AnimatedBuilder(
       animation: Listenable.merge(<Listenable>[
         layoutSettingsController,
+        safetySettingsController,
         ?toolbarDisplayController,
         ?gameRenderingModeController,
       ]),
@@ -1521,6 +1522,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                   final infoWidget = _InformationPanel(
                                     layoutSettingsController:
                                         widget.layoutSettingsController,
+                                    safetySettingsController:
+                                        widget.safetySettingsController,
                                     controller: widget.controller,
                                     browserController: widget.browserController,
                                     captureModeController:
@@ -1663,12 +1666,14 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             onToggleMoraleMetricMode: widget
                                 .layoutSettingsController
                                 .toggleFleetMoraleMetricMode,
-                            damagePulseMode:
-                                widget
-                                    .layoutSettingsController
-                                    .enhancedDamagePulse
-                                ? DamagePulseMode.enhanced
-                                : DamagePulseMode.normal,
+                            damagePulseMode: widget
+                                .safetySettingsController
+                                .battleStatusEffects
+                                .pulseFilterFor(BattleEffectSurface.fleet),
+                            moraleSparkleEnabled: widget
+                                .safetySettingsController
+                                .battleStatusEffects
+                                .sparkleEnabledFor(BattleEffectSurface.fleet),
                             page: FleetInformationPage.fleet,
                             initialFleetId: _fleetCenterInitialFleetId,
                             showContextHeader: false,
@@ -2024,6 +2029,7 @@ class _NavigationButton extends StatelessWidget {
 class _InformationPanel extends StatefulWidget {
   const _InformationPanel({
     required this.layoutSettingsController,
+    required this.safetySettingsController,
     required this.controller,
     required this.browserController,
     required this.captureModeController,
@@ -2041,6 +2047,7 @@ class _InformationPanel extends StatefulWidget {
   });
 
   final LayoutSettingsController layoutSettingsController;
+  final SafetySettingsController safetySettingsController;
   final PrototypeStatusController controller;
   final GameBrowserController browserController;
   final CaptureModeController captureModeController;
@@ -2074,6 +2081,7 @@ class _InformationPanelState extends State<_InformationPanel> {
       child: AnimatedBuilder(
         animation: Listenable.merge([
           widget.layoutSettingsController,
+          widget.safetySettingsController,
           widget.browserController,
           widget.gameCaptureController,
           if (widget.battlePredictionSettingsController != null)
@@ -2116,20 +2124,24 @@ class _InformationPanelState extends State<_InformationPanel> {
                     widget.layoutSettingsController.fleetMoraleMetricMode,
                 onToggleMoraleMetricMode:
                     widget.layoutSettingsController.toggleFleetMoraleMetricMode,
-                damagePulseMode:
-                    widget.layoutSettingsController.enhancedDamagePulse
-                    ? DamagePulseMode.enhanced
-                    : DamagePulseMode.normal,
+                damagePulseFilter: widget
+                    .safetySettingsController
+                    .battleStatusEffects
+                    .pulseFilterFor(BattleEffectSurface.fleet),
+                moraleSparkleEnabled: widget
+                    .safetySettingsController
+                    .battleStatusEffects
+                    .sparkleEnabledFor(BattleEffectSurface.fleet),
                 collapsed: isCollapsed,
                 onToggleCollapse: toggle,
                 onOpenFleet: widget.onOpenFleet,
               ),
               'land_base' => LandBaseSummaryCard(
                 controller: widget.gameStateController,
-                damagePulseMode:
-                    widget.layoutSettingsController.enhancedDamagePulse
-                    ? DamagePulseMode.enhanced
-                    : DamagePulseMode.normal,
+                damagePulseMode: widget
+                    .safetySettingsController
+                    .battleStatusEffects
+                    .pulseFilterFor(BattleEffectSurface.fleet),
                 collapsed: isCollapsed,
                 onToggleCollapse: toggle,
               ),
@@ -2172,10 +2184,10 @@ class _InformationPanelState extends State<_InformationPanel> {
                         .battlePredictionSettingsController
                         ?.lastFormationHintEnabled ??
                     true,
-                damagePulseMode:
-                    widget.layoutSettingsController.enhancedDamagePulse
-                    ? DamagePulseMode.enhanced
-                    : DamagePulseMode.normal,
+                damagePulseMode: widget
+                    .safetySettingsController
+                    .battleStatusEffects
+                    .pulseFilterFor(BattleEffectSurface.prediction),
                 collapsed: isCollapsed,
                 onToggleCollapse: toggle,
               ),

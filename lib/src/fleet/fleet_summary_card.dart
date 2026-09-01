@@ -4,7 +4,6 @@ import '../game_state/game_state_controller.dart';
 import '../game_state/game_state.dart';
 import 'dashboard_card.dart';
 import 'combat_mechanism.dart';
-import 'ship_status_style.dart';
 import 'ship_repair_status.dart';
 
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
@@ -13,6 +12,7 @@ import 'fleet_ship_status_capsule.dart';
 import 'fleet_line_of_sight_details.dart';
 import '../performance/second_tick_scope.dart';
 import '../settings/layout_settings_store.dart';
+import '../settings/battle_status_effect_settings.dart';
 import 'fleet_air_power_details.dart';
 import 'morale_recovery_display.dart';
 import 'morale_recovery_timer_controller.dart';
@@ -24,7 +24,8 @@ class FleetSummaryCard extends StatefulWidget {
     required this.collapsed,
     required this.onToggleCollapse,
     required this.onOpenFleet,
-    this.damagePulseMode = DamagePulseMode.enhanced,
+    this.damagePulseFilter = DamagePulseFilter.all,
+    this.moraleSparkleEnabled = true,
     this.moraleRecoveryTimerController,
     this.moraleMetricMode = FleetMoraleMetricMode.minimumCondition,
     this.onToggleMoraleMetricMode,
@@ -35,7 +36,8 @@ class FleetSummaryCard extends StatefulWidget {
   final bool collapsed;
   final VoidCallback onToggleCollapse;
   final ValueChanged<int> onOpenFleet;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseFilter;
+  final bool moraleSparkleEnabled;
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final FleetMoraleMetricMode moraleMetricMode;
   final VoidCallback? onToggleMoraleMetricMode;
@@ -111,7 +113,8 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
                     FleetShipStatusCapsule(
                       state: state,
                       ship: ship,
-                      damagePulseMode: widget.damagePulseMode,
+                      damagePulseFilter: widget.damagePulseFilter,
+                      moraleSparkleEnabled: widget.moraleSparkleEnabled,
                       repairStatus: shipRepairStatusFor(
                         state: state,
                         shipId: ship.id,

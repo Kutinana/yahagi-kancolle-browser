@@ -5,6 +5,7 @@ import '../fleet/ship_status_style.dart';
 import '../fleet/ship_status_visuals.dart';
 import '../fleet/status_density.dart';
 import '../game_state/game_state.dart';
+import '../settings/battle_status_effect_settings.dart';
 import 'battle_models.dart';
 import 'battle_pills.dart';
 import 'land_base_raid_panel.dart';
@@ -16,14 +17,14 @@ class DetailedBattlePanel extends StatelessWidget {
     super.key,
     required this.battle,
     required this.gameState,
-    this.damagePulseMode = DamagePulseMode.enhanced,
+    this.damagePulseMode = DamagePulseFilter.all,
     this.showEnemyPortraits = true,
     this.showLastFormationHint = true,
   });
 
   final LiveBattle battle;
   final GameState gameState;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
   final bool showEnemyPortraits;
   final bool showLastFormationHint;
 
@@ -120,7 +121,7 @@ class _FleetColumn extends StatelessWidget {
   final String escortTitle;
   final List<BattleShipSnapshot> escortShips;
   final List<int> mvpPositions;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +357,7 @@ class NavigationFriendlyFleets extends StatelessWidget {
   });
 
   final LiveBattle battle;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +411,7 @@ class _FleetGroup extends StatelessWidget {
   final String title;
   final List<BattleShipSnapshot> ships;
   final List<int> mvpPositions;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
   final int positionOffset;
 
   @override
@@ -462,7 +463,7 @@ class _BattleShipRow extends StatelessWidget {
   final BattleShipSnapshot ship;
   final int absolutePosition;
   final bool isMvp;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
 
   @override
   Widget build(BuildContext context) {
@@ -579,16 +580,17 @@ class _BattleShipRow extends StatelessWidget {
     );
 
     final shouldPulse =
-        ship.side == BattleSide.friend &&
         !isEscaped &&
-        ratio > 0 &&
-        ratio <= 0.75;
+        ship.currentHp > 0 &&
+        ship.maxHp > 0 &&
+        ship.currentHp * 4 <= ship.maxHp * 3;
     if (!shouldPulse) {
       return rowContent(hpContent());
     }
     return DamagePulseBuilder(
-      ratio: ratio,
-      mode: damagePulseMode,
+      currentHp: ship.currentHp,
+      maxHp: ship.maxHp,
+      filter: damagePulseMode,
       normalColor: hpBarColor,
       builder: (context, spec, phase) {
         final hpOpacity =

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../settings/battle_status_effect_settings.dart';
+import 'ship_damage_level.dart';
 import 'ship_status_style.dart';
 
 typedef DamagePulseWidgetBuilder =
@@ -11,14 +14,16 @@ typedef DamagePulseWidgetBuilder =
 class DamagePulseBuilder extends StatefulWidget {
   const DamagePulseBuilder({
     super.key,
-    required this.ratio,
-    required this.mode,
+    required this.currentHp,
+    required this.maxHp,
+    required this.filter,
     required this.normalColor,
     required this.builder,
   });
 
-  final double ratio;
-  final DamagePulseMode mode;
+  final int currentHp;
+  final int maxHp;
+  final DamagePulseFilter filter;
   final Color normalColor;
   final DamagePulseWidgetBuilder builder;
 
@@ -31,8 +36,11 @@ class _DamagePulseBuilderState extends State<DamagePulseBuilder>
   late final AnimationController _animation;
 
   DamagePulseVisualSpec get _spec => damagePulseVisualSpec(
-    hpRatio: widget.ratio,
-    mode: widget.mode,
+    damageLevel: shipDamageLevel(
+      currentHp: widget.currentHp,
+      maxHp: widget.maxHp,
+    ),
+    filter: widget.filter,
     normalColor: widget.normalColor,
   );
 
@@ -93,17 +101,21 @@ class ShipHpFrame extends StatefulWidget {
   const ShipHpFrame({
     super.key,
     required this.shipId,
-    required this.ratio,
+    required this.currentHp,
+    required this.maxHp,
     required this.color,
-    this.mode = DamagePulseMode.enhanced,
+    this.filter = DamagePulseFilter.all,
     this.strokeWidth = 4.0,
   });
 
   final int shipId;
-  final double ratio;
+  final int currentHp;
+  final int maxHp;
   final Color color;
-  final DamagePulseMode mode;
+  final DamagePulseFilter filter;
   final double strokeWidth;
+
+  double get ratio => maxHp <= 0 ? 0 : (currentHp / maxHp).clamp(0, 1);
 
   @override
   State<ShipHpFrame> createState() => _ShipHpFrameState();
@@ -114,8 +126,11 @@ class _ShipHpFrameState extends State<ShipHpFrame>
   late final AnimationController _animation;
 
   DamagePulseVisualSpec get _spec => damagePulseVisualSpec(
-    hpRatio: widget.ratio,
-    mode: widget.mode,
+    damageLevel: shipDamageLevel(
+      currentHp: widget.currentHp,
+      maxHp: widget.maxHp,
+    ),
+    filter: widget.filter,
     normalColor: widget.color,
   );
 
@@ -155,7 +170,7 @@ class _ShipHpFrameState extends State<ShipHpFrame>
   @override
   Widget build(BuildContext context) {
     final spec = _spec;
-    final effectiveStrokeWidth = widget.mode == DamagePulseMode.enhanced
+    final effectiveStrokeWidth = spec.pulses
         ? widget.strokeWidth.clamp(spec.strokeWidth, double.infinity).toDouble()
         : widget.strokeWidth;
     Widget coloredFrame({double glowRadius = 1}) => CustomPaint(
@@ -324,6 +339,7 @@ class ShipMoraleMark extends StatelessWidget {
     required this.shipId,
     required this.value,
     required this.sparklePulse,
+    this.sparkleEnabled = true,
     this.showTextBadge = true,
     this.repairLabel,
     this.layout = ShipMoraleMarkLayout.brief,
@@ -332,6 +348,7 @@ class ShipMoraleMark extends StatelessWidget {
   final int shipId;
   final int value;
   final Animation<double> sparklePulse;
+  final bool sparkleEnabled;
   final bool showTextBadge;
   final String? repairLabel;
   final ShipMoraleMarkLayout layout;
@@ -355,7 +372,7 @@ class ShipMoraleMark extends StatelessWidget {
         return Stack(
           fit: StackFit.expand,
           children: [
-            if (value >= 50)
+            if (sparkleEnabled && value >= 50)
               _ShipSparkleLayer(shipId: shipId, animation: sparklePulse),
             if (value < 30)
               _fatigueFace(constraints.maxHeight, placeOnLeft: isDetail),

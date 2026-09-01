@@ -1,39 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/ship_damage_level.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_status_style.dart';
+import 'package:yahagi_kancolle_browser/src/settings/battle_status_effect_settings.dart';
 
 void main() {
-  test('normal damage pulse preserves the original shared visual settings', () {
-    for (final ratio in <double>[0.65, 0.42, 0.18]) {
+  test('disabled damage pulse preserves a static shared visual', () {
+    for (final level in <ShipDamageLevel>[
+      ShipDamageLevel.minor,
+      ShipDamageLevel.moderate,
+      ShipDamageLevel.heavy,
+    ]) {
       final spec = damagePulseVisualSpec(
-        hpRatio: ratio,
-        mode: DamagePulseMode.normal,
-        normalColor: shipHpBarColor(ratio),
+        damageLevel: level,
+        filter: DamagePulseFilter.off,
+        normalColor: yahagiStatusRed,
       );
 
-      expect(spec.pulses, isTrue);
+      expect(spec.pulses, isFalse);
       expect(spec.duration, const Duration(milliseconds: 2400));
       expect(spec.minFrameOpacity, 0.35);
       expect(spec.maxGlowRadius, 11);
       expect(spec.maxTintOpacity, 0);
-      expect(spec.color, shipHpBarColor(ratio));
+      expect(spec.color, yahagiStatusRed);
     }
   });
 
   test('enhanced damage pulse separates minor moderate and heavy damage', () {
     final minor = damagePulseVisualSpec(
-      hpRatio: 0.65,
-      mode: DamagePulseMode.enhanced,
+      damageLevel: ShipDamageLevel.minor,
+      filter: DamagePulseFilter.all,
       normalColor: shipHpBarColor(0.65),
     );
     final moderate = damagePulseVisualSpec(
-      hpRatio: 0.42,
-      mode: DamagePulseMode.enhanced,
+      damageLevel: ShipDamageLevel.moderate,
+      filter: DamagePulseFilter.all,
       normalColor: shipHpBarColor(0.42),
     );
     final heavy = damagePulseVisualSpec(
-      hpRatio: 0.18,
-      mode: DamagePulseMode.enhanced,
+      damageLevel: ShipDamageLevel.heavy,
+      filter: DamagePulseFilter.all,
       normalColor: shipHpBarColor(0.18),
     );
 
@@ -51,16 +57,16 @@ void main() {
   test('healthy and zero HP ships do not pulse', () {
     expect(
       damagePulseVisualSpec(
-        hpRatio: 0.76,
-        mode: DamagePulseMode.enhanced,
+        damageLevel: ShipDamageLevel.healthy,
+        filter: DamagePulseFilter.all,
         normalColor: yahagiStatusGreen,
       ).pulses,
       isFalse,
     );
     expect(
       damagePulseVisualSpec(
-        hpRatio: 0,
-        mode: DamagePulseMode.enhanced,
+        damageLevel: ShipDamageLevel.none,
+        filter: DamagePulseFilter.all,
         normalColor: yahagiStatusZeroHp,
       ).pulses,
       isFalse,

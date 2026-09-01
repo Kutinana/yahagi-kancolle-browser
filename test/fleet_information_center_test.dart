@@ -12,6 +12,7 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/src/notification/notification_timer_anchor_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/battle_status_effect_settings.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
@@ -1149,14 +1150,14 @@ void main() {
           home: Scaffold(
             body: FleetInformationCenter(
               controller: controller,
-              damagePulseMode: DamagePulseMode.normal,
+              damagePulseMode: DamagePulseFilter.off,
             ),
           ),
         ),
       );
       await tester.pump();
       for (final id in <int>[9102, 9103, 9104]) {
-        expect(find.byKey(Key('fleet-damage-pulse-$id')), findsOneWidget);
+        expect(find.byKey(Key('fleet-damage-pulse-$id')), findsNothing);
         expect(find.byKey(Key('fleet-damage-tint-$id')), findsNothing);
       }
     },

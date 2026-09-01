@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../settings/battle_status_effect_settings.dart';
 import 'ship_damage_level.dart';
 
 const yahagiStatusRed = Color(0xffd33d17);
@@ -7,8 +8,6 @@ const yahagiStatusOrange = Color(0xfff57c00);
 const yahagiStatusYellow = Color(0xffffc940);
 const yahagiStatusGreen = Color(0xff29a634);
 const yahagiStatusZeroHp = Color(0xff71818b);
-
-enum DamagePulseMode { normal, enhanced }
 
 @immutable
 class DamagePulseVisualSpec {
@@ -34,12 +33,12 @@ class DamagePulseVisualSpec {
 }
 
 DamagePulseVisualSpec damagePulseVisualSpec({
-  required double hpRatio,
-  required DamagePulseMode mode,
+  required ShipDamageLevel damageLevel,
+  required DamagePulseFilter filter,
   required Color normalColor,
 }) {
-  final pulses = hpRatio > 0 && hpRatio <= 0.75;
-  if (mode == DamagePulseMode.normal || !pulses) {
+  final pulses = filter.matches(damageLevel);
+  if (!pulses) {
     return DamagePulseVisualSpec(
       pulses: pulses,
       color: normalColor,
@@ -51,7 +50,7 @@ DamagePulseVisualSpec damagePulseVisualSpec({
       strokeWidth: 4,
     );
   }
-  if (hpRatio <= 0.25) {
+  if (damageLevel == ShipDamageLevel.heavy) {
     return const DamagePulseVisualSpec(
       pulses: true,
       color: Color(0xffff2933),
@@ -63,7 +62,7 @@ DamagePulseVisualSpec damagePulseVisualSpec({
       strokeWidth: 4,
     );
   }
-  if (hpRatio <= 0.50) {
+  if (damageLevel == ShipDamageLevel.moderate) {
     return const DamagePulseVisualSpec(
       pulses: true,
       color: Color(0xffff8418),

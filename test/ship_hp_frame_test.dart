@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_status_style.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_status_visuals.dart';
+import 'package:yahagi_kancolle_browser/src/settings/battle_status_effect_settings.dart';
 
 void main() {
   testWidgets('damage pulse builder advances only for damaged hp', (
@@ -10,8 +11,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: DamagePulseBuilder(
-          ratio: 0.2,
-          mode: DamagePulseMode.enhanced,
+          currentHp: 20,
+          maxHp: 100,
+          filter: DamagePulseFilter.heavyOnly,
           normalColor: yahagiStatusRed,
           builder: (context, spec, phase) => Opacity(
             key: const Key('shared-damage-pulse-phase'),
@@ -35,8 +37,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: DamagePulseBuilder(
-          ratio: 1,
-          mode: DamagePulseMode.enhanced,
+          currentHp: 100,
+          maxHp: 100,
+          filter: DamagePulseFilter.all,
           normalColor: yahagiStatusGreen,
           builder: (context, spec, phase) => Opacity(
             key: const Key('healthy-damage-pulse-phase'),
@@ -53,14 +56,15 @@ void main() {
     expect(tester.widget<Opacity>(phase).opacity, 1);
   });
 
-  testWidgets('damage pulse builder adopts mode changes immediately', (
+  testWidgets('damage pulse builder adopts exact filter changes immediately', (
     tester,
   ) async {
-    Widget subject(DamagePulseMode mode) => MaterialApp(
+    Widget subject(DamagePulseFilter filter) => MaterialApp(
       home: DamagePulseBuilder(
-        key: const Key('mode-aware-damage-pulse'),
-        ratio: 0.2,
-        mode: mode,
+        key: const Key('filter-aware-damage-pulse'),
+        currentHp: 20,
+        maxHp: 100,
+        filter: filter,
         normalColor: yahagiStatusRed,
         builder: (context, spec, phase) => Text(
           '${spec.duration.inMilliseconds}',
@@ -69,10 +73,10 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(subject(DamagePulseMode.enhanced));
+    await tester.pumpWidget(subject(DamagePulseFilter.heavyOnly));
     expect(find.text('760'), findsOneWidget);
 
-    await tester.pumpWidget(subject(DamagePulseMode.normal));
+    await tester.pumpWidget(subject(DamagePulseFilter.moderateOnly));
     expect(find.text('2400'), findsOneWidget);
   });
 
@@ -86,9 +90,10 @@ void main() {
           height: 120,
           child: ShipHpFrame(
             shipId: 41,
-            ratio: 0.18,
+            currentHp: 18,
+            maxHp: 100,
             color: yahagiStatusRed,
-            mode: DamagePulseMode.enhanced,
+            filter: DamagePulseFilter.heavyOnly,
           ),
         ),
       ),
@@ -104,7 +109,7 @@ void main() {
     expect(find.byKey(const Key('fleet-damage-pulse-41')), findsOneWidget);
   });
 
-  testWidgets('normal damage frame keeps the old outer-only effect', (
+  testWidgets('a non-matching exact filter keeps a static damage frame', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -114,15 +119,16 @@ void main() {
           height: 120,
           child: ShipHpFrame(
             shipId: 42,
-            ratio: 0.18,
+            currentHp: 18,
+            maxHp: 100,
             color: yahagiStatusRed,
-            mode: DamagePulseMode.normal,
+            filter: DamagePulseFilter.moderateOnly,
           ),
         ),
       ),
     );
 
-    expect(find.byKey(const Key('fleet-damage-pulse-42')), findsOneWidget);
+    expect(find.byKey(const Key('fleet-damage-pulse-42')), findsNothing);
     expect(find.byKey(const Key('fleet-damage-tint-42')), findsNothing);
   });
 
@@ -136,9 +142,10 @@ void main() {
           height: 120,
           child: ShipHpFrame(
             shipId: 43,
-            ratio: 0.9,
+            currentHp: 90,
+            maxHp: 100,
             color: yahagiStatusGreen,
-            mode: DamagePulseMode.enhanced,
+            filter: DamagePulseFilter.all,
           ),
         ),
       ),

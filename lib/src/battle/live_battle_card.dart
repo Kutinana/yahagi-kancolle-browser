@@ -9,6 +9,7 @@ import '../fleet/ship_status_style.dart';
 import '../fleet/ship_status_visuals.dart';
 import '../fleet/status_density.dart';
 import '../game_state/game_state.dart';
+import '../settings/battle_status_effect_settings.dart';
 import 'detailed_battle_panel.dart';
 import 'land_base_raid_panel.dart';
 import 'official_enemy_preview.dart';
@@ -22,7 +23,7 @@ class LiveBattleCard extends StatefulWidget {
     required this.controller,
     required this.collapsed,
     required this.onToggleCollapse,
-    this.damagePulseMode = DamagePulseMode.enhanced,
+    this.damagePulseMode = DamagePulseFilter.all,
     this.showEnemyPortraits = true,
     this.showLastFormationHint = true,
   });
@@ -30,7 +31,7 @@ class LiveBattleCard extends StatefulWidget {
   final BattleController controller;
   final bool collapsed;
   final VoidCallback onToggleCollapse;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
   final bool showEnemyPortraits;
   final bool showLastFormationHint;
 
@@ -197,7 +198,7 @@ class _CompactBattlePanel extends StatelessWidget {
 
   final LiveBattle battle;
   final GameState gameState;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
   final bool showLastFormationHint;
 
   @override
@@ -361,7 +362,7 @@ class _CompactFleetGrid extends StatelessWidget {
   });
 
   final LiveBattle battle;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
 
   @override
   Widget build(BuildContext context) {
@@ -555,7 +556,7 @@ class _CompactFleetColumn extends StatelessWidget {
   final String keyName;
   final List<BattleShipSnapshot> ships;
   final List<int> mvpPositions;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
   final int positionOffset;
 
   @override
@@ -590,7 +591,7 @@ class _CompactBarRow extends StatelessWidget {
   final String keyName;
   final int index;
   final bool isMvp;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseMode;
 
   @override
   Widget build(BuildContext context) {
@@ -681,17 +682,18 @@ class _CompactBarRow extends StatelessWidget {
     }
 
     final shouldPulse =
-        ship.side == BattleSide.friend &&
         !isEscaped &&
-        ratio > 0 &&
-        ratio <= 0.75;
+        ship.currentHp > 0 &&
+        ship.maxHp > 0 &&
+        ship.currentHp * 4 <= ship.maxHp * 3;
     return Padding(
       key: Key('compact-bar-$keyName-$index'),
       padding: const EdgeInsets.fromLTRB(6, 3, 6, 3),
       child: shouldPulse
           ? DamagePulseBuilder(
-              ratio: ratio,
-              mode: damagePulseMode,
+              currentHp: ship.currentHp,
+              maxHp: ship.maxHp,
+              filter: damagePulseMode,
               normalColor: hpBarColor,
               builder: (context, spec, phase) => hpContent(
                 opacity:

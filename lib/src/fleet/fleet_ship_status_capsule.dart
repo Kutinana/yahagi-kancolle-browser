@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../game_state/game_state.dart';
+import '../settings/battle_status_effect_settings.dart';
 import 'combat_mechanism.dart';
 import 'equipment_type_icon.dart';
 import 'ship_portrait.dart';
@@ -23,7 +24,8 @@ class FleetShipStatusCapsule extends StatefulWidget {
     super.key,
     required this.state,
     required this.ship,
-    this.damagePulseMode = DamagePulseMode.enhanced,
+    this.damagePulseFilter = DamagePulseFilter.all,
+    this.moraleSparkleEnabled = true,
     this.repairStatus,
     this.specialAttack,
     this.onTap,
@@ -31,7 +33,8 @@ class FleetShipStatusCapsule extends StatefulWidget {
 
   final GameState state;
   final OwnedShip ship;
-  final DamagePulseMode damagePulseMode;
+  final DamagePulseFilter damagePulseFilter;
+  final bool moraleSparkleEnabled;
   final ShipRepairStatus? repairStatus;
   final EquipmentMechanismDisplay? specialAttack;
   final VoidCallback? onTap;
@@ -276,11 +279,12 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                       'fleet-summary-hp-outer-frame-${ship.id}',
                                     ),
                                     shipId: ship.id,
-                                    ratio:
+                                    currentHp:
                                         widget.repairStatus ==
                                             ShipRepairStatus.retreat
-                                        ? 0.0
-                                        : hpRatio,
+                                        ? 0
+                                        : ship.currentHp,
+                                    maxHp: ship.maxHp,
                                     color:
                                         widget.repairStatus ==
                                             ShipRepairStatus.retreat
@@ -289,7 +293,7 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                             hpRatio,
                                             isZeroHp: ship.currentHp <= 0,
                                           ),
-                                    mode: widget.damagePulseMode,
+                                    filter: widget.damagePulseFilter,
                                     strokeWidth: 2.0,
                                   ),
                                   ShipMoraleMark(
@@ -299,6 +303,7 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                     shipId: ship.id,
                                     value: ship.condition,
                                     sparklePulse: _sparklePulse,
+                                    sparkleEnabled: widget.moraleSparkleEnabled,
                                     showTextBadge: false,
                                     repairLabel: widget.repairStatus?.label,
                                     layout: ShipMoraleMarkLayout.brief,

@@ -3,6 +3,43 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_status_visuals.dart';
 
 void main() {
+  testWidgets('sparkle switch hides only stars and keeps fatigue visuals', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SizedBox(
+          width: 160,
+          height: 72,
+          child: ShipMoraleMark(
+            shipId: 40,
+            value: 55,
+            sparklePulse: AlwaysStoppedAnimation<double>(0.2),
+            sparkleEnabled: false,
+          ),
+        ),
+      ),
+    );
+    expect(find.byKey(const Key('fleet-morale-stars-40')), findsNothing);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SizedBox(
+          width: 160,
+          height: 72,
+          child: ShipMoraleMark(
+            shipId: 40,
+            value: 18,
+            sparklePulse: AlwaysStoppedAnimation<double>(0.2),
+            sparkleEnabled: false,
+          ),
+        ),
+      ),
+    );
+    expect(find.byKey(const Key('fleet-fatigue-face-18')), findsOneWidget);
+    expect(find.byKey(const Key('fleet-fatigue-badge-40')), findsOneWidget);
+  });
+
   testWidgets('detail portrait keeps the low-morale face at top-left', (
     tester,
   ) async {
