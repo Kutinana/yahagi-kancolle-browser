@@ -152,13 +152,6 @@ flutter test test/battle_result_warning_overlay_test.dart --reporter expanded
 
 预期：仅「does not warn when only the combined escort flagship is heavy」因实际值为 `true` 而失败；其余新增边界测试和原有测试通过。
 
-- [ ] **步骤 4：提交红灯测试**
-
-```powershell
-git add -- test/battle_result_warning_overlay_test.dart
-git commit -m "test(战斗): 覆盖二队旗舰大破提醒边界"
-```
-
 ### 任务 2：实现最小风险过滤
 
 **文件：**
@@ -204,10 +197,10 @@ flutter test test/battle_result_warning_overlay_test.dart --reporter compact
 
 预期：格式化不改变行为，全部测试通过。
 
-- [ ] **步骤 4：提交最小实现**
+- [ ] **步骤 4：提交测试与最小实现**
 
 ```powershell
-git add -- lib/src/capture/battle_result_warning_overlay.dart
+git add -- lib/src/capture/battle_result_warning_overlay.dart test/battle_result_warning_overlay_test.dart
 git commit -m "fix(战斗): 排除联合舰队二队旗舰进击提醒"
 ```
 
@@ -258,4 +251,4 @@ git show --stat --oneline HEAD
 git show --stat --oneline HEAD~1
 ```
 
-预期：除规格提交外，本任务仅包含 1 个测试提交和 1 个生产代码提交；没有装备开发或其他模块文件混入。
+预期：除规格与计划提交外，本任务仅包含 1 个测试和生产代码原子提交；没有装备开发或其他模块文件混入。
