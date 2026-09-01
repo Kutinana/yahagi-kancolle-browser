@@ -3,6 +3,32 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_serializer.dart';
 
 void main() {
+  test(
+    'ship experience and expansion-slot state survive cache serialization',
+    () {
+      const state = GameState(
+        ships: <int, OwnedShip>{
+          7: OwnedShip(
+            id: 7,
+            masterId: 101,
+            level: 51,
+            experience: 45000,
+            nextExperience: 1200,
+            extraSlotId: 503,
+          ),
+        },
+      );
+
+      final restored = GameStateSerializer.deserialize(
+        GameStateSerializer.serialize(state),
+      );
+
+      expect(restored.ships[7]?.experience, 45000);
+      expect(restored.ships[7]?.nextExperience, 1200);
+      expect(restored.ships[7]?.extraSlotId, 503);
+    },
+  );
+
   test('new-ship identity metadata survives cache serialization', () {
     const state = GameState(
       memberId: 90001,

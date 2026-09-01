@@ -25,8 +25,8 @@ Uri externalFleetToolUri(
               'id': ship.id,
               'ship_id': ship.masterId,
               'lv': ship.level,
-              'exp': <int>[0, ship.nextExperience, 0],
-              'ex': ship.extraSlotId > 0 ? 1 : 0,
+              'exp': <int>[ship.experience, ship.nextExperience, 0],
+              'ex': ship.extraSlotId != 0 ? 1 : 0,
             },
           )
           .toList(),
