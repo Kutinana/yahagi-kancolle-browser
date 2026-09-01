@@ -575,7 +575,7 @@ void main() {
   );
 
   testWidgets(
-    'compatibility drawer adapts to narrow screens and filters rows',
+    '装备适配抽屉 compatibility drawer uses compact tools and fixed ship categories',
     (tester) async {
       final semanticsHandle = tester.ensureSemantics();
       tester.view.devicePixelRatio = 1;
@@ -647,6 +647,12 @@ void main() {
         expect(size.width, greaterThanOrEqualTo(48));
         expect(size.height, greaterThanOrEqualTo(48));
       }
+      for (final key in const <Key>[
+        Key('equipment-compatibility-ship-type-button-visual'),
+        Key('equipment-compatibility-search-button-visual'),
+      ]) {
+        expect(tester.getSize(find.byKey(key)), const Size(32, 32));
+      }
       expect(
         toolButton(
           const Key('equipment-compatibility-ship-type-button'),
@@ -711,6 +717,8 @@ void main() {
         findsNothing,
       );
 
+      tester.view.physicalSize = const Size(900, 700);
+      await tester.pump();
       await tester.tap(
         find.byKey(const Key('equipment-compatibility-ship-type-button')),
       );
@@ -722,6 +730,7 @@ void main() {
       final shipTypeDialog = find.byKey(
         const Key('equipment-compatibility-ship-type-dialog'),
       );
+      expect(tester.getSize(shipTypeDialog).width, 480);
       expect(
         find.descendant(of: shipTypeDialog, matching: find.text('选择舰种')),
         findsOneWidget,
@@ -732,30 +741,31 @@ void main() {
       );
       expect(
         find.descendant(of: shipTypeDialog, matching: find.byType(FilterChip)),
-        findsNWidgets(4),
+        findsNWidgets(10),
       );
       expect(
         find.descendant(of: shipTypeDialog, matching: find.byType(ListView)),
         findsOneWidget,
       );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('equipment-compatibility-ship-type-dialog')),
-          matching: find.text('全部'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('軽巡洋艦'), findsWidgets);
-      expect(find.text('駆逐艦'), findsWidgets);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('equipment-compatibility-ship-type-dialog')),
-          matching: find.text('其他'),
-        ),
-        findsOneWidget,
-      );
+      for (final label in const <String>[
+        '全部',
+        'BB/BC',
+        'CV',
+        'CVL',
+        'CA',
+        'CL',
+        'DD',
+        'DE',
+        'SS',
+        'AV/AO/AS…',
+      ]) {
+        expect(
+          find.descendant(of: shipTypeDialog, matching: find.text(label)),
+          findsOneWidget,
+        );
+      }
       await tester.tap(
-        find.byKey(const Key('equipment-compatibility-ship-type-option-2')),
+        find.byKey(const Key('equipment-compatibility-ship-category-dd')),
       );
       await tester.pumpAndSettle();
       expect(
@@ -782,7 +792,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(const Key('equipment-compatibility-ship-type-option-all')),
+        find.byKey(const Key('equipment-compatibility-ship-category-all')),
       );
       await tester.pumpAndSettle();
       expect(
@@ -967,7 +977,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(
-      find.byKey(const Key('equipment-compatibility-ship-type-option-2')),
+      find.byKey(const Key('equipment-compatibility-ship-category-dd')),
     );
     await tester.pumpAndSettle();
     await tester.tap(

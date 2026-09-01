@@ -7,6 +7,7 @@ import '../fleet/ship_portrait.dart';
 import '../game_state/game_state.dart';
 import '../widgets/standalone_text_input_dialog.dart';
 import 'equipment_compatibility_projection.dart';
+import 'owned_inventory_projection.dart';
 
 class EquipmentCompatibilityDrawer extends StatefulWidget {
   const EquipmentCompatibilityDrawer({
@@ -28,7 +29,7 @@ class EquipmentCompatibilityDrawer extends StatefulWidget {
 class _EquipmentCompatibilityDrawerState
     extends State<EquipmentCompatibilityDrawer> {
   bool _ownedOnly = true;
-  int? _shipTypeId;
+  ShipInventoryCategory _shipCategory = ShipInventoryCategory.all;
   String _query = '';
   EquipmentCompatibilitySlotFilter _slotFilter =
       EquipmentCompatibilitySlotFilter.all;
@@ -56,7 +57,7 @@ class _EquipmentCompatibilityDrawerState
     final rows = _projection.rows(
       equipmentMasterId: widget.equipment.id,
       ownedOnly: _ownedOnly,
-      shipTypeId: _shipTypeId,
+      shipCategory: _shipCategory,
       query: _query,
       filter: _slotFilter,
     );
@@ -131,16 +132,23 @@ class _EquipmentCompatibilityDrawerState
                                           key: const Key(
                                             'equipment-compatibility-ship-type-button',
                                           ),
+                                          visualKey: const Key(
+                                            'equipment-compatibility-ship-type-button-visual',
+                                          ),
                                           icon: Icons.filter_alt_rounded,
                                           tooltip: l10n.shipType,
-                                          active: _shipTypeId != null,
-                                          onPressed: () =>
-                                              _showShipTypeDialog(allRows),
+                                          active:
+                                              _shipCategory !=
+                                              ShipInventoryCategory.all,
+                                          onPressed: _showShipTypeDialog,
                                         ),
                                         const SizedBox(width: 4),
                                         _ToolButton(
                                           key: const Key(
                                             'equipment-compatibility-search-button',
+                                          ),
+                                          visualKey: const Key(
+                                            'equipment-compatibility-search-button-visual',
                                           ),
                                           icon: Icons.search_rounded,
                                           tooltip: l10n
@@ -196,21 +204,13 @@ class _EquipmentCompatibilityDrawerState
     );
   }
 
-  Future<void> _showShipTypeDialog(
-    List<EquipmentCompatibilityShipRow> allRows,
-  ) async {
-    final shipTypes = <int, String>{
-      for (final row in allRows) row.shipMaster.shipTypeId: row.shipTypeName,
-    };
-    final selected = await showDialog<int>(
+  Future<void> _showShipTypeDialog() async {
+    final selected = await showDialog<ShipInventoryCategory>(
       context: context,
-      builder: (context) => _ShipTypeDialog(
-        shipTypes: shipTypes,
-        selectedShipTypeId: _shipTypeId,
-      ),
+      builder: (context) => _ShipTypeDialog(selectedCategory: _shipCategory),
     );
     if (selected == null || !mounted) return;
-    setState(() => _shipTypeId = selected == 0 ? null : selected);
+    setState(() => _shipCategory = selected);
   }
 
   Future<void> _showSearchDialog() async {
@@ -298,12 +298,14 @@ class _Header extends StatelessWidget {
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
     super.key,
+    required this.visualKey,
     required this.icon,
     required this.tooltip,
     required this.active,
     required this.onPressed,
   });
 
+  final Key visualKey;
   final IconData icon;
   final String tooltip;
   final bool active;
@@ -315,29 +317,32 @@ class _ToolButton extends StatelessWidget {
     isSelected: active,
     constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
     style: IconButton.styleFrom(
-      backgroundColor: active
-          ? const Color(0xff2b7180)
-          : const Color(0xff102a38),
       foregroundColor: active
           ? const Color(0xfff2f7f9)
           : const Color(0xff9bb0bb),
-      side: BorderSide(
-        color: active ? const Color(0xff69d2cf) : const Color(0xff315064),
-      ),
     ),
     onPressed: onPressed,
-    icon: Icon(icon, size: 19),
+    icon: Container(
+      key: visualKey,
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: active ? const Color(0xff2b7180) : const Color(0xff102a38),
+        border: Border.all(
+          color: active ? const Color(0xff69d2cf) : const Color(0xff315064),
+        ),
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Icon(icon, size: 19),
+    ),
   );
 }
 
 class _ShipTypeDialog extends StatelessWidget {
-  const _ShipTypeDialog({
-    required this.shipTypes,
-    required this.selectedShipTypeId,
-  });
+  const _ShipTypeDialog({required this.selectedCategory});
 
-  final Map<int, String> shipTypes;
-  final int? selectedShipTypeId;
+  final ShipInventoryCategory selectedCategory;
 
   @override
   Widget build(BuildContext context) {
@@ -345,11 +350,11 @@ class _ShipTypeDialog extends StatelessWidget {
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
     return Dialog(
-      key: const Key('equipment-compatibility-ship-type-dialog'),
       insetPadding: const EdgeInsets.all(24),
       backgroundColor: Colors.transparent,
       child: Container(
-        width: 360,
+        key: const Key('equipment-compatibility-ship-type-dialog'),
+        width: 480,
         constraints: const BoxConstraints(maxHeight: 520),
         decoration: BoxDecoration(
           color: const Color(0xff101d27),
@@ -405,25 +410,15 @@ class _ShipTypeDialog extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      FilterChip(
-                        key: const Key(
-                          'equipment-compatibility-ship-type-option-all',
-                        ),
-                        label: Text(l10n.all),
-                        selected: selectedShipTypeId == null,
-                        onSelected: (_) => Navigator.of(context).pop(0),
-                      ),
-                      for (final entry in shipTypes.entries)
+                      for (final category in ShipInventoryCategory.values)
                         FilterChip(
                           key: Key(
-                            'equipment-compatibility-ship-type-option-${entry.key}',
+                            'equipment-compatibility-ship-category-${category.name}',
                           ),
-                          label: Text(
-                            entry.value.isEmpty ? l10n.otherType : entry.value,
-                          ),
-                          selected: selectedShipTypeId == entry.key,
+                          label: Text(_shipCategoryLabel(category, l10n)),
+                          selected: selectedCategory == category,
                           onSelected: (_) =>
-                              Navigator.of(context).pop(entry.key),
+                              Navigator.of(context).pop(category),
                         ),
                     ],
                   ),
@@ -436,6 +431,22 @@ class _ShipTypeDialog extends StatelessWidget {
     );
   }
 }
+
+String _shipCategoryLabel(
+  ShipInventoryCategory category,
+  AppLocalizations l10n,
+) => switch (category) {
+  ShipInventoryCategory.all => l10n.all,
+  ShipInventoryCategory.bbBc => 'BB/BC',
+  ShipInventoryCategory.cv => 'CV',
+  ShipInventoryCategory.cvl => 'CVL',
+  ShipInventoryCategory.ca => 'CA',
+  ShipInventoryCategory.cl => 'CL',
+  ShipInventoryCategory.dd => 'DD',
+  ShipInventoryCategory.de => 'DE',
+  ShipInventoryCategory.ss => 'SS',
+  ShipInventoryCategory.support => 'AV/AO/AS…',
+};
 
 class _ScopeTabs extends StatelessWidget {
   const _ScopeTabs({
