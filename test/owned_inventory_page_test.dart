@@ -658,6 +658,21 @@ void main() {
         find.descendant(of: unownedRow, matching: find.textContaining('Lv.')),
         findsNothing,
       );
+      final unownedUnknownTypeRow = find.byKey(
+        const Key('equipment-compatibility-ship-104'),
+      );
+      expect(unownedUnknownTypeRow, findsOneWidget);
+      expect(
+        find.descendant(of: unownedUnknownTypeRow, matching: find.text('其他')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: unownedUnknownTypeRow,
+          matching: find.textContaining('Lv.'),
+        ),
+        findsNothing,
+      );
 
       await tester.tap(
         find.byKey(const Key('equipment-compatibility-ship-type-button')),
@@ -843,6 +858,47 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('compatibility drawer labels an owned unknown ship type', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 640);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController(
+      includeOwnedUnknownType: true,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showShips: false,
+            showSectionControl: false,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('equipment-name-row-201')));
+    await tester.pumpAndSettle();
+
+    final ownedUnknownTypeRow = find.byKey(
+      const Key('equipment-compatibility-ship-104'),
+    );
+    expect(ownedUnknownTypeRow, findsOneWidget);
+    expect(
+      find.descendant(
+        of: ownedUnknownTypeRow,
+        matching: find.text('其他 · Lv.73'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('compatibility drawer header scrolls with its single viewport', (
     tester,
@@ -2428,7 +2484,9 @@ void main() {
   });
 }
 
-Future<GameStateController> _equipmentCompatibilityController() async {
+Future<GameStateController> _equipmentCompatibilityController({
+  bool includeOwnedUnknownType = false,
+}) async {
   final startEnvelope =
       jsonDecode(start2Event.responseBody) as Map<String, Object?>;
   final startData =
@@ -2485,6 +2543,16 @@ Future<GameStateController> _equipmentCompatibilityController() async {
       ...firstOwnedShip,
       'api_id': instanceId,
       'api_lv': level,
+      'api_slot': const <int>[-1, -1, -1, -1],
+      'api_onslot': const <int>[0, 0, 0, 0],
+    });
+  }
+  if (includeOwnedUnknownType) {
+    ownedShips.add(<String, Object?>{
+      ...firstOwnedShip,
+      'api_id': 9005,
+      'api_ship_id': 104,
+      'api_lv': 73,
       'api_slot': const <int>[-1, -1, -1, -1],
       'api_onslot': const <int>[0, 0, 0, 0],
     });

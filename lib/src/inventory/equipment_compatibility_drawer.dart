@@ -705,9 +705,12 @@ class _ShipRow extends StatelessWidget {
         : compatibility.canEquipInRegularSlot
         ? l10n.equipmentCompatibilityRegularSlot
         : l10n.equipmentCompatibilityExpansionSlot;
+    final shipTypeLabel = row.shipTypeName.isEmpty
+        ? l10n.otherType
+        : row.shipTypeName;
     final metadata = row.ownedShips.isEmpty
-        ? row.shipTypeName
-        : '${row.shipTypeName} · ${l10n.equipmentCompatibilityOwnedLevels(row.ownedShips.map((ship) => ship.level).join(' / '))}';
+        ? shipTypeLabel
+        : '$shipTypeLabel · ${l10n.equipmentCompatibilityOwnedLevels(row.ownedShips.map((ship) => ship.level).join(' / '))}';
     final fleetText = row.fleetNumbers.isEmpty
         ? null
         : l10n.equipmentCompatibilityFleetNumbers(row.fleetNumbers.join('、'));
