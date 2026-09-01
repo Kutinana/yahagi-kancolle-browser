@@ -182,7 +182,7 @@ dart run tool/development_data/sync.dart `
   --output assets/data/development/development_snapshot.json
 ```
 
-预期摘要必须列出 99 个池记录、46 个可选池名、102 件可开发装备、2 个负池和 2 个最低资源池。
+预期摘要必须列出 99 个池记录、45 个可选池、46 个已本地化池名、102 件可开发装备、2 个负池和 2 个最低资源池。「空母系-陆攻」只用于特殊门槛记录，不单独出现在秘书舰池选择器中。
 
 - [ ] **步骤 3：注册资产目录**
 

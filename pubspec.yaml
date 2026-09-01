@@ -85,6 +85,7 @@ flutter:
     - assets/data/quests-scn.json
     - assets/data/quests-meta.json
     - assets/data/improvement/
+    - assets/data/development/
     - assets/data/game_resource_static_catalog.json
     - assets/data/game_resource_baseline_manifest.json.gz
 
