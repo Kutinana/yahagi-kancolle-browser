@@ -93,7 +93,7 @@ void main() {
     expect(find.text('20'), findsWidgets);
   });
 
-  testWidgets('target sheet uses a round button to open the search dialog', (
+  testWidgets('target dialog uses two columns and keeps search in a button', (
     tester,
   ) async {
     await tester.pumpWidget(_app(size: const Size(390, 844)));
@@ -102,7 +102,14 @@ void main() {
     await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('development-target-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('development-target-dialog')), findsOneWidget);
+    expect(
+      find.byKey(const Key('development-equipment-type-filter')),
+      findsNothing,
+    );
+    expect(find.text('舰上攻击机'), findsOneWidget);
+    expect(find.text('#8'), findsNothing);
+    expect(find.textContaining('ID '), findsNothing);
     expect(find.byKey(const Key('development-inline-search')), findsNothing);
 
     await tester.tap(find.byKey(const Key('development-search-button')));
@@ -125,10 +132,20 @@ void main() {
     await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-type-8')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-equipment-7')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('development-target-dialog')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('development-target-dialog')),
+        matching: find.text('已选 1 件'),
+      ),
+      findsOneWidget,
+    );
     Navigator.of(
-      tester.element(find.byKey(const Key('development-target-sheet'))),
+      tester.element(find.byKey(const Key('development-target-dialog'))),
     ).pop();
     await tester.pumpAndSettle();
 
@@ -184,12 +201,49 @@ void main() {
     await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-type-8')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-equipment-7')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-type-15')));
     await tester.pumpAndSettle();
 
     final incompatible = find.byKey(const Key('development-equipment-9'));
     expect(incompatible, findsOneWidget);
-    expect(tester.widget<ListTile>(incompatible).enabled, isFalse);
+    expect(tester.widget<InkWell>(incompatible).onTap, isNull);
+  });
+
+  testWidgets('target dialog preserves multi-selection across types', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(size: const Size(700, 844)));
+    await tester.pumpAndSettle();
+    await _openFormula(tester);
+    await tester.tap(find.byKey(const Key('development-open-target-picker')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('development-equipment-type-8')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-7')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-type-12')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-8')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('development-target-dialog')),
+        matching: find.text('已选 2 件'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('development-target-dialog')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('development-target-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('development-target-dialog')), findsNothing);
+    expect(find.text('测试舰攻'), findsOneWidget);
+    expect(find.text('测试雷达'), findsOneWidget);
   });
 
   testWidgets('search trims confirmation and cancel preserves prior query', (
@@ -199,6 +253,8 @@ void main() {
     await tester.pumpAndSettle();
     await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-type-12')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-search-button')));
     await tester.pumpAndSettle();
