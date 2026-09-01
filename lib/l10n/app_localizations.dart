@@ -5038,6 +5038,66 @@ abstract class AppLocalizations {
   /// **'开发指挥台'**
   String get developmentCommandTitle;
 
+  /// No description provided for @developmentWorkbenchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'开发工作台'**
+  String get developmentWorkbenchTitle;
+
+  /// No description provided for @developmentCalculator.
+  ///
+  /// In zh, this message translates to:
+  /// **'开发计算器'**
+  String get developmentCalculator;
+
+  /// No description provided for @developmentFormula.
+  ///
+  /// In zh, this message translates to:
+  /// **'开发公式'**
+  String get developmentFormula;
+
+  /// No description provided for @developmentOutputProbability.
+  ///
+  /// In zh, this message translates to:
+  /// **'出货概率'**
+  String get developmentOutputProbability;
+
+  /// No description provided for @developmentFinalProbability.
+  ///
+  /// In zh, this message translates to:
+  /// **'最终概率'**
+  String get developmentFinalProbability;
+
+  /// No description provided for @developmentAvailableRecipes.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用公式'**
+  String get developmentAvailableRecipes;
+
+  /// No description provided for @developmentPoolType.
+  ///
+  /// In zh, this message translates to:
+  /// **'池类型'**
+  String get developmentPoolType;
+
+  /// No description provided for @developmentSelectSecretary.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择秘书舰类型'**
+  String get developmentSelectSecretary;
+
+  /// No description provided for @developmentOtherSecretaryGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get developmentOtherSecretaryGroup;
+
+  /// No description provided for @developmentEquipmentType.
+  ///
+  /// In zh, this message translates to:
+  /// **'类型'**
+  String get developmentEquipmentType;
+
   /// No description provided for @developmentCurrentFlagship.
   ///
   /// In zh, this message translates to:

@@ -90,22 +90,17 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
                 DataColumn(
                   numeric: true,
                   onSort: (_, _) => setState(() => _ascending = !_ascending),
-                  label: InkWell(
+                  label: Row(
                     key: const Key('development-output-probability-sort'),
-                    onTap: () => setState(() => _ascending = !_ascending),
-                    child: Row(
-                      children: [
-                        Text(widget.finalProbabilityLabel),
-                        const SizedBox(width: 4),
-                        Icon(
-                          _ascending
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward,
-                          size: 14,
-                          color: const Color(0xffffc85a),
-                        ),
-                      ],
-                    ),
+                    children: [
+                      Text(widget.finalProbabilityLabel),
+                      const SizedBox(width: 4),
+                      Icon(
+                        _ascending ? Icons.arrow_upward : Icons.arrow_downward,
+                        size: 14,
+                        color: const Color(0xffffc85a),
+                      ),
+                    ],
                   ),
                 ),
               ],

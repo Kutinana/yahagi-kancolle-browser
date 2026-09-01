@@ -2703,6 +2703,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get developmentCommandTitle => '開発指揮卓';
 
   @override
+  String get developmentWorkbenchTitle => '開発ワークベンチ';
+
+  @override
+  String get developmentCalculator => '開発計算機';
+
+  @override
+  String get developmentFormula => '開発レシピ';
+
+  @override
+  String get developmentOutputProbability => '開発確率';
+
+  @override
+  String get developmentFinalProbability => '最終確率';
+
+  @override
+  String get developmentAvailableRecipes => '利用可能なレシピ';
+
+  @override
+  String get developmentPoolType => 'プール種類';
+
+  @override
+  String get developmentSelectSecretary => '秘書艦タイプを選択';
+
+  @override
+  String get developmentOtherSecretaryGroup => 'その他';
+
+  @override
+  String get developmentEquipmentType => '種類';
+
+  @override
   String get developmentCurrentFlagship => '現在の旗艦';
 
   @override

@@ -11,20 +11,54 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
-  testWidgets('command dashboard has no persistent search field', (
+  testWidgets(
+    'development workbench shows calculator table without old groups',
+    (tester) async {
+      await tester.pumpWidget(_app(size: const Size(1000, 700)));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('development-command-card')), findsOneWidget);
+      expect(
+        find.byKey(const Key('development-mode-calculator')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('development-mode-formula')), findsOneWidget);
+      expect(find.byKey(const Key('development-inline-search')), findsNothing);
+      expect(find.text('开发工作台'), findsOneWidget);
+      expect(find.text('出货概率'), findsOneWidget);
+      expect(find.textContaining('其他出货'), findsNothing);
+      expect(find.textContaining('被替换出货'), findsNothing);
+      expect(find.byKey(const Key('development-minimum-7')), findsNothing);
+      for (var index = 0; index < 4; index++) {
+        expect(
+          find.byKey(Key('development-resource-icon-$index')),
+          findsOneWidget,
+        );
+      }
+    },
+  );
+
+  testWidgets('workbench switches modes and preserves calculator resources', (
     tester,
   ) async {
     await tester.pumpWidget(_app(size: const Size(1000, 700)));
     await tester.pumpAndSettle();
+    final fuel = find.byType(TextFormField).first;
+    await tester.enterText(fuel, '20');
+    await tester.pump();
 
-    expect(find.byKey(const Key('development-command-card')), findsOneWidget);
-    expect(find.byKey(const Key('development-wide-layout')), findsOneWidget);
-    expect(find.byKey(const Key('development-inline-search')), findsNothing);
-    expect(find.text('开发指挥台'), findsOneWidget);
-    expect(find.text('其他出货  3%'), findsOneWidget);
-    expect(find.byKey(const Key('development-rate-details-7')), findsOneWidget);
-    expect(find.byKey(const Key('development-minimum-7')), findsOneWidget);
-    expect(find.byKey(const Key('development-rate-details-10')), findsNothing);
+    await tester.tap(find.byKey(const Key('development-mode-formula')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('development-open-target-picker')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('development-output-table')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('development-mode-calculator')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('development-output-table')), findsOneWidget);
+    expect(find.text('20'), findsWidgets);
   });
 
   testWidgets('target sheet uses a round button to open the search dialog', (
@@ -33,6 +67,7 @@ void main() {
     await tester.pumpWidget(_app(size: const Size(390, 844)));
     await tester.pumpAndSettle();
 
+    await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('development-target-sheet')), findsOneWidget);
@@ -55,6 +90,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(size: const Size(1000, 700)));
     await tester.pumpAndSettle();
+    await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-equipment-7')));
@@ -100,6 +136,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(size: const Size(390, 844)));
     await tester.pumpAndSettle();
+    await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-equipment-7')));
@@ -115,6 +152,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(size: const Size(390, 844)));
     await tester.pumpAndSettle();
+    await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-search-button')));
@@ -156,6 +194,11 @@ void main() {
 
     expect(find.text('当前旗舰没有可用的开发池，已保留原选择'), findsOneWidget);
   });
+}
+
+Future<void> _openFormula(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('development-mode-formula')));
+  await tester.pumpAndSettle();
 }
 
 Widget _app({required Size size, GameState state = _state}) => MediaQuery(
