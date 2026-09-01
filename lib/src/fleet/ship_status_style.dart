@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'ship_damage_level.dart';
+
 const yahagiStatusRed = Color(0xffd33d17);
 const yahagiStatusOrange = Color(0xfff57c00);
 const yahagiStatusYellow = Color(0xffffc940);
@@ -110,7 +112,8 @@ Color shipSupplyBarColor(double ratio) =>
 Color shipSupplyValueColor(double ratio) => _fourBandColor(ratio, Colors.white);
 
 bool isShipHeavilyDamaged({required int currentHp, required int maxHp}) {
-  return currentHp > 0 && maxHp > 0 && currentHp * 4 <= maxHp;
+  return shipDamageLevel(currentHp: currentHp, maxHp: maxHp) ==
+      ShipDamageLevel.heavy;
 }
 
 Color shipFatigueColor(int fatigue) {
