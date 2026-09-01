@@ -15,6 +15,7 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
 import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/safety_settings_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/battle_status_effect_settings.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
@@ -179,7 +180,7 @@ void main() {
     );
 
     expect(fixture.alerts.alerts, <BattleDamageAlertSeverity>[
-      BattleDamageAlertSeverity.postBattleWarning,
+      BattleDamageAlertSeverity.heavy,
     ]);
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('大破安全警告'), findsOneWidget);
@@ -195,7 +196,7 @@ void main() {
     );
 
     expect(fixture.alerts.alerts, <BattleDamageAlertSeverity>[
-      BattleDamageAlertSeverity.postBattleWarning,
+      BattleDamageAlertSeverity.heavy,
     ]);
     expect(find.byType(AlertDialog), findsNothing);
   });
@@ -273,7 +274,7 @@ void main() {
     );
 
     expect(fixture.alerts.alerts, <BattleDamageAlertSeverity>[
-      BattleDamageAlertSeverity.postBattleWarning,
+      BattleDamageAlertSeverity.heavy,
     ]);
     expect(find.byType(AlertDialog), findsOneWidget);
   });
@@ -308,12 +309,12 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
   });
 
-  testWidgets('warning does not vibrate while damage vibration is disabled', (
+  testWidgets('warning uses heavy filter while keeping dialog independent', (
     tester,
   ) async {
     final fixture = await _WarningOverlayFixture.create(
       mode: BattleWarningMode.confirm,
-      vibrationEnabled: false,
+      vibrationFilter: DamageVibrationFilter.moderateOnly,
     );
     addTearDown(fixture.dispose);
 
@@ -346,7 +347,7 @@ final class _WarningOverlayFixture {
 
   static Future<_WarningOverlayFixture> create({
     required BattleWarningMode mode,
-    bool vibrationEnabled = true,
+    DamageVibrationFilter vibrationFilter = DamageVibrationFilter.all,
   }) async {
     final reducer = GameStateReducer();
     var state = reducer.reduce(GameState.empty, start2Event);
@@ -362,7 +363,7 @@ final class _WarningOverlayFixture {
       MemorySafetySettingsStore(),
     );
     await settingsController.setBattleWarningMode(mode);
-    await settingsController.setBattleDamageVibrationEnabled(vibrationEnabled);
+    await settingsController.setDamageVibrationFilter(vibrationFilter);
     return _WarningOverlayFixture(
       captureController: captureController,
       capturePort: capturePort,

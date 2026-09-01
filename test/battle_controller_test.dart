@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_damage_alert.dart';
+import 'package:yahagi_kancolle_browser/src/settings/battle_status_effect_settings.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_node_label_resolver.dart';
@@ -178,7 +179,7 @@ void main() {
       final controller = BattleController(
         gameState: () => state,
         damageAlertPort: alerts,
-        battleDamageVibrationEnabled: () => true,
+        battleStatusEffectSettings: () => const BattleStatusEffectSettings(),
       );
       addTearDown(controller.dispose);
 
@@ -202,11 +203,11 @@ void main() {
     var state = reducer.reduce(GameState.empty, start2Event);
     state = reducer.reduce(state, portEvent);
     final alerts = _RecordingDamageAlertPort();
-    var enabled = false;
+    var settings = const BattleStatusEffectSettings(enabled: false);
     final controller = BattleController(
       gameState: () => state,
       damageAlertPort: alerts,
-      battleDamageVibrationEnabled: () => enabled,
+      battleStatusEffectSettings: () => settings,
     );
     addTearDown(controller.dispose);
 
@@ -217,7 +218,7 @@ void main() {
     await controller.idle;
     expect(alerts.alerts, isEmpty);
 
-    enabled = true;
+    settings = const BattleStatusEffectSettings();
     controller.accept(
       kcsapiEvent('/kcsapi/api_req_practice/battle', <String, Object?>{
         'api_deck_id': 1,

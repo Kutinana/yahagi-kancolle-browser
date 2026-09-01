@@ -23,12 +23,5 @@ void main() {
 
     expect(received?.method, 'alert');
     expect(received?.arguments, <String, Object?>{'severity': 'heavy'});
-
-    await port.alert(BattleDamageAlertSeverity.postBattleWarning);
-
-    expect(received?.method, 'alert');
-    expect(received?.arguments, <String, Object?>{
-      'severity': 'postBattleWarning',
-    });
   });
 }

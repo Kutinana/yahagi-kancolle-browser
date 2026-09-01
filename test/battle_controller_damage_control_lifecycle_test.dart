@@ -8,6 +8,7 @@ import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_
 import 'package:yahagi_kancolle_browser/src/battle/prediction/battle_prediction_executor.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
+import 'package:yahagi_kancolle_browser/src/settings/battle_status_effect_settings.dart';
 
 void main() {
   test('does not reuse damage control on the next node', () async {
@@ -409,7 +410,7 @@ void main() {
     final controller = BattleController(
       gameState: () => state,
       damageAlertPort: alerts,
-      battleDamageVibrationEnabled: () => true,
+      battleStatusEffectSettings: () => const BattleStatusEffectSettings(),
     );
     addTearDown(controller.dispose);
 

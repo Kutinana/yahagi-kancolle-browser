@@ -408,11 +408,11 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
                 "alert" -> {
                     val severity = call.argument<String>("severity")
                     if (severity == null ||
-                        severity !in setOf("moderate", "heavy", "postBattleWarning")
+                        severity !in setOf("moderate", "heavy")
                     ) {
                         result.error(
                             "invalid_argument",
-                            "severity must be moderate, heavy, or postBattleWarning",
+                            "severity must be moderate or heavy",
                             null,
                         )
                         return@setMethodCallHandler

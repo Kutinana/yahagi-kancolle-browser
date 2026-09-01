@@ -19,12 +19,4 @@ class BattleDamageVibrationPatternTest {
         assertArrayEquals(longArrayOf(0, 255, 90, 255), pattern.timings)
         assertArrayEquals(intArrayOf(0, 255, 0, 255), pattern.amplitudes)
     }
-
-    @Test
-    fun postBattleWarningUsesOneClearShortPulse() {
-        val pattern = BattleDamageVibrationPattern.forSeverity("postBattleWarning")
-
-        assertArrayEquals(longArrayOf(0, 300), pattern.timings)
-        assertArrayEquals(intArrayOf(0, 255), pattern.amplitudes)
-    }
 }

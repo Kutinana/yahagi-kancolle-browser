@@ -293,8 +293,8 @@ Future<void> main() async {
     waitForGameState: () => gameStateController.idle,
     onFriendlyHpUpdated: gameStateController.applyFriendlyBattleHp,
     damageAlertPort: const MethodChannelBattleDamageAlertPort(),
-    battleDamageVibrationEnabled: () =>
-        safetySettingsController.battleDamageVibrationEnabled,
+    battleStatusEffectSettings: () =>
+        safetySettingsController.battleStatusEffects,
     nodeLabelResolver: fcdMapController,
     formationMemory: formationMemoryController,
   );

@@ -1,8 +1,9 @@
 import 'package:flutter/services.dart';
 
+import '../fleet/ship_damage_level.dart';
 import 'battle_models.dart';
 
-enum BattleDamageAlertSeverity { moderate, heavy, postBattleWarning }
+enum BattleDamageAlertSeverity { moderate, heavy }
 
 abstract interface class BattleDamageAlertPort {
   Future<void> alert(BattleDamageAlertSeverity severity);
@@ -37,26 +38,23 @@ BattleDamageAlertSeverity? detectFriendlyDamageAlert({
     if (ship.isEscaped) continue;
     final previous = beforeByKey[(ship.fleetRole, ship.position)];
     if (previous == null || ship.currentHp >= previous.currentHp) continue;
-    final previousBand = _damageBand(previous.currentHp, previous.maxHp);
-    final currentBand = _damageBand(ship.currentHp, ship.maxHp);
+    final previousBand = shipDamageLevel(
+      currentHp: previous.currentHp,
+      maxHp: previous.maxHp,
+    );
+    final currentBand = shipDamageLevel(
+      currentHp: ship.currentHp,
+      maxHp: ship.maxHp,
+    );
     if (currentBand.index <= previousBand.index ||
-        currentBand.index < _DamageBand.moderate.index) {
+        currentBand.index < ShipDamageLevel.moderate.index) {
       continue;
     }
-    final alert = currentBand == _DamageBand.heavy
+    final alert = currentBand == ShipDamageLevel.heavy
         ? BattleDamageAlertSeverity.heavy
         : BattleDamageAlertSeverity.moderate;
     if (alert == BattleDamageAlertSeverity.heavy) return alert;
     strongest = alert;
   }
   return strongest;
-}
-
-enum _DamageBand { healthyOrMinor, moderate, heavy }
-
-_DamageBand _damageBand(int currentHp, int maxHp) {
-  if (maxHp <= 0) return _DamageBand.healthyOrMinor;
-  if (currentHp * 4 <= maxHp) return _DamageBand.heavy;
-  if (currentHp * 2 <= maxHp) return _DamageBand.moderate;
-  return _DamageBand.healthyOrMinor;
 }

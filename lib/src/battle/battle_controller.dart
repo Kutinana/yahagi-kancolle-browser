@@ -20,6 +20,8 @@ import 'prediction/poi/poi_battle_prediction_engine.dart';
 import '../logbook/logbook_database.dart';
 import '../logbook/expedition_log_catalog.dart';
 import '../performance/frame_notification_coalescer.dart';
+import '../fleet/ship_damage_level.dart';
+import '../settings/battle_status_effect_settings.dart';
 import 'battle_damage_alert.dart';
 
 final class BattleController extends ChangeNotifier
@@ -30,7 +32,7 @@ final class BattleController extends ChangeNotifier
     void Function(Map<int, int> hpByShipId, DateTime capturedAt)?
     onFriendlyHpUpdated,
     this.damageAlertPort,
-    this.battleDamageVibrationEnabled,
+    this.battleStatusEffectSettings,
     this.poiEngineFactory,
     this.maxRecords = 100,
     this.nodeLabelResolver = const EmptyBattleNodeLabelResolver(),
@@ -56,7 +58,7 @@ final class BattleController extends ChangeNotifier
   final FrameNotificationCoalescer _captureNotifications;
   final BattlePredictionExecutor _predictionExecutor;
   final BattleDamageAlertPort? damageAlertPort;
-  final bool Function()? battleDamageVibrationEnabled;
+  final BattleStatusEffectSettings Function()? battleStatusEffectSettings;
   final BattlePredictionEngineFactory? poiEngineFactory;
   final int maxRecords;
   final BattleNodeLabelResolver nodeLabelResolver;
@@ -544,14 +546,20 @@ final class BattleController extends ChangeNotifier
       parsed.friendEscort,
       friendEscort,
     );
-    if (!practice &&
-        !hasUntrustedPoiLedger &&
-        (battleDamageVibrationEnabled?.call() ?? false)) {
+    if (!practice && !hasUntrustedPoiLedger) {
       final severity = detectFriendlyDamageAlert(
         before: <BattleShipSnapshot>[...friendMain, ...friendEscort],
         after: <BattleShipSnapshot>[...parsedFriendMain, ...parsedFriendEscort],
       );
-      if (severity != null && damageAlertPort != null) {
+      final level = switch (severity) {
+        BattleDamageAlertSeverity.moderate => ShipDamageLevel.moderate,
+        BattleDamageAlertSeverity.heavy => ShipDamageLevel.heavy,
+        null => ShipDamageLevel.none,
+      };
+      final settings = battleStatusEffectSettings?.call();
+      if (severity != null &&
+          settings?.vibrates(level) == true &&
+          damageAlertPort != null) {
         unawaited(
           damageAlertPort!.alert(severity).catchError((Object error) {
             debugPrint('战斗受损震动提醒失败: $error');

@@ -9,6 +9,7 @@ import '../battle/battle_models.dart';
 import '../game_state/game_state.dart';
 import '../settings/safety_settings_controller.dart';
 import '../settings/safety_settings_store.dart';
+import '../fleet/ship_damage_level.dart';
 import 'game_capture_controller.dart';
 
 bool shouldShowPostBattleWarning(LiveBattle? battle) {
@@ -125,10 +126,12 @@ class _BattleResultWarningOverlayState
   void _showPendingWarning() {
     final mode = widget.safetySettingsController.battleWarningMode;
     if (mode == BattleWarningMode.off) return;
-    if (widget.safetySettingsController.battleDamageVibrationEnabled) {
+    if (widget.safetySettingsController.battleStatusEffects.vibrates(
+      ShipDamageLevel.heavy,
+    )) {
       unawaited(
         widget.damageAlertPort
-            .alert(BattleDamageAlertSeverity.postBattleWarning)
+            .alert(BattleDamageAlertSeverity.heavy)
             .catchError((Object error) {
               debugPrint('战后大破警告震动失败: $error');
             }),
