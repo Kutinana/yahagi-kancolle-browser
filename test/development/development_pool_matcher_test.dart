@@ -115,7 +115,7 @@ Map<String, Object?> _pool(
   'labels': {'zh': key, 'zh_Hant': key, 'ja': key},
   'pool_id': id,
   'ship_ids': ships,
-  if (minimum != null) 'minimum_resources': minimum,
+  'minimum_resources': ?minimum,
   'drop_rates': rates,
   'criteria': {
     'ship_types': <Object?>[],

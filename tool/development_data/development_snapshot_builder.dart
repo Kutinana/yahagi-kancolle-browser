@@ -163,7 +163,7 @@ Map<String, Object?> buildDevelopmentSnapshot({
       'labels': _sortedStringMap(labels),
       'pool_id': poolId,
       'ship_ids': expandedIds,
-      if (minimum != null) 'minimum_resources': minimum,
+      'minimum_resources': ?minimum,
       'drop_rates': dropRates,
       'criteria': <String, Object?>{
         'ship_types': stypes,
