@@ -44,3 +44,11 @@
 | `assets/images/material/useitem_59.png` | 给粮舰「伊良湖」 | [ItemCard059.png](https://zh.kcwiki.cn/wiki/File:ItemCard059.png) |
 | `assets/images/material/useitem_61.png` | 甲种勋章 | [ItemCard061.png](https://zh.kcwiki.cn/wiki/File:ItemCard061.png) |
 | `assets/images/material/useitem_68.png` | 秋刀鱼 | [ItemCard068.png](https://zh.kcwiki.cn/wiki/File:ItemCard068.png) |
+
+## 装备开发池快照
+
+`development/development_snapshot.json` 由 [SkywalkerJi/kc-development-tools](https://github.com/SkywalkerJi/kc-development-tools) 的固定提交 `d065120` 生成，来源文件为 `DevelopmentPool.json`、`start2.json`、`ctype.json` 和开发池名称翻译表。快照仅保留开发计算所需的池条件、出货率、装备最低资源、图标分类、秘书舰匹配结果及中日文池名。
+
+参考项目作者已经通过项目维护者与本项目沟通，同意在本功能中使用相关数据和计算行为，并明确要求不复制其 UI。Yahagi 使用独立的「开发指挥台」界面，未复制参考站的 Vue 组件、CSS、图片或页面布局。计算实现为本项目中的独立 Dart 实现，并通过固定数值向量做兼容性回归。
+
+快照可能存在更新延迟或社区整理误差，实际开发结果以游戏为准。同步工具会写入来源仓库、提交号和每个源文件的 SHA-256，以便复核和重现。

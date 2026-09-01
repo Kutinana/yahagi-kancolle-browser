@@ -117,3 +117,23 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+kc-development-tools development data
+-------------------------------------
+
+The bundled equipment-development snapshot is derived from the fixed commit
+`d065120` of SkywalkerJi/kc-development-tools:
+https://github.com/SkywalkerJi/kc-development-tools
+
+The upstream author granted the project maintainer permission to use the
+relevant data and calculation behavior, with the express condition that the
+upstream user interface not be copied. Yahagi uses an independently designed
+command-dashboard interface and an independent Dart implementation. It does
+not bundle the upstream Vue components, CSS, images, or page layout.
+
+The snapshot records the source repository, commit, and SHA-256 hashes. Pool
+name translations included in the upstream dataset remain attributed to the
+upstream contributors and their noted KC3-derived naming references. Game
+names and master-data identifiers remain the property of their respective
+owners. Development probabilities may lag behind game changes; actual game
+behavior takes precedence.
