@@ -1605,6 +1605,64 @@ class AppLocalizationsJa extends AppLocalizations {
   String get battleDamageVibrationDesc => '味方艦娘が戦闘中に中破または大破になったとき振動で通知します。';
 
   @override
+  String get battleStatusEffectsSection => '戦闘ステータス効果';
+
+  @override
+  String get battleStatusEffectsEnabled => 'ステータス効果を有効化';
+
+  @override
+  String get battleStatusEffectsEnabledDesc => '損傷点滅、損傷振動、士気キラキラをまとめてオン／オフします。';
+
+  @override
+  String get battleEffectDisplayScope => '画面表示範囲';
+
+  @override
+  String get battleEffectDisplayScopeDesc => '損傷点滅と士気キラキラを表示する艦娘画面を選びます。';
+
+  @override
+  String get battleEffectScopePredictionOnly => '予知のみ';
+
+  @override
+  String get battleEffectScopeFleetOnly => '編成のみ';
+
+  @override
+  String get battleEffectScopeAll => 'すべて';
+
+  @override
+  String get battleDamagePulse => '損傷点滅';
+
+  @override
+  String get battleDamagePulseDesc => '現在の HP 損傷段階に応じて艦娘画像の枠を点滅させます。';
+
+  @override
+  String get battleDamageVibrationEffect => '損傷振動';
+
+  @override
+  String get battleDamageVibrationEffectDesc => '味方艦娘が戦闘中に選択した損傷段階へ入ったとき振動します。';
+
+  @override
+  String get battleMoraleSparkle => '士気キラキラ効果';
+
+  @override
+  String get battleMoraleSparkleDesc =>
+      'Cond 50 以上で艦娘画像の周囲に星を表示します。疲労顔と疲労警告には影響しません。';
+
+  @override
+  String get battleEffectOff => 'オフ';
+
+  @override
+  String get battleEffectMinorOnly => '小破のみ';
+
+  @override
+  String get battleEffectModerateOnly => '中破のみ';
+
+  @override
+  String get battleEffectHeavyOnly => '大破のみ';
+
+  @override
+  String get battleEffectAll => 'すべて有効';
+
+  @override
   String get battlePredictionSection => '戦闘予測';
 
   @override

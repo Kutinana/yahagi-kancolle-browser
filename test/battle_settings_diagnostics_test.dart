@@ -18,7 +18,7 @@ void main() {
     expect(find.text('大破提醒'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('大破提醒')).dy,
-      lessThan(tester.getTopLeft(find.text('战斗提醒')).dy),
+      lessThan(tester.getTopLeft(find.text('战斗状态效果')).dy),
     );
   });
 }

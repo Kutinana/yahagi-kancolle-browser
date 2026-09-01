@@ -3095,6 +3095,120 @@ abstract class AppLocalizations {
   /// **'我方舰娘在战斗中刚进入中破或大破时震动提醒。'**
   String get battleDamageVibrationDesc;
 
+  /// No description provided for @battleStatusEffectsSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'战斗状态效果'**
+  String get battleStatusEffectsSection;
+
+  /// No description provided for @battleStatusEffectsEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用状态效果'**
+  String get battleStatusEffectsEnabled;
+
+  /// No description provided for @battleStatusEffectsEnabledDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'统一开启或关闭受损闪烁、受损震动与士气闪光。'**
+  String get battleStatusEffectsEnabledDesc;
+
+  /// No description provided for @battleEffectDisplayScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'画面显示范围'**
+  String get battleEffectDisplayScope;
+
+  /// No description provided for @battleEffectDisplayScopeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'决定受损闪烁与士气闪光出现在哪些舰娘画面。'**
+  String get battleEffectDisplayScopeDesc;
+
+  /// No description provided for @battleEffectScopePredictionOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅未卜先知'**
+  String get battleEffectScopePredictionOnly;
+
+  /// No description provided for @battleEffectScopeFleetOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅编队'**
+  String get battleEffectScopeFleetOnly;
+
+  /// No description provided for @battleEffectScopeAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get battleEffectScopeAll;
+
+  /// No description provided for @battleDamagePulse.
+  ///
+  /// In zh, this message translates to:
+  /// **'受损闪烁'**
+  String get battleDamagePulse;
+
+  /// No description provided for @battleDamagePulseDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'按当前 HP 损伤等级控制头像边框的动态闪烁。'**
+  String get battleDamagePulseDesc;
+
+  /// No description provided for @battleDamageVibrationEffect.
+  ///
+  /// In zh, this message translates to:
+  /// **'受损震动'**
+  String get battleDamageVibrationEffect;
+
+  /// No description provided for @battleDamageVibrationEffectDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'我方舰娘在战斗中刚进入所选损伤状态时震动。'**
+  String get battleDamageVibrationEffectDesc;
+
+  /// No description provided for @battleMoraleSparkle.
+  ///
+  /// In zh, this message translates to:
+  /// **'士气闪光效果'**
+  String get battleMoraleSparkle;
+
+  /// No description provided for @battleMoraleSparkleDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Cond ≥ 50 时在舰娘头像周围显示星光动画；不影响疲劳脸和疲劳警告。'**
+  String get battleMoraleSparkleDesc;
+
+  /// No description provided for @battleEffectOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get battleEffectOff;
+
+  /// No description provided for @battleEffectMinorOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅小破'**
+  String get battleEffectMinorOnly;
+
+  /// No description provided for @battleEffectModerateOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅中破'**
+  String get battleEffectModerateOnly;
+
+  /// No description provided for @battleEffectHeavyOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅大破'**
+  String get battleEffectHeavyOnly;
+
+  /// No description provided for @battleEffectAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部开启'**
+  String get battleEffectAll;
+
   /// No description provided for @battlePredictionSection.
   ///
   /// In zh, this message translates to:

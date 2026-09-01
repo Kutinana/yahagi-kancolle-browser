@@ -1595,6 +1595,63 @@ class AppLocalizationsZh extends AppLocalizations {
   String get battleDamageVibrationDesc => '我方舰娘在战斗中刚进入中破或大破时震动提醒。';
 
   @override
+  String get battleStatusEffectsSection => '战斗状态效果';
+
+  @override
+  String get battleStatusEffectsEnabled => '启用状态效果';
+
+  @override
+  String get battleStatusEffectsEnabledDesc => '统一开启或关闭受损闪烁、受损震动与士气闪光。';
+
+  @override
+  String get battleEffectDisplayScope => '画面显示范围';
+
+  @override
+  String get battleEffectDisplayScopeDesc => '决定受损闪烁与士气闪光出现在哪些舰娘画面。';
+
+  @override
+  String get battleEffectScopePredictionOnly => '仅未卜先知';
+
+  @override
+  String get battleEffectScopeFleetOnly => '仅编队';
+
+  @override
+  String get battleEffectScopeAll => '全部';
+
+  @override
+  String get battleDamagePulse => '受损闪烁';
+
+  @override
+  String get battleDamagePulseDesc => '按当前 HP 损伤等级控制头像边框的动态闪烁。';
+
+  @override
+  String get battleDamageVibrationEffect => '受损震动';
+
+  @override
+  String get battleDamageVibrationEffectDesc => '我方舰娘在战斗中刚进入所选损伤状态时震动。';
+
+  @override
+  String get battleMoraleSparkle => '士气闪光效果';
+
+  @override
+  String get battleMoraleSparkleDesc => 'Cond ≥ 50 时在舰娘头像周围显示星光动画；不影响疲劳脸和疲劳警告。';
+
+  @override
+  String get battleEffectOff => '关闭';
+
+  @override
+  String get battleEffectMinorOnly => '仅小破';
+
+  @override
+  String get battleEffectModerateOnly => '仅中破';
+
+  @override
+  String get battleEffectHeavyOnly => '仅大破';
+
+  @override
+  String get battleEffectAll => '全部开启';
+
+  @override
   String get battlePredictionSection => '战斗预测';
 
   @override
@@ -4294,6 +4351,63 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get battleDamageVibrationDesc => '我方艦娘在戰鬥中剛進入中破或大破時震動提醒。';
+
+  @override
+  String get battleStatusEffectsSection => '戰鬥狀態效果';
+
+  @override
+  String get battleStatusEffectsEnabled => '啟用狀態效果';
+
+  @override
+  String get battleStatusEffectsEnabledDesc => '統一開啟或關閉受損閃爍、受損震動與士氣閃光。';
+
+  @override
+  String get battleEffectDisplayScope => '畫面顯示範圍';
+
+  @override
+  String get battleEffectDisplayScopeDesc => '決定受損閃爍與士氣閃光出現在哪些艦娘畫面。';
+
+  @override
+  String get battleEffectScopePredictionOnly => '僅未卜先知';
+
+  @override
+  String get battleEffectScopeFleetOnly => '僅編隊';
+
+  @override
+  String get battleEffectScopeAll => '全部';
+
+  @override
+  String get battleDamagePulse => '受損閃爍';
+
+  @override
+  String get battleDamagePulseDesc => '按目前 HP 損傷等級控制頭像邊框的動態閃爍。';
+
+  @override
+  String get battleDamageVibrationEffect => '受損震動';
+
+  @override
+  String get battleDamageVibrationEffectDesc => '我方艦娘在戰鬥中剛進入所選損傷狀態時震動。';
+
+  @override
+  String get battleMoraleSparkle => '士氣閃光效果';
+
+  @override
+  String get battleMoraleSparkleDesc => 'Cond ≥ 50 時在艦娘頭像周圍顯示星光動畫；不影響疲勞臉和疲勞警告。';
+
+  @override
+  String get battleEffectOff => '關閉';
+
+  @override
+  String get battleEffectMinorOnly => '僅小破';
+
+  @override
+  String get battleEffectModerateOnly => '僅中破';
+
+  @override
+  String get battleEffectHeavyOnly => '僅大破';
+
+  @override
+  String get battleEffectAll => '全部開啟';
 
   @override
   String get battlePredictionSection => '戰鬥預測';
