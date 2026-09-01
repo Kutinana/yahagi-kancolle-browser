@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
+import 'package:yahagi_kancolle_browser/src/development/development_workbench_state_store.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/external_fleet_tool_launcher.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/fleet_export_page.dart';
@@ -341,10 +342,12 @@ void main() {
               'assets/data/development/development_snapshot.json',
             ).readAsStringSync(),
           ),
+          developmentStateStore: _EmptyDevelopmentStateStore(),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(FleetExportPage), findsNothing);
     expect(find.byType(EquipmentDevelopmentPage), findsOneWidget);
@@ -374,6 +377,15 @@ void main() {
     expect(find.byKey(const Key('fleet-export-one-column')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+final class _EmptyDevelopmentStateStore
+    implements DevelopmentWorkbenchStateStore {
+  @override
+  Future<DevelopmentWorkbenchState?> load() async => null;
+
+  @override
+  Future<void> save(DevelopmentWorkbenchState state) async {}
 }
 
 Widget _testApp(Widget child) => MaterialApp(
