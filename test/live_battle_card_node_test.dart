@@ -22,10 +22,13 @@ import 'fixtures/kcsapi_fixtures.dart';
 
 BattleController _createController({
   FormationMemoryController? formationMemory,
+  CombinedFleetType combinedFleetType = CombinedFleetType.none,
 }) {
   final reducer = GameStateReducer();
   var state = reducer.reduce(GameState.empty, start2Event);
-  state = reducer.reduce(state, portEvent);
+  state = reducer
+      .reduce(state, portEvent)
+      .copyWith(combinedFleetType: combinedFleetType);
   return BattleController(
     gameState: () => state,
     predictionExecutor: const _InlinePredictionExecutor(),
@@ -429,7 +432,36 @@ void main() {
     expect(find.text('我方舰队'), findsOneWidget);
     expect(find.text('夕張'), findsOneWidget);
     expect(find.text('28 / 30'), findsOneWidget);
+    expect(find.text('出击舰队'), findsNothing);
   });
+
+  for (final combinedFleetType in <CombinedFleetType>[
+    CombinedFleetType.carrierTaskForce,
+    CombinedFleetType.surfaceTaskForce,
+    CombinedFleetType.transportEscort,
+  ]) {
+    testWidgets('navigation combined fleet type shows '
+        '${combinedFleetType.label} in detailed and compact modes', (
+      tester,
+    ) async {
+      final controller = _createController(
+        combinedFleetType: combinedFleetType,
+      );
+      addTearDown(controller.dispose);
+      controller.accept(mapStartEvent);
+      await controller.idle;
+
+      await _pumpCard(tester, controller, width: 360);
+
+      expect(find.text(combinedFleetType.label), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('battle-mode-compact')));
+      await tester.pump();
+
+      expect(find.text(combinedFleetType.label), findsOneWidget);
+      expect(find.text('普通战斗'), findsOneWidget);
+    });
+  }
 
   testWidgets('last formation appears in detailed and compact navigation', (
     tester,
