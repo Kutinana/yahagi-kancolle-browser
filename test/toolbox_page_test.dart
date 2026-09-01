@@ -348,7 +348,7 @@ void main() {
 
     expect(find.byType(FleetExportPage), findsNothing);
     expect(find.byType(EquipmentDevelopmentPage), findsOneWidget);
-    expect(find.text('开发指挥台'), findsOneWidget);
+    expect(find.text('开发工作台'), findsOneWidget);
   });
 
   testWidgets('uses two columns in landscape and one column when narrow', (
