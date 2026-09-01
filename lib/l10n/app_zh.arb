@@ -872,6 +872,7 @@
   "noro6": "noro6",
   "jervis": "Jervis",
   "exportToNoro6": "导出至 noro6",
+  "exportToNoro6Mirror": "导出至 noro6（国内镜像）",
   "exportToJervis": "导出至 Jervis",
   "eventLandBasesOnly": "仅导出活动海域陆航",
   "landBaseExportLimitHint": "DeckBuilder 每次最多支持 3 队；关闭筛选时按已捕获顺序导出前 3 队。",

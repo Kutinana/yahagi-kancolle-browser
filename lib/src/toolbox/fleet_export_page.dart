@@ -116,6 +116,13 @@ class _FleetExportPageState extends State<FleetExportPage> {
               ),
               const SizedBox(height: 10),
               _ExternalToolButton(
+                buttonKey: const Key('fleet-export-noro6-mirror'),
+                label: l10n.exportToNoro6Mirror,
+                enabled: widget.state.hasPortData,
+                onPressed: () => _open(ExternalFleetTool.noro6Mirror),
+              ),
+              const SizedBox(height: 10),
+              _ExternalToolButton(
                 buttonKey: const Key('fleet-export-jervis'),
                 label: l10n.exportToJervis,
                 enabled: widget.state.hasPortData,

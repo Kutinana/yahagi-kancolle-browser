@@ -31,7 +31,19 @@ void main() {
 
     expect(find.byType(FleetExportPage), findsOneWidget);
     expect(find.text('导出至 noro6'), findsOneWidget);
+    expect(find.text('导出至 noro6（国内镜像）'), findsOneWidget);
     expect(find.text('导出至 Jervis'), findsOneWidget);
+    expect(
+      _filledButtonKeysInNearestColumn(
+        tester,
+        find.byKey(const Key('fleet-export-noro6-mirror')),
+      ).take(3),
+      <Key>[
+        const Key('fleet-export-noro6'),
+        const Key('fleet-export-noro6-mirror'),
+        const Key('fleet-export-jervis'),
+      ],
+    );
     expect(find.text('仅导出活动海域陆航'), findsOneWidget);
     expect(
       find.text('DeckBuilder 每次最多支持 3 队；关闭筛选时按已捕获顺序导出前 3 队。'),
@@ -50,6 +62,14 @@ void main() {
     expect(
       tester
           .widget<FilledButton>(find.byKey(const Key('fleet-export-noro6')))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('fleet-export-noro6-mirror')),
+          )
           .onPressed,
       isNull,
     );
@@ -219,6 +239,95 @@ void main() {
     expect(find.text('无法打开外部舰队工具，请检查是否已安装浏览器。'), findsOneWidget);
   });
 
+  testWidgets(
+    'noro6 mirror launch imports fleet and complete owned inventory',
+    (tester) async {
+      Uri? received;
+      const state = GameState(
+        admiralLevel: 88,
+        hasPortData: true,
+        ships: <int, OwnedShip>{
+          101: OwnedShip(
+            id: 101,
+            masterId: 187,
+            level: 70,
+            experience: 123456,
+            nextExperience: 2345,
+            extraSlotId: 503,
+          ),
+          202: OwnedShip(id: 202, masterId: 200, level: 45),
+          303: OwnedShip(id: 303, masterId: 201, level: 30, extraSlotId: 0),
+        },
+        slotItems: <int, OwnedSlotItem>{
+          501: OwnedSlotItem(instanceId: 501, masterSlotItemId: 86, level: 7),
+          502: OwnedSlotItem(instanceId: 502, masterSlotItemId: 42),
+        },
+        fleets: <Fleet>[
+          Fleet(id: 1, name: 'First', shipIds: <int>[101]),
+        ],
+      );
+      await tester.pumpWidget(
+        _testApp(
+          FleetExportPage(
+            state: state,
+            launcher: ExternalFleetToolLauncher(
+              launch: (uri) async {
+                received = uri;
+                return false;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('fleet-export-noro6-mirror')));
+      await tester.pump();
+
+      expect(received?.scheme, 'https');
+      expect(received?.host, 'noro6.kcwiki.cn');
+      expect(received?.path, '/');
+      expect(received?.queryParameters, isEmpty);
+      expect(received.toString(), contains('#import:'));
+      final encodedPayload = received.toString().split('#import:').last;
+      final payload = jsonDecode(Uri.decodeComponent(encodedPayload)) as Map;
+      final displayedDeckBuilder = jsonDecode(
+        tester
+            .widget<SelectableText>(find.byKey(const Key('fleet-export-text')))
+            .data!,
+      );
+      expect(payload['predeck'], displayedDeckBuilder);
+      expect(payload['ships'], <Object?>[
+        <String, Object?>{
+          'id': 101,
+          'ship_id': 187,
+          'lv': 70,
+          'exp': <int>[123456, 2345, 0],
+          'ex': 1,
+        },
+        <String, Object?>{
+          'id': 202,
+          'ship_id': 200,
+          'lv': 45,
+          'exp': <int>[0, 0, 0],
+          'ex': 1,
+        },
+        <String, Object?>{
+          'id': 303,
+          'ship_id': 201,
+          'lv': 30,
+          'exp': <int>[0, 0, 0],
+          'ex': 0,
+        },
+      ]);
+      expect(payload['items'], <Object?>[
+        <String, Object?>{'id': 86, 'lv': 7},
+        <String, Object?>{'id': 42, 'lv': 0},
+      ]);
+      expect(find.textContaining('"hqlv":88'), findsOneWidget);
+      expect(find.text('无法打开外部舰队工具，请检查是否已安装浏览器。'), findsOneWidget);
+    },
+  );
+
   testWidgets('equipment development mode opens the native dashboard', (
     tester,
   ) async {
@@ -239,7 +348,7 @@ void main() {
 
     expect(find.byType(FleetExportPage), findsNothing);
     expect(find.byType(EquipmentDevelopmentPage), findsOneWidget);
-    expect(find.text('开发指挥台'), findsOneWidget);
+    expect(find.text('开发工作台'), findsOneWidget);
   });
 
   testWidgets('uses two columns in landscape and one column when narrow', (
@@ -273,3 +382,28 @@ Widget _testApp(Widget child) => MaterialApp(
   supportedLocales: AppLocalizations.supportedLocales,
   home: TopNoticeHost(child: Scaffold(body: child)),
 );
+
+List<Key> _filledButtonKeysInNearestColumn(
+  WidgetTester tester,
+  Finder descendant,
+) {
+  Element? columnElement;
+  tester.element(descendant).visitAncestorElements((ancestor) {
+    if (ancestor.widget is! Column) return true;
+    columnElement = ancestor;
+    return false;
+  });
+
+  final keys = <Key>[];
+  columnElement!.visitChildren((directChild) {
+    void collectFilledButtonKeys(Element element) {
+      if (element.widget case FilledButton(key: final Key key)) {
+        keys.add(key);
+      }
+      element.visitChildren(collectFilledButtonKeys);
+    }
+
+    collectFilledButtonKeys(directChild);
+  });
+  return keys;
+}
