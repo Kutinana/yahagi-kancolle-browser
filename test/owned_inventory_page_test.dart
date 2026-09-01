@@ -485,7 +485,14 @@ void main() {
         find.byKey(const Key('equipment-compatibility-search-button')),
         findsOneWidget,
       );
-      expect(find.textContaining('舰级 #34'), findsOneWidget);
+      expect(find.textContaining('舰级 #'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('equipment-compatibility-ship-101')),
+          matching: find.text('軽巡洋艦 · Lv.98 / 76 / 45'),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const Key('equipment-compatibility-tab-owned')),
         findsOneWidget,
@@ -639,6 +646,17 @@ void main() {
       expect(
         find.byKey(const Key('equipment-compatibility-ship-103')),
         findsOneWidget,
+      );
+      final unownedRow = find.byKey(
+        const Key('equipment-compatibility-ship-103'),
+      );
+      expect(
+        find.descendant(of: unownedRow, matching: find.text('駆逐艦')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: unownedRow, matching: find.textContaining('Lv.')),
+        findsNothing,
       );
 
       await tester.tap(
@@ -825,6 +843,64 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('compatibility drawer header scrolls with its single viewport', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 360);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showShips: false,
+            showSectionControl: false,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('equipment-name-row-201')));
+    await tester.pumpAndSettle();
+
+    final drawer = find.byKey(const Key('equipment-compatibility-drawer'));
+    final scroll = find.descendant(
+      of: drawer,
+      matching: find.byKey(const Key('equipment-compatibility-scroll')),
+    );
+    expect(scroll, findsOneWidget);
+    expect(tester.widget(scroll), isA<CustomScrollView>());
+    expect(
+      find.descendant(of: drawer, matching: find.byType(Scrollable)),
+      findsOneWidget,
+    );
+
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(of: drawer, matching: find.byType(Scrollable)),
+    );
+    expect(scrollable.position.maxScrollExtent, greaterThan(0));
+    final title = find.descendant(
+      of: scroll,
+      matching: find.text('12.7cm 连装炮'),
+    );
+    expect(title, findsOneWidget);
+    final initialTop = tester.getTopLeft(title).dy;
+
+    await tester.drag(scroll, const Offset(0, -240));
+    await tester.pumpAndSettle();
+
+    expect(
+      title.evaluate().isEmpty || tester.getTopLeft(title).dy < initialTop,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('compatibility drawer distinguishes unavailable rule data', (
     tester,
@@ -2397,10 +2473,27 @@ Future<GameStateController> _equipmentCompatibilityController() async {
   };
   startData['api_mst_equip_limit_exslot'] = <String, Object?>{};
 
+  final portEnvelope =
+      jsonDecode(portEvent.responseBody) as Map<String, Object?>;
+  final portData =
+      jsonDecode(jsonEncode(portEnvelope['api_data'])) as Map<String, Object?>;
+  final ownedShips = portData['api_ship']! as List<Object?>;
+  final firstOwnedShip = ownedShips.first! as Map<String, Object?>;
+  firstOwnedShip['api_lv'] = 98;
+  for (final (instanceId, level) in <(int, int)>[(9003, 76), (9004, 45)]) {
+    ownedShips.add(<String, Object?>{
+      ...firstOwnedShip,
+      'api_id': instanceId,
+      'api_lv': level,
+      'api_slot': const <int>[-1, -1, -1, -1],
+      'api_onslot': const <int>[0, 0, 0, 0],
+    });
+  }
+
   final controller = GameStateController();
   controller
     ..accept(kcsapiEvent('/kcsapi/api_start2/getData', startData))
-    ..accept(portEvent)
+    ..accept(kcsapiEvent('/kcsapi/api_port/port', portData))
     ..accept(slotItemEvent);
   await controller.idle;
   return controller;

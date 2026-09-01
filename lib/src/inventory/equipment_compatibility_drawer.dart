@@ -104,74 +104,85 @@ class _EquipmentCompatibilityDrawerState
                           left: BorderSide(color: Color(0xff38586b)),
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _Header(
-                            equipment: widget.equipment,
-                            iconId: iconId,
-                            onClose: widget.onClose,
+                      child: CustomScrollView(
+                        key: const Key('equipment-compatibility-scroll'),
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: _Header(
+                              equipment: widget.equipment,
+                              iconId: iconId,
+                              onClose: widget.onClose,
+                            ),
                           ),
                           if (widget.state.hasEquipmentCompatibilityData)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      _ToolButton(
-                                        key: const Key(
-                                          'equipment-compatibility-ship-type-button',
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  14,
+                                  2,
+                                  14,
+                                  10,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        _ToolButton(
+                                          key: const Key(
+                                            'equipment-compatibility-ship-type-button',
+                                          ),
+                                          icon: Icons.filter_alt_rounded,
+                                          tooltip: l10n.shipType,
+                                          active: _shipTypeId != null,
+                                          onPressed: () =>
+                                              _showShipTypeDialog(allRows),
                                         ),
-                                        icon: Icons.filter_alt_rounded,
-                                        tooltip: l10n.shipType,
-                                        active: _shipTypeId != null,
-                                        onPressed: () =>
-                                            _showShipTypeDialog(allRows),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      _ToolButton(
-                                        key: const Key(
-                                          'equipment-compatibility-search-button',
+                                        const SizedBox(width: 4),
+                                        _ToolButton(
+                                          key: const Key(
+                                            'equipment-compatibility-search-button',
+                                          ),
+                                          icon: Icons.search_rounded,
+                                          tooltip: l10n
+                                              .equipmentCompatibilitySearchHint,
+                                          active: _query.isNotEmpty,
+                                          onPressed: _showSearchDialog,
                                         ),
-                                        icon: Icons.search_rounded,
-                                        tooltip: l10n
-                                            .equipmentCompatibilitySearchHint,
-                                        active: _query.isNotEmpty,
-                                        onPressed: _showSearchDialog,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: _ScopeTabs(
-                                          ownedOnly: _ownedOnly,
-                                          ownedCount: ownedCount,
-                                          allCount: allCount,
-                                          onChanged: (value) => setState(
-                                            () => _ownedOnly = value,
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: _ScopeTabs(
+                                            ownedOnly: _ownedOnly,
+                                            ownedCount: ownedCount,
+                                            allCount: allCount,
+                                            onChanged: (value) => setState(
+                                              () => _ownedOnly = value,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _SlotFilters(
-                                    selected: _slotFilter,
-                                    onChanged: (value) =>
-                                        setState(() => _slotFilter = value),
-                                  ),
-                                ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _SlotFilters(
+                                      selected: _slotFilter,
+                                      onChanged: (value) =>
+                                          setState(() => _slotFilter = value),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          Expanded(
-                            child: !widget.state.hasEquipmentCompatibilityData
-                                ? const _RulesWaiting()
-                                : rows.isEmpty
-                                ? _EmptyResult(ownedOnly: _ownedOnly)
-                                : _CompatibilityList(
-                                    state: widget.state,
-                                    rows: rows,
-                                  ),
-                          ),
+                          if (!widget.state.hasEquipmentCompatibilityData)
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: _RulesWaiting(),
+                            )
+                          else if (rows.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: _EmptyResult(ownedOnly: _ownedOnly),
+                            )
+                          else
+                            _CompatibilityList(state: widget.state, rows: rows),
                         ],
                       ),
                     ),
@@ -626,19 +637,27 @@ class _CompatibilityList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[];
+    final items = <({String? typeName, EquipmentCompatibilityShipRow? row})>[];
     int? previousTypeId;
     for (final row in rows) {
       if (row.shipMaster.shipTypeId != previousTypeId) {
         previousTypeId = row.shipMaster.shipTypeId;
-        children.add(_TypeHeader(name: row.shipTypeName));
+        items.add((typeName: row.shipTypeName, row: null));
       }
-      children.add(_ShipRow(state: state, row: row));
+      items.add((typeName: null, row: row));
     }
-    return ListView(
-      key: const Key('equipment-compatibility-results'),
+    return SliverPadding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
-      children: children,
+      sliver: SliverList(
+        key: const Key('equipment-compatibility-results'),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final item = items[index];
+          final row = item.row;
+          return row == null
+              ? _TypeHeader(name: item.typeName!)
+              : _ShipRow(state: state, row: row);
+        }, childCount: items.length),
+      ),
     );
   }
 }
@@ -686,11 +705,9 @@ class _ShipRow extends StatelessWidget {
         : compatibility.canEquipInRegularSlot
         ? l10n.equipmentCompatibilityRegularSlot
         : l10n.equipmentCompatibilityExpansionSlot;
-    final ownedText = row.ownedShips.isEmpty
-        ? null
-        : l10n.equipmentCompatibilityOwnedLevels(
-            row.ownedShips.map((ship) => ship.level).join(' / '),
-          );
+    final metadata = row.ownedShips.isEmpty
+        ? row.shipTypeName
+        : '${row.shipTypeName} · ${l10n.equipmentCompatibilityOwnedLevels(row.ownedShips.map((ship) => ship.level).join(' / '))}';
     final fleetText = row.fleetNumbers.isEmpty
         ? null
         : l10n.equipmentCompatibilityFleetNumbers(row.fleetNumbers.join('、'));
@@ -728,17 +745,17 @@ class _ShipRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${row.shipTypeName} · ${l10n.equipmentCompatibilityShipClassId(row.shipMaster.classTypeId)}',
+                  metadata,
                   style: const TextStyle(
                     color: Color(0xff78909c),
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (ownedText != null || fleetText != null) ...[
+                if (fleetText != null) ...[
                   const SizedBox(height: 3),
                   Text(
-                    [ownedText, fleetText].whereType<String>().join(' · '),
+                    fleetText,
                     style: const TextStyle(
                       color: Color(0xff9bb0bb),
                       fontSize: 10,
