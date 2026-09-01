@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/equipment_compatibility_projection.dart';
+import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
 
 void main() {
   const state = GameState(
@@ -107,38 +108,44 @@ void main() {
     expect(regular.map((row) => row.shipMaster.id), <int>[4, 1, 2, 3]);
   });
 
-  test('ship type filter keeps only rows of the selected type', () {
-    final rows = projection.rows(equipmentMasterId: 10, shipTypeId: 3);
+  test('ship category filter keeps only rows in the selected category', () {
+    final rows = projection.rows(
+      equipmentMasterId: 10,
+      shipCategory: ShipInventoryCategory.cl,
+    );
 
     expect(rows.map((row) => row.shipMaster.id), <int>[1, 2, 3]);
   });
 
-  test('null ship type filter keeps all rows', () {
-    final rows = projection.rows(equipmentMasterId: 10, shipTypeId: null);
+  test('all ship category keeps all rows', () {
+    final rows = projection.rows(
+      equipmentMasterId: 10,
+      shipCategory: ShipInventoryCategory.all,
+    );
 
     expect(rows.map((row) => row.shipMaster.id), <int>[4, 1, 2, 3]);
   });
 
-  test('ship type filter combines with owned-only filter', () {
+  test('ship category filter combines with owned-only filter', () {
     final rows = projection.rows(
       equipmentMasterId: 10,
-      shipTypeId: 3,
+      shipCategory: ShipInventoryCategory.cl,
       ownedOnly: true,
     );
 
     expect(rows.map((row) => row.shipMaster.id), <int>[3]);
   });
 
-  test('ship type, query, and slot filters return their intersection', () {
+  test('ship category, query, and slot filters return their intersection', () {
     final queryRows = projection.rows(equipmentMasterId: 11, query: '改');
     final queryAndTypeRows = projection.rows(
       equipmentMasterId: 11,
-      shipTypeId: 3,
+      shipCategory: ShipInventoryCategory.cl,
       query: '改',
     );
     final rows = projection.rows(
       equipmentMasterId: 11,
-      shipTypeId: 3,
+      shipCategory: ShipInventoryCategory.cl,
       query: '改',
       filter: EquipmentCompatibilitySlotFilter.expansion,
     );
@@ -146,5 +153,34 @@ void main() {
     expect(queryRows.map((row) => row.shipMaster.id), <int>[4, 2, 3]);
     expect(queryAndTypeRows.map((row) => row.shipMaster.id), <int>[2, 3]);
     expect(rows.map((row) => row.shipMaster.id), <int>[3]);
+  });
+
+  test('BB/BC category keeps all matching ship types and excludes others', () {
+    const categoryState = GameState(
+      masterShipTypes: <int, MasterShipType>{
+        2: MasterShipType(id: 2, name: '驱逐舰', equipTypeIds: <int>{1}),
+        9: MasterShipType(id: 9, name: '战列舰', equipTypeIds: <int>{1}),
+        10: MasterShipType(id: 10, name: '航空战列舰', equipTypeIds: <int>{1}),
+      },
+      masterShips: <int, MasterShip>{
+        1: MasterShip(id: 1, name: '大和', shipTypeId: 9, equipTypeIds: <int>{1}),
+        2: MasterShip(
+          id: 2,
+          name: '伊势',
+          shipTypeId: 10,
+          equipTypeIds: <int>{1},
+        ),
+        3: MasterShip(id: 3, name: '吹雪', shipTypeId: 2, equipTypeIds: <int>{1}),
+      },
+      masterSlotItems: <int, MasterSlotItem>{
+        10: MasterSlotItem(id: 10, name: '测试炮', type: <int>[0, 0, 1]),
+      },
+    );
+    final rows = EquipmentCompatibilityProjection(
+      categoryState,
+    ).rows(equipmentMasterId: 10, shipCategory: ShipInventoryCategory.bbBc);
+
+    expect(rows.map((row) => row.shipMaster.shipTypeId), <int>[9, 10]);
+    expect(rows.map((row) => row.shipMaster.shipTypeId), isNot(contains(2)));
   });
 }

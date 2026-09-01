@@ -1,5 +1,6 @@
 import '../game_state/game_state.dart';
 import 'equipment_compatibility.dart';
+import 'owned_inventory_projection.dart';
 
 enum EquipmentCompatibilitySlotFilter { all, regular, expansion }
 
@@ -29,7 +30,7 @@ class EquipmentCompatibilityProjection {
   List<EquipmentCompatibilityShipRow> rows({
     required int equipmentMasterId,
     bool ownedOnly = false,
-    int? shipTypeId,
+    ShipInventoryCategory shipCategory = ShipInventoryCategory.all,
     String query = '',
     EquipmentCompatibilitySlotFilter filter =
         EquipmentCompatibilitySlotFilter.all,
@@ -42,7 +43,10 @@ class EquipmentCompatibilityProjection {
     return List<EquipmentCompatibilityShipRow>.unmodifiable(
       baseRows.where((row) {
         if (ownedOnly && row.ownedShips.isEmpty) return false;
-        if (shipTypeId != null && row.shipMaster.shipTypeId != shipTypeId) {
+        if (!shipTypeMatchesInventoryCategory(
+          row.shipMaster.shipTypeId,
+          shipCategory,
+        )) {
           return false;
         }
         if (normalizedQuery.isNotEmpty &&
