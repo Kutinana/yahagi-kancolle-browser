@@ -606,6 +606,15 @@ void main() {
       IconButton toolButton(Key key) => tester.widget<IconButton>(
         find.descendant(of: find.byKey(key), matching: find.byType(IconButton)),
       );
+      expect(find.byTooltip('舰种'), findsOneWidget);
+      for (final key in const <Key>[
+        Key('equipment-compatibility-ship-type-button'),
+        Key('equipment-compatibility-search-button'),
+      ]) {
+        final size = tester.getSize(find.byKey(key));
+        expect(size.width, greaterThanOrEqualTo(48));
+        expect(size.height, greaterThanOrEqualTo(48));
+      }
       expect(
         toolButton(
           const Key('equipment-compatibility-ship-type-button'),

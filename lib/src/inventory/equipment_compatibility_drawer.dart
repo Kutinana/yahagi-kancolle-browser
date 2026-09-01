@@ -124,7 +124,7 @@ class _EquipmentCompatibilityDrawerState
                                           'equipment-compatibility-ship-type-button',
                                         ),
                                         icon: Icons.filter_alt_rounded,
-                                        tooltip: l10n.allTypes,
+                                        tooltip: l10n.shipType,
                                         active: _shipTypeId != null,
                                         onPressed: () =>
                                             _showShipTypeDialog(allRows),
@@ -302,7 +302,7 @@ class _ToolButton extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     tooltip: tooltip,
     isSelected: active,
-    visualDensity: VisualDensity.compact,
+    constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
     style: IconButton.styleFrom(
       backgroundColor: active
           ? const Color(0xff2b7180)
