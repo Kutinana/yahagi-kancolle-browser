@@ -466,12 +466,25 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('12.7cm 连装炮'), findsWidgets);
-      expect(find.text('装备 ID 201'), findsOneWidget);
-      expect(find.text('分类：主炮'), findsOneWidget);
-      expect(find.text('持有数 2'), findsOneWidget);
-      expect(find.text('普通槽 3'), findsOneWidget);
-      expect(find.text('增设栏 1'), findsOneWidget);
-      expect(find.text('规则来源：游戏官方主数据'), findsOneWidget);
+      expect(find.text('装备 ID 201'), findsNothing);
+      expect(find.textContaining('可装备：持有'), findsNothing);
+      expect(find.text('分类：主炮'), findsNothing);
+      expect(find.text('持有数 2'), findsNothing);
+      expect(find.text('普通槽 3'), findsNothing);
+      expect(find.text('增设栏 1'), findsNothing);
+      expect(find.text('规则来源：游戏官方主数据'), findsNothing);
+      expect(
+        find.byKey(const Key('equipment-compatibility-search')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-type-button')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('equipment-compatibility-search-button')),
+        findsOneWidget,
+      );
       expect(find.textContaining('舰级 #34'), findsOneWidget);
       expect(
         find.byKey(const Key('equipment-compatibility-tab-owned')),
@@ -597,6 +610,120 @@ void main() {
       );
 
       await tester.tap(
+        find.byKey(const Key('equipment-compatibility-ship-type-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-type-dialog')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('equipment-compatibility-ship-type-dialog')),
+          matching: find.text('全部'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('軽巡洋艦'), findsWidgets);
+      expect(find.text('駆逐艦'), findsWidgets);
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-ship-type-option-2')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-101')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-102')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-103')),
+        findsNothing,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-ship-type-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-ship-type-option-all')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-102')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-103')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-search-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-search-dialog')),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const Key('equipment-compatibility-search-dialog-field')),
+        '不存在',
+      );
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-search-dialog-cancel')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-103')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-search-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('equipment-compatibility-search-dialog-field')),
+        '  夕張  ',
+      );
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-search-dialog-confirm')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-101')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-102')),
+        findsNothing,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-search-button')),
+      );
+      await tester.pumpAndSettle();
+      final searchField = tester.widget<TextField>(
+        find.byKey(const Key('equipment-compatibility-search-dialog-field')),
+      );
+      expect(searchField.controller!.text, '夕張');
+      await tester.enterText(
+        find.byKey(const Key('equipment-compatibility-search-dialog-field')),
+        '',
+      );
+      await tester.tap(
+        find.byKey(const Key('equipment-compatibility-search-dialog-confirm')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-ship-103')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
         find.byKey(const Key('equipment-compatibility-filter-expansion')),
       );
       await tester.pump();
@@ -608,13 +735,7 @@ void main() {
         find.byKey(const Key('equipment-compatibility-ship-102')),
         findsNothing,
       );
-
-      await tester.enterText(
-        find.byKey(const Key('equipment-compatibility-search')),
-        '不存在',
-      );
-      await tester.pump();
-      expect(find.text('没有找到可装备的舰娘形态'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     },
   );
 

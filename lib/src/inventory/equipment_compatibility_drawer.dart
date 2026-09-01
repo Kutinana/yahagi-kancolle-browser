@@ -5,8 +5,8 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import '../fleet/equipment_type_icon.dart';
 import '../fleet/ship_portrait.dart';
 import '../game_state/game_state.dart';
+import '../widgets/standalone_text_input_dialog.dart';
 import 'equipment_compatibility_projection.dart';
-import 'owned_inventory_projection.dart';
 
 class EquipmentCompatibilityDrawer extends StatefulWidget {
   const EquipmentCompatibilityDrawer({
@@ -28,6 +28,7 @@ class EquipmentCompatibilityDrawer extends StatefulWidget {
 class _EquipmentCompatibilityDrawerState
     extends State<EquipmentCompatibilityDrawer> {
   bool _ownedOnly = true;
+  int? _shipTypeId;
   String _query = '';
   EquipmentCompatibilitySlotFilter _slotFilter =
       EquipmentCompatibilitySlotFilter.all;
@@ -55,6 +56,7 @@ class _EquipmentCompatibilityDrawerState
     final rows = _projection.rows(
       equipmentMasterId: widget.equipment.id,
       ownedOnly: _ownedOnly,
+      shipTypeId: _shipTypeId,
       query: _query,
       filter: _slotFilter,
     );
@@ -65,19 +67,6 @@ class _EquipmentCompatibilityDrawerState
     );
     final allCount = allRows.length;
     final ownedCount = ownedRows.length;
-    final equipmentOwnedCount = widget.state.slotItems.values
-        .where((item) => item.masterSlotItemId == widget.equipment.id)
-        .length;
-    final regularCount = allRows
-        .where((row) => row.compatibility.canEquipInRegularSlot)
-        .length;
-    final expansionCount = allRows
-        .where((row) => row.compatibility.canEquipInExpansionSlot)
-        .length;
-    final category = _equipmentCategoryLabel(
-      equipmentInventoryCategoryFor(widget.equipment),
-      l10n,
-    );
     final iconId = widget.equipment.type.length > 3
         ? widget.equipment.type[3]
         : -1;
@@ -121,12 +110,6 @@ class _EquipmentCompatibilityDrawerState
                           _Header(
                             equipment: widget.equipment,
                             iconId: iconId,
-                            ownedCount: ownedCount,
-                            allCount: allCount,
-                            equipmentOwnedCount: equipmentOwnedCount,
-                            regularCount: regularCount,
-                            expansionCount: expansionCount,
-                            category: category,
                             onClose: widget.onClose,
                           ),
                           if (widget.state.hasEquipmentCompatibilityData)
@@ -134,51 +117,41 @@ class _EquipmentCompatibilityDrawerState
                               padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
                               child: Column(
                                 children: [
-                                  _ScopeTabs(
-                                    ownedOnly: _ownedOnly,
-                                    ownedCount: ownedCount,
-                                    allCount: allCount,
-                                    onChanged: (value) =>
-                                        setState(() => _ownedOnly = value),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextField(
-                                    key: const Key(
-                                      'equipment-compatibility-search',
-                                    ),
-                                    onChanged: (value) =>
-                                        setState(() => _query = value),
-                                    style: const TextStyle(
-                                      color: Color(0xffe8f0f4),
-                                      fontSize: 13,
-                                    ),
-                                    decoration: InputDecoration(
-                                      isDense: true,
-                                      hintText:
-                                          l10n.equipmentCompatibilitySearchHint,
-                                      hintStyle: const TextStyle(
-                                        color: Color(0xff78909c),
+                                  Row(
+                                    children: [
+                                      _ToolButton(
+                                        key: const Key(
+                                          'equipment-compatibility-ship-type-button',
+                                        ),
+                                        icon: Icons.filter_alt_rounded,
+                                        tooltip: l10n.allTypes,
+                                        active: _shipTypeId != null,
+                                        onPressed: () =>
+                                            _showShipTypeDialog(allRows),
                                       ),
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        size: 18,
-                                        color: Color(0xff8ba2af),
+                                      const SizedBox(width: 4),
+                                      _ToolButton(
+                                        key: const Key(
+                                          'equipment-compatibility-search-button',
+                                        ),
+                                        icon: Icons.search_rounded,
+                                        tooltip: l10n
+                                            .equipmentCompatibilitySearchHint,
+                                        active: _query.isNotEmpty,
+                                        onPressed: _showSearchDialog,
                                       ),
-                                      filled: true,
-                                      fillColor: const Color(0xff081923),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xff315064),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: _ScopeTabs(
+                                          ownedOnly: _ownedOnly,
+                                          ownedCount: ownedCount,
+                                          allCount: allCount,
+                                          onChanged: (value) => setState(
+                                            () => _ownedOnly = value,
+                                          ),
                                         ),
                                       ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(7),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xff315064),
-                                        ),
-                                      ),
-                                    ),
+                                    ],
                                   ),
                                   const SizedBox(height: 8),
                                   _SlotFilters(
@@ -199,7 +172,6 @@ class _EquipmentCompatibilityDrawerState
                                     rows: rows,
                                   ),
                           ),
-                          const _SourceNote(),
                         ],
                       ),
                     ),
@@ -212,29 +184,56 @@ class _EquipmentCompatibilityDrawerState
       },
     );
   }
+
+  Future<void> _showShipTypeDialog(
+    List<EquipmentCompatibilityShipRow> allRows,
+  ) async {
+    final shipTypes = <int, String>{
+      for (final row in allRows) row.shipMaster.shipTypeId: row.shipTypeName,
+    };
+    final selected = await showDialog<int>(
+      context: context,
+      builder: (context) => _ShipTypeDialog(
+        shipTypes: shipTypes,
+        selectedShipTypeId: _shipTypeId,
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _shipTypeId = selected == 0 ? null : selected);
+  }
+
+  Future<void> _showSearchDialog() async {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => StandaloneTextInputDialog(
+        key: const Key('equipment-compatibility-search-dialog'),
+        title: l10n.equipmentCompatibilitySearchHint,
+        label: l10n.equipmentCompatibilitySearchHint,
+        initialValue: _query,
+        fieldKey: const Key('equipment-compatibility-search-dialog-field'),
+        cancelKey: const Key('equipment-compatibility-search-dialog-cancel'),
+        confirmKey: const Key('equipment-compatibility-search-dialog-confirm'),
+        cancelLabel: l10n.cancel,
+        confirmLabel: l10n.confirm,
+      ),
+    );
+    if (value == null || !mounted) return;
+    setState(() => _query = value.trim());
+  }
 }
 
 class _Header extends StatelessWidget {
   const _Header({
     required this.equipment,
     required this.iconId,
-    required this.ownedCount,
-    required this.allCount,
-    required this.equipmentOwnedCount,
-    required this.regularCount,
-    required this.expansionCount,
-    required this.category,
     required this.onClose,
   });
 
   final MasterSlotItem equipment;
   final int iconId;
-  final int ownedCount;
-  final int allCount;
-  final int equipmentOwnedCount;
-  final int regularCount;
-  final int expansionCount;
-  final String category;
   final VoidCallback onClose;
 
   @override
@@ -262,78 +261,15 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  equipment.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xfff2f7f9),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  l10n.equipmentCompatibilitySummary(ownedCount, allCount),
-                  style: const TextStyle(
-                    color: Color(0xff8ba2af),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 3,
-                  children: [
-                    Text(
-                      l10n.equipmentCompatibilityOfficialId(equipment.id),
-                      style: const TextStyle(
-                        color: Color(0xff9bb0bb),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      l10n.equipmentCompatibilityCategory(category),
-                      style: const TextStyle(
-                        color: Color(0xff9bb0bb),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      l10n.equipmentCompatibilityOwnedCount(
-                        equipmentOwnedCount,
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xff9bb0bb),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      l10n.equipmentCompatibilityRegularCount(regularCount),
-                      style: const TextStyle(
-                        color: Color(0xff72d8ae),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      l10n.equipmentCompatibilityExpansionCount(expansionCount),
-                      style: const TextStyle(
-                        color: Color(0xffffc85a),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            child: Text(
+              equipment.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xfff2f7f9),
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           IconButton(
@@ -346,6 +282,186 @@ class _Header extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.active,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool active;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: tooltip,
+    visualDensity: VisualDensity.compact,
+    style: IconButton.styleFrom(
+      backgroundColor: active
+          ? const Color(0xff2b7180)
+          : const Color(0xff102a38),
+      foregroundColor: active
+          ? const Color(0xfff2f7f9)
+          : const Color(0xff9bb0bb),
+      side: BorderSide(
+        color: active ? const Color(0xff69d2cf) : const Color(0xff315064),
+      ),
+    ),
+    onPressed: onPressed,
+    icon: Icon(icon, size: 19),
+  );
+}
+
+class _ShipTypeDialog extends StatelessWidget {
+  const _ShipTypeDialog({
+    required this.shipTypes,
+    required this.selectedShipTypeId,
+  });
+
+  final Map<int, String> shipTypes;
+  final int? selectedShipTypeId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    return Dialog(
+      key: const Key('equipment-compatibility-ship-type-dialog'),
+      insetPadding: const EdgeInsets.all(24),
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 360,
+        constraints: const BoxConstraints(maxHeight: 520),
+        decoration: BoxDecoration(
+          color: const Color(0xff101d27),
+          border: Border.all(color: const Color(0xff385064)),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(color: Colors.black54, blurRadius: 22, spreadRadius: 2),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 52,
+              child: Row(
+                children: [
+                  const SizedBox(width: 16),
+                  const Icon(
+                    Icons.filter_alt_rounded,
+                    size: 20,
+                    color: Color(0xff69d2cf),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.allTypes,
+                    style: const TextStyle(
+                      color: Color(0xfff2f7f9),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: l10n.close,
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Color(0xffc7d5dc),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: Color(0xff385064)),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(10),
+                children: [
+                  _ShipTypeOption(
+                    key: const Key(
+                      'equipment-compatibility-ship-type-option-all',
+                    ),
+                    label: l10n.all,
+                    selected: selectedShipTypeId == null,
+                    onTap: () => Navigator.of(context).pop(0),
+                  ),
+                  for (final entry in shipTypes.entries) ...[
+                    const SizedBox(height: 5),
+                    _ShipTypeOption(
+                      key: Key(
+                        'equipment-compatibility-ship-type-option-${entry.key}',
+                      ),
+                      label: entry.value.isEmpty ? l10n.otherType : entry.value,
+                      selected: selectedShipTypeId == entry.key,
+                      onTap: () => Navigator.of(context).pop(entry.key),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShipTypeOption extends StatelessWidget {
+  const _ShipTypeOption({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: selected ? const Color(0xff1d5f91) : const Color(0xff172a38),
+    borderRadius: BorderRadius.circular(7),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(7),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: const Color(0xffe8f0f4),
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ),
+            if (selected)
+              const Icon(
+                Icons.check_circle_rounded,
+                size: 19,
+                color: Color(0xff7fd6ff),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _ScopeTabs extends StatelessWidget {
@@ -709,41 +825,3 @@ class _RulesWaiting extends StatelessWidget {
     );
   }
 }
-
-class _SourceNote extends StatelessWidget {
-  const _SourceNote();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n =
-        AppLocalizations.of(context) ??
-        lookupAppLocalizations(const Locale('zh'));
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 7, 14, 10),
-      child: Text(
-        l10n.equipmentCompatibilitySource,
-        textAlign: TextAlign.center,
-        style: const TextStyle(color: Color(0xff78909c), fontSize: 9),
-      ),
-    );
-  }
-}
-
-String _equipmentCategoryLabel(
-  EquipmentInventoryCategory value,
-  AppLocalizations l10n,
-) => switch (value) {
-  EquipmentInventoryCategory.all => l10n.all,
-  EquipmentInventoryCategory.mainGun => l10n.equipmentMainGun,
-  EquipmentInventoryCategory.secondaryGun => l10n.equipmentSecondaryGun,
-  EquipmentInventoryCategory.machineGun => l10n.equipmentMachineGun,
-  EquipmentInventoryCategory.torpedo => l10n.equipmentTorpedo,
-  EquipmentInventoryCategory.carrierAircraft => l10n.equipmentCarrierAircraft,
-  EquipmentInventoryCategory.seaplane => l10n.equipmentSeaplane,
-  EquipmentInventoryCategory.landBasedAircraft =>
-    l10n.equipmentLandBasedAircraft,
-  EquipmentInventoryCategory.antiSubmarine => l10n.antiSub,
-  EquipmentInventoryCategory.radar => l10n.equipmentRadar,
-  EquipmentInventoryCategory.landingTransport => l10n.equipmentLandingTransport,
-  EquipmentInventoryCategory.support => l10n.equipmentSupport,
-};
