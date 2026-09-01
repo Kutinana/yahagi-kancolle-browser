@@ -29,6 +29,7 @@ class EquipmentCompatibilityProjection {
   List<EquipmentCompatibilityShipRow> rows({
     required int equipmentMasterId,
     bool ownedOnly = false,
+    int? shipTypeId,
     String query = '',
     EquipmentCompatibilitySlotFilter filter =
         EquipmentCompatibilitySlotFilter.all,
@@ -41,6 +42,9 @@ class EquipmentCompatibilityProjection {
     return List<EquipmentCompatibilityShipRow>.unmodifiable(
       baseRows.where((row) {
         if (ownedOnly && row.ownedShips.isEmpty) return false;
+        if (shipTypeId != null && row.shipMaster.shipTypeId != shipTypeId) {
+          return false;
+        }
         if (normalizedQuery.isNotEmpty &&
             !row.shipMaster.name.toLowerCase().contains(normalizedQuery)) {
           return false;

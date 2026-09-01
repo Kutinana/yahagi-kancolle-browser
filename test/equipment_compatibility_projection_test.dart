@@ -101,4 +101,26 @@ void main() {
     expect(expansion.map((row) => row.shipMaster.id), <int>[1, 2, 3]);
     expect(regular.map((row) => row.shipMaster.id), <int>[4, 1, 2, 3]);
   });
+
+  test('ship type filter keeps only rows of the selected type', () {
+    final rows = projection.rows(equipmentMasterId: 10, shipTypeId: 3);
+
+    expect(rows.map((row) => row.shipMaster.id), <int>[1, 2, 3]);
+  });
+
+  test('null ship type filter keeps all rows', () {
+    final rows = projection.rows(equipmentMasterId: 10, shipTypeId: null);
+
+    expect(rows.map((row) => row.shipMaster.id), <int>[4, 1, 2, 3]);
+  });
+
+  test('ship type filter combines with owned-only filter', () {
+    final rows = projection.rows(
+      equipmentMasterId: 10,
+      shipTypeId: 3,
+      ownedOnly: true,
+    );
+
+    expect(rows.map((row) => row.shipMaster.id), <int>[3]);
+  });
 }
