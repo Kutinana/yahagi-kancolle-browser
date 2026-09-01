@@ -1969,7 +1969,7 @@ Map<String, _WorkspaceDestination> _workspaceDestinations(
   'tools': _WorkspaceDestination(
     id: 'tools',
     pageIndex: 10,
-    icon: Icons.handyman_outlined,
+    icon: Icons.widgets_outlined,
     label: l10n.toolbox,
   ),
   'settings': _WorkspaceDestination(
