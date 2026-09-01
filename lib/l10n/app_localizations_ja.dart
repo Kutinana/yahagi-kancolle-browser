@@ -2553,6 +2553,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exportToNoro6 => 'noro6 へエクスポート';
 
   @override
+  String get exportToNoro6Mirror => 'noro6（中国向けミラー）へエクスポート';
+
+  @override
   String get exportToJervis => 'Jervis へエクスポート';
 
   @override

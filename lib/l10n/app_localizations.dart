@@ -4798,6 +4798,12 @@ abstract class AppLocalizations {
   /// **'导出至 noro6'**
   String get exportToNoro6;
 
+  /// No description provided for @exportToNoro6Mirror.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出至 noro6（国内镜像）'**
+  String get exportToNoro6Mirror;
+
   /// No description provided for @exportToJervis.
   ///
   /// In zh, this message translates to:

@@ -872,6 +872,7 @@
   "noro6": "noro6",
   "jervis": "Jervis",
   "exportToNoro6": "匯出至 noro6",
+  "exportToNoro6Mirror": "匯出至 noro6（中國鏡像）",
   "exportToJervis": "匯出至 Jervis",
   "eventLandBasesOnly": "僅匯出活動海域陸航",
   "landBaseExportLimitHint": "DeckBuilder 每次最多支援 3 隊；關閉篩選時依擷取順序匯出前 3 隊。",

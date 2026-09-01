@@ -2529,6 +2529,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportToNoro6 => '导出至 noro6';
 
   @override
+  String get exportToNoro6Mirror => '导出至 noro6（国内镜像）';
+
+  @override
   String get exportToJervis => '导出至 Jervis';
 
   @override
@@ -5285,6 +5288,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get exportToNoro6 => '匯出至 noro6';
+
+  @override
+  String get exportToNoro6Mirror => '匯出至 noro6（中國鏡像）';
 
   @override
   String get exportToJervis => '匯出至 Jervis';
