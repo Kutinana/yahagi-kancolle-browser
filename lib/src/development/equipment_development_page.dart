@@ -435,12 +435,6 @@ class _OutcomePanel extends StatelessWidget {
                   accent: const Color(0xff75b9d8),
                 ),
                 _EquipmentGroup(
-                  title: l10n.developmentInsufficient,
-                  items: groups.insufficient,
-                  controller: controller,
-                  accent: const Color(0xffd59667),
-                ),
-                _EquipmentGroup(
                   title: l10n.developmentReplaced,
                   items: groups.replaced,
                   controller: controller,

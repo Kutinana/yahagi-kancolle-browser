@@ -24,6 +24,7 @@ void main() {
     expect(find.text('其他出货  3%'), findsOneWidget);
     expect(find.byKey(const Key('development-rate-details-7')), findsOneWidget);
     expect(find.byKey(const Key('development-minimum-7')), findsOneWidget);
+    expect(find.byKey(const Key('development-rate-details-10')), findsNothing);
   });
 
   testWidgets('target sheet uses a round button to open the search dialog', (
@@ -192,6 +193,7 @@ const _state = GameState(
     7: MasterSlotItem(id: 7, name: '测试舰攻', type: [0, 0, 8]),
     8: MasterSlotItem(id: 8, name: '测试雷达', type: [0, 0, 12]),
     9: MasterSlotItem(id: 9, name: '测试爆雷', type: [0, 0, 15]),
+    10: MasterSlotItem(id: 10, name: '高耗测试装备', type: [0, 0, 1]),
   },
 );
 
@@ -215,7 +217,7 @@ final _snapshot = <String, Object?>{
   'summary': {
     'pool_count': 3,
     'selectable_pool_count': 3,
-    'equipment_count': 3,
+    'equipment_count': 4,
     'negative_pool_count': 0,
     'minimum_resource_pool_count': 0,
   },
@@ -238,6 +240,12 @@ final _snapshot = <String, Object?>{
       'type_id': 15,
       'minimum_resources': [10, 10, 10, 10],
     },
+    {
+      'id': 10,
+      'name': '高耗测试装备',
+      'type_id': 1,
+      'minimum_resources': [20, 20, 20, 20],
+    },
   ],
   'pools': [
     {
@@ -246,7 +254,7 @@ final _snapshot = <String, Object?>{
       'labels': {'zh': '空母系-赤城', 'zh_Hant': '空母系-赤城', 'ja': '空母系-赤城'},
       'pool_id': 1,
       'ship_ids': [101],
-      'drop_rates': {'7': 2, '8': 1},
+      'drop_rates': {'7': 2, '8': 1, '10': 1},
       'criteria': {
         'ship_types': <Object?>[],
         'class_types': <Object?>[],
@@ -276,7 +284,7 @@ final _snapshot = <String, Object?>{
       'labels': {'zh': '空母系-赤城', 'zh_Hant': '空母系-赤城', 'ja': '空母系-赤城'},
       'pool_id': 3,
       'ship_ids': [101],
-      'drop_rates': {'7': 2, '8': 1},
+      'drop_rates': {'7': 2, '8': 1, '10': 1},
       'criteria': {
         'ship_types': <Object?>[],
         'class_types': <Object?>[],

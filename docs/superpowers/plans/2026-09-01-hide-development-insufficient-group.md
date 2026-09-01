@@ -17,11 +17,11 @@
 - 修改：`test/development/equipment_development_page_test.dart`
 - 修改：`lib/src/development/equipment_development_page.dart`
 
-- [ ] **步骤 1：编写失败的页面测试**
+- [x] **步骤 1：编写失败的页面测试**
 
 在页面夹具中加入一个最低资源高于当前 `10/10/10/10` 的装备，并断言页面不存在该装备对应的 `development-rate-details-*` 节点，同时断言目标、其他和替换分组逻辑不受影响。
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -31,7 +31,7 @@ flutter test --no-test-assets test/development/equipment_development_page_test.d
 
 预期：FAIL，原因是页面仍渲染资源不足装备。
 
-- [ ] **步骤 3：删除页面中的资源不足分组**
+- [x] **步骤 3：删除页面中的资源不足分组**
 
 从 `_OutcomePanel` 的 `Column` 中删除：
 
@@ -46,7 +46,7 @@ _EquipmentGroup(
 
 不删除 `DevelopmentEquipmentGroups.insufficient`，也不修改 `evaluateDevelopmentRecipe`，确保不足门槛概率继续进入失败率。
 
-- [ ] **步骤 4：运行页面与算法测试验证通过**
+- [x] **步骤 4：运行页面与算法测试验证通过**
 
 运行：
 
@@ -56,7 +56,7 @@ flutter test --no-test-assets test/development/equipment_development_page_test.d
 
 预期：全部 PASS。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```powershell
 git add lib/src/development/equipment_development_page.dart test/development/equipment_development_page_test.dart docs/superpowers/plans/2026-09-01-hide-development-insufficient-group.md
