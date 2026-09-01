@@ -194,6 +194,8 @@ void main() {
       'acknowledge',
       // “上次” is standard wording shared by both Chinese scripts.
       'battleLastFormation',
+      // “全部” is the compact all-surfaces scope label in both Chinese scripts.
+      'battleEffectScopeAll',
       // “最小/最大” are standard range labels shared by both Chinese scripts.
       'minimumValue',
       'maximumValue',
