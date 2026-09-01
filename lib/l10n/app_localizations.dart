@@ -4911,6 +4911,174 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'舰级 #{id}'**
   String equipmentCompatibilityShipClassId(int id);
+
+  /// No description provided for @equipmentDevelopment.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备开发'**
+  String get equipmentDevelopment;
+
+  /// No description provided for @developmentCommandTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'开发指挥台'**
+  String get developmentCommandTitle;
+
+  /// No description provided for @developmentCurrentFlagship.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前旗舰'**
+  String get developmentCurrentFlagship;
+
+  /// No description provided for @developmentUseFlagship.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用当前旗舰'**
+  String get developmentUseFlagship;
+
+  /// No description provided for @developmentSelectPool.
+  ///
+  /// In zh, this message translates to:
+  /// **'秘书舰类型'**
+  String get developmentSelectPool;
+
+  /// No description provided for @developmentCurrentRecipe.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前配方'**
+  String get developmentCurrentRecipe;
+
+  /// No description provided for @developmentTargetEquipment.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标装备'**
+  String get developmentTargetEquipment;
+
+  /// No description provided for @developmentChooseTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择目标装备'**
+  String get developmentChooseTarget;
+
+  /// No description provided for @developmentSearchEquipment.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索装备'**
+  String get developmentSearchEquipment;
+
+  /// No description provided for @developmentSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入装备名称或 ID'**
+  String get developmentSearchHint;
+
+  /// No description provided for @developmentAllTypes.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部类型'**
+  String get developmentAllTypes;
+
+  /// No description provided for @developmentTargetDrops.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标出货'**
+  String get developmentTargetDrops;
+
+  /// No description provided for @developmentOtherDrops.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他出货'**
+  String get developmentOtherDrops;
+
+  /// No description provided for @developmentInsufficient.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源不足'**
+  String get developmentInsufficient;
+
+  /// No description provided for @developmentReplaced.
+  ///
+  /// In zh, this message translates to:
+  /// **'被替换出货'**
+  String get developmentReplaced;
+
+  /// No description provided for @developmentRecommendations.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐配方'**
+  String get developmentRecommendations;
+
+  /// No description provided for @developmentNoTargets.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择目标装备后显示推荐配方'**
+  String get developmentNoTargets;
+
+  /// No description provided for @developmentNoResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有能同时开发所有目标的配方'**
+  String get developmentNoResults;
+
+  /// No description provided for @developmentTargetRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标率'**
+  String get developmentTargetRate;
+
+  /// No description provided for @developmentFailureRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败率'**
+  String get developmentFailureRate;
+
+  /// No description provided for @developmentTotalResources.
+  ///
+  /// In zh, this message translates to:
+  /// **'总资源'**
+  String get developmentTotalResources;
+
+  /// No description provided for @developmentApplyRecipe.
+  ///
+  /// In zh, this message translates to:
+  /// **'回填配方'**
+  String get developmentApplyRecipe;
+
+  /// No description provided for @developmentDataError.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备开发数据加载失败'**
+  String get developmentDataError;
+
+  /// No description provided for @developmentRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get developmentRetry;
+
+  /// No description provided for @developmentSelectedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选 {count} 件'**
+  String developmentSelectedCount(int count);
+
+  /// No description provided for @developmentPoolBauxite.
+  ///
+  /// In zh, this message translates to:
+  /// **'铝土系'**
+  String get developmentPoolBauxite;
+
+  /// No description provided for @developmentPoolAmmunition.
+  ///
+  /// In zh, this message translates to:
+  /// **'弹药系'**
+  String get developmentPoolAmmunition;
+
+  /// No description provided for @developmentPoolFuelSteel.
+  ///
+  /// In zh, this message translates to:
+  /// **'油钢系'**
+  String get developmentPoolFuelSteel;
 }
 
 class _AppLocalizationsDelegate

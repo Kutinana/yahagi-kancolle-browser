@@ -2637,4 +2637,90 @@ class AppLocalizationsJa extends AppLocalizations {
   String equipmentCompatibilityShipClassId(int id) {
     return '艦級 #$id';
   }
+
+  @override
+  String get equipmentDevelopment => '装備開発';
+
+  @override
+  String get developmentCommandTitle => '開発指揮卓';
+
+  @override
+  String get developmentCurrentFlagship => '現在の旗艦';
+
+  @override
+  String get developmentUseFlagship => '現在の旗艦を使用';
+
+  @override
+  String get developmentSelectPool => '秘書艦タイプ';
+
+  @override
+  String get developmentCurrentRecipe => '現在のレシピ';
+
+  @override
+  String get developmentTargetEquipment => '目標装備';
+
+  @override
+  String get developmentChooseTarget => '目標装備を選択';
+
+  @override
+  String get developmentSearchEquipment => '装備を検索';
+
+  @override
+  String get developmentSearchHint => '装備名または ID';
+
+  @override
+  String get developmentAllTypes => 'すべての種類';
+
+  @override
+  String get developmentTargetDrops => '目標装備';
+
+  @override
+  String get developmentOtherDrops => 'その他の装備';
+
+  @override
+  String get developmentInsufficient => '資材不足';
+
+  @override
+  String get developmentReplaced => '置き換え出現';
+
+  @override
+  String get developmentRecommendations => 'おすすめレシピ';
+
+  @override
+  String get developmentNoTargets => '目標装備を選ぶとおすすめレシピを表示します';
+
+  @override
+  String get developmentNoResults => 'すべての目標を同時に開発できるレシピはありません';
+
+  @override
+  String get developmentTargetRate => '目標率';
+
+  @override
+  String get developmentFailureRate => '失敗率';
+
+  @override
+  String get developmentTotalResources => '資材合計';
+
+  @override
+  String get developmentApplyRecipe => 'レシピを適用';
+
+  @override
+  String get developmentDataError => '装備開発データの読み込みに失敗しました';
+
+  @override
+  String get developmentRetry => '再試行';
+
+  @override
+  String developmentSelectedCount(int count) {
+    return '$count 件選択中';
+  }
+
+  @override
+  String get developmentPoolBauxite => 'ボーキサイト系';
+
+  @override
+  String get developmentPoolAmmunition => '弾薬系';
+
+  @override
+  String get developmentPoolFuelSteel => '燃料・鋼材系';
 }

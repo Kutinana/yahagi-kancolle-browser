@@ -2613,6 +2613,92 @@ class AppLocalizationsZh extends AppLocalizations {
   String equipmentCompatibilityShipClassId(int id) {
     return '舰级 #$id';
   }
+
+  @override
+  String get equipmentDevelopment => '装备开发';
+
+  @override
+  String get developmentCommandTitle => '开发指挥台';
+
+  @override
+  String get developmentCurrentFlagship => '当前旗舰';
+
+  @override
+  String get developmentUseFlagship => '使用当前旗舰';
+
+  @override
+  String get developmentSelectPool => '秘书舰类型';
+
+  @override
+  String get developmentCurrentRecipe => '当前配方';
+
+  @override
+  String get developmentTargetEquipment => '目标装备';
+
+  @override
+  String get developmentChooseTarget => '选择目标装备';
+
+  @override
+  String get developmentSearchEquipment => '搜索装备';
+
+  @override
+  String get developmentSearchHint => '输入装备名称或 ID';
+
+  @override
+  String get developmentAllTypes => '全部类型';
+
+  @override
+  String get developmentTargetDrops => '目标出货';
+
+  @override
+  String get developmentOtherDrops => '其他出货';
+
+  @override
+  String get developmentInsufficient => '资源不足';
+
+  @override
+  String get developmentReplaced => '被替换出货';
+
+  @override
+  String get developmentRecommendations => '推荐配方';
+
+  @override
+  String get developmentNoTargets => '选择目标装备后显示推荐配方';
+
+  @override
+  String get developmentNoResults => '没有能同时开发所有目标的配方';
+
+  @override
+  String get developmentTargetRate => '目标率';
+
+  @override
+  String get developmentFailureRate => '失败率';
+
+  @override
+  String get developmentTotalResources => '总资源';
+
+  @override
+  String get developmentApplyRecipe => '回填配方';
+
+  @override
+  String get developmentDataError => '装备开发数据加载失败';
+
+  @override
+  String get developmentRetry => '重试';
+
+  @override
+  String developmentSelectedCount(int count) {
+    return '已选 $count 件';
+  }
+
+  @override
+  String get developmentPoolBauxite => '铝土系';
+
+  @override
+  String get developmentPoolAmmunition => '弹药系';
+
+  @override
+  String get developmentPoolFuelSteel => '油钢系';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5225,4 +5311,90 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String equipmentCompatibilityShipClassId(int id) {
     return '艦級 #$id';
   }
+
+  @override
+  String get equipmentDevelopment => '裝備開發';
+
+  @override
+  String get developmentCommandTitle => '開發指揮台';
+
+  @override
+  String get developmentCurrentFlagship => '當前旗艦';
+
+  @override
+  String get developmentUseFlagship => '使用當前旗艦';
+
+  @override
+  String get developmentSelectPool => '秘書艦類型';
+
+  @override
+  String get developmentCurrentRecipe => '當前配方';
+
+  @override
+  String get developmentTargetEquipment => '目標裝備';
+
+  @override
+  String get developmentChooseTarget => '選擇目標裝備';
+
+  @override
+  String get developmentSearchEquipment => '搜尋裝備';
+
+  @override
+  String get developmentSearchHint => '輸入裝備名稱或 ID';
+
+  @override
+  String get developmentAllTypes => '全部類型';
+
+  @override
+  String get developmentTargetDrops => '目標出貨';
+
+  @override
+  String get developmentOtherDrops => '其他出貨';
+
+  @override
+  String get developmentInsufficient => '資源不足';
+
+  @override
+  String get developmentReplaced => '被替換出貨';
+
+  @override
+  String get developmentRecommendations => '推薦配方';
+
+  @override
+  String get developmentNoTargets => '選擇目標裝備後顯示推薦配方';
+
+  @override
+  String get developmentNoResults => '沒有能同時開發所有目標的配方';
+
+  @override
+  String get developmentTargetRate => '目標率';
+
+  @override
+  String get developmentFailureRate => '失敗率';
+
+  @override
+  String get developmentTotalResources => '總資源';
+
+  @override
+  String get developmentApplyRecipe => '回填配方';
+
+  @override
+  String get developmentDataError => '裝備開發資料載入失敗';
+
+  @override
+  String get developmentRetry => '重試';
+
+  @override
+  String developmentSelectedCount(int count) {
+    return '已選 $count 件';
+  }
+
+  @override
+  String get developmentPoolBauxite => '鋁土系';
+
+  @override
+  String get developmentPoolAmmunition => '彈藥系';
+
+  @override
+  String get developmentPoolFuelSteel => '油鋼系';
 }
