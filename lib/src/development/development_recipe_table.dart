@@ -31,65 +31,103 @@ class DevelopmentRecipeTable extends StatelessWidget {
         text: l10n.developmentNoResults,
       );
     }
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xff0a222d),
-        border: Border.all(color: const Color(0xff31596a)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      clipBehavior: Clip.antiAlias,
+    return Align(
+      alignment: Alignment.centerLeft,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: DataTable(
-          key: const Key('development-recipe-table'),
-          showCheckboxColumn: false,
-          sortColumnIndex: _sortColumn(controller.recipeSort),
-          sortAscending: controller.sortAscending,
-          headingRowColor: const WidgetStatePropertyAll(Color(0xff0d2935)),
-          dataRowMinHeight: 46,
-          dataRowMaxHeight: 54,
-          columns: [
-            DataColumn(label: Text(l10n.developmentSecretary)),
-            DataColumn(numeric: true, label: Text(l10n.developmentFuelShort)),
-            DataColumn(numeric: true, label: Text(l10n.developmentAmmoShort)),
-            DataColumn(numeric: true, label: Text(l10n.developmentSteelShort)),
-            DataColumn(
-              numeric: true,
-              label: Text(l10n.developmentBauxiteShort),
+        child: Container(
+          key: const Key('development-recipe-table-frame'),
+          decoration: BoxDecoration(
+            color: const Color(0xff0a222d),
+            border: Border.all(color: const Color(0xff31596a)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: DataTable(
+            key: const Key('development-recipe-table'),
+            showCheckboxColumn: false,
+            sortColumnIndex: _sortColumn(controller.recipeSort),
+            sortAscending: controller.sortAscending,
+            headingRowColor: const WidgetStatePropertyAll(Color(0xff0d2935)),
+            headingRowHeight: 34,
+            dataRowMinHeight: 44,
+            dataRowMaxHeight: 44,
+            horizontalMargin: 8,
+            columnSpacing: 16,
+            headingTextStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
             ),
-            DataColumn(
-              numeric: true,
-              label: Text(l10n.developmentTotalResources),
-              onSort: (_, _) => controller.sortRecipes(
-                DevelopmentRecipeSortField.totalResources,
+            dataTextStyle: const TextStyle(fontSize: 12),
+            columns: [
+              DataColumn(label: Text(l10n.developmentSecretary)),
+              DataColumn(
+                numeric: true,
+                label: _ResourceHeader(
+                  index: 0,
+                  asset: 'assets/images/material/01.png',
+                  label: l10n.fuel,
+                ),
               ),
-            ),
-            DataColumn(label: Text(l10n.developmentPoolType)),
-            DataColumn(
-              numeric: true,
-              label: Text(l10n.developmentOutputRate),
-              onSort: (_, _) =>
-                  controller.sortRecipes(DevelopmentRecipeSortField.targetRate),
-            ),
-            DataColumn(
-              numeric: true,
-              label: Text(l10n.developmentFailureRate),
-              onSort: (_, _) => controller.sortRecipes(
-                DevelopmentRecipeSortField.failureRate,
+              DataColumn(
+                numeric: true,
+                label: _ResourceHeader(
+                  index: 1,
+                  asset: 'assets/images/material/02.png',
+                  label: l10n.ammo,
+                ),
               ),
-            ),
-          ],
-          rows: [
-            for (var index = 0; index < controller.recipes.length; index++)
-              _recipeRow(
-                index,
-                controller.recipes[index],
-                controller.dataset?.poolsByKey[controller
-                    .recipes[index]
-                    .poolKey],
-                l10n,
+              DataColumn(
+                numeric: true,
+                label: _ResourceHeader(
+                  index: 2,
+                  asset: 'assets/images/material/03.png',
+                  label: l10n.steel,
+                ),
               ),
-          ],
+              DataColumn(
+                numeric: true,
+                label: _ResourceHeader(
+                  index: 3,
+                  asset: 'assets/images/material/04.png',
+                  label: l10n.bauxite,
+                ),
+              ),
+              DataColumn(
+                numeric: true,
+                label: Text(l10n.developmentTotalResources),
+                onSort: (_, _) => controller.sortRecipes(
+                  DevelopmentRecipeSortField.totalResources,
+                ),
+              ),
+              DataColumn(
+                numeric: true,
+                label: Text(l10n.developmentOutputRate),
+                onSort: (_, _) => controller.sortRecipes(
+                  DevelopmentRecipeSortField.targetRate,
+                ),
+              ),
+              DataColumn(
+                numeric: true,
+                label: Text(l10n.developmentFailureRate),
+                onSort: (_, _) => controller.sortRecipes(
+                  DevelopmentRecipeSortField.failureRate,
+                ),
+              ),
+              DataColumn(label: Text(l10n.developmentPoolType)),
+            ],
+            rows: [
+              for (var index = 0; index < controller.recipes.length; index++)
+                _recipeRow(
+                  index,
+                  controller.recipes[index],
+                  controller.dataset?.poolsByKey[controller
+                      .recipes[index]
+                      .poolKey],
+                  l10n,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -128,7 +166,6 @@ class DevelopmentRecipeTable extends StatelessWidget {
         DataCell(Text('${recipe.resources.steel}')),
         DataCell(Text('${recipe.resources.bauxite}')),
         DataCell(Text('${recipe.totalResources}')),
-        DataCell(Text(_poolTypeLabel(l10n, recipe.poolType))),
         DataCell(
           Text(
             '${_rate(recipe.targetRate)}%',
@@ -139,9 +176,37 @@ class DevelopmentRecipeTable extends StatelessWidget {
           ),
         ),
         DataCell(Text('${_rate(recipe.failureRate)}%')),
+        DataCell(Text(_poolTypeLabel(l10n, recipe.poolType))),
       ],
     );
   }
+}
+
+class _ResourceHeader extends StatelessWidget {
+  const _ResourceHeader({
+    required this.index,
+    required this.asset,
+    required this.label,
+  });
+
+  final int index;
+  final String asset;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: label,
+    child: Semantics(
+      label: label,
+      image: true,
+      child: Image.asset(
+        asset,
+        key: Key('development-recipe-resource-$index'),
+        width: 20,
+        height: 20,
+      ),
+    ),
+  );
 }
 
 class _EmptyRecipes extends StatelessWidget {
@@ -168,9 +233,9 @@ class _EmptyRecipes extends StatelessWidget {
 }
 
 int _sortColumn(DevelopmentRecipeSortField field) => switch (field) {
-  DevelopmentRecipeSortField.targetRate => 7,
+  DevelopmentRecipeSortField.targetRate => 6,
   DevelopmentRecipeSortField.totalResources => 5,
-  DevelopmentRecipeSortField.failureRate => 8,
+  DevelopmentRecipeSortField.failureRate => 7,
 };
 
 String _rate(double value) => value == value.roundToDouble()

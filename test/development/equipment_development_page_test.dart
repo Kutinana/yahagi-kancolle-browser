@@ -156,19 +156,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('development-recipe-row-0')), findsOneWidget);
-    for (final header in [
-      '秘书舰',
-      '油',
-      '弹',
-      '钢',
-      '铝',
-      '总资源',
-      '池类型',
-      '出货率',
-      '失败率',
-    ]) {
-      expect(find.text(header), findsOneWidget);
+    final tableFinder = find.byKey(const Key('development-recipe-table'));
+    final table = tester.widget<DataTable>(tableFinder);
+    expect(table.headingRowHeight, 34);
+    expect(table.dataRowMinHeight, 44);
+    expect(table.dataRowMaxHeight, 44);
+    expect(table.horizontalMargin, 8);
+    expect(table.columnSpacing, 16);
+    expect(table.columns.length, 9);
+    expect(table.sortColumnIndex, 6);
+    for (var index = 0; index < 4; index++) {
+      expect(
+        find.byKey(Key('development-recipe-resource-$index')),
+        findsOneWidget,
+      );
     }
+    expect(find.text('油'), findsNothing);
+    expect(find.text('弹'), findsNothing);
+    expect(find.text('钢'), findsNothing);
+    expect(find.text('铝'), findsNothing);
+    expect((table.columns.last.label as Text).data, '池类型');
+    final frame = find.byKey(const Key('development-recipe-table-frame'));
+    expect(frame, findsOneWidget);
+    expect(tester.getSize(frame).width, lessThan(1000));
     await tester.tap(find.byKey(const Key('development-recipe-row-0')));
     await tester.pumpAndSettle();
     expect(find.text('11'), findsWidgets);
