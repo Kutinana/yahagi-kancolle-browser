@@ -238,6 +238,12 @@ class _CompactBattlePanel extends StatelessWidget {
                 children: <Widget>[
                   if (showLastFormationHint && battle.lastFormation != null)
                     LastFormationPill(formation: battle.lastFormation!),
+                  if (battle.context.combinedFleetType !=
+                      CombinedFleetType.none)
+                    MetaChip(
+                      label: battle.context.combinedFleetType.label,
+                      color: const Color(0xff70c7bc),
+                    ),
                   if (battle.resourceChanges.isNotEmpty)
                     ResourceChangesPill(changes: battle.resourceChanges),
                   if (battle.rewardItems.isNotEmpty)
