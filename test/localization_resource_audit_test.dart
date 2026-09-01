@@ -223,6 +223,8 @@ void main() {
       'noro6',
       'jervis',
       'deckBuilderV4',
+      // “回填配方” is the concise action used in both Chinese scripts.
+      'developmentApplyRecipe',
     };
     const reviewedJa = <String>{
       'appTitle',

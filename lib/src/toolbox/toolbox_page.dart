@@ -1,36 +1,32 @@
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
+import '../development/development_repository.dart';
+import '../development/equipment_development_page.dart';
 import '../game_state/game_state.dart';
 import 'fleet_export_page.dart';
 
-enum ToolboxMode { fleetExport, other }
+enum ToolboxMode { fleetExport, equipmentDevelopment }
 
 class ToolboxPage extends StatelessWidget {
   const ToolboxPage({
     super.key,
     required this.state,
     this.mode = ToolboxMode.fleetExport,
+    this.developmentRepository,
   });
 
   final GameState state;
   final ToolboxMode mode;
+  final DevelopmentRepository? developmentRepository;
 
   @override
   Widget build(BuildContext context) {
     if (mode == ToolboxMode.fleetExport) {
       return FleetExportPage(state: state);
     }
-    final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(l10n.otherToolsComingSoon),
-          const SizedBox(height: 8),
-          Text(l10n.otherToolsHint),
-        ],
-      ),
+    return EquipmentDevelopmentPage(
+      state: state,
+      repository: developmentRepository,
     );
   }
 }

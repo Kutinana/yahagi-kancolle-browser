@@ -448,14 +448,16 @@ void main() {
     expect(find.text('工具箱'), findsOneWidget);
     expect(find.byKey(const Key('toolbox-mode-tabs')), findsOneWidget);
     expect(find.text('舰队导出'), findsOneWidget);
-    expect(find.text('其他'), findsOneWidget);
+    expect(find.text('装备开发'), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const Key('toolbox-mode-tabs'))).height,
       38,
     );
 
-    await tester.tap(find.byKey(const Key('toolbox-mode-other')));
-    expect(selectedMode, ToolboxMode.other);
+    await tester.tap(
+      find.byKey(const Key('toolbox-mode-equipmentDevelopment')),
+    );
+    expect(selectedMode, ToolboxMode.equipmentDevelopment);
   });
 
   testWidgets('Japanese toolbox header fits a narrow workspace', (

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,8 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/external_fleet_tool_launcher.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/fleet_export_page.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
+import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
+import 'package:yahagi_kancolle_browser/src/development/development_repository.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
@@ -216,13 +219,27 @@ void main() {
     expect(find.text('无法打开外部舰队工具，请检查是否已安装浏览器。'), findsOneWidget);
   });
 
-  testWidgets('other mode shows a development message', (tester) async {
+  testWidgets('equipment development mode opens the native dashboard', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      _testApp(const ToolboxPage(state: GameState(), mode: ToolboxMode.other)),
+      _testApp(
+        ToolboxPage(
+          state: const GameState(),
+          mode: ToolboxMode.equipmentDevelopment,
+          developmentRepository: DevelopmentRepository(
+            loadString: (_) async => File(
+              'assets/data/development/development_snapshot.json',
+            ).readAsStringSync(),
+          ),
+        ),
+      ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.byType(FleetExportPage), findsNothing);
-    expect(find.text('其他功能正在开发'), findsOneWidget);
+    expect(find.byType(EquipmentDevelopmentPage), findsOneWidget);
+    expect(find.text('开发指挥台'), findsOneWidget);
   });
 
   testWidgets('uses two columns in landscape and one column when narrow', (

@@ -454,9 +454,11 @@ void main() {
     await gameStateController.idle;
     await tester.pumpAndSettle();
     expect(find.textContaining('"hqlv":77'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('toolbox-mode-other')));
-    await tester.pumpAndSettle();
-    expect(find.text('其他功能正在开发'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const Key('toolbox-mode-equipmentDevelopment')),
+    );
+    await tester.pump();
+    expect(find.text('装备开发'), findsOneWidget);
     gameCaptureController.dispose();
     gameStateController.dispose();
     battleController.dispose();

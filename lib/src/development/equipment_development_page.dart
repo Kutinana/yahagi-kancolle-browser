@@ -194,9 +194,10 @@ class _CommandCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               SizedBox(
+                key: const Key('development-pool-selector'),
                 width: 260,
                 child: DropdownButtonFormField<String>(
-                  key: const Key('development-pool-selector'),
+                  key: ValueKey(controller.selectedPoolKey),
                   initialValue: controller.selectedPoolKey,
                   isExpanded: true,
                   decoration: InputDecoration(

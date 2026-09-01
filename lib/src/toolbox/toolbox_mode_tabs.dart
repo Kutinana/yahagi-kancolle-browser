@@ -43,7 +43,7 @@ class ToolboxModeTabs extends StatelessWidget {
                     child: Text(
                       value == ToolboxMode.fleetExport
                           ? l10n.fleetExport
-                          : l10n.otherTools,
+                          : l10n.equipmentDevelopment,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

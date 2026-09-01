@@ -53,6 +53,7 @@ import 'src/diagnostics/diagnostic_platform_port.dart';
 import 'src/diagnostics/diagnostic_recorder.dart';
 import 'src/diagnostics/diagnostic_settings_store.dart';
 import 'src/diagnostics/diagnostic_storage.dart';
+import 'src/development/development_repository.dart';
 import 'src/fleet/fleet_information_center.dart';
 import 'src/fleet/ship_status_style.dart';
 import 'src/fleet/anchorage_repair_navigation.dart';
@@ -964,6 +965,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
       ConstructionCenterMode.construction;
   SenkaCenterMode _senkaCenterMode = SenkaCenterMode.info;
   ToolboxMode _toolboxMode = ToolboxMode.fleetExport;
+  final DevelopmentRepository _developmentRepository = DevelopmentRepository();
   BackgroundGameRetentionCoordinator? _backgroundGameRetentionCoordinator;
 
   @override
@@ -1818,6 +1820,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             builder: (context, _) => ToolboxPage(
                               state: widget.gameStateController.state,
                               mode: _toolboxMode,
+                              developmentRepository: _developmentRepository,
                             ),
                           ),
                       ],
