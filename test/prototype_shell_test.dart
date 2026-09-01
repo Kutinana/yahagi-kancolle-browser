@@ -418,6 +418,27 @@ void main() {
     ]) {
       expect(find.byKey(Key(key)), findsOneWidget);
     }
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('workspace-nav-tools')),
+        matching: find.byIcon(Icons.widgets_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('workspace-nav-tools')),
+        matching: find.byIcon(Icons.handyman_outlined),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('workspace-nav-construction')),
+        matching: find.byIcon(Icons.handyman_outlined),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const Key('workspace-nav-tools')));
     await tester.pumpAndSettle();
     expect(find.byType(ToolboxPage), findsOneWidget);
