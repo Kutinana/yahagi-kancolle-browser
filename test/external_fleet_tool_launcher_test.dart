@@ -9,26 +9,42 @@ void main() {
 
   group('externalFleetToolUri', () {
     test('builds a noro6 import fragment with stock and predeck data', () {
-      final uri = externalFleetToolUri(
+      const state = GameState(
+        ships: <int, OwnedShip>{
+          10: OwnedShip(id: 10, masterId: 187, level: 70),
+        },
+        slotItems: <int, OwnedSlotItem>{
+          20: OwnedSlotItem(instanceId: 20, masterSlotItemId: 86, level: 4),
+        },
+      );
+      final officialUri = externalFleetToolUri(
         ExternalFleetTool.noro6,
         json,
-        state: const GameState(
-          ships: <int, OwnedShip>{
-            10: OwnedShip(id: 10, masterId: 187, level: 70),
-          },
-          slotItems: <int, OwnedSlotItem>{
-            20: OwnedSlotItem(instanceId: 20, masterSlotItemId: 86, level: 4),
-          },
-        ),
+        state: state,
+      );
+      final mirrorUri = externalFleetToolUri(
+        ExternalFleetTool.noro6Mirror,
+        json,
+        state: state,
       );
 
-      expect(uri.scheme, 'https');
-      expect(uri.host, 'noro6.github.io');
-      expect(uri.path, '/kc-web/');
-      expect(uri.queryParameters, isEmpty);
-      expect(uri.toString(), contains('#import:'));
+      expect(officialUri.scheme, 'https');
+      expect(officialUri.host, 'noro6.github.io');
+      expect(officialUri.path, '/kc-web/');
+      expect(officialUri.queryParameters, isEmpty);
+      expect(officialUri.fragment, startsWith('import:'));
+      expect(mirrorUri.scheme, 'https');
+      expect(mirrorUri.host, 'noro6.kcwiki.cn');
+      expect(mirrorUri.path, '/');
+      expect(mirrorUri.queryParameters, isEmpty);
+      expect(mirrorUri.fragment, startsWith('import:'));
+      expect(mirrorUri.fragment, officialUri.fragment);
       final payload =
-          jsonDecode(Uri.decodeComponent(uri.toString().split('#import:').last))
+          jsonDecode(
+                Uri.decodeComponent(
+                  mirrorUri.fragment.substring('import:'.length),
+                ),
+              )
               as Map;
       expect(payload['predeck'], jsonDecode(json));
       expect(payload['ships'], hasLength(1));
