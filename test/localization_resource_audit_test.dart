@@ -151,6 +151,10 @@ void main() {
       'gadgetBypassRestricted',
       // 官方ID is the same developer-facing label in both Chinese scripts.
       'equipmentOfficialId',
+      // These compact scope labels intentionally use the same wording in
+      // Simplified and Traditional Chinese.
+      'equipmentCompatibilityOwnedCompact',
+      'equipmentCompatibilityAllCompact',
       // Short game/UI terms conventionally share the same Han spelling.
       'highSpeedPlus',
       'all',

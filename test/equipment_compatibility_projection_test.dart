@@ -123,4 +123,15 @@ void main() {
 
     expect(rows.map((row) => row.shipMaster.id), <int>[3]);
   });
+
+  test('ship type, query, and slot filters return their intersection', () {
+    final rows = projection.rows(
+      equipmentMasterId: 10,
+      shipTypeId: 3,
+      query: '改二乙',
+      filter: EquipmentCompatibilitySlotFilter.expansion,
+    );
+
+    expect(rows.map((row) => row.shipMaster.id), <int>[3]);
+  });
 }

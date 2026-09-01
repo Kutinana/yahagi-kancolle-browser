@@ -610,6 +610,30 @@ void main() {
             .height,
         32,
       );
+      expect(find.text('持有 2'), findsOneWidget);
+      expect(find.text('全部 4'), findsOneWidget);
+      expect(find.textContaining('持有舰娘'), findsNothing);
+      expect(find.textContaining('全部舰娘'), findsNothing);
+      Semantics explicitSemantics(Key key, String label) =>
+          tester.widget<Semantics>(
+            find.descendant(
+              of: find.byKey(key),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Semantics && widget.properties.label == label,
+              ),
+            ),
+          );
+      expect(
+        explicitSemantics(
+          const Key('equipment-compatibility-tab-owned'),
+          '持有 2',
+        ).properties,
+        isA<SemanticsProperties>()
+            .having((value) => value.button, 'button', isTrue)
+            .having((value) => value.selected, 'selected', isTrue)
+            .having((value) => value.label, 'label', '持有 2'),
+      );
       IconButton toolButton(Key key) => tester.widget<IconButton>(
         find.descendant(of: find.byKey(key), matching: find.byType(IconButton)),
       );
@@ -643,6 +667,13 @@ void main() {
         find.byKey(const Key('equipment-compatibility-tab-all')),
       );
       await tester.pump();
+      expect(
+        explicitSemantics(
+          const Key('equipment-compatibility-tab-all'),
+          '全部 4',
+        ).properties.selected,
+        isTrue,
+      );
       expect(
         find.byKey(const Key('equipment-compatibility-ship-103')),
         findsOneWidget,
@@ -680,6 +711,25 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('equipment-compatibility-ship-type-dialog')),
+        findsOneWidget,
+      );
+      final shipTypeDialog = find.byKey(
+        const Key('equipment-compatibility-ship-type-dialog'),
+      );
+      expect(
+        find.descendant(of: shipTypeDialog, matching: find.text('选择舰种')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: shipTypeDialog, matching: find.byType(Wrap)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: shipTypeDialog, matching: find.byType(FilterChip)),
+        findsNWidgets(4),
+      );
+      expect(
+        find.descendant(of: shipTypeDialog, matching: find.byType(ListView)),
         findsOneWidget,
       );
       expect(
@@ -797,10 +847,12 @@ void main() {
         find.byKey(const Key('equipment-compatibility-search-dialog-field')),
         '  夕張  ',
       );
-      await tester.tap(
-        find.byKey(const Key('equipment-compatibility-search-dialog-confirm')),
-      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('equipment-compatibility-search-dialog')),
+        findsNothing,
+      );
       expect(
         toolButton(
           const Key('equipment-compatibility-search-button'),
@@ -848,6 +900,16 @@ void main() {
       );
       await tester.pump();
       expect(
+        explicitSemantics(
+          const Key('equipment-compatibility-filter-expansion'),
+          '增设栏',
+        ).properties,
+        isA<SemanticsProperties>()
+            .having((value) => value.button, 'button', isTrue)
+            .having((value) => value.selected, 'selected', isTrue)
+            .having((value) => value.label, 'label', '增设栏'),
+      );
+      expect(
         find.byKey(const Key('equipment-compatibility-ship-101')),
         findsOneWidget,
       );
@@ -858,6 +920,94 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('compatibility drawer keeps ship type and query across scope', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 640);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showShips: false,
+            showSectionControl: false,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('equipment-name-row-201')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('equipment-compatibility-tab-all')));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('equipment-compatibility-ship-type-button')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('equipment-compatibility-ship-type-option-2')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('equipment-compatibility-search-button')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('equipment-compatibility-search-dialog-field')),
+      '夕張',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('equipment-compatibility-tab-owned')),
+    );
+    await tester.pump();
+    IconButton toolButton(Key key) => tester.widget<IconButton>(
+      find.descendant(of: find.byKey(key), matching: find.byType(IconButton)),
+    );
+    expect(
+      toolButton(
+        const Key('equipment-compatibility-ship-type-button'),
+      ).isSelected,
+      isTrue,
+    );
+    expect(
+      toolButton(const Key('equipment-compatibility-search-button')).isSelected,
+      isTrue,
+    );
+    expect(
+      find.byKey(const Key('equipment-compatibility-ship-101')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('equipment-compatibility-ship-102')),
+      findsNothing,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('equipment-compatibility-search-button')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(
+              const Key('equipment-compatibility-search-dialog-field'),
+            ),
+          )
+          .controller!
+          .text,
+      '夕張',
+    );
+  });
 
   testWidgets('compatibility drawer labels an owned unknown ship type', (
     tester,

@@ -375,7 +375,7 @@ class _ShipTypeDialog extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    l10n.allTypes,
+                    l10n.equipmentCompatibilitySelectShipType,
                     style: const TextStyle(
                       color: Color(0xfff2f7f9),
                       fontSize: 16,
@@ -401,25 +401,32 @@ class _ShipTypeDialog extends StatelessWidget {
                 shrinkWrap: true,
                 padding: const EdgeInsets.all(10),
                 children: [
-                  _ShipTypeOption(
-                    key: const Key(
-                      'equipment-compatibility-ship-type-option-all',
-                    ),
-                    label: l10n.all,
-                    selected: selectedShipTypeId == null,
-                    onTap: () => Navigator.of(context).pop(0),
-                  ),
-                  for (final entry in shipTypes.entries) ...[
-                    const SizedBox(height: 5),
-                    _ShipTypeOption(
-                      key: Key(
-                        'equipment-compatibility-ship-type-option-${entry.key}',
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilterChip(
+                        key: const Key(
+                          'equipment-compatibility-ship-type-option-all',
+                        ),
+                        label: Text(l10n.all),
+                        selected: selectedShipTypeId == null,
+                        onSelected: (_) => Navigator.of(context).pop(0),
                       ),
-                      label: entry.value.isEmpty ? l10n.otherType : entry.value,
-                      selected: selectedShipTypeId == entry.key,
-                      onTap: () => Navigator.of(context).pop(entry.key),
-                    ),
-                  ],
+                      for (final entry in shipTypes.entries)
+                        FilterChip(
+                          key: Key(
+                            'equipment-compatibility-ship-type-option-${entry.key}',
+                          ),
+                          label: Text(
+                            entry.value.isEmpty ? l10n.otherType : entry.value,
+                          ),
+                          selected: selectedShipTypeId == entry.key,
+                          onSelected: (_) =>
+                              Navigator.of(context).pop(entry.key),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -428,52 +435,6 @@ class _ShipTypeDialog extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ShipTypeOption extends StatelessWidget {
-  const _ShipTypeOption({
-    super.key,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: selected ? const Color(0xff1d5f91) : const Color(0xff172a38),
-    borderRadius: BorderRadius.circular(7),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(7),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: const Color(0xffe8f0f4),
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                ),
-              ),
-            ),
-            if (selected)
-              const Icon(
-                Icons.check_circle_rounded,
-                size: 19,
-                color: Color(0xff7fd6ff),
-              ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 class _ScopeTabs extends StatelessWidget {
@@ -509,7 +470,7 @@ class _ScopeTabs extends StatelessWidget {
             child: _ScopeTab(
               key: const Key('equipment-compatibility-tab-owned'),
               selected: ownedOnly,
-              label: l10n.equipmentCompatibilityOwnedTab(ownedCount),
+              label: l10n.equipmentCompatibilityOwnedCompact(ownedCount),
               onTap: () => onChanged(true),
             ),
           ),
@@ -517,7 +478,7 @@ class _ScopeTabs extends StatelessWidget {
             child: _ScopeTab(
               key: const Key('equipment-compatibility-tab-all'),
               selected: !ownedOnly,
-              label: l10n.equipmentCompatibilityAllTab(allCount),
+              label: l10n.equipmentCompatibilityAllCompact(allCount),
               onTap: () => onChanged(false),
             ),
           ),
@@ -540,19 +501,27 @@ class _ScopeTab extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: selected ? const Color(0xff2b7180) : Colors.transparent,
-    borderRadius: BorderRadius.circular(15),
-    child: InkWell(
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: label,
+    excludeSemantics: true,
+    child: Material(
+      color: selected ? const Color(0xff2b7180) : Colors.transparent,
       borderRadius: BorderRadius.circular(15),
-      onTap: onTap,
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? const Color(0xfff2f7f9) : const Color(0xff8ba2af),
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: onTap,
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected
+                  ? const Color(0xfff2f7f9)
+                  : const Color(0xff8ba2af),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ),
@@ -608,20 +577,28 @@ class _FilterChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: selected ? const Color(0xff173f4c) : const Color(0xff102a38),
-    borderRadius: BorderRadius.circular(6),
-    child: InkWell(
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: label,
+    excludeSemantics: true,
+    child: Material(
+      color: selected ? const Color(0xff173f4c) : const Color(0xff102a38),
       borderRadius: BorderRadius.circular(6),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? const Color(0xff69d2cf) : const Color(0xff9bb0bb),
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected
+                  ? const Color(0xff69d2cf)
+                  : const Color(0xff9bb0bb),
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ),

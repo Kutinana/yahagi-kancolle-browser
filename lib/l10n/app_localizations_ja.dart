@@ -2551,6 +2551,19 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String equipmentCompatibilityOwnedCompact(int count) {
+    return '所持 $count';
+  }
+
+  @override
+  String equipmentCompatibilityAllCompact(int count) {
+    return '全て $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySelectShipType => '艦種を選択';
+
+  @override
   String get equipmentCompatibilitySearchHint => '艦娘を検索';
 
   @override

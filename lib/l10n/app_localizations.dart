@@ -4780,6 +4780,24 @@ abstract class AppLocalizations {
   /// **'全部舰娘 {count}'**
   String equipmentCompatibilityAllTab(int count);
 
+  /// No description provided for @equipmentCompatibilityOwnedCompact.
+  ///
+  /// In zh, this message translates to:
+  /// **'持有 {count}'**
+  String equipmentCompatibilityOwnedCompact(int count);
+
+  /// No description provided for @equipmentCompatibilityAllCompact.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部 {count}'**
+  String equipmentCompatibilityAllCompact(int count);
+
+  /// No description provided for @equipmentCompatibilitySelectShipType.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择舰种'**
+  String get equipmentCompatibilitySelectShipType;
+
   /// No description provided for @equipmentCompatibilitySearchHint.
   ///
   /// In zh, this message translates to:

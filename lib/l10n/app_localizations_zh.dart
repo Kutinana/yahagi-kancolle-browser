@@ -2527,6 +2527,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String equipmentCompatibilityOwnedCompact(int count) {
+    return '持有 $count';
+  }
+
+  @override
+  String equipmentCompatibilityAllCompact(int count) {
+    return '全部 $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySelectShipType => '选择舰种';
+
+  @override
   String get equipmentCompatibilitySearchHint => '搜索舰娘';
 
   @override
@@ -5124,6 +5137,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String equipmentCompatibilityAllTab(int count) {
     return '全體艦娘 $count';
   }
+
+  @override
+  String equipmentCompatibilityOwnedCompact(int count) {
+    return '持有 $count';
+  }
+
+  @override
+  String equipmentCompatibilityAllCompact(int count) {
+    return '全部 $count';
+  }
+
+  @override
+  String get equipmentCompatibilitySelectShipType => '選擇艦種';
 
   @override
   String get equipmentCompatibilitySearchHint => '搜尋艦娘';
