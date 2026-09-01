@@ -18,13 +18,17 @@ import 'package:yahagi_kancolle_browser/src/settings/safety_settings_store.dart'
 
 import 'fixtures/kcsapi_fixtures.dart';
 
-BattleShipSnapshot _heavyDamageShip() {
-  return const BattleShipSnapshot(
+BattleShipSnapshot _heavyDamageShip({
+  BattleFleetRole fleetRole = BattleFleetRole.main,
+  int position = 1,
+  String name = 'test',
+}) {
+  return BattleShipSnapshot(
     masterId: 1,
-    name: 'test',
+    name: name,
     side: BattleSide.friend,
-    fleetRole: BattleFleetRole.main,
-    position: 1,
+    fleetRole: fleetRole,
+    position: position,
     initialHp: 20,
     maxHp: 20,
     currentHp: 5,
@@ -50,6 +54,98 @@ void main() {
     );
 
     expect(shouldShowPostBattleWarning(battle), isTrue);
+  });
+
+  group('combined escort flagship warning exception', () {
+    const combinedContext = BattleContext(
+      node: 4,
+      bossNode: 5,
+      combinedFleetType: CombinedFleetType.surfaceTaskForce,
+    );
+
+    LiveBattle resultBattle({
+      BattleContext? context,
+      List<BattleShipSnapshot> main = const <BattleShipSnapshot>[],
+      List<BattleShipSnapshot> escort = const <BattleShipSnapshot>[],
+    }) => LiveBattle(
+      context: context ?? combinedContext,
+      friendMain: main,
+      friendEscort: escort,
+      displayStage: BattleDisplayStage.result,
+    );
+
+    test('does not warn when only the combined escort flagship is heavy', () {
+      final battle = resultBattle(
+        escort: <BattleShipSnapshot>[
+          _heavyDamageShip(
+            fleetRole: BattleFleetRole.escort,
+            position: 0,
+            name: '二队旗舰',
+          ),
+        ],
+      );
+
+      expect(shouldShowPostBattleWarning(battle), isFalse);
+    });
+
+    test('still warns for a combined escort non-flagship', () {
+      final battle = resultBattle(
+        escort: <BattleShipSnapshot>[
+          _heavyDamageShip(
+            fleetRole: BattleFleetRole.escort,
+            position: 1,
+            name: '二队僚舰',
+          ),
+        ],
+      );
+
+      expect(shouldShowPostBattleWarning(battle), isTrue);
+    });
+
+    test('still warns for a combined main-fleet ship', () {
+      final battle = resultBattle(
+        main: <BattleShipSnapshot>[_heavyDamageShip(position: 0, name: '一队旗舰')],
+      );
+
+      expect(shouldShowPostBattleWarning(battle), isTrue);
+    });
+
+    test('still warns when another ship is heavy with the escort flagship', () {
+      final battle = resultBattle(
+        escort: <BattleShipSnapshot>[
+          _heavyDamageShip(
+            fleetRole: BattleFleetRole.escort,
+            position: 0,
+            name: '二队旗舰',
+          ),
+          _heavyDamageShip(
+            fleetRole: BattleFleetRole.escort,
+            position: 2,
+            name: '二队僚舰',
+          ),
+        ],
+      );
+
+      expect(shouldShowPostBattleWarning(battle), isTrue);
+    });
+
+    test(
+      'does not treat an escort-like snapshot as safe outside combined fleet',
+      () {
+        final battle = resultBattle(
+          context: const BattleContext(node: 4, bossNode: 5),
+          escort: <BattleShipSnapshot>[
+            _heavyDamageShip(
+              fleetRole: BattleFleetRole.escort,
+              position: 0,
+              name: '普通舰队舰娘',
+            ),
+          ],
+        );
+
+        expect(shouldShowPostBattleWarning(battle), isTrue);
+      },
+    );
   });
 
   testWidgets('battle result only arms warning without dialog or vibration', (

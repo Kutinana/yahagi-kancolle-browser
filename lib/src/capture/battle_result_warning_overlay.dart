@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../battle/battle_controller.dart';
 import '../battle/battle_damage_alert.dart';
 import '../battle/battle_models.dart';
+import '../game_state/game_state.dart';
 import '../settings/safety_settings_controller.dart';
 import '../settings/safety_settings_store.dart';
 import 'game_capture_controller.dart';
@@ -21,9 +22,17 @@ bool shouldShowPostBattleWarning(LiveBattle? battle) {
   if (isBossNode) {
     return false;
   }
-  return battle.friendShips.any(
-    (ship) => !ship.isEscaped && ship.isHeavilyDamaged,
-  );
+  final isCombinedFleet = context.combinedFleetType != CombinedFleetType.none;
+  return battle.friendShips.any((ship) {
+    if (ship.isEscaped || !ship.isHeavilyDamaged) {
+      return false;
+    }
+    final isEscortFlagship =
+        isCombinedFleet &&
+        ship.fleetRole == BattleFleetRole.escort &&
+        ship.position == 0;
+    return !isEscortFlagship;
+  });
 }
 
 class BattleResultWarningOverlay extends StatefulWidget {
