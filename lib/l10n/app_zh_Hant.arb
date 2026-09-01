@@ -943,6 +943,7 @@
   "developmentSteelShort": "鋼",
   "developmentBauxiteShort": "鋁",
   "developmentOutputRate": "出貨率",
+  "developmentEquipment": "裝備",
   "developmentCurrentFlagship": "當前旗艦",
   "developmentUseFlagship": "使用當前旗艦",
   "developmentFlagshipUnsupported": "當前旗艦沒有可用的開發池，已保留原選擇",

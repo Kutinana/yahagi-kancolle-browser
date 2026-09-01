@@ -2751,6 +2751,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get developmentOutputRate => '開発率';
 
   @override
+  String get developmentEquipment => '装備';
+
+  @override
   String get developmentCurrentFlagship => '現在の旗艦';
 
   @override

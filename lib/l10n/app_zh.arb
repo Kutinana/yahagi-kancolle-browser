@@ -943,6 +943,7 @@
   "developmentSteelShort": "钢",
   "developmentBauxiteShort": "铝",
   "developmentOutputRate": "出货率",
+  "developmentEquipment": "装备",
   "developmentCurrentFlagship": "当前旗舰",
   "developmentUseFlagship": "使用当前旗舰",
   "developmentFlagshipUnsupported": "当前旗舰没有可用的开发池，已保留原选择",

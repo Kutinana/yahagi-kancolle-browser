@@ -29,13 +29,15 @@ class DevelopmentOutputTable extends StatefulWidget {
     super.key,
     required this.controller,
     required this.title,
+    required this.equipmentLabel,
     required this.finalProbabilityLabel,
-    this.typeLabel = '类型',
-    this.targetLabel = '目标',
+    required this.typeLabel,
+    required this.targetLabel,
   });
 
   final EquipmentDevelopmentController controller;
   final String title;
+  final String equipmentLabel;
   final String finalProbabilityLabel;
   final String typeLabel;
   final String targetLabel;
@@ -85,7 +87,7 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
               dataRowMinHeight: 48,
               dataRowMaxHeight: 56,
               columns: [
-                const DataColumn(label: Text('装备')),
+                DataColumn(label: Text(widget.equipmentLabel)),
                 DataColumn(label: Text(widget.typeLabel)),
                 DataColumn(
                   numeric: true,

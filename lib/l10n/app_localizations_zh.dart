@@ -2726,6 +2726,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developmentOutputRate => '出货率';
 
   @override
+  String get developmentEquipment => '装备';
+
+  @override
   String get developmentCurrentFlagship => '当前旗舰';
 
   @override
@@ -5530,6 +5533,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developmentOutputRate => '出貨率';
+
+  @override
+  String get developmentEquipment => '裝備';
 
   @override
   String get developmentCurrentFlagship => '當前旗艦';

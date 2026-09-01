@@ -280,6 +280,7 @@ class _CalculatorBody extends StatelessWidget {
         DevelopmentOutputTable(
           controller: controller,
           title: l10n.developmentOutputProbability,
+          equipmentLabel: l10n.developmentEquipment,
           finalProbabilityLabel: l10n.developmentFinalProbability,
           typeLabel: l10n.developmentEquipmentType,
           targetLabel: l10n.developmentTargetEquipment,

@@ -943,6 +943,7 @@
   "developmentSteelShort": "鋼",
   "developmentBauxiteShort": "ボ",
   "developmentOutputRate": "開発率",
+  "developmentEquipment": "装備",
   "developmentCurrentFlagship": "現在の旗艦",
   "developmentUseFlagship": "現在の旗艦を使用",
   "developmentFlagshipUnsupported": "現在の旗艦に対応する開発プールがないため、元の選択を維持しました",

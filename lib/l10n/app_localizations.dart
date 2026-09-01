@@ -5134,6 +5134,12 @@ abstract class AppLocalizations {
   /// **'出货率'**
   String get developmentOutputRate;
 
+  /// No description provided for @developmentEquipment.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备'**
+  String get developmentEquipment;
+
   /// No description provided for @developmentCurrentFlagship.
   ///
   /// In zh, this message translates to:
