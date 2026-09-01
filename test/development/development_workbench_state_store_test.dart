@@ -4,7 +4,10 @@ import 'package:yahagi_kancolle_browser/src/development/development_resources.da
 import 'package:yahagi_kancolle_browser/src/development/development_workbench_state_store.dart';
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+  setUp(() async {
+    await SharedPreferencesDevelopmentWorkbenchStateStore.resetForTesting();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
 
   test('workbench state round trips every persisted field', () {
     final state = _sampleState();

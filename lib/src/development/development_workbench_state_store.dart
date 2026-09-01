@@ -115,9 +115,15 @@ abstract interface class DevelopmentWorkbenchStateStore {
 final class SharedPreferencesDevelopmentWorkbenchStateStore
     implements DevelopmentWorkbenchStateStore {
   static const key = 'development_workbench_state_v1';
+  static Future<void> _pendingSave = Future<void>.value();
+  static DevelopmentWorkbenchState? _latestState;
 
   @override
   Future<DevelopmentWorkbenchState?> load() async {
+    final latest = _latestState;
+    if (latest != null) return latest;
+    await _pendingSave;
+    if (_latestState case final latest?) return latest;
     final preferences = await SharedPreferences.getInstance();
     final encoded = preferences.getString(key);
     if (encoded == null) return null;
@@ -132,9 +138,31 @@ final class SharedPreferencesDevelopmentWorkbenchStateStore
 
   @override
   Future<void> save(DevelopmentWorkbenchState state) async {
-    final preferences = await SharedPreferences.getInstance();
-    final saved = await preferences.setString(key, jsonEncode(state.toJson()));
-    if (!saved) throw StateError('development workbench state was not saved');
+    _latestState = state;
+    _pendingSave = _pendingSave
+        .onError((Object error, StackTrace stackTrace) {})
+        .then((_) async {
+          final preferences = await SharedPreferences.getInstance();
+          final saved = await preferences.setString(
+            key,
+            jsonEncode(state.toJson()),
+          );
+          if (!saved) {
+            throw StateError('development workbench state was not saved');
+          }
+        });
+    await _pendingSave;
+  }
+
+  @visibleForTesting
+  static Future<void> resetForTesting() async {
+    try {
+      await _pendingSave;
+    } on Object {
+      // A failed mocked write must not leak into the next test.
+    }
+    _pendingSave = Future<void>.value();
+    _latestState = null;
   }
 }
 

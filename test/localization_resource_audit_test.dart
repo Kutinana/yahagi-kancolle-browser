@@ -229,6 +229,10 @@ void main() {
       'developmentApplyRecipe',
       // 「其他」 is the concise fallback secretary group in both scripts.
       'developmentOtherSecretaryGroup',
+      // 「可用公式」 and the one-character fuel icon fallback use the same
+      // established wording in both Chinese scripts.
+      'developmentAvailableRecipes',
+      'developmentFuelShort',
     };
     const reviewedJa = <String>{
       'appTitle',

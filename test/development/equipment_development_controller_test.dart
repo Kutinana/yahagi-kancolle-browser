@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/development/development_repository.dart';
 import 'package:yahagi_kancolle_browser/src/development/development_resources.dart';
+import 'package:yahagi_kancolle_browser/src/development/development_workbench_state_store.dart';
 import 'package:yahagi_kancolle_browser/src/development/equipment_development_controller.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 
@@ -128,6 +129,77 @@ void main() {
     expect(controller.error, isNull);
     expect(controller.selectedPoolKey, 'carrier-akagi#1');
   });
+
+  test('retry restores the state loaded before a repository failure', () async {
+    var calls = 0;
+    final controller = EquipmentDevelopmentController(
+      repository: DevelopmentRepository(
+        loadString: (_) async {
+          calls++;
+          if (calls == 1) throw StateError('temporary');
+          return jsonEncode(_snapshot());
+        },
+      ),
+      stateStore: _MemoryStateStore(
+        const DevelopmentWorkbenchState(
+          mode: DevelopmentWorkbenchMode.formula,
+          resources: DevelopmentResources(20, 30, 40, 50),
+          targetIds: <int>[7],
+          recipeSort: DevelopmentRecipeSortField.totalResources,
+          sortAscending: true,
+        ),
+      ),
+    );
+
+    await controller.initialize(_stateWithFlagship(101));
+    expect(controller.error, isNotNull);
+    await controller.retry();
+
+    expect(controller.mode, DevelopmentWorkbenchMode.formula);
+    expect(controller.resources, const DevelopmentResources(20, 30, 40, 50));
+    expect(controller.targets, <int>{7});
+    expect(controller.recipeSort, DevelopmentRecipeSortField.totalResources);
+    expect(controller.sortAscending, isTrue);
+  });
+
+  test('state and repository loading start in parallel', () async {
+    final state = Completer<DevelopmentWorkbenchState?>();
+    final dataset = Completer<String>();
+    var repositoryStarted = false;
+    final controller = EquipmentDevelopmentController(
+      repository: DevelopmentRepository(
+        loadString: (_) {
+          repositoryStarted = true;
+          return dataset.future;
+        },
+      ),
+      stateStore: _MemoryStateStore.future(state.future),
+    );
+
+    final initialization = controller.initialize(_stateWithFlagship(101));
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.isLoading, isTrue);
+    expect(repositoryStarted, isTrue);
+
+    state.complete(null);
+    dataset.complete(jsonEncode(_snapshot()));
+    await initialization;
+  });
+}
+
+final class _MemoryStateStore implements DevelopmentWorkbenchStateStore {
+  _MemoryStateStore(DevelopmentWorkbenchState? state)
+    : _state = Future<DevelopmentWorkbenchState?>.value(state);
+
+  _MemoryStateStore.future(this._state);
+
+  final Future<DevelopmentWorkbenchState?> _state;
+
+  @override
+  Future<DevelopmentWorkbenchState?> load() => _state;
+
+  @override
+  Future<void> save(DevelopmentWorkbenchState state) async {}
 }
 
 DevelopmentRepository _repository() =>

@@ -37,7 +37,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
   DevelopmentWorkbenchMode _mode = DevelopmentWorkbenchMode.calculator;
   String? _lastAppliedRecipeKey;
   bool _disposed = false;
-  Future<void> _pendingSave = Future<void>.value();
+  DevelopmentWorkbenchState? _pendingRestoredState;
 
   DevelopmentDataset? get dataset => _dataset;
   bool get isLoading => _loading;
@@ -124,29 +124,42 @@ class EquipmentDevelopmentController extends ChangeNotifier {
 
   Future<void> initialize(GameState state) async {
     _gameState = state;
+    await _load(restoredStateFuture: _readStoredState());
+  }
+
+  Future<DevelopmentWorkbenchState?> _readStoredState() async {
     DevelopmentWorkbenchState? restoredState;
     try {
       restoredState = await stateStore?.load();
     } on Object catch (error) {
       debugPrint('Failed to load development workbench state: $error');
     }
-    if (_disposed) return;
-    await _load(restoredState: restoredState);
+    _pendingRestoredState = restoredState;
+    return restoredState;
   }
 
   Future<void> retry() => _load();
 
-  Future<void> _load({DevelopmentWorkbenchState? restoredState}) async {
+  Future<void> _load({
+    Future<DevelopmentWorkbenchState?>? restoredStateFuture,
+  }) async {
     if (_disposed || _loading) return;
     _loading = true;
     _error = null;
     notifyListeners();
     try {
-      _dataset = await repository.load();
+      final results = await Future.wait<Object?>([
+        repository.load(),
+        restoredStateFuture ??
+            Future<DevelopmentWorkbenchState?>.value(_pendingRestoredState),
+      ]);
       if (_disposed) return;
+      _dataset = results[0]! as DevelopmentDataset;
       _selectAutomaticPool();
       _recompute();
+      final restoredState = results[1] as DevelopmentWorkbenchState?;
       if (restoredState != null) _restoreState(restoredState);
+      _pendingRestoredState = null;
     } on Object catch (error) {
       if (_disposed) return;
       _error = error;
@@ -298,10 +311,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
       recipeSort: _recipeSort,
       sortAscending: _sortAscending,
     );
-    _pendingSave = _pendingSave.then((_) => store.save(snapshot)).onError((
-      Object error,
-      StackTrace stackTrace,
-    ) {
+    store.save(snapshot).onError((Object error, StackTrace stackTrace) {
       debugPrint('Failed to save development workbench state: $error');
     });
   }
