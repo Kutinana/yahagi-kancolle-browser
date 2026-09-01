@@ -336,11 +336,6 @@ class _FormulaBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        Text(
-          l10n.developmentAvailableRecipes,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 8),
         DevelopmentRecipeTable(controller: controller, locale: locale),
       ],
     );

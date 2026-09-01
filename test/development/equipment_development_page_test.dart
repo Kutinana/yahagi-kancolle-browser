@@ -191,10 +191,12 @@ void main() {
     final formulaBody = find.byKey(const Key('development-formula-body'));
     expect(frame, findsOneWidget);
     expect(formulaBody, findsOneWidget);
+    expect(tester.getSize(frame).width, tester.getSize(formulaBody).width);
     expect(
-      tester.getSize(frame).width,
-      lessThan(tester.getSize(formulaBody).width),
+      find.descendant(of: frame, matching: find.text('可用公式')),
+      findsOneWidget,
     );
+    expect(find.text('可用公式'), findsOneWidget);
 
     table.columns[5].onSort!(5, true);
     await tester.pump();

@@ -19,116 +19,134 @@ class DevelopmentRecipeTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final Widget content;
     if (controller.targets.isEmpty) {
-      return _EmptyRecipes(
+      content = _EmptyRecipes(
         icon: Icons.track_changes,
         text: l10n.developmentNoTargets,
       );
-    }
-    if (controller.recipes.isEmpty) {
-      return _EmptyRecipes(
+    } else if (controller.recipes.isEmpty) {
+      content = _EmptyRecipes(
         icon: Icons.route_outlined,
         text: l10n.developmentNoResults,
       );
-    }
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Container(
-          key: const Key('development-recipe-table-frame'),
-          decoration: BoxDecoration(
-            color: const Color(0xff0a222d),
-            border: Border.all(color: const Color(0xff31596a)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: DataTable(
-            key: const Key('development-recipe-table'),
-            showCheckboxColumn: false,
-            sortColumnIndex: _sortColumn(controller.recipeSort),
-            sortAscending: controller.sortAscending,
-            headingRowColor: const WidgetStatePropertyAll(Color(0xff0d2935)),
-            headingRowHeight: 34,
-            dataRowMinHeight: 44,
-            dataRowMaxHeight: 44,
-            horizontalMargin: 8,
-            columnSpacing: 16,
-            headingTextStyle: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
+    } else {
+      content = LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: DataTable(
+              key: const Key('development-recipe-table'),
+              showCheckboxColumn: false,
+              sortColumnIndex: _sortColumn(controller.recipeSort),
+              sortAscending: controller.sortAscending,
+              headingRowColor: const WidgetStatePropertyAll(Color(0xff0d2935)),
+              headingRowHeight: 34,
+              dataRowMinHeight: 44,
+              dataRowMaxHeight: 44,
+              horizontalMargin: 8,
+              columnSpacing: 16,
+              headingTextStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+              dataTextStyle: const TextStyle(fontSize: 12),
+              columns: [
+                DataColumn(label: Text(l10n.developmentSecretary)),
+                DataColumn(
+                  numeric: true,
+                  label: _ResourceHeader(
+                    index: 0,
+                    asset: 'assets/images/material/01.png',
+                    label: l10n.fuel,
+                  ),
+                ),
+                DataColumn(
+                  numeric: true,
+                  label: _ResourceHeader(
+                    index: 1,
+                    asset: 'assets/images/material/02.png',
+                    label: l10n.ammo,
+                  ),
+                ),
+                DataColumn(
+                  numeric: true,
+                  label: _ResourceHeader(
+                    index: 2,
+                    asset: 'assets/images/material/03.png',
+                    label: l10n.steel,
+                  ),
+                ),
+                DataColumn(
+                  numeric: true,
+                  label: _ResourceHeader(
+                    index: 3,
+                    asset: 'assets/images/material/04.png',
+                    label: l10n.bauxite,
+                  ),
+                ),
+                DataColumn(
+                  numeric: true,
+                  label: Text(l10n.developmentTotalResources),
+                  onSort: (_, _) => controller.sortRecipes(
+                    DevelopmentRecipeSortField.totalResources,
+                  ),
+                ),
+                DataColumn(
+                  numeric: true,
+                  label: Text(l10n.developmentOutputRate),
+                  onSort: (_, _) => controller.sortRecipes(
+                    DevelopmentRecipeSortField.targetRate,
+                  ),
+                ),
+                DataColumn(
+                  numeric: true,
+                  label: Text(l10n.developmentFailureRate),
+                  onSort: (_, _) => controller.sortRecipes(
+                    DevelopmentRecipeSortField.failureRate,
+                  ),
+                ),
+                DataColumn(label: Text(l10n.developmentPoolType)),
+              ],
+              rows: [
+                for (var index = 0; index < controller.recipes.length; index++)
+                  _recipeRow(
+                    index,
+                    controller.recipes[index],
+                    controller.dataset?.poolsByKey[controller
+                        .recipes[index]
+                        .poolKey],
+                    l10n,
+                  ),
+              ],
             ),
-            dataTextStyle: const TextStyle(fontSize: 12),
-            columns: [
-              DataColumn(label: Text(l10n.developmentSecretary)),
-              DataColumn(
-                numeric: true,
-                label: _ResourceHeader(
-                  index: 0,
-                  asset: 'assets/images/material/01.png',
-                  label: l10n.fuel,
-                ),
-              ),
-              DataColumn(
-                numeric: true,
-                label: _ResourceHeader(
-                  index: 1,
-                  asset: 'assets/images/material/02.png',
-                  label: l10n.ammo,
-                ),
-              ),
-              DataColumn(
-                numeric: true,
-                label: _ResourceHeader(
-                  index: 2,
-                  asset: 'assets/images/material/03.png',
-                  label: l10n.steel,
-                ),
-              ),
-              DataColumn(
-                numeric: true,
-                label: _ResourceHeader(
-                  index: 3,
-                  asset: 'assets/images/material/04.png',
-                  label: l10n.bauxite,
-                ),
-              ),
-              DataColumn(
-                numeric: true,
-                label: Text(l10n.developmentTotalResources),
-                onSort: (_, _) => controller.sortRecipes(
-                  DevelopmentRecipeSortField.totalResources,
-                ),
-              ),
-              DataColumn(
-                numeric: true,
-                label: Text(l10n.developmentOutputRate),
-                onSort: (_, _) => controller.sortRecipes(
-                  DevelopmentRecipeSortField.targetRate,
-                ),
-              ),
-              DataColumn(
-                numeric: true,
-                label: Text(l10n.developmentFailureRate),
-                onSort: (_, _) => controller.sortRecipes(
-                  DevelopmentRecipeSortField.failureRate,
-                ),
-              ),
-              DataColumn(label: Text(l10n.developmentPoolType)),
-            ],
-            rows: [
-              for (var index = 0; index < controller.recipes.length; index++)
-                _recipeRow(
-                  index,
-                  controller.recipes[index],
-                  controller.dataset?.poolsByKey[controller
-                      .recipes[index]
-                      .poolKey],
-                  l10n,
-                ),
-            ],
           ),
         ),
+      );
+    }
+    return Container(
+      key: const Key('development-recipe-table-frame'),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xff0a222d),
+        border: Border.all(color: const Color(0xff31596a)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(13, 11, 13, 9),
+            child: Text(
+              l10n.developmentAvailableRecipes,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xff31596a)),
+          content,
+        ],
       ),
     );
   }
