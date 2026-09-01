@@ -301,6 +301,7 @@ class _FormulaBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
+      key: const Key('development-formula-body'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Wrap(

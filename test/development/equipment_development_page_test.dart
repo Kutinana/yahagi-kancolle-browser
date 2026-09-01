@@ -165,20 +165,46 @@ void main() {
     expect(table.columnSpacing, 16);
     expect(table.columns.length, 9);
     expect(table.sortColumnIndex, 6);
+    const resourceLabels = ['燃料', '弹药', '钢材', '铝土'];
     for (var index = 0; index < 4; index++) {
-      expect(
-        find.byKey(Key('development-recipe-resource-$index')),
-        findsOneWidget,
+      final resourceIcon = find.byKey(
+        Key('development-recipe-resource-$index'),
       );
+      expect(resourceIcon, findsOneWidget);
+      final semantics = tester.widget<Semantics>(
+        find.ancestor(of: resourceIcon, matching: find.byType(Semantics)).first,
+      );
+      expect(semantics.properties.label, resourceLabels[index]);
+      expect(semantics.properties.image, isTrue);
+      final tooltip = tester.widget<Tooltip>(
+        find.ancestor(of: resourceIcon, matching: find.byType(Tooltip)).first,
+      );
+      expect(tooltip.message, resourceLabels[index]);
     }
     expect(find.text('油'), findsNothing);
     expect(find.text('弹'), findsNothing);
     expect(find.text('钢'), findsNothing);
     expect(find.text('铝'), findsNothing);
     expect((table.columns.last.label as Text).data, '池类型');
+    expect((table.rows.first.cells.last.child as Text).data, '铝土系');
     final frame = find.byKey(const Key('development-recipe-table-frame'));
+    final formulaBody = find.byKey(const Key('development-formula-body'));
     expect(frame, findsOneWidget);
-    expect(tester.getSize(frame).width, lessThan(1000));
+    expect(formulaBody, findsOneWidget);
+    expect(
+      tester.getSize(frame).width,
+      lessThan(tester.getSize(formulaBody).width),
+    );
+
+    table.columns[5].onSort!(5, true);
+    await tester.pump();
+    expect(tester.widget<DataTable>(tableFinder).sortColumnIndex, 5);
+    tester.widget<DataTable>(tableFinder).columns[6].onSort!(6, true);
+    await tester.pump();
+    expect(tester.widget<DataTable>(tableFinder).sortColumnIndex, 6);
+    tester.widget<DataTable>(tableFinder).columns[7].onSort!(7, true);
+    await tester.pump();
+    expect(tester.widget<DataTable>(tableFinder).sortColumnIndex, 7);
     await tester.tap(find.byKey(const Key('development-recipe-row-0')));
     await tester.pumpAndSettle();
     expect(find.text('11'), findsWidgets);
@@ -189,6 +215,40 @@ void main() {
           .flagsCollection
           .isSelected,
       Tristate.isTrue,
+    );
+  });
+
+  testWidgets('recipe table scrolls horizontally on narrow screens', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(size: const Size(390, 844)));
+    await tester.pumpAndSettle();
+    await _openFormula(tester);
+    await tester.tap(find.byKey(const Key('development-open-target-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-type-8')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-7')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-target-close')));
+    await tester.pumpAndSettle();
+
+    final horizontalScrollView = find.byWidgetPredicate(
+      (widget) =>
+          widget is SingleChildScrollView &&
+          widget.scrollDirection == Axis.horizontal,
+    );
+    expect(horizontalScrollView, findsOneWidget);
+    final scrollable = find.descendant(
+      of: horizontalScrollView,
+      matching: find.byType(Scrollable),
+    );
+    expect(scrollable, findsOneWidget);
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      greaterThan(0),
     );
   });
 
@@ -271,8 +331,8 @@ void main() {
     expect(radarIconFinder, findsOneWidget);
     final attackIcon = tester.widget<EquipmentTypeIconImage>(attackIconFinder);
     final radarIcon = tester.widget<EquipmentTypeIconImage>(radarIconFinder);
-    expect(attackIcon.iconId, 8);
-    expect(radarIcon.iconId, 12);
+    expect(attackIcon.iconId, 5);
+    expect(radarIcon.iconId, 11);
     expect(attackIcon.width, 23);
     expect(attackIcon.height, 23);
 
@@ -411,12 +471,14 @@ final _snapshot = <String, Object?>{
       'id': 7,
       'name': '测试舰攻',
       'type_id': 8,
+      'icon_id': 5,
       'minimum_resources': [10, 10, 10, 10],
     },
     {
       'id': 8,
       'name': '测试雷达',
       'type_id': 12,
+      'icon_id': 11,
       'minimum_resources': [10, 10, 10, 10],
     },
     {
