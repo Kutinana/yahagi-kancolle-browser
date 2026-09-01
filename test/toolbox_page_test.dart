@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
@@ -132,14 +134,35 @@ void main() {
     expect(find.textContaining('"hqlv":81'), findsOneWidget);
   });
 
-  testWidgets('external launch regenerates text and keeps it on failure', (
+  testWidgets('noro6 launch imports fleet and complete owned inventory', (
     tester,
   ) async {
     Uri? received;
+    const state = GameState(
+      admiralLevel: 88,
+      hasPortData: true,
+      ships: <int, OwnedShip>{
+        101: OwnedShip(
+          id: 101,
+          masterId: 187,
+          level: 70,
+          nextExperience: 2345,
+          extraSlotId: 503,
+        ),
+        202: OwnedShip(id: 202, masterId: 200, level: 45),
+      },
+      slotItems: <int, OwnedSlotItem>{
+        501: OwnedSlotItem(instanceId: 501, masterSlotItemId: 86, level: 7),
+        502: OwnedSlotItem(instanceId: 502, masterSlotItemId: 42),
+      },
+      fleets: <Fleet>[
+        Fleet(id: 1, name: 'First', shipIds: <int>[101]),
+      ],
+    );
     await tester.pumpWidget(
       _testApp(
         FleetExportPage(
-          state: const GameState(admiralLevel: 88, hasPortData: true),
+          state: state,
           launcher: ExternalFleetToolLauncher(
             launch: (uri) async {
               received = uri;
@@ -154,7 +177,32 @@ void main() {
     await tester.pump();
 
     expect(received?.host, 'noro6.github.io');
-    expect(received?.queryParameters['predeck'], contains('"hqlv":88'));
+    expect(received.toString(), contains('#import:'));
+    expect(received?.queryParameters, isEmpty);
+    final encodedPayload = received.toString().split('#import:').last;
+    final payload = jsonDecode(Uri.decodeComponent(encodedPayload)) as Map;
+    expect(payload['predeck'], isA<Map>());
+    expect((payload['predeck'] as Map)['hqlv'], 88);
+    expect(payload['ships'], <Object?>[
+      <String, Object?>{
+        'id': 101,
+        'ship_id': 187,
+        'lv': 70,
+        'exp': <int>[0, 2345, 0],
+        'ex': 1,
+      },
+      <String, Object?>{
+        'id': 202,
+        'ship_id': 200,
+        'lv': 45,
+        'exp': <int>[0, 0, 0],
+        'ex': 0,
+      },
+    ]);
+    expect(payload['items'], <Object?>[
+      <String, Object?>{'id': 86, 'lv': 7},
+      <String, Object?>{'id': 42, 'lv': 0},
+    ]);
     expect(find.textContaining('"hqlv":88'), findsOneWidget);
     expect(find.text('无法打开外部舰队工具，请检查是否已安装浏览器。'), findsOneWidget);
   });

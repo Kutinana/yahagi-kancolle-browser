@@ -30,9 +30,9 @@
 - 新建：`test/external_fleet_tool_launcher_test.dart`
 - 新建：`lib/src/toolbox/external_fleet_tool_launcher.dart`
 
-1. 先写失败测试，定义 `ExternalFleetTool.noro6/jervis`，分别断言 HTTPS 主机、路径和 `predeck` 查询参数可无损解码 JSON。
+1. 先写失败测试，定义 `ExternalFleetTool.noro6/jervis`，分别断言 HTTPS 主机与路径；noro6 的 `#import:` 载荷可无损解码 `ships`、`items` 与 `predeck`，Jervis 的 `predeck` 查询参数可无损解码 JSON。
 2. 运行 `flutter test test/external_fleet_tool_launcher_test.dart`，确认因实现缺失失败。
-3. 用 `Uri.replace(queryParameters: {'predeck': json})` 实现纯 URI 构造，重跑至通过。
+3. noro6 使用 URL 编码的 `#import:` JSON，Jervis 使用 `Uri.replace(queryParameters: {'predeck': json})`；重跑至通过。
 4. 添加可注入的 `ExternalFleetToolLauncher`，默认调用 `launchUrl(..., mode: LaunchMode.externalApplication)`；测试注入回调能收到 URI并返回成功/失败。
 5. 提交：`feat(工具箱): 支持外部舰队工具链接（任务 2/5）`。
 
