@@ -9,13 +9,13 @@ import 'development_projection.dart';
 import 'development_recipe_calculator.dart';
 import 'development_repository.dart';
 import 'development_resources.dart';
-
-enum DevelopmentRecipeSortField { targetRate, totalResources, failureRate }
+import 'development_workbench_state_store.dart';
 
 class EquipmentDevelopmentController extends ChangeNotifier {
-  EquipmentDevelopmentController({required this.repository});
+  EquipmentDevelopmentController({required this.repository, this.stateStore});
 
   final DevelopmentRepository repository;
+  final DevelopmentWorkbenchStateStore? stateStore;
 
   DevelopmentDataset? _dataset;
   GameState _gameState = GameState.empty;
@@ -34,8 +34,10 @@ class EquipmentDevelopmentController extends ChangeNotifier {
   DevelopmentRecipeSortField _recipeSort =
       DevelopmentRecipeSortField.targetRate;
   bool _sortAscending = false;
+  DevelopmentWorkbenchMode _mode = DevelopmentWorkbenchMode.calculator;
   String? _lastAppliedRecipeKey;
   bool _disposed = false;
+  Future<void> _pendingSave = Future<void>.value();
 
   DevelopmentDataset? get dataset => _dataset;
   bool get isLoading => _loading;
@@ -51,6 +53,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
   List<DevelopmentRecipeResult> get recipes => _recipes;
   DevelopmentRecipeSortField get recipeSort => _recipeSort;
   bool get sortAscending => _sortAscending;
+  DevelopmentWorkbenchMode get mode => _mode;
   bool get followsCurrentFlagship => !_manualPoolSelection;
 
   bool isRecipeApplied(DevelopmentRecipeResult recipe) =>
@@ -121,13 +124,20 @@ class EquipmentDevelopmentController extends ChangeNotifier {
 
   Future<void> initialize(GameState state) async {
     _gameState = state;
-    await _load();
+    DevelopmentWorkbenchState? restoredState;
+    try {
+      restoredState = await stateStore?.load();
+    } on Object catch (error) {
+      debugPrint('Failed to load development workbench state: $error');
+    }
+    if (_disposed) return;
+    await _load(restoredState: restoredState);
   }
 
   Future<void> retry() => _load();
 
-  Future<void> _load() async {
-    if (_loading) return;
+  Future<void> _load({DevelopmentWorkbenchState? restoredState}) async {
+    if (_disposed || _loading) return;
     _loading = true;
     _error = null;
     notifyListeners();
@@ -136,6 +146,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
       if (_disposed) return;
       _selectAutomaticPool();
       _recompute();
+      if (restoredState != null) _restoreState(restoredState);
     } on Object catch (error) {
       if (_disposed) return;
       _error = error;
@@ -161,6 +172,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     _lastAppliedRecipeKey = null;
     if (changed) _recompute();
     notifyListeners();
+    _persistState();
   }
 
   bool useCurrentFlagship() {
@@ -169,6 +181,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     _lastAppliedRecipeKey = null;
     _recompute();
     notifyListeners();
+    _persistState();
     return true;
   }
 
@@ -180,6 +193,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     _resources = value;
     _recompute();
     notifyListeners();
+    _persistState();
   }
 
   void toggleTarget(int equipmentId) {
@@ -187,6 +201,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
       _lastAppliedRecipeKey = null;
       _recompute();
       notifyListeners();
+      _persistState();
       return;
     }
     if (!_enabledEquipment.contains(equipmentId)) return;
@@ -194,6 +209,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     _lastAppliedRecipeKey = null;
     _recompute();
     notifyListeners();
+    _persistState();
   }
 
   void applyRecipe(DevelopmentRecipeResult recipe) {
@@ -206,6 +222,7 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     _manualPoolSelection = true;
     _recompute();
     notifyListeners();
+    _persistState();
   }
 
   void setEquipmentTypeFilter(int? typeId) {
@@ -229,6 +246,64 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     }
     _sortRecipeOutput();
     notifyListeners();
+    _persistState();
+  }
+
+  void setMode(DevelopmentWorkbenchMode mode) {
+    if (_mode == mode) return;
+    _mode = mode;
+    notifyListeners();
+    _persistState();
+  }
+
+  void _restoreState(DevelopmentWorkbenchState state) {
+    final data = _dataset;
+    if (data == null) return;
+    _mode = state.mode;
+    _resources = state.resources.normalized();
+    _recipeSort = state.recipeSort;
+    _sortAscending = state.sortAscending;
+    _targets.clear();
+
+    final restoredPool = state.selectedPoolKey == null
+        ? null
+        : data.poolsByKey[state.selectedPoolKey];
+    if (!state.followsCurrentFlagship && restoredPool?.isSelectable == true) {
+      _selectedPoolKey = restoredPool!.key;
+      _manualPoolSelection = true;
+    } else {
+      _selectedPoolKey = null;
+      _manualPoolSelection = false;
+      _selectAutomaticPool();
+    }
+    _recompute();
+
+    for (final id in state.targetIds) {
+      if (_enabledEquipment.contains(id)) {
+        _targets.add(id);
+        _recompute();
+      }
+    }
+  }
+
+  void _persistState() {
+    final store = stateStore;
+    if (store == null || _dataset == null) return;
+    final snapshot = DevelopmentWorkbenchState(
+      mode: _mode,
+      selectedPoolKey: _selectedPoolKey,
+      followsCurrentFlagship: followsCurrentFlagship,
+      resources: _resources,
+      targetIds: List<int>.unmodifiable(_targets),
+      recipeSort: _recipeSort,
+      sortAscending: _sortAscending,
+    );
+    _pendingSave = _pendingSave.then((_) => store.save(snapshot)).onError((
+      Object error,
+      StackTrace stackTrace,
+    ) {
+      debugPrint('Failed to save development workbench state: $error');
+    });
   }
 
   bool _selectAutomaticPool({bool fallbackToFirst = true}) {

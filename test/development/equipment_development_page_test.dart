@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
+import 'package:yahagi_kancolle_browser/src/development/development_workbench_state_store.dart';
 import 'package:yahagi_kancolle_browser/src/development/development_repository.dart';
 import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/equipment_type_icon.dart';
@@ -91,6 +92,55 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('development-output-table')), findsOneWidget);
     expect(find.text('20'), findsWidgets);
+  });
+
+  testWidgets('workbench state survives page recreation', (tester) async {
+    final store = _MemoryDevelopmentWorkbenchStateStore();
+    await tester.pumpWidget(
+      _app(size: const Size(1000, 700), stateStore: store),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, '20');
+    await tester.pump();
+    await _openFormula(tester);
+    await tester.tap(find.byKey(const Key('development-open-target-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-type-8')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-equipment-7')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('development-target-close')));
+    await tester.pumpAndSettle();
+
+    final tableFinder = find.byKey(const Key('development-recipe-table'));
+    tester.widget<DataTable>(tableFinder).columns[5].onSort!(5, true);
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(
+      _app(size: const Size(1000, 700), stateStore: store),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('development-recipe-table')), findsOneWidget);
+    expect(find.widgetWithText(InputChip, '测试舰攻'), findsOneWidget);
+    expect(
+      tester
+          .widget<DataTable>(find.byKey(const Key('development-recipe-table')))
+          .sortColumnIndex,
+      5,
+    );
+
+    await tester.tap(find.byKey(const Key('development-mode-calculator')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).first)
+          .controller!
+          .text,
+      '20',
+    );
   });
 
   testWidgets('target dialog uses two columns and keeps search in a button', (
@@ -402,7 +452,11 @@ Future<void> _openFormula(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Widget _app({required Size size, GameState state = _state}) => MediaQuery(
+Widget _app({
+  required Size size,
+  GameState state = _state,
+  DevelopmentWorkbenchStateStore? stateStore,
+}) => MediaQuery(
   data: MediaQueryData(size: size),
   child: MaterialApp(
     locale: const Locale('zh'),
@@ -417,6 +471,7 @@ Widget _app({required Size size, GameState state = _state}) => MediaQuery(
       child: Scaffold(
         body: EquipmentDevelopmentPage(
           state: state,
+          stateStore: stateStore ?? _MemoryDevelopmentWorkbenchStateStore(),
           repository: DevelopmentRepository(
             loadString: (_) async => jsonEncode(_snapshot),
           ),
@@ -425,6 +480,19 @@ Widget _app({required Size size, GameState state = _state}) => MediaQuery(
     ),
   ),
 );
+
+final class _MemoryDevelopmentWorkbenchStateStore
+    implements DevelopmentWorkbenchStateStore {
+  DevelopmentWorkbenchState? state;
+
+  @override
+  Future<DevelopmentWorkbenchState?> load() async => state;
+
+  @override
+  Future<void> save(DevelopmentWorkbenchState state) async {
+    this.state = state;
+  }
+}
 
 const _state = GameState(
   hasPortData: true,

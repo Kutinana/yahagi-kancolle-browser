@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import 'development_dataset.dart';
 import 'development_recipe_calculator.dart';
 import 'development_resources.dart';
+import 'development_workbench_state_store.dart';
 import 'equipment_development_controller.dart';
 
 class DevelopmentRecipeTable extends StatelessWidget {

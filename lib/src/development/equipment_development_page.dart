@@ -12,19 +12,20 @@ import 'development_recipe_table.dart';
 import 'development_repository.dart';
 import 'development_resources.dart';
 import 'development_secretary_picker.dart';
+import 'development_workbench_state_store.dart';
 import 'equipment_development_controller.dart';
-
-enum _DevelopmentWorkbenchMode { calculator, formula }
 
 class EquipmentDevelopmentPage extends StatefulWidget {
   const EquipmentDevelopmentPage({
     super.key,
     required this.state,
     this.repository,
+    this.stateStore,
   });
 
   final GameState state;
   final DevelopmentRepository? repository;
+  final DevelopmentWorkbenchStateStore? stateStore;
 
   @override
   State<EquipmentDevelopmentPage> createState() =>
@@ -33,13 +34,15 @@ class EquipmentDevelopmentPage extends StatefulWidget {
 
 class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
   late final EquipmentDevelopmentController controller;
-  var mode = _DevelopmentWorkbenchMode.calculator;
 
   @override
   void initState() {
     super.initState();
     controller = EquipmentDevelopmentController(
       repository: widget.repository ?? DevelopmentRepository(),
+      stateStore:
+          widget.stateStore ??
+          SharedPreferencesDevelopmentWorkbenchStateStore(),
     )..addListener(_refresh);
     controller.initialize(widget.state);
   }
@@ -132,11 +135,11 @@ class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
                       ),
                     ],
                   );
-                  final selector = SegmentedButton<_DevelopmentWorkbenchMode>(
+                  final selector = SegmentedButton<DevelopmentWorkbenchMode>(
                     showSelectedIcon: false,
                     segments: [
                       ButtonSegment(
-                        value: _DevelopmentWorkbenchMode.calculator,
+                        value: DevelopmentWorkbenchMode.calculator,
                         icon: const Icon(Icons.calculate_outlined, size: 17),
                         label: Text(
                           l10n.developmentCalculator,
@@ -144,7 +147,7 @@ class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
                         ),
                       ),
                       ButtonSegment(
-                        value: _DevelopmentWorkbenchMode.formula,
+                        value: DevelopmentWorkbenchMode.formula,
                         icon: const Icon(Icons.table_chart_outlined, size: 17),
                         label: Text(
                           l10n.developmentFormula,
@@ -152,10 +155,9 @@ class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
                         ),
                       ),
                     ],
-                    selected: {mode},
-                    onSelectionChanged: (selection) {
-                      setState(() => mode = selection.single);
-                    },
+                    selected: {controller.mode},
+                    onSelectionChanged: (selection) =>
+                        controller.setMode(selection.single),
                   );
                   if (constraints.maxWidth >= 620) {
                     return Row(children: [title, const Spacer(), selector]);
@@ -167,7 +169,7 @@ class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
                 },
               ),
               const SizedBox(height: 14),
-              if (mode == _DevelopmentWorkbenchMode.calculator)
+              if (controller.mode == DevelopmentWorkbenchMode.calculator)
                 _CalculatorBody(controller: controller, locale: locale)
               else
                 _FormulaBody(controller: controller, locale: locale),
