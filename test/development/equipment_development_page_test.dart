@@ -260,6 +260,28 @@ void main() {
     expect(find.byKey(const Key('development-target-dialog')), findsNothing);
     expect(find.text('测试舰攻'), findsOneWidget);
     expect(find.text('测试雷达'), findsOneWidget);
+
+    final attackIconFinder = find.byKey(
+      const Key('development-target-chip-icon-7'),
+    );
+    final radarIconFinder = find.byKey(
+      const Key('development-target-chip-icon-8'),
+    );
+    expect(attackIconFinder, findsOneWidget);
+    expect(radarIconFinder, findsOneWidget);
+    final attackIcon = tester.widget<EquipmentTypeIconImage>(attackIconFinder);
+    final radarIcon = tester.widget<EquipmentTypeIconImage>(radarIconFinder);
+    expect(attackIcon.iconId, 8);
+    expect(radarIcon.iconId, 12);
+    expect(attackIcon.width, 23);
+    expect(attackIcon.height, 23);
+
+    tester
+        .widget<InputChip>(find.widgetWithText(InputChip, '测试舰攻'))
+        .onDeleted!();
+    await tester.pumpAndSettle();
+    expect(attackIconFinder, findsNothing);
+    expect(find.text('测试舰攻'), findsNothing);
   });
 
   testWidgets('search trims confirmation and cancel preserves prior query', (

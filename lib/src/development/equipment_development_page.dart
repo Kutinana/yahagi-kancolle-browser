@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../fleet/equipment_type_icon.dart';
 import '../game_state/game_state.dart';
 import '../widgets/top_notice.dart';
 import 'development_equipment_picker.dart';
@@ -320,6 +321,12 @@ class _FormulaBody extends StatelessWidget {
             ),
             for (final id in controller.targets)
               InputChip(
+                avatar: EquipmentTypeIconImage(
+                  key: Key('development-target-chip-icon-$id'),
+                  iconId: controller.dataset!.equipment[id]!.iconId,
+                  width: 23,
+                  height: 23,
+                ),
                 label: Text(
                   controller.equipmentName(controller.dataset!.equipment[id]!),
                 ),
