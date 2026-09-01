@@ -577,6 +577,7 @@ void main() {
   testWidgets(
     'compatibility drawer adapts to narrow screens and filters rows',
     (tester) async {
+      final semanticsHandle = tester.ensureSemantics();
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(360, 640);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -663,9 +664,14 @@ void main() {
         findsNothing,
       );
 
-      await tester.tap(
+      final allScopeNode = tester.getSemantics(
         find.byKey(const Key('equipment-compatibility-tab-all')),
       );
+      expect(
+        allScopeNode.getSemanticsData().hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+      allScopeNode.owner!.performAction(allScopeNode.id, SemanticsAction.tap);
       await tester.pump();
       expect(
         explicitSemantics(
@@ -895,8 +901,16 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(
+      final expansionFilterNode = tester.getSemantics(
         find.byKey(const Key('equipment-compatibility-filter-expansion')),
+      );
+      expect(
+        expansionFilterNode.getSemanticsData().hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+      expansionFilterNode.owner!.performAction(
+        expansionFilterNode.id,
+        SemanticsAction.tap,
       );
       await tester.pump();
       expect(
@@ -917,6 +931,7 @@ void main() {
         find.byKey(const Key('equipment-compatibility-ship-102')),
         findsNothing,
       );
+      semanticsHandle.dispose();
       expect(tester.takeException(), isNull);
     },
   );

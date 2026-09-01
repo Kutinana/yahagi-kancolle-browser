@@ -506,6 +506,7 @@ class _ScopeTab extends StatelessWidget {
     selected: selected,
     label: label,
     excludeSemantics: true,
+    onTap: onTap,
     child: Material(
       color: selected ? const Color(0xff2b7180) : Colors.transparent,
       borderRadius: BorderRadius.circular(15),
@@ -582,6 +583,7 @@ class _FilterChip extends StatelessWidget {
     selected: selected,
     label: label,
     excludeSemantics: true,
+    onTap: onTap,
     child: Material(
       color: selected ? const Color(0xff173f4c) : const Color(0xff102a38),
       borderRadius: BorderRadius.circular(6),

@@ -48,11 +48,16 @@ void main() {
     },
     masterSlotItems: <int, MasterSlotItem>{
       10: MasterSlotItem(id: 10, name: '测试炮', type: <int>[0, 0, 1]),
+      11: MasterSlotItem(id: 11, name: '交集测试炮', type: <int>[0, 0, 1]),
     },
     expansionSlotSpecialRules: <int, ExpansionSlotSpecialRule>{
       10: ExpansionSlotSpecialRule(
         equipmentMasterId: 10,
         shipTypeIds: <int>{3},
+      ),
+      11: ExpansionSlotSpecialRule(
+        equipmentMasterId: 11,
+        shipMasterIds: <int>{3},
       ),
     },
     ships: <int, OwnedShip>{
@@ -125,13 +130,21 @@ void main() {
   });
 
   test('ship type, query, and slot filters return their intersection', () {
-    final rows = projection.rows(
-      equipmentMasterId: 10,
+    final queryRows = projection.rows(equipmentMasterId: 11, query: '改');
+    final queryAndTypeRows = projection.rows(
+      equipmentMasterId: 11,
       shipTypeId: 3,
-      query: '改二乙',
+      query: '改',
+    );
+    final rows = projection.rows(
+      equipmentMasterId: 11,
+      shipTypeId: 3,
+      query: '改',
       filter: EquipmentCompatibilitySlotFilter.expansion,
     );
 
+    expect(queryRows.map((row) => row.shipMaster.id), <int>[4, 2, 3]);
+    expect(queryAndTypeRows.map((row) => row.shipMaster.id), <int>[2, 3]);
     expect(rows.map((row) => row.shipMaster.id), <int>[3]);
   });
 }
