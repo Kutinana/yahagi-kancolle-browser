@@ -83,18 +83,23 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     return id == null ? null : _gameState.masterShips[id]?.name;
   }
 
-  List<DevelopmentEquipmentRecord> get filteredEquipment =>
-      _filteredEquipment(_equipmentTypeFilter);
+  List<DevelopmentEquipmentRecord> get filteredEquipment => _filteredEquipment(
+    _equipmentTypeFilter == null ? null : {_equipmentTypeFilter!},
+  );
 
   List<DevelopmentEquipmentRecord> filteredEquipmentForType(int typeId) =>
-      _filteredEquipment(typeId);
+      filteredEquipmentForTypes({typeId});
 
-  List<DevelopmentEquipmentRecord> _filteredEquipment(int? typeId) {
+  List<DevelopmentEquipmentRecord> filteredEquipmentForTypes(
+    Set<int> typeIds,
+  ) => _filteredEquipment(typeIds);
+
+  List<DevelopmentEquipmentRecord> _filteredEquipment(Set<int>? typeIds) {
     final data = _dataset;
     if (data == null) return const [];
     final query = _equipmentSearch.trim().toLowerCase();
     final output = data.equipment.values.where((item) {
-      if (typeId != null && item.typeId != typeId) return false;
+      if (typeIds != null && !typeIds.contains(item.typeId)) return false;
       if (query.isEmpty) return true;
       return equipmentName(item).toLowerCase().contains(query) ||
           item.id.toString() == query;

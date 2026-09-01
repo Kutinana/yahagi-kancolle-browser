@@ -83,6 +83,10 @@ void main() {
 
     expect(controller.filteredEquipmentForType(1).map((item) => item.id), [7]);
     expect(controller.filteredEquipmentForType(12).map((item) => item.id), [8]);
+    expect(
+      controller.filteredEquipmentForTypes({1, 12}).map((item) => item.id),
+      [7, 8],
+    );
   });
 
   test('default recipe ordering preserves calculator tie breakers', () async {

@@ -19,6 +19,13 @@ Future<void> showDevelopmentEquipmentPicker(
   ),
 );
 
+class _EquipmentTypeGroup {
+  const _EquipmentTypeGroup(this.key, this.typeIds);
+
+  final String key;
+  final List<int> typeIds;
+}
+
 class _DevelopmentEquipmentPicker extends StatefulWidget {
   const _DevelopmentEquipmentPicker({required this.controller});
 
@@ -31,7 +38,7 @@ class _DevelopmentEquipmentPicker extends StatefulWidget {
 
 class _DevelopmentEquipmentPickerState
     extends State<_DevelopmentEquipmentPicker> {
-  late int selectedTypeId = _initialTypeId();
+  late String selectedGroupKey = _initialGroupKey();
 
   EquipmentDevelopmentController get controller => widget.controller;
 
@@ -46,21 +53,43 @@ class _DevelopmentEquipmentPickerState
     return values;
   }
 
-  int _initialTypeId() {
-    final types = typeIds;
-    final current = controller.equipmentTypeFilter;
-    if (current != null && types.contains(current)) return current;
-    for (final id in controller.targets) {
-      final typeId = controller.dataset?.equipment[id]?.typeId;
-      if (typeId != null && types.contains(typeId)) return typeId;
+  List<_EquipmentTypeGroup> get typeGroups {
+    final known = <_EquipmentTypeGroup>[];
+    final unknown = <int>[];
+    for (final typeId in typeIds) {
+      if (controller.equipmentTypeName(typeId) == '—') {
+        unknown.add(typeId);
+      } else {
+        known.add(_EquipmentTypeGroup('$typeId', [typeId]));
+      }
     }
-    return types.isEmpty ? -1 : types.first;
+    if (unknown.isNotEmpty) {
+      known.add(_EquipmentTypeGroup('other', unknown));
+    }
+    return known;
   }
 
-  String _typeLabel(AppLocalizations l10n, int typeId) {
-    final value = controller.equipmentTypeName(typeId);
-    return value == '—' ? l10n.developmentOtherSecretaryGroup : value;
+  String _initialGroupKey() {
+    final groups = typeGroups;
+    final current = controller.equipmentTypeFilter;
+    if (current != null) {
+      for (final group in groups) {
+        if (group.typeIds.contains(current)) return group.key;
+      }
+    }
+    for (final id in controller.targets) {
+      final typeId = controller.dataset?.equipment[id]?.typeId;
+      for (final group in groups) {
+        if (typeId != null && group.typeIds.contains(typeId)) return group.key;
+      }
+    }
+    return groups.isEmpty ? '' : groups.first.key;
   }
+
+  String _typeLabel(AppLocalizations l10n, _EquipmentTypeGroup group) =>
+      group.key == 'other'
+      ? l10n.developmentOtherSecretaryGroup
+      : controller.equipmentTypeName(group.typeIds.single);
 
   @override
   Widget build(BuildContext context) {
@@ -69,13 +98,21 @@ class _DevelopmentEquipmentPickerState
     final width = math.min(720.0, math.max(300.0, screen.width - 32));
     final height = math.min(620.0, math.max(380.0, screen.height * 0.78));
     final leftWidth = (width * 0.3).clamp(112.0, 190.0);
-    final types = typeIds;
-    if (types.isNotEmpty && !types.contains(selectedTypeId)) {
-      selectedTypeId = types.first;
+    final groups = typeGroups;
+    if (groups.isNotEmpty &&
+        !groups.any((group) => group.key == selectedGroupKey)) {
+      selectedGroupKey = groups.first.key;
     }
-    final equipment = selectedTypeId < 0
+    _EquipmentTypeGroup? selectedGroup;
+    for (final group in groups) {
+      if (group.key == selectedGroupKey) {
+        selectedGroup = group;
+        break;
+      }
+    }
+    final equipment = selectedGroup == null
         ? const <DevelopmentEquipmentRecord>[]
-        : controller.filteredEquipmentForType(selectedTypeId);
+        : controller.filteredEquipmentForTypes(selectedGroup.typeIds.toSet());
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
       backgroundColor: Colors.transparent,
@@ -106,25 +143,27 @@ class _DevelopmentEquipmentPickerState
                       color: const Color(0xff0b1720),
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: types.length,
+                        itemCount: groups.length,
                         itemBuilder: (context, index) {
-                          final typeId = types[index];
-                          final selected = typeId == selectedTypeId;
+                          final group = groups[index];
+                          final selected = group.key == selectedGroupKey;
                           return Material(
                             color: selected
                                 ? const Color(0xff244b69)
                                 : Colors.transparent,
                             child: InkWell(
-                              key: Key('development-equipment-type-$typeId'),
+                              key: Key(
+                                'development-equipment-type-${group.key}',
+                              ),
                               onTap: () =>
-                                  setState(() => selectedTypeId = typeId),
+                                  setState(() => selectedGroupKey = group.key),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 13,
                                 ),
                                 child: Text(
-                                  _typeLabel(l10n, typeId),
+                                  _typeLabel(l10n, group),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(

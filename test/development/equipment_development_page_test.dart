@@ -108,9 +108,15 @@ void main() {
       findsNothing,
     );
     expect(find.text('舰上攻击机'), findsOneWidget);
+    expect(find.text('其他'), findsOneWidget);
     expect(find.text('#8'), findsNothing);
     expect(find.textContaining('ID '), findsNothing);
     expect(find.byKey(const Key('development-inline-search')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('development-equipment-type-other')));
+    await tester.pumpAndSettle();
+    expect(find.text('测试喷气机'), findsOneWidget);
+    expect(find.text('测试直升机'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('development-search-button')));
     await tester.pumpAndSettle();
@@ -338,6 +344,8 @@ const _state = GameState(
     8: MasterSlotItem(id: 8, name: '测试雷达', type: [0, 0, 12]),
     9: MasterSlotItem(id: 9, name: '测试爆雷', type: [0, 0, 15]),
     10: MasterSlotItem(id: 10, name: '高耗测试装备', type: [0, 0, 1]),
+    11: MasterSlotItem(id: 11, name: '测试喷气机', type: [0, 0, 47]),
+    12: MasterSlotItem(id: 12, name: '测试直升机', type: [0, 0, 48]),
   },
   masterSlotItemTypes: {8: '舰上攻击机', 12: '小型电探', 15: '爆雷', 1: '小口径主炮'},
 );
@@ -362,7 +370,7 @@ final _snapshot = <String, Object?>{
   'summary': {
     'pool_count': 3,
     'selectable_pool_count': 3,
-    'equipment_count': 4,
+    'equipment_count': 6,
     'negative_pool_count': 0,
     'minimum_resource_pool_count': 0,
   },
@@ -390,6 +398,18 @@ final _snapshot = <String, Object?>{
       'name': '高耗测试装备',
       'type_id': 1,
       'minimum_resources': [20, 20, 20, 20],
+    },
+    {
+      'id': 11,
+      'name': '测试喷气机',
+      'type_id': 47,
+      'minimum_resources': [10, 10, 10, 10],
+    },
+    {
+      'id': 12,
+      'name': '测试直升机',
+      'type_id': 48,
+      'minimum_resources': [10, 10, 10, 10],
     },
   ],
   'pools': [
