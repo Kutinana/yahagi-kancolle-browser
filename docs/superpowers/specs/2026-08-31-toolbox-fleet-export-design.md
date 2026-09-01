@@ -10,7 +10,7 @@
 
 - 新增独立「工具箱」工作区，为后续辅助工具提供稳定入口。
 - 第一项工具为「舰队导出」，支持 noro6 与 Jervis。
-- 使用 DeckBuilder v4 JSON 作为共同交换格式。
+- 舰队编成使用 DeckBuilder v4 JSON 作为共同交换格式；noro6 额外导入完整舰娘与装备库存，以支持其「舰娘/装备管理」功能。
 - 点击目标按钮后，通过系统默认浏览器打开网站并自动带入当前编成。
 - 提供导出文本刷新、查看和复制能力。
 - 默认只输出活动海域基地航空队；取消筛选时按已捕获顺序输出 DeckBuilder 支持的前 3 队。
@@ -19,8 +19,8 @@
 ## 不在本期范围内
 
 - 不在 Yahagi 内嵌 noro6 或 Jervis 网页。
-- 不向第三方上传舰娘实例 ID、账号凭据或其他不属于 DeckBuilder 编成格式的数据。
-- 不导出整个母港的舰娘与装备库存。
+- 不导出账号凭据、API Token 或其他与舰队工具无关的数据。
+- Jervis 不导入整个母港的舰娘与装备库存。
 - 不实现第二项实际工具；「其他」页面只显示开发中状态。
 - 不导出活动贴条、缎带等当前 `GameState` 未建模信息。
 
@@ -108,7 +108,9 @@
 
 - noro6 基础地址：`https://noro6.github.io/kc-web/`。
 - Jervis 兼容入口：`https://fleethub.madonoharu.workers.dev/`。
-- 使用 `Uri.replace(queryParameters: {'predeck': json})` 构造地址，确保 JSON 正确编码。
+- noro6 使用其官方 `#import:` 片段格式，载荷同时包含 `ships`、`items` 与 `predeck`。其中 `ships` 覆盖全部已捕获舰娘，`items` 覆盖全部已捕获装备，`predeck` 为当前 DeckBuilder v4 编成。
+- Jervis 使用 `Uri.replace(queryParameters: {'predeck': json})` 构造地址。
+- 两种地址都必须对 JSON 正确编码，并通过系统默认浏览器打开。
 - 使用现有 `url_launcher`，并指定 `LaunchMode.externalApplication`，交给系统默认浏览器处理。
 - 点击导出目标时先重新生成 JSON，再打开外部网站，避免发送旧文本。
 - 使用 Flutter `Clipboard` 复制文本。
@@ -159,7 +161,7 @@
 - 活动陆航默认筛选、关闭筛选及最多三队上限。
 - 基地航空队连续编号。
 - JSON 往返解析与字段类型。
-- noro6、Jervis URI 的 `predeck` 参数可解码回原 JSON。
+- noro6 URI 的 `#import:` 载荷可解码出完整舰娘、装备库存与原 DeckBuilder JSON；Jervis URI 的 `predeck` 参数可解码回原 JSON。
 
 ### Widget 测试
 
@@ -180,7 +182,7 @@
 
 ## 完成标准
 
-- 用户能从独立工具箱页面一键用系统默认浏览器打开 noro6 或 Jervis，并自动导入当前 DeckBuilder v4 编成。
+- 用户能从独立工具箱页面一键用系统默认浏览器打开 noro6 或 Jervis，并自动导入当前 DeckBuilder v4 编成；noro6 同时可直接使用舰娘与装备管理功能。
 - 用户能刷新和复制同一份导出文本。
 - 活动陆航筛选默认开启，开关行为与 poi 旧版插件一致。
 - 右上工具切换与项目现有分段按钮一致。

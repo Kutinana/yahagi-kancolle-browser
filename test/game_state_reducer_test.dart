@@ -49,6 +49,8 @@ void main() {
       expect(state.masterMissions[5]?.ammunitionConsumptionPercent, 0);
       expect(state.mapName(2, 3), '东部奥廖尔海');
       expect(state.ships[9002]?.repairDurationMilliseconds, 5400000);
+      expect(state.ships[9001]?.experience, 45000);
+      expect(state.ships[9001]?.nextExperience, 1200);
       expect(state.ships[9001]?.armor, 46);
       expect(state.ships[9001]?.evasion, 80);
       expect(state.ships[9001]?.luck, 41);

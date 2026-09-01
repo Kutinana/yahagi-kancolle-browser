@@ -380,6 +380,7 @@ class OwnedShip {
     this.condition = 49,
     this.currentFuel = 0,
     this.currentAmmo = 0,
+    this.experience = 0,
     this.nextExperience = 0,
     this.firepower = 0,
     this.firepowerMax = 0,
@@ -413,6 +414,7 @@ class OwnedShip {
   final int condition;
   final int currentFuel;
   final int currentAmmo;
+  final int experience;
   final int nextExperience;
   final int firepower;
   final int firepowerMax;

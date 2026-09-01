@@ -61,7 +61,11 @@ class _FleetExportPageState extends State<FleetExportPage> {
     setState(() => _exportText = latestText);
     var launched = false;
     try {
-      launched = await widget.launcher.open(tool, latestText);
+      launched = await widget.launcher.open(
+        tool,
+        latestText,
+        state: widget.state,
+      );
     } catch (_) {
       launched = false;
     }
