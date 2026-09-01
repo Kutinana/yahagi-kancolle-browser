@@ -26,6 +26,8 @@ void main() {
       expect(find.byKey(const Key('development-inline-search')), findsNothing);
       expect(find.text('开发工作台'), findsOneWidget);
       expect(find.text('出货概率'), findsOneWidget);
+      expect(find.text('舰上攻击机'), findsOneWidget);
+      expect(find.text('#8'), findsNothing);
       expect(find.textContaining('其他出货'), findsNothing);
       expect(find.textContaining('被替换出货'), findsNothing);
       expect(find.byKey(const Key('development-minimum-7')), findsNothing);
@@ -35,6 +37,12 @@ void main() {
           findsOneWidget,
         );
       }
+
+      final tableWidth = tester.getSize(find.byType(DataTable)).width;
+      final containerWidth = tester
+          .getSize(find.byKey(const Key('development-output-table')))
+          .width;
+      expect(tableWidth, greaterThanOrEqualTo(containerWidth - 2));
     },
   );
 
@@ -251,6 +259,7 @@ const _state = GameState(
     9: MasterSlotItem(id: 9, name: '测试爆雷', type: [0, 0, 15]),
     10: MasterSlotItem(id: 10, name: '高耗测试装备', type: [0, 0, 1]),
   },
+  masterSlotItemTypes: {8: '舰上攻击机', 12: '小型电探', 15: '爆雷', 1: '小口径主炮'},
 );
 
 const _stateWithUnknownFlagship = GameState(
