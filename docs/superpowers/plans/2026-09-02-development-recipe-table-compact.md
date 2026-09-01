@@ -137,10 +137,10 @@ git commit -m "style(装备开发): 紧凑化开发公式表格"
 在目标多选测试中选中装备后关闭对话框，增加以下断言：
 
 ```dart
-final iconFinder = find.byKey(const Key('development-target-chip-icon-1'));
+final iconFinder = find.byKey(const Key('development-target-chip-icon-7'));
 expect(iconFinder, findsOneWidget);
 final icon = tester.widget<EquipmentTypeIconImage>(iconFinder);
-expect(icon.iconId, 1);
+expect(icon.iconId, 8);
 expect(icon.width, 23);
 expect(icon.height, 23);
 ```
@@ -152,10 +152,10 @@ expect(icon.height, 23);
 运行：
 
 ```powershell
-flutter test test/development/equipment_development_page_test.dart --plain-name "target dialog uses two columns and keeps search in a button"
+flutter test test/development/equipment_development_page_test.dart --plain-name "target dialog preserves multi-selection across types"
 ```
 
-预期：FAIL；找不到 `development-target-chip-icon-1`。
+预期：FAIL；找不到 `development-target-chip-icon-7`。
 
 - [ ] **步骤 3：实现目标标签图标**
 
@@ -177,7 +177,7 @@ avatar: EquipmentTypeIconImage(
 运行：
 
 ```powershell
-flutter test test/development/equipment_development_page_test.dart --plain-name "target dialog uses two columns and keeps search in a button"
+flutter test test/development/equipment_development_page_test.dart --plain-name "target dialog preserves multi-selection across types"
 ```
 
 预期：PASS。
