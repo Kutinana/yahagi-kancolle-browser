@@ -301,6 +301,7 @@ class _ToolButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IconButton(
     tooltip: tooltip,
+    isSelected: active,
     visualDensity: VisualDensity.compact,
     style: IconButton.styleFrom(
       backgroundColor: active
@@ -483,7 +484,8 @@ class _ScopeTabs extends StatelessWidget {
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
     return Container(
-      height: 36,
+      key: const Key('equipment-compatibility-scope-tabs'),
+      height: 32,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: const Color(0xff081923),

@@ -596,6 +596,29 @@ void main() {
       expect(drawer, findsOneWidget);
       expect(tester.getSize(drawer).width, lessThanOrEqualTo(340));
       expect(
+        tester
+            .getSize(
+              find.byKey(const Key('equipment-compatibility-scope-tabs')),
+            )
+            .height,
+        32,
+      );
+      IconButton toolButton(Key key) => tester.widget<IconButton>(
+        find.descendant(of: find.byKey(key), matching: find.byType(IconButton)),
+      );
+      expect(
+        toolButton(
+          const Key('equipment-compatibility-ship-type-button'),
+        ).isSelected,
+        isFalse,
+      );
+      expect(
+        toolButton(
+          const Key('equipment-compatibility-search-button'),
+        ).isSelected,
+        isFalse,
+      );
+      expect(
         find.byKey(const Key('equipment-compatibility-ship-103')),
         findsNothing,
       );
@@ -626,10 +649,23 @@ void main() {
       );
       expect(find.text('軽巡洋艦'), findsWidgets);
       expect(find.text('駆逐艦'), findsWidgets);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('equipment-compatibility-ship-type-dialog')),
+          matching: find.text('其他'),
+        ),
+        findsOneWidget,
+      );
       await tester.tap(
         find.byKey(const Key('equipment-compatibility-ship-type-option-2')),
       );
       await tester.pumpAndSettle();
+      expect(
+        toolButton(
+          const Key('equipment-compatibility-ship-type-button'),
+        ).isSelected,
+        isTrue,
+      );
       expect(
         find.byKey(const Key('equipment-compatibility-ship-101')),
         findsOneWidget,
@@ -652,6 +688,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
+        toolButton(
+          const Key('equipment-compatibility-ship-type-button'),
+        ).isSelected,
+        isFalse,
+      );
+      expect(
         find.byKey(const Key('equipment-compatibility-ship-102')),
         findsOneWidget,
       );
@@ -668,6 +710,24 @@ void main() {
         find.byKey(const Key('equipment-compatibility-search-dialog')),
         findsOneWidget,
       );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('equipment-compatibility-search-dialog')),
+          matching: find.text('搜索舰娘'),
+        ),
+        findsNWidgets(2),
+      );
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(
+                const Key('equipment-compatibility-search-dialog-field'),
+              ),
+            )
+            .decoration
+            ?.labelText,
+        '搜索舰娘',
+      );
       await tester.enterText(
         find.byKey(const Key('equipment-compatibility-search-dialog-field')),
         '不存在',
@@ -676,6 +736,12 @@ void main() {
         find.byKey(const Key('equipment-compatibility-search-dialog-cancel')),
       );
       await tester.pumpAndSettle();
+      expect(
+        toolButton(
+          const Key('equipment-compatibility-search-button'),
+        ).isSelected,
+        isFalse,
+      );
       expect(
         find.byKey(const Key('equipment-compatibility-ship-103')),
         findsOneWidget,
@@ -693,6 +759,12 @@ void main() {
         find.byKey(const Key('equipment-compatibility-search-dialog-confirm')),
       );
       await tester.pumpAndSettle();
+      expect(
+        toolButton(
+          const Key('equipment-compatibility-search-button'),
+        ).isSelected,
+        isTrue,
+      );
       expect(
         find.byKey(const Key('equipment-compatibility-ship-101')),
         findsOneWidget,
@@ -718,6 +790,12 @@ void main() {
         find.byKey(const Key('equipment-compatibility-search-dialog-confirm')),
       );
       await tester.pumpAndSettle();
+      expect(
+        toolButton(
+          const Key('equipment-compatibility-search-button'),
+        ).isSelected,
+        isFalse,
+      );
       expect(
         find.byKey(const Key('equipment-compatibility-ship-103')),
         findsOneWidget,
@@ -2270,20 +2348,37 @@ Future<GameStateController> _equipmentCompatibilityController() async {
       jsonDecode(start2Event.responseBody) as Map<String, Object?>;
   final startData =
       jsonDecode(jsonEncode(startEnvelope['api_data'])) as Map<String, Object?>;
-  for (final entry in startData['api_mst_stype']! as List<Object?>) {
+  final shipTypes = startData['api_mst_stype']! as List<Object?>;
+  for (final entry in shipTypes) {
     (entry! as Map<String, Object?>)['api_equip_type'] = <String, Object?>{
       '1': 1,
       '10': 1,
       '14': 1,
     };
   }
+  shipTypes.add(<String, Object?>{
+    'api_id': 99,
+    'api_name': '',
+    'api_equip_type': <String, Object?>{'1': 1, '10': 1, '14': 1},
+  });
   final ships = startData['api_mst_ship']! as List<Object?>;
   final unownedShip = jsonDecode(jsonEncode(ships[1])) as Map<String, Object?>
     ..['api_id'] = 103
     ..['api_sortno'] = 52
     ..['api_name'] = '白雪';
   ships.add(unownedShip);
-  startData['api_mst_equip_ship'] = <String, Object?>{};
+  final unknownTypeShip =
+      jsonDecode(jsonEncode(ships[1])) as Map<String, Object?>
+        ..['api_id'] = 104
+        ..['api_sortno'] = 53
+        ..['api_name'] = '未知舰种'
+        ..['api_stype'] = 99;
+  ships.add(unknownTypeShip);
+  startData['api_mst_equip_ship'] = <String, Object?>{
+    '104': <String, Object?>{
+      'api_equip_type': <String, Object?>{'1': 1, '10': 1, '14': 1},
+    },
+  };
   startData['api_mst_equip_exslot'] = <Object?>[];
   startData['api_mst_equip_exslot_ship'] = <String, Object?>{
     '201': <String, Object?>{
