@@ -289,6 +289,7 @@ Future<void> main() async {
   );
   final battleController = BattleController(
     gameState: () => gameStateController.state,
+    waitForGameState: () => gameStateController.idle,
     onFriendlyHpUpdated: gameStateController.applyFriendlyBattleHp,
     damageAlertPort: const MethodChannelBattleDamageAlertPort(),
     battleDamageVibrationEnabled: () =>

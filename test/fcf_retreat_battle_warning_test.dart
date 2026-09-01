@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
@@ -298,11 +300,29 @@ void main() {
           ),
         );
 
-        final controller = BattleController(gameState: () => state);
+        var shouldDelayGameState = false;
+        final gameStateGate = Completer<void>();
+        final waitStarted = Completer<void>();
+        final controller = BattleController(
+          gameState: () => state,
+          waitForGameState: () async {
+            if (!shouldDelayGameState) return;
+            if (!waitStarted.isCompleted) waitStarted.complete();
+            await gameStateGate.future;
+          },
+          onFriendlyHpUpdated: (hpByShipId, capturedAt) {
+            state = reducer.applyFriendlyBattleHp(
+              state,
+              hpByShipId,
+              capturedAt,
+            );
+          },
+        );
+        addTearDown(controller.dispose);
 
         // 0. Map and Battle phase
         final mapEvent = kcsapiEvent(
-          '/kcsapi/api_req_map/next',
+          '/kcsapi/api_req_map/start',
           <String, Object?>{
             'api_no': 5,
             'api_maparea_id': 60,
@@ -357,8 +377,22 @@ void main() {
           <String, Object?>{},
           sequence: 4,
         );
-        state = reducer.reduce(state, gobackEvent);
+        shouldDelayGameState = true;
         controller.accept(gobackEvent);
+        await waitStarted.future;
+
+        // BattleController must not consume stale state while the game-state
+        // queue is still reducing the same API event.
+        expect(
+          controller.current!.friendEscort
+              .where((ship) => ship.ownedShipId == 203)
+              .single
+              .isEscaped,
+          isFalse,
+        );
+
+        state = reducer.reduce(state, gobackEvent);
+        gameStateGate.complete();
         await controller.idle;
 
         expect(state.combatState.escapedShipIds, <int>{203, 202});
@@ -369,12 +403,67 @@ void main() {
           isTrue,
         );
         expect(
+          currentEscort.where((s) => s.ownedShipId == 203).first.currentHp,
+          1,
+        );
+        expect(
           currentEscort.where((s) => s.ownedShipId == 202).first.isEscaped,
           isTrue,
         );
         expect(
+          currentEscort.where((s) => s.ownedShipId == 202).first.currentHp,
+          16,
+        );
+        expect(
           currentEscort.where((s) => s.ownedShipId == 201).first.isEscaped,
           isFalse,
+        );
+        expect(
+          currentEscort.where((s) => s.ownedShipId == 201).first.currentHp,
+          43,
+        );
+
+        // Moving to the next node must rebuild the navigation snapshot from
+        // the synchronized state without waiting for another battle packet.
+        shouldDelayGameState = false;
+        final nextEvent = kcsapiEvent(
+          '/kcsapi/api_req_map/next',
+          <String, Object?>{
+            'api_no': 6,
+            'api_maparea_id': 60,
+            'api_mapinfo_no': 1,
+          },
+          sequence: 5,
+        );
+        state = reducer.reduce(state, nextEvent);
+        controller.accept(nextEvent);
+        await controller.idle;
+
+        expect(controller.current!.displayStage, BattleDisplayStage.navigation);
+        final nextEscort = controller.current!.friendEscort;
+        expect(
+          nextEscort.where((s) => s.ownedShipId == 203).single.isEscaped,
+          isTrue,
+        );
+        expect(
+          nextEscort.where((s) => s.ownedShipId == 203).single.currentHp,
+          1,
+        );
+        expect(
+          nextEscort.where((s) => s.ownedShipId == 202).single.isEscaped,
+          isTrue,
+        );
+        expect(
+          nextEscort.where((s) => s.ownedShipId == 202).single.currentHp,
+          16,
+        );
+        expect(
+          nextEscort.where((s) => s.ownedShipId == 201).single.isEscaped,
+          isFalse,
+        );
+        expect(
+          nextEscort.where((s) => s.ownedShipId == 201).single.currentHp,
+          43,
         );
       },
     );

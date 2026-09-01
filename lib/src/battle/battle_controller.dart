@@ -26,6 +26,7 @@ final class BattleController extends ChangeNotifier
     implements GameApiEventConsumer {
   BattleController({
     required this.gameState,
+    this.waitForGameState,
     void Function(Map<int, int> hpByShipId, DateTime capturedAt)?
     onFriendlyHpUpdated,
     this.damageAlertPort,
@@ -49,6 +50,7 @@ final class BattleController extends ChangeNotifier
   static const Set<String> _retreatPaths = GameCapturePathCatalog.battleRetreat;
 
   final GameState Function() gameState;
+  final Future<void> Function()? waitForGameState;
   void Function(Map<int, int> hpByShipId, DateTime capturedAt)?
   _friendlyHpUpdater;
   final FrameNotificationCoalescer _captureNotifications;
@@ -130,6 +132,10 @@ final class BattleController extends ChangeNotifier
         return;
       }
       try {
+        await waitForGameState?.call();
+        if (_disposed) {
+          return;
+        }
         await _reduce(event);
         _lastError = null;
         _captureNotifications.schedule(notifyListeners);
