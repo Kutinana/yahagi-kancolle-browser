@@ -290,8 +290,12 @@ void main() {
       expect(received.toString(), contains('#import:'));
       final encodedPayload = received.toString().split('#import:').last;
       final payload = jsonDecode(Uri.decodeComponent(encodedPayload)) as Map;
-      expect(payload['predeck'], isA<Map>());
-      expect((payload['predeck'] as Map)['hqlv'], 88);
+      final displayedDeckBuilder = jsonDecode(
+        tester
+            .widget<SelectableText>(find.byKey(const Key('fleet-export-text')))
+            .data!,
+      );
+      expect(payload['predeck'], displayedDeckBuilder);
       expect(payload['ships'], <Object?>[
         <String, Object?>{
           'id': 101,
