@@ -239,30 +239,36 @@ void main() {
       expect(state.combatState.pendingEscapeShipIds, <int>[202]);
     });
 
-    test(
-      'BattleController updates current LiveBattle on goback_port',
-      () async {
+    for (final scenario in const <({String label, int equippedFlagshipId})>[
+      (label: '一队旗舰', equippedFlagshipId: 101),
+      (label: '二队旗舰', equippedFlagshipId: 201),
+    ]) {
+      test('BattleController immediately syncs retreat with FCF on '
+          '${scenario.label}', () async {
         var state = GameState.empty.copyWith(
           fleets: const <Fleet>[
             Fleet(id: 1, name: '主力', shipIds: <int>[101, 102, 103]),
             Fleet(id: 2, name: '随伴', shipIds: <int>[201, 202, 203]),
           ],
-          ships: const <int, OwnedShip>{
+          ships: <int, OwnedShip>{
             101: OwnedShip(
               id: 101,
               masterId: 546,
               level: 99,
               currentHp: 99,
               maxHp: 99,
+              slotIds: scenario.equippedFlagshipId == 101
+                  ? const <int>[701]
+                  : const <int>[],
             ),
-            102: OwnedShip(
+            102: const OwnedShip(
               id: 102,
               masterId: 662,
               level: 99,
               currentHp: 60,
               maxHp: 60,
             ),
-            103: OwnedShip(
+            103: const OwnedShip(
               id: 103,
               masterId: 119,
               level: 99,
@@ -275,20 +281,29 @@ void main() {
               level: 97,
               currentHp: 49,
               maxHp: 49,
+              slotIds: scenario.equippedFlagshipId == 201
+                  ? const <int>[701]
+                  : const <int>[],
             ),
-            202: OwnedShip(
+            202: const OwnedShip(
               id: 202,
               masterId: 35,
               level: 1,
               currentHp: 16,
               maxHp: 16,
             ),
-            203: OwnedShip(
+            203: const OwnedShip(
               id: 203,
               masterId: 36,
               level: 1,
               currentHp: 15,
               maxHp: 15,
+            ),
+          },
+          slotItems: const <int, OwnedSlotItem>{
+            701: OwnedSlotItem(
+              instanceId: 701,
+              masterSlotItemId: 107, // 艦隊司令部施設
             ),
           },
           combinedFleetType: CombinedFleetType.surfaceTaskForce,
@@ -299,6 +314,16 @@ void main() {
             currentNode: 5,
           ),
         );
+
+        final equippedFlagship = state.ships[scenario.equippedFlagshipId]!;
+        final otherFlagshipId = scenario.equippedFlagshipId == 101 ? 201 : 101;
+        expect(
+          state
+              .equipmentForShip(equippedFlagship)
+              .map((equipment) => equipment.owned.masterSlotItemId),
+          <int>[107],
+        );
+        expect(state.equipmentForShip(state.ships[otherFlagshipId]!), isEmpty);
 
         var shouldDelayGameState = false;
         final gameStateGate = Completer<void>();
@@ -465,8 +490,8 @@ void main() {
           nextEscort.where((s) => s.ownedShipId == 201).single.currentHp,
           43,
         );
-      },
-    );
+      });
+    }
 
     test('shouldShowPostBattleWarning ignores escaped ships', () {
       const escapedShip = BattleShipSnapshot(
