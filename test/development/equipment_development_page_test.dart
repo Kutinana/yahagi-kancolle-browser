@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/development/development_repository.dart';
 import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/equipment_type_icon.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
@@ -39,6 +40,18 @@ void main() {
       }
 
       final tableWidth = tester.getSize(find.byType(DataTable)).width;
+      final table = tester.widget<DataTable>(find.byType(DataTable));
+      expect(table.headingRowHeight, 34);
+      expect(table.dataRowMinHeight, 44);
+      expect(table.dataRowMaxHeight, 44);
+      final equipmentName = tester.widget<Text>(find.text('测试舰攻'));
+      expect(equipmentName.style?.fontSize, 12);
+      expect(equipmentName.style?.fontWeight, FontWeight.w800);
+      final outputIcon = tester.widget<EquipmentTypeIconImage>(
+        find.byType(EquipmentTypeIconImage).first,
+      );
+      expect(outputIcon.width, 23);
+      expect(outputIcon.height, 23);
       final containerWidth = tester
           .getSize(find.byKey(const Key('development-output-table')))
           .width;

@@ -89,8 +89,16 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
                   headingRowColor: const WidgetStatePropertyAll(
                     Color(0xff0d2935),
                   ),
-                  dataRowMinHeight: 48,
-                  dataRowMaxHeight: 56,
+                  headingRowHeight: 34,
+                  dataRowMinHeight: 44,
+                  dataRowMaxHeight: 44,
+                  horizontalMargin: 8,
+                  columnSpacing: 24,
+                  headingTextStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  dataTextStyle: const TextStyle(fontSize: 12),
                   columns: [
                     DataColumn(label: Text(widget.equipmentLabel)),
                     DataColumn(label: Text(widget.typeLabel)),
@@ -122,15 +130,27 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
                           DataCell(
                             Row(
                               children: [
-                                EquipmentTypeIconImage(
-                                  iconId: item.equipment.iconId,
-                                  width: 27,
-                                  height: 27,
+                                SizedBox(
+                                  width: 25,
+                                  height: 25,
+                                  child: Center(
+                                    child: EquipmentTypeIconImage(
+                                      iconId: item.equipment.iconId,
+                                      width: 23,
+                                      height: 23,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 7),
                                 Text(
                                   widget.controller.equipmentName(
                                     item.equipment,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                                 if (widget.controller.targets.contains(
@@ -165,6 +185,10 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
                               widget.controller.equipmentTypeName(
                                 item.equipment.typeId,
                               ),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                           DataCell(
@@ -173,6 +197,7 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
                               key: Key('development-final-rate-${item.id}'),
                               style: const TextStyle(
                                 color: Color(0xffffc85a),
+                                fontSize: 12,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
