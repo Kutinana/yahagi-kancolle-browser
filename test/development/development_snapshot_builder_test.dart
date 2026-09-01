@@ -38,7 +38,7 @@ void main() {
       {
         'api_id': 7,
         'api_name': '测试主炮',
-        'api_type': [0, 0, 1, 0, 0],
+          'api_type': [0, 0, 1, 5, 0],
         'api_broken': [1, 2, 3, 4],
       },
       {
@@ -109,6 +109,7 @@ void main() {
       equipment.first,
       containsPair('minimum_resources', [10, 20, 30, 40]),
     );
+    expect(equipment.first, containsPair('icon_id', 5));
 
     final secretaries = output['secretaries']! as List<Object?>;
     expect(

@@ -183,6 +183,7 @@ Map<String, Object?> buildDevelopmentSnapshot({
           'id': id,
           'name': item.name,
           'type_id': item.typeId,
+          'icon_id': item.iconId,
           'minimum_resources': item.broken.map((value) => value * 10).toList(),
         };
       })
@@ -285,6 +286,7 @@ Map<int, _Equipment> _parseEquipment(Object? raw) {
     result[id] = _Equipment(
       name: _requiredString(map, 'api_name', 'api_mst_slotitem[$index]'),
       typeId: types.length > 2 ? types[2] : 0,
+      iconId: types.length > 3 ? types[3] : 0,
       broken: broken,
     );
   }
@@ -419,9 +421,11 @@ class _Equipment {
   const _Equipment({
     required this.name,
     required this.typeId,
+    required this.iconId,
     required this.broken,
   });
   final String name;
   final int typeId;
+  final int iconId;
   final List<int> broken;
 }

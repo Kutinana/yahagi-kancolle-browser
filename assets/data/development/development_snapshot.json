@@ -7077,6 +7077,7 @@
       "id": 1,
       "name": "12cm単装砲",
       "type_id": 1,
+      "icon_id": 1,
       "minimum_resources": [
         0,
         10,
@@ -7088,6 +7089,7 @@
       "id": 2,
       "name": "12.7cm連装砲",
       "type_id": 1,
+      "icon_id": 1,
       "minimum_resources": [
         0,
         10,
@@ -7099,6 +7101,7 @@
       "id": 3,
       "name": "10cm連装高角砲",
       "type_id": 1,
+      "icon_id": 16,
       "minimum_resources": [
         0,
         10,
@@ -7110,6 +7113,7 @@
       "id": 4,
       "name": "14cm単装砲",
       "type_id": 2,
+      "icon_id": 2,
       "minimum_resources": [
         0,
         20,
@@ -7121,6 +7125,7 @@
       "id": 5,
       "name": "15.5cm三連装砲",
       "type_id": 2,
+      "icon_id": 2,
       "minimum_resources": [
         0,
         20,
@@ -7132,6 +7137,7 @@
       "id": 6,
       "name": "20.3cm連装砲",
       "type_id": 2,
+      "icon_id": 2,
       "minimum_resources": [
         0,
         30,
@@ -7143,6 +7149,7 @@
       "id": 7,
       "name": "35.6cm連装砲",
       "type_id": 3,
+      "icon_id": 3,
       "minimum_resources": [
         0,
         100,
@@ -7154,6 +7161,7 @@
       "id": 8,
       "name": "41cm連装砲",
       "type_id": 3,
+      "icon_id": 3,
       "minimum_resources": [
         0,
         120,
@@ -7165,6 +7173,7 @@
       "id": 9,
       "name": "46cm三連装砲",
       "type_id": 3,
+      "icon_id": 3,
       "minimum_resources": [
         0,
         240,
@@ -7176,6 +7185,7 @@
       "id": 10,
       "name": "12.7cm連装高角砲",
       "type_id": 4,
+      "icon_id": 16,
       "minimum_resources": [
         0,
         20,
@@ -7187,6 +7197,7 @@
       "id": 11,
       "name": "15.2cm単装砲",
       "type_id": 4,
+      "icon_id": 4,
       "minimum_resources": [
         0,
         20,
@@ -7198,6 +7209,7 @@
       "id": 12,
       "name": "15.5cm三連装副砲",
       "type_id": 4,
+      "icon_id": 4,
       "minimum_resources": [
         0,
         20,
@@ -7209,6 +7221,7 @@
       "id": 13,
       "name": "61cm三連装魚雷",
       "type_id": 5,
+      "icon_id": 5,
       "minimum_resources": [
         10,
         10,
@@ -7220,6 +7233,7 @@
       "id": 14,
       "name": "61cm四連装魚雷",
       "type_id": 5,
+      "icon_id": 5,
       "minimum_resources": [
         10,
         20,
@@ -7231,6 +7245,7 @@
       "id": 15,
       "name": "61cm四連装(酸素)魚雷",
       "type_id": 5,
+      "icon_id": 5,
       "minimum_resources": [
         20,
         20,
@@ -7242,6 +7257,7 @@
       "id": 16,
       "name": "九七式艦攻",
       "type_id": 8,
+      "icon_id": 8,
       "minimum_resources": [
         10,
         10,
@@ -7253,6 +7269,7 @@
       "id": 17,
       "name": "天山",
       "type_id": 8,
+      "icon_id": 8,
       "minimum_resources": [
         20,
         40,
@@ -7264,6 +7281,7 @@
       "id": 18,
       "name": "流星",
       "type_id": 8,
+      "icon_id": 8,
       "minimum_resources": [
         20,
         50,
@@ -7275,6 +7293,7 @@
       "id": 19,
       "name": "九六式艦戦",
       "type_id": 6,
+      "icon_id": 6,
       "minimum_resources": [
         10,
         10,
@@ -7286,6 +7305,7 @@
       "id": 20,
       "name": "零式艦戦21型",
       "type_id": 6,
+      "icon_id": 6,
       "minimum_resources": [
         10,
         10,
@@ -7297,6 +7317,7 @@
       "id": 21,
       "name": "零式艦戦52型",
       "type_id": 6,
+      "icon_id": 6,
       "minimum_resources": [
         10,
         20,
@@ -7308,6 +7329,7 @@
       "id": 22,
       "name": "試製烈風 後期型",
       "type_id": 6,
+      "icon_id": 6,
       "minimum_resources": [
         20,
         20,
@@ -7319,6 +7341,7 @@
       "id": 23,
       "name": "九九式艦爆",
       "type_id": 7,
+      "icon_id": 7,
       "minimum_resources": [
         10,
         10,
@@ -7330,6 +7353,7 @@
       "id": 24,
       "name": "彗星",
       "type_id": 7,
+      "icon_id": 7,
       "minimum_resources": [
         20,
         30,
@@ -7341,6 +7365,7 @@
       "id": 25,
       "name": "零式水上偵察機",
       "type_id": 10,
+      "icon_id": 10,
       "minimum_resources": [
         10,
         10,
@@ -7352,6 +7377,7 @@
       "id": 26,
       "name": "瑞雲",
       "type_id": 11,
+      "icon_id": 10,
       "minimum_resources": [
         20,
         30,
@@ -7363,6 +7389,7 @@
       "id": 27,
       "name": "13号対空電探",
       "type_id": 12,
+      "icon_id": 11,
       "minimum_resources": [
         0,
         0,
@@ -7374,6 +7401,7 @@
       "id": 28,
       "name": "22号対水上電探",
       "type_id": 12,
+      "icon_id": 11,
       "minimum_resources": [
         0,
         0,
@@ -7385,6 +7413,7 @@
       "id": 29,
       "name": "33号対水上電探",
       "type_id": 12,
+      "icon_id": 11,
       "minimum_resources": [
         0,
         0,
@@ -7396,6 +7425,7 @@
       "id": 30,
       "name": "21号対空電探",
       "type_id": 13,
+      "icon_id": 11,
       "minimum_resources": [
         0,
         0,
@@ -7407,6 +7437,7 @@
       "id": 31,
       "name": "32号対水上電探",
       "type_id": 13,
+      "icon_id": 11,
       "minimum_resources": [
         0,
         0,
@@ -7418,6 +7449,7 @@
       "id": 32,
       "name": "42号対空電探",
       "type_id": 13,
+      "icon_id": 11,
       "minimum_resources": [
         0,
         0,
@@ -7429,6 +7461,7 @@
       "id": 33,
       "name": "改良型艦本式タービン",
       "type_id": 17,
+      "icon_id": 19,
       "minimum_resources": [
         100,
         0,
@@ -7440,6 +7473,7 @@
       "id": 34,
       "name": "強化型艦本式缶",
       "type_id": 17,
+      "icon_id": 19,
       "minimum_resources": [
         100,
         0,
@@ -7451,6 +7485,7 @@
       "id": 35,
       "name": "三式弾",
       "type_id": 18,
+      "icon_id": 12,
       "minimum_resources": [
         0,
         90,
@@ -7462,6 +7497,7 @@
       "id": 36,
       "name": "九一式徹甲弾",
       "type_id": 19,
+      "icon_id": 13,
       "minimum_resources": [
         0,
         30,
@@ -7473,6 +7509,7 @@
       "id": 37,
       "name": "7.7mm機銃",
       "type_id": 21,
+      "icon_id": 15,
       "minimum_resources": [
         0,
         10,
@@ -7484,6 +7521,7 @@
       "id": 38,
       "name": "12.7mm単装機銃",
       "type_id": 21,
+      "icon_id": 15,
       "minimum_resources": [
         0,
         10,
@@ -7495,6 +7533,7 @@
       "id": 39,
       "name": "25mm連装機銃",
       "type_id": 21,
+      "icon_id": 15,
       "minimum_resources": [
         0,
         20,
@@ -7506,6 +7545,7 @@
       "id": 40,
       "name": "25mm三連装機銃",
       "type_id": 21,
+      "icon_id": 15,
       "minimum_resources": [
         0,
         30,
@@ -7517,6 +7557,7 @@
       "id": 41,
       "name": "甲標的 甲型",
       "type_id": 22,
+      "icon_id": 5,
       "minimum_resources": [
         0,
         70,
@@ -7528,6 +7569,7 @@
       "id": 44,
       "name": "九四式爆雷投射機",
       "type_id": 15,
+      "icon_id": 17,
       "minimum_resources": [
         0,
         20,
@@ -7539,6 +7581,7 @@
       "id": 45,
       "name": "三式爆雷投射機",
       "type_id": 15,
+      "icon_id": 17,
       "minimum_resources": [
         0,
         30,
@@ -7550,6 +7593,7 @@
       "id": 46,
       "name": "九三式水中聴音機",
       "type_id": 14,
+      "icon_id": 18,
       "minimum_resources": [
         0,
         0,
@@ -7561,6 +7605,7 @@
       "id": 47,
       "name": "三式水中探信儀",
       "type_id": 14,
+      "icon_id": 18,
       "minimum_resources": [
         0,
         0,
@@ -7572,6 +7617,7 @@
       "id": 48,
       "name": "12cm単装高角砲",
       "type_id": 1,
+      "icon_id": 16,
       "minimum_resources": [
         0,
         10,
@@ -7583,6 +7629,7 @@
       "id": 49,
       "name": "25mm単装機銃",
       "type_id": 21,
+      "icon_id": 15,
       "minimum_resources": [
         0,
         10,
@@ -7594,6 +7641,7 @@
       "id": 51,
       "name": "12cm30連装噴進砲",
       "type_id": 21,
+      "icon_id": 15,
       "minimum_resources": [
         0,
         40,
@@ -7605,6 +7653,7 @@
       "id": 52,
       "name": "流星改",
       "type_id": 8,
+      "icon_id": 8,
       "minimum_resources": [
         20,
         60,
@@ -7616,6 +7665,7 @@
       "id": 54,
       "name": "彩雲",
       "type_id": 9,
+      "icon_id": 9,
       "minimum_resources": [
         20,
         0,
@@ -7627,6 +7677,7 @@
       "id": 55,
       "name": "紫電改二",
       "type_id": 6,
+      "icon_id": 6,
       "minimum_resources": [
         20,
         20,
@@ -7638,6 +7689,7 @@
       "id": 57,
       "name": "彗星一二型甲",
       "type_id": 7,
+      "icon_id": 7,
       "minimum_resources": [
         20,
         30,
@@ -7649,6 +7701,7 @@
       "id": 59,
       "name": "零式水上観測機",
       "type_id": 10,
+      "icon_id": 10,
       "minimum_resources": [
         10,
         10,
@@ -7660,6 +7713,7 @@
       "id": 60,
       "name": "零式艦戦62型(爆戦)",
       "type_id": 7,
+      "icon_id": 7,
       "minimum_resources": [
         10,
         30,
@@ -7671,6 +7725,7 @@
       "id": 61,
       "name": "二式艦上偵察機",
       "type_id": 9,
+      "icon_id": 9,
       "minimum_resources": [
         30,
         10,
@@ -7682,6 +7737,7 @@
       "id": 65,
       "name": "15.2cm連装砲",
       "type_id": 2,
+      "icon_id": 2,
       "minimum_resources": [
         0,
         20,
@@ -7693,6 +7749,7 @@
       "id": 66,
       "name": "8cm高角砲",
       "type_id": 4,
+      "icon_id": 16,
       "minimum_resources": [
         0,
         10,
@@ -7704,6 +7761,7 @@
       "id": 68,
       "name": "大発動艇",
       "type_id": 24,
+      "icon_id": 20,
       "minimum_resources": [
         10,
         10,
@@ -7715,6 +7773,7 @@
       "id": 69,
       "name": "カ号観測機",
       "type_id": 25,
+      "icon_id": 21,
       "minimum_resources": [
         10,
         10,
@@ -7726,6 +7785,7 @@
       "id": 70,
       "name": "三式指揮連絡機(対潜)",
       "type_id": 26,
+      "icon_id": 22,
       "minimum_resources": [
         10,
         10,
@@ -7737,6 +7797,7 @@
       "id": 71,
       "name": "10cm連装高角砲(砲架)",
       "type_id": 4,
+      "icon_id": 16,
       "minimum_resources": [
         0,
         10,
@@ -7748,6 +7809,7 @@
       "id": 72,
       "name": "増設バルジ(中型艦)",
       "type_id": 27,
+      "icon_id": 23,
       "minimum_resources": [
         0,
         0,
@@ -7759,6 +7821,7 @@
       "id": 73,
       "name": "増設バルジ(大型艦)",
       "type_id": 28,
+      "icon_id": 23,
       "minimum_resources": [
         0,
         0,
@@ -7770,6 +7833,7 @@
       "id": 74,
       "name": "探照灯",
       "type_id": 29,
+      "icon_id": 24,
       "minimum_resources": [
         0,
         0,
@@ -7781,6 +7845,7 @@
       "id": 75,
       "name": "ドラム缶(輸送用)",
       "type_id": 30,
+      "icon_id": 25,
       "minimum_resources": [
         0,
         0,
@@ -7792,6 +7857,7 @@
       "id": 78,
       "name": "12.7cm単装砲",
       "type_id": 1,
+      "icon_id": 1,
       "minimum_resources": [
         0,
         10,
@@ -7803,6 +7869,7 @@
       "id": 90,
       "name": "20.3cm(2号)連装砲",
       "type_id": 2,
+      "icon_id": 2,
       "minimum_resources": [
         0,
         30,
@@ -7814,6 +7881,7 @@
       "id": 102,
       "name": "九八式水上偵察機(夜偵)",
       "type_id": 10,
+      "icon_id": 50,
       "minimum_resources": [
         20,
         10,
@@ -7825,6 +7893,7 @@
       "id": 117,
       "name": "試製46cm連装砲",
       "type_id": 3,
+      "icon_id": 3,
       "minimum_resources": [
         10,
         180,
@@ -7836,6 +7905,7 @@
       "id": 120,
       "name": "91式高射装置",
       "type_id": 36,
+      "icon_id": 30,
       "minimum_resources": [
         0,
         10,
@@ -7847,6 +7917,7 @@
       "id": 147,
       "name": "120mm/50 連装砲",
       "type_id": 1,
+      "icon_id": 1,
       "minimum_resources": [
         0,
         10,
@@ -7858,6 +7929,7 @@
       "id": 163,
       "name": "Ro.43水偵",
       "type_id": 10,
+      "icon_id": 10,
       "minimum_resources": [
         10,
         10,
@@ -7869,6 +7941,7 @@
       "id": 168,
       "name": "九六式陸攻",
       "type_id": 47,
+      "icon_id": 37,
       "minimum_resources": [
         70,
         40,
@@ -7880,6 +7953,7 @@
       "id": 176,
       "name": "三式戦 飛燕",
       "type_id": 48,
+      "icon_id": 44,
       "minimum_resources": [
         10,
         20,
@@ -7891,6 +7965,7 @@
       "id": 181,
       "name": "零式艦戦32型",
       "type_id": 6,
+      "icon_id": 6,
       "minimum_resources": [
         10,
         20,
@@ -7902,6 +7977,7 @@
       "id": 194,
       "name": "Laté 298B",
       "type_id": 11,
+      "icon_id": 10,
       "minimum_resources": [
         20,
         40,
@@ -7913,6 +7989,7 @@
       "id": 195,
       "name": "SBD",
       "type_id": 7,
+      "icon_id": 7,
       "minimum_resources": [
         10,
         30,
@@ -7924,6 +8001,7 @@
       "id": 197,
       "name": "F4F-3",
       "type_id": 6,
+      "icon_id": 6,
       "minimum_resources": [
         10,
         20,
@@ -7935,6 +8013,7 @@
       "id": 201,
       "name": "紫電一一型",
       "type_id": 48,
+      "icon_id": 38,
       "minimum_resources": [
         20,
         20,
@@ -7946,6 +8025,7 @@
       "id": 207,
       "name": "瑞雲(六三一空)",
       "type_id": 11,
+      "icon_id": 10,
       "minimum_resources": [
         20,
         30,
@@ -7957,6 +8037,7 @@
       "id": 210,
       "name": "潜水艦搭載電探&水防式望遠鏡",
       "type_id": 51,
+      "icon_id": 42,
       "minimum_resources": [
         0,
         0,
@@ -7968,6 +8049,7 @@
       "id": 213,
       "name": "後期型艦首魚雷(6門)",
       "type_id": 32,
+      "icon_id": 5,
       "minimum_resources": [
         20,
         30,
@@ -7979,6 +8061,7 @@
       "id": 221,
       "name": "一式戦 隼II型",
       "type_id": 48,
+      "icon_id": 44,
       "minimum_resources": [
         10,
         10,
@@ -7990,6 +8073,7 @@
       "id": 226,
       "name": "九五式爆雷",
       "type_id": 15,
+      "icon_id": 17,
       "minimum_resources": [
         10,
         20,
@@ -8001,6 +8085,7 @@
       "id": 242,
       "name": "Swordfish",
       "type_id": 8,
+      "icon_id": 8,
       "minimum_resources": [
         10,
         10,
@@ -8012,6 +8097,7 @@
       "id": 245,
       "name": "38cm四連装砲",
       "type_id": 3,
+      "icon_id": 3,
       "minimum_resources": [
         0,
         200,
@@ -8023,6 +8109,7 @@
       "id": 249,
       "name": "Fulmar",
       "type_id": 6,
+      "icon_id": 6,
       "minimum_resources": [
         10,
         20,
@@ -8034,6 +8121,7 @@
       "id": 250,
       "name": "Spitfire Mk.I",
       "type_id": 48,
+      "icon_id": 44,
       "minimum_resources": [
         10,
         20,
@@ -8045,6 +8133,7 @@
       "id": 298,
       "name": "16inch Mk.I三連装砲",
       "type_id": 3,
+      "icon_id": 3,
       "minimum_resources": [
         0,
         150,
@@ -8056,6 +8145,7 @@
       "id": 301,
       "name": "20連装7inch UP Rocket Launchers",
       "type_id": 21,
+      "icon_id": 15,
       "minimum_resources": [
         0,
         40,
@@ -8067,6 +8157,7 @@
       "id": 346,
       "name": "二式12cm迫撃砲改",
       "type_id": 15,
+      "icon_id": 17,
       "minimum_resources": [
         10,
         20,
@@ -8078,6 +8169,7 @@
       "id": 382,
       "name": "12cm単装高角砲E型",
       "type_id": 1,
+      "icon_id": 16,
       "minimum_resources": [
         0,
         10,
@@ -8089,6 +8181,7 @@
       "id": 414,
       "name": "SOC Seagull",
       "type_id": 10,
+      "icon_id": 10,
       "minimum_resources": [
         10,
         10,
@@ -8100,6 +8193,7 @@
       "id": 440,
       "name": "21inch艦首魚雷発射管6門(初期型)",
       "type_id": 32,
+      "icon_id": 5,
       "minimum_resources": [
         30,
         30,
@@ -8111,6 +8205,7 @@
       "id": 442,
       "name": "潜水艦後部魚雷発射管4門(初期型)",
       "type_id": 32,
+      "icon_id": 5,
       "minimum_resources": [
         20,
         20,
@@ -8122,6 +8217,7 @@
       "id": 445,
       "name": "二式複戦 屠龍",
       "type_id": 48,
+      "icon_id": 44,
       "minimum_resources": [
         20,
         40,
@@ -8133,6 +8229,7 @@
       "id": 457,
       "name": "後期型艦首魚雷(4門)",
       "type_id": 32,
+      "icon_id": 5,
       "minimum_resources": [
         20,
         20,
@@ -8144,6 +8241,7 @@
       "id": 500,
       "name": "発煙装置(煙幕)",
       "type_id": 54,
+      "icon_id": 54,
       "minimum_resources": [
         10,
         0,
@@ -8155,6 +8253,7 @@
       "id": 507,
       "name": "14inch/45 連装砲",
       "type_id": 3,
+      "icon_id": 3,
       "minimum_resources": [
         0,
         100,
@@ -8166,6 +8265,7 @@
       "id": 511,
       "name": "21inch艦首魚雷発射管4門(初期型)",
       "type_id": 32,
+      "icon_id": 5,
       "minimum_resources": [
         20,
         20,
@@ -8177,6 +8277,7 @@
       "id": 541,
       "name": "SBD(Yellow Wings)",
       "type_id": 7,
+      "icon_id": 7,
       "minimum_resources": [
         10,
         30,
@@ -8188,6 +8289,7 @@
       "id": 542,
       "name": "TBD(Yellow Wings)",
       "type_id": 8,
+      "icon_id": 8,
       "minimum_resources": [
         10,
         40,

@@ -254,6 +254,7 @@ class DevelopmentEquipmentRecord {
     required this.id,
     required this.name,
     required this.typeId,
+    this.iconId = 0,
     required this.minimumResources,
   });
 
@@ -262,6 +263,9 @@ class DevelopmentEquipmentRecord {
         id: _integer(json['id'], 'equipment.id'),
         name: _string(json['name'], 'equipment.name'),
         typeId: _integer(json['type_id'], 'equipment.type_id'),
+        iconId: json['icon_id'] == null
+            ? _integer(json['type_id'], 'equipment.type_id')
+            : _integer(json['icon_id'], 'equipment.icon_id'),
         minimumResources: _resources(
           json['minimum_resources'],
           'equipment.minimum_resources',
@@ -271,6 +275,7 @@ class DevelopmentEquipmentRecord {
   final int id;
   final String name;
   final int typeId;
+  final int iconId;
   final DevelopmentResources minimumResources;
 }
 

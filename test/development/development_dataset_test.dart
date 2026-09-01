@@ -46,6 +46,7 @@ void main() {
             'id': 20,
             'name': '九七式艦攻',
             'type_id': 8,
+            'icon_id': 17,
             'minimum_resources': [10, 20, 30, 40],
           },
         ],
@@ -68,6 +69,7 @@ void main() {
       dataset.equipment[20]!.minimumResources,
       const DevelopmentResources(10, 20, 30, 40),
     );
+    expect(dataset.equipment[20]!.iconId, 17);
     expect(dataset.secretaries[1]!.poolKey, 'carrier-other#1');
   });
 
