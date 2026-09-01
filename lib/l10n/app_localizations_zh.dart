@@ -2681,6 +2681,57 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developmentCommandTitle => '开发指挥台';
 
   @override
+  String get developmentWorkbenchTitle => '开发工作台';
+
+  @override
+  String get developmentCalculator => '开发计算器';
+
+  @override
+  String get developmentFormula => '开发公式';
+
+  @override
+  String get developmentOutputProbability => '出货概率';
+
+  @override
+  String get developmentFinalProbability => '最终概率';
+
+  @override
+  String get developmentAvailableRecipes => '可用公式';
+
+  @override
+  String get developmentPoolType => '池类型';
+
+  @override
+  String get developmentSelectSecretary => '选择秘书舰类型';
+
+  @override
+  String get developmentOtherSecretaryGroup => '其他';
+
+  @override
+  String get developmentEquipmentType => '类型';
+
+  @override
+  String get developmentSecretary => '秘书舰';
+
+  @override
+  String get developmentFuelShort => '油';
+
+  @override
+  String get developmentAmmoShort => '弹';
+
+  @override
+  String get developmentSteelShort => '钢';
+
+  @override
+  String get developmentBauxiteShort => '铝';
+
+  @override
+  String get developmentOutputRate => '出货率';
+
+  @override
+  String get developmentEquipment => '装备';
+
+  @override
   String get developmentCurrentFlagship => '当前旗舰';
 
   @override
@@ -5440,6 +5491,57 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developmentCommandTitle => '開發指揮台';
+
+  @override
+  String get developmentWorkbenchTitle => '開發工作台';
+
+  @override
+  String get developmentCalculator => '開發計算器';
+
+  @override
+  String get developmentFormula => '開發公式';
+
+  @override
+  String get developmentOutputProbability => '出貨機率';
+
+  @override
+  String get developmentFinalProbability => '最終機率';
+
+  @override
+  String get developmentAvailableRecipes => '可用公式';
+
+  @override
+  String get developmentPoolType => '池類型';
+
+  @override
+  String get developmentSelectSecretary => '選擇秘書艦類型';
+
+  @override
+  String get developmentOtherSecretaryGroup => '其他';
+
+  @override
+  String get developmentEquipmentType => '類型';
+
+  @override
+  String get developmentSecretary => '秘書艦';
+
+  @override
+  String get developmentFuelShort => '油';
+
+  @override
+  String get developmentAmmoShort => '彈';
+
+  @override
+  String get developmentSteelShort => '鋼';
+
+  @override
+  String get developmentBauxiteShort => '鋁';
+
+  @override
+  String get developmentOutputRate => '出貨率';
+
+  @override
+  String get developmentEquipment => '裝備';
 
   @override
   String get developmentCurrentFlagship => '當前旗艦';

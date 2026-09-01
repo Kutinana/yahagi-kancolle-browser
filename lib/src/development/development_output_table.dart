@@ -29,13 +29,15 @@ class DevelopmentOutputTable extends StatefulWidget {
     super.key,
     required this.controller,
     required this.title,
+    required this.equipmentLabel,
     required this.finalProbabilityLabel,
-    this.typeLabel = '类型',
-    this.targetLabel = '目标',
+    required this.typeLabel,
+    required this.targetLabel,
   });
 
   final EquipmentDevelopmentController controller;
   final String title;
+  final String equipmentLabel;
   final String finalProbabilityLabel;
   final String typeLabel;
   final String targetLabel;
@@ -78,95 +80,108 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
             ),
           ),
           const Divider(height: 1, color: Color(0xff31596a)),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: const WidgetStatePropertyAll(Color(0xff0d2935)),
-              dataRowMinHeight: 48,
-              dataRowMaxHeight: 56,
-              columns: [
-                const DataColumn(label: Text('装备')),
-                DataColumn(label: Text(widget.typeLabel)),
-                DataColumn(
-                  numeric: true,
-                  onSort: (_, _) => setState(() => _ascending = !_ascending),
-                  label: InkWell(
-                    key: const Key('development-output-probability-sort'),
-                    onTap: () => setState(() => _ascending = !_ascending),
-                    child: Row(
-                      children: [
-                        Text(widget.finalProbabilityLabel),
-                        const SizedBox(width: 4),
-                        Icon(
-                          _ascending
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward,
-                          size: 14,
-                          color: const Color(0xffffc85a),
-                        ),
-                      ],
-                    ),
+          LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+                  headingRowColor: const WidgetStatePropertyAll(
+                    Color(0xff0d2935),
                   ),
-                ),
-              ],
-              rows: [
-                for (final item in items)
-                  DataRow(
-                    key: ValueKey('development-output-${item.id}'),
-                    cells: [
-                      DataCell(
-                        Row(
-                          children: [
-                            EquipmentTypeIconImage(
-                              iconId: item.equipment.iconId,
-                              width: 27,
-                              height: 27,
-                            ),
-                            const SizedBox(width: 7),
-                            Text(
-                              widget.controller.equipmentName(item.equipment),
-                            ),
-                            if (widget.controller.targets.contains(
-                              item.id,
-                            )) ...[
-                              const SizedBox(width: 7),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: const Color(0xffb48732),
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  widget.targetLabel,
-                                  style: const TextStyle(
-                                    color: Color(0xffffc85a),
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      DataCell(Text('#${item.equipment.typeId}')),
-                      DataCell(
-                        Text(
-                          '${_rate(item.totalRate)}%',
-                          key: Key('development-final-rate-${item.id}'),
-                          style: const TextStyle(
-                            color: Color(0xffffc85a),
-                            fontWeight: FontWeight.w900,
+                  dataRowMinHeight: 48,
+                  dataRowMaxHeight: 56,
+                  columns: [
+                    DataColumn(label: Text(widget.equipmentLabel)),
+                    DataColumn(label: Text(widget.typeLabel)),
+                    DataColumn(
+                      numeric: true,
+                      onSort: (_, _) =>
+                          setState(() => _ascending = !_ascending),
+                      label: Row(
+                        key: const Key('development-output-probability-sort'),
+                        children: [
+                          Text(widget.finalProbabilityLabel),
+                          const SizedBox(width: 4),
+                          Icon(
+                            _ascending
+                                ? Icons.arrow_upward
+                                : Icons.arrow_downward,
+                            size: 14,
+                            color: const Color(0xffffc85a),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-              ],
+                    ),
+                  ],
+                  rows: [
+                    for (final item in items)
+                      DataRow(
+                        key: ValueKey('development-output-${item.id}'),
+                        cells: [
+                          DataCell(
+                            Row(
+                              children: [
+                                EquipmentTypeIconImage(
+                                  iconId: item.equipment.iconId,
+                                  width: 27,
+                                  height: 27,
+                                ),
+                                const SizedBox(width: 7),
+                                Text(
+                                  widget.controller.equipmentName(
+                                    item.equipment,
+                                  ),
+                                ),
+                                if (widget.controller.targets.contains(
+                                  item.id,
+                                )) ...[
+                                  const SizedBox(width: 7),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: const Color(0xffb48732),
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      widget.targetLabel,
+                                      style: const TextStyle(
+                                        color: Color(0xffffc85a),
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              widget.controller.equipmentTypeName(
+                                item.equipment.typeId,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              '${_rate(item.totalRate)}%',
+                              key: Key('development-final-rate-${item.id}'),
+                              style: const TextStyle(
+                                color: Color(0xffffc85a),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

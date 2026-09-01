@@ -65,6 +65,15 @@ void main() {
     expect(controller.filteredEquipment, isEmpty);
   });
 
+  test('equipment type name comes from captured master data', () async {
+    final controller = EquipmentDevelopmentController(
+      repository: _repository(),
+    );
+    await controller.initialize(_stateWithFlagship(101));
+
+    expect(controller.equipmentTypeName(1), '小口径主炮');
+  });
+
   test('default recipe ordering preserves calculator tie breakers', () async {
     final controller = EquipmentDevelopmentController(
       repository: _repository(),
@@ -123,6 +132,7 @@ GameState _stateWithFlagship(int masterId) => GameState(
     8: MasterSlotItem(id: 8, name: '测试雷达', type: [0, 0, 12]),
     9: MasterSlotItem(id: 9, name: '测试爆雷', type: [0, 0, 15]),
   },
+  masterSlotItemTypes: const {1: '小口径主炮'},
 );
 
 Map<String, Object?> _snapshot() => {

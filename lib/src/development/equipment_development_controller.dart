@@ -107,6 +107,9 @@ class EquipmentDevelopmentController extends ChangeNotifier {
   String equipmentName(DevelopmentEquipmentRecord item) =>
       _gameState.masterSlotItems[item.id]?.name ?? item.name;
 
+  String equipmentTypeName(int typeId) =>
+      _gameState.masterSlotItemTypes[typeId] ?? '—';
+
   Future<void> initialize(GameState state) async {
     _gameState = state;
     await _load();

@@ -31,239 +31,122 @@ class DevelopmentRecipeTable extends StatelessWidget {
         text: l10n.developmentNoResults,
       );
     }
-    return Column(
-      children: [
-        _RecipeHeader(controller: controller),
-        const SizedBox(height: 6),
-        for (var index = 0; index < controller.recipes.length; index++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 7),
-            child: _RecipeRow(
-              key: Key('development-recipe-row-$index'),
-              index: index,
-              recipe: controller.recipes[index],
-              pool: controller
-                  .dataset
-                  ?.poolsByKey[controller.recipes[index].poolKey],
-              applied: controller.isRecipeApplied(controller.recipes[index]),
-              locale: locale,
-              onApply: () => controller.applyRecipe(controller.recipes[index]),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xff0a222d),
+        border: Border.all(color: const Color(0xff31596a)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          key: const Key('development-recipe-table'),
+          showCheckboxColumn: false,
+          sortColumnIndex: _sortColumn(controller.recipeSort),
+          sortAscending: controller.sortAscending,
+          headingRowColor: const WidgetStatePropertyAll(Color(0xff0d2935)),
+          dataRowMinHeight: 46,
+          dataRowMaxHeight: 54,
+          columns: [
+            DataColumn(label: Text(l10n.developmentSecretary)),
+            DataColumn(numeric: true, label: Text(l10n.developmentFuelShort)),
+            DataColumn(numeric: true, label: Text(l10n.developmentAmmoShort)),
+            DataColumn(numeric: true, label: Text(l10n.developmentSteelShort)),
+            DataColumn(
+              numeric: true,
+              label: Text(l10n.developmentBauxiteShort),
+            ),
+            DataColumn(
+              numeric: true,
+              label: Text(l10n.developmentTotalResources),
+              onSort: (_, _) => controller.sortRecipes(
+                DevelopmentRecipeSortField.totalResources,
+              ),
+            ),
+            DataColumn(label: Text(l10n.developmentPoolType)),
+            DataColumn(
+              numeric: true,
+              label: Text(l10n.developmentOutputRate),
+              onSort: (_, _) =>
+                  controller.sortRecipes(DevelopmentRecipeSortField.targetRate),
+            ),
+            DataColumn(
+              numeric: true,
+              label: Text(l10n.developmentFailureRate),
+              onSort: (_, _) => controller.sortRecipes(
+                DevelopmentRecipeSortField.failureRate,
+              ),
+            ),
+          ],
+          rows: [
+            for (var index = 0; index < controller.recipes.length; index++)
+              _recipeRow(
+                index,
+                controller.recipes[index],
+                controller.dataset?.poolsByKey[controller
+                    .recipes[index]
+                    .poolKey],
+                l10n,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  DataRow _recipeRow(
+    int index,
+    DevelopmentRecipeResult recipe,
+    DevelopmentPoolRecord? pool,
+    AppLocalizations l10n,
+  ) {
+    final applied = controller.isRecipeApplied(recipe);
+    return DataRow(
+      selected: applied,
+      color: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const Color(0xff315b73);
+        }
+        return index.isEven ? const Color(0xff0a222d) : const Color(0xff0c2732);
+      }),
+      onSelectChanged: (_) => controller.applyRecipe(recipe),
+      cells: [
+        DataCell(
+          Semantics(
+            key: Key('development-recipe-row-$index'),
+            selected: applied,
+            button: true,
+            child: Text(
+              pool?.label(locale) ?? recipe.poolKey,
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
+        ),
+        DataCell(Text('${recipe.resources.fuel}')),
+        DataCell(Text('${recipe.resources.ammo}')),
+        DataCell(Text('${recipe.resources.steel}')),
+        DataCell(Text('${recipe.resources.bauxite}')),
+        DataCell(Text('${recipe.totalResources}')),
+        DataCell(Text(_poolTypeLabel(l10n, recipe.poolType))),
+        DataCell(
+          Text(
+            '${_rate(recipe.targetRate)}%',
+            style: const TextStyle(
+              color: Color(0xffffc85a),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        DataCell(Text('${_rate(recipe.failureRate)}%')),
       ],
     );
   }
 }
 
-class _RecipeHeader extends StatelessWidget {
-  const _RecipeHeader({required this.controller});
-  final EquipmentDevelopmentController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _SortChip(
-            label: l10n.developmentTargetRate,
-            selected:
-                controller.recipeSort == DevelopmentRecipeSortField.targetRate,
-            onTap: () =>
-                controller.sortRecipes(DevelopmentRecipeSortField.targetRate),
-          ),
-          _SortChip(
-            label: l10n.developmentTotalResources,
-            selected:
-                controller.recipeSort ==
-                DevelopmentRecipeSortField.totalResources,
-            onTap: () => controller.sortRecipes(
-              DevelopmentRecipeSortField.totalResources,
-            ),
-          ),
-          _SortChip(
-            label: l10n.developmentFailureRate,
-            selected:
-                controller.recipeSort == DevelopmentRecipeSortField.failureRate,
-            onTap: () =>
-                controller.sortRecipes(DevelopmentRecipeSortField.failureRate),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SortChip extends StatelessWidget {
-  const _SortChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(right: 6),
-    child: ActionChip(
-      label: Text(label),
-      avatar: selected ? const Icon(Icons.swap_vert, size: 16) : null,
-      onPressed: onTap,
-      side: BorderSide(
-        color: selected ? const Color(0xffd8a64a) : const Color(0xff365566),
-      ),
-      backgroundColor: selected
-          ? const Color(0xff3c301d)
-          : const Color(0xff102a38),
-    ),
-  );
-}
-
-class _RecipeRow extends StatelessWidget {
-  const _RecipeRow({
-    super.key,
-    required this.index,
-    required this.recipe,
-    required this.pool,
-    required this.locale,
-    required this.onApply,
-    required this.applied,
-  });
-  final int index;
-  final DevelopmentRecipeResult recipe;
-  final DevelopmentPoolRecord? pool;
-  final Locale locale;
-  final VoidCallback onApply;
-  final bool applied;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Semantics(
-      selected: applied,
-      button: true,
-      child: Material(
-        color: applied ? const Color(0xff3b301d) : const Color(0xff0d2532),
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            color: applied ? const Color(0xffffc85a) : const Color(0xff294b5d),
-          ),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: InkWell(
-          onTap: onApply,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 9, 6, 9),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pool?.label(locale) ?? recipe.poolKey,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xffd9e7ee),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        _poolTypeLabel(l10n, recipe.poolType),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xff84a6b6),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 7,
-                        runSpacing: 4,
-                        children: [
-                          _Metric(
-                            icon: Icons.local_gas_station,
-                            value: '${recipe.resources.fuel}',
-                          ),
-                          _Metric(
-                            icon: Icons.grain,
-                            value: '${recipe.resources.ammo}',
-                          ),
-                          _Metric(
-                            icon: Icons.hexagon_outlined,
-                            value: '${recipe.resources.steel}',
-                          ),
-                          _Metric(
-                            icon: Icons.landscape_outlined,
-                            value: '${recipe.resources.bauxite}',
-                          ),
-                          _Metric(
-                            icon: Icons.track_changes,
-                            value: '${_rate(recipe.targetRate)}%',
-                            accent: true,
-                          ),
-                          _Metric(
-                            icon: Icons.close,
-                            value: '${_rate(recipe.failureRate)}%',
-                          ),
-                          _Metric(
-                            icon: Icons.functions,
-                            value: '${recipe.totalResources}',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  key: Key('development-apply-recipe-$index'),
-                  tooltip: l10n.developmentApplyRecipe,
-                  onPressed: onApply,
-                  icon: const Icon(Icons.input, color: Color(0xffffc85a)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({required this.icon, required this.value, this.accent = false});
-  final IconData icon;
-  final String value;
-  final bool accent;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(
-        icon,
-        size: 13,
-        color: accent ? const Color(0xffffc85a) : const Color(0xff7fa3b5),
-      ),
-      const SizedBox(width: 2),
-      Text(
-        value,
-        style: TextStyle(
-          fontSize: 12,
-          color: accent ? const Color(0xffffd783) : const Color(0xffb8ccd6),
-        ),
-      ),
-    ],
-  );
-}
-
 class _EmptyRecipes extends StatelessWidget {
   const _EmptyRecipes({required this.icon, required this.text});
+
   final IconData icon;
   final String text;
 
@@ -283,6 +166,12 @@ class _EmptyRecipes extends StatelessWidget {
     ),
   );
 }
+
+int _sortColumn(DevelopmentRecipeSortField field) => switch (field) {
+  DevelopmentRecipeSortField.targetRate => 7,
+  DevelopmentRecipeSortField.totalResources => 5,
+  DevelopmentRecipeSortField.failureRate => 8,
+};
 
 String _rate(double value) => value == value.roundToDouble()
     ? '${value.round()}'

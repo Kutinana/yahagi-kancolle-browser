@@ -227,6 +227,8 @@ void main() {
       'deckBuilderV4',
       // “回填配方” is the concise action used in both Chinese scripts.
       'developmentApplyRecipe',
+      // 「其他」 is the concise fallback secretary group in both scripts.
+      'developmentOtherSecretaryGroup',
     };
     const reviewedJa = <String>{
       'appTitle',

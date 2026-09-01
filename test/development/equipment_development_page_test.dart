@@ -11,20 +11,62 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
-  testWidgets('command dashboard has no persistent search field', (
+  testWidgets(
+    'development workbench shows calculator table without old groups',
+    (tester) async {
+      await tester.pumpWidget(_app(size: const Size(1000, 700)));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('development-command-card')), findsOneWidget);
+      expect(
+        find.byKey(const Key('development-mode-calculator')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('development-mode-formula')), findsOneWidget);
+      expect(find.byKey(const Key('development-inline-search')), findsNothing);
+      expect(find.text('开发工作台'), findsOneWidget);
+      expect(find.text('出货概率'), findsOneWidget);
+      expect(find.text('舰上攻击机'), findsOneWidget);
+      expect(find.text('#8'), findsNothing);
+      expect(find.textContaining('其他出货'), findsNothing);
+      expect(find.textContaining('被替换出货'), findsNothing);
+      expect(find.byKey(const Key('development-minimum-7')), findsNothing);
+      for (var index = 0; index < 4; index++) {
+        expect(
+          find.byKey(Key('development-resource-icon-$index')),
+          findsOneWidget,
+        );
+      }
+
+      final tableWidth = tester.getSize(find.byType(DataTable)).width;
+      final containerWidth = tester
+          .getSize(find.byKey(const Key('development-output-table')))
+          .width;
+      expect(tableWidth, greaterThanOrEqualTo(containerWidth - 2));
+    },
+  );
+
+  testWidgets('workbench switches modes and preserves calculator resources', (
     tester,
   ) async {
     await tester.pumpWidget(_app(size: const Size(1000, 700)));
     await tester.pumpAndSettle();
+    final fuel = find.byType(TextFormField).first;
+    await tester.enterText(fuel, '20');
+    await tester.pump();
 
-    expect(find.byKey(const Key('development-command-card')), findsOneWidget);
-    expect(find.byKey(const Key('development-wide-layout')), findsOneWidget);
-    expect(find.byKey(const Key('development-inline-search')), findsNothing);
-    expect(find.text('开发指挥台'), findsOneWidget);
-    expect(find.text('其他出货  3%'), findsOneWidget);
-    expect(find.byKey(const Key('development-rate-details-7')), findsOneWidget);
-    expect(find.byKey(const Key('development-minimum-7')), findsOneWidget);
-    expect(find.byKey(const Key('development-rate-details-10')), findsNothing);
+    await tester.tap(find.byKey(const Key('development-mode-formula')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('development-open-target-picker')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('development-output-table')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('development-mode-calculator')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('development-output-table')), findsOneWidget);
+    expect(find.text('20'), findsWidgets);
   });
 
   testWidgets('target sheet uses a round button to open the search dialog', (
@@ -33,6 +75,7 @@ void main() {
     await tester.pumpWidget(_app(size: const Size(390, 844)));
     await tester.pumpAndSettle();
 
+    await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('development-target-sheet')), findsOneWidget);
@@ -55,6 +98,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(size: const Size(1000, 700)));
     await tester.pumpAndSettle();
+    await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-equipment-7')));
@@ -65,6 +109,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('development-recipe-row-0')), findsOneWidget);
+    for (final header in [
+      '秘书舰',
+      '油',
+      '弹',
+      '钢',
+      '铝',
+      '总资源',
+      '池类型',
+      '出货率',
+      '失败率',
+    ]) {
+      expect(find.text(header), findsOneWidget);
+    }
     await tester.tap(find.byKey(const Key('development-recipe-row-0')));
     await tester.pumpAndSettle();
     expect(find.text('11'), findsWidgets);
@@ -100,6 +157,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(size: const Size(390, 844)));
     await tester.pumpAndSettle();
+    await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-equipment-7')));
@@ -115,6 +173,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(size: const Size(390, 844)));
     await tester.pumpAndSettle();
+    await _openFormula(tester);
     await tester.tap(find.byKey(const Key('development-open-target-picker')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('development-search-button')));
@@ -158,6 +217,11 @@ void main() {
   });
 }
 
+Future<void> _openFormula(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('development-mode-formula')));
+  await tester.pumpAndSettle();
+}
+
 Widget _app({required Size size, GameState state = _state}) => MediaQuery(
   data: MediaQueryData(size: size),
   child: MaterialApp(
@@ -195,6 +259,7 @@ const _state = GameState(
     9: MasterSlotItem(id: 9, name: '测试爆雷', type: [0, 0, 15]),
     10: MasterSlotItem(id: 10, name: '高耗测试装备', type: [0, 0, 1]),
   },
+  masterSlotItemTypes: {8: '舰上攻击机', 12: '小型电探', 15: '爆雷', 1: '小口径主炮'},
 );
 
 const _stateWithUnknownFlagship = GameState(
