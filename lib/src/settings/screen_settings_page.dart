@@ -140,15 +140,6 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                         label: Text(l10n.restoreDefaultOrder),
                       ),
                     ),
-                    const Divider(color: Color(0xff294052), height: 1),
-                    buildSwitchTile(
-                      title: l10n.enhancedDamagePulse,
-                      titleKey: const Key('settings-enhanced-damage-pulse'),
-                      subtitle: l10n.enhancedDamagePulseDesc,
-                      value: layoutSettingsController.enhancedDamagePulse,
-                      onChanged:
-                          layoutSettingsController.setEnhancedDamagePulse,
-                    ),
                   ],
                 ),
               ),

@@ -77,36 +77,28 @@ void main() {
     expect(layoutController.workspaceMenuOnRight, isTrue);
   });
 
-  testWidgets(
-    'damage pulse enhancement switch defaults on and updates setting',
-    (tester) async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final layoutController = await LayoutSettingsController.load(
-        SharedPreferencesLayoutSettingsStore(),
-      );
-      final displayController = await DisplayModeController.load(
-        MemoryDisplayModeStore(),
-      );
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ScreenSettingsPage(
-            layoutSettingsController: layoutController,
-            displayModeController: displayController,
-          ),
+  testWidgets('damage pulse switch is consolidated into battle settings', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final layoutController = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    final displayController = await DisplayModeController.load(
+      MemoryDisplayModeStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ScreenSettingsPage(
+          layoutSettingsController: layoutController,
+          displayModeController: displayController,
         ),
-      );
+      ),
+    );
 
-      final label = find.byKey(const Key('settings-enhanced-damage-pulse'));
-      expect(label, findsOneWidget);
-      expect(layoutController.enhancedDamagePulse, isTrue);
-
-      final row = find.ancestor(of: label, matching: find.byType(Row)).first;
-      await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
-      await tester.pump();
-
-      expect(layoutController.enhancedDamagePulse, isFalse);
-    },
-  );
+    final label = find.byKey(const Key('settings-enhanced-damage-pulse'));
+    expect(label, findsNothing);
+  });
 
   testWidgets(
     'workspace menu reset button restores the current default order',

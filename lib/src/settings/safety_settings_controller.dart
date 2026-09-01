@@ -12,8 +12,6 @@ class SafetySettingsController extends ChangeNotifier {
 
   BattleWarningMode get battleWarningMode => _battleWarningMode;
   BattleStatusEffectSettings get battleStatusEffects => _battleStatusEffects;
-  bool get battleDamageVibrationEnabled =>
-      _battleStatusEffects.damageVibrationFilter != DamageVibrationFilter.off;
 
   static Future<SafetySettingsController> load(
     SafetySettingsStore store,
@@ -34,12 +32,6 @@ class SafetySettingsController extends ChangeNotifier {
     _battleWarningMode = mode;
     notifyListeners();
     await _store.saveWarningMode(mode);
-  }
-
-  Future<void> setBattleDamageVibrationEnabled(bool enabled) async {
-    await setDamageVibrationFilter(
-      enabled ? DamageVibrationFilter.all : DamageVibrationFilter.off,
-    );
   }
 
   Future<void> setBattleStatusEffects(

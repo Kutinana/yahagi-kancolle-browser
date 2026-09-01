@@ -9,8 +9,6 @@ abstract class SafetySettingsStore {
   Future<void> saveWarningMode(BattleWarningMode mode);
   Future<BattleStatusEffectSettings> loadBattleStatusEffects();
   Future<void> saveBattleStatusEffects(BattleStatusEffectSettings settings);
-  Future<bool> loadBattleDamageVibrationEnabled();
-  Future<void> saveBattleDamageVibrationEnabled(bool enabled);
 }
 
 class SharedPreferencesSafetySettingsStore implements SafetySettingsStore {
@@ -84,18 +82,6 @@ class SharedPreferencesSafetySettingsStore implements SafetySettingsStore {
       prefs.setBool(_moraleSparkleEnabledKey, settings.moraleSparkleEnabled),
     ]);
   }
-
-  @override
-  Future<bool> loadBattleDamageVibrationEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_damageVibrationKey) ?? true;
-  }
-
-  @override
-  Future<void> saveBattleDamageVibrationEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_damageVibrationKey, enabled);
-  }
 }
 
 class MemorySafetySettingsStore implements SafetySettingsStore {
@@ -105,7 +91,6 @@ class MemorySafetySettingsStore implements SafetySettingsStore {
   }) : _battleStatusEffects = battleStatusEffects;
 
   BattleWarningMode _mode = BattleWarningMode.confirm;
-  bool _damageVibrationEnabled = true;
   BattleStatusEffectSettings _battleStatusEffects;
 
   @override
@@ -125,22 +110,6 @@ class MemorySafetySettingsStore implements SafetySettingsStore {
     BattleStatusEffectSettings settings,
   ) async {
     _battleStatusEffects = settings;
-    _damageVibrationEnabled =
-        settings.damageVibrationFilter != DamageVibrationFilter.off;
-  }
-
-  @override
-  Future<bool> loadBattleDamageVibrationEnabled() async =>
-      _damageVibrationEnabled;
-
-  @override
-  Future<void> saveBattleDamageVibrationEnabled(bool enabled) async {
-    _damageVibrationEnabled = enabled;
-    _battleStatusEffects = _battleStatusEffects.copyWith(
-      damageVibrationFilter: enabled
-          ? DamageVibrationFilter.all
-          : DamageVibrationFilter.off,
-    );
   }
 }
 
