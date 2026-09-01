@@ -404,38 +404,45 @@ class _ResourceInputState extends State<_ResourceInput> {
   }
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 126,
-    child: TextFormField(
-      key: Key('development-resource-${widget.index}'),
-      controller: _textController,
-      focusNode: _focusNode,
-      keyboardType: TextInputType.number,
-      textInputAction: TextInputAction.done,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      onChanged: (text) {
-        final parsed = int.tryParse(text);
-        if (parsed != null && parsed >= 10 && parsed <= 300) {
-          widget.onCommit(parsed);
-        }
-      },
-      onFieldSubmitted: (_) => _focusNode.unfocus(),
-      decoration: InputDecoration(
-        labelText: widget.label,
-        isDense: true,
-        filled: true,
-        fillColor: const Color(0xff0a202b),
-        prefixIconConstraints: const BoxConstraints(minWidth: 40),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Image.asset(
-            widget.asset,
-            key: Key('development-resource-icon-${widget.index}'),
-            width: 23,
-            height: 23,
+  Widget build(BuildContext context) => Semantics(
+    key: Key('development-resource-semantics-${widget.index}'),
+    label: widget.label,
+    textField: true,
+    child: Tooltip(
+      message: widget.label,
+      child: SizedBox(
+        width: 126,
+        child: TextFormField(
+          key: Key('development-resource-${widget.index}'),
+          controller: _textController,
+          focusNode: _focusNode,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: (text) {
+            final parsed = int.tryParse(text);
+            if (parsed != null && parsed >= 10 && parsed <= 300) {
+              widget.onCommit(parsed);
+            }
+          },
+          onFieldSubmitted: (_) => _focusNode.unfocus(),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: const Color(0xff0a202b),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Image.asset(
+                widget.asset,
+                key: Key('development-resource-icon-${widget.index}'),
+                width: 23,
+                height: 23,
+              ),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
           ),
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
       ),
     ),
   );

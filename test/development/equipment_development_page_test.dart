@@ -37,6 +37,17 @@ void main() {
           find.byKey(Key('development-resource-icon-$index')),
           findsOneWidget,
         );
+        final field = tester.widget<TextField>(
+          find.descendant(
+            of: find.byKey(Key('development-resource-$index')),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(field.decoration?.labelText, isNull);
+        expect(
+          find.byKey(Key('development-resource-semantics-$index')),
+          findsOneWidget,
+        );
       }
 
       final tableWidth = tester.getSize(find.byType(DataTable)).width;
