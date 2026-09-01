@@ -5098,6 +5098,42 @@ abstract class AppLocalizations {
   /// **'类型'**
   String get developmentEquipmentType;
 
+  /// No description provided for @developmentSecretary.
+  ///
+  /// In zh, this message translates to:
+  /// **'秘书舰'**
+  String get developmentSecretary;
+
+  /// No description provided for @developmentFuelShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'油'**
+  String get developmentFuelShort;
+
+  /// No description provided for @developmentAmmoShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'弹'**
+  String get developmentAmmoShort;
+
+  /// No description provided for @developmentSteelShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'钢'**
+  String get developmentSteelShort;
+
+  /// No description provided for @developmentBauxiteShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'铝'**
+  String get developmentBauxiteShort;
+
+  /// No description provided for @developmentOutputRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'出货率'**
+  String get developmentOutputRate;
+
   /// No description provided for @developmentCurrentFlagship.
   ///
   /// In zh, this message translates to:

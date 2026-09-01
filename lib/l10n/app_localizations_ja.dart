@@ -2733,6 +2733,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get developmentEquipmentType => '種類';
 
   @override
+  String get developmentSecretary => '秘書艦';
+
+  @override
+  String get developmentFuelShort => '燃';
+
+  @override
+  String get developmentAmmoShort => '弾';
+
+  @override
+  String get developmentSteelShort => '鋼';
+
+  @override
+  String get developmentBauxiteShort => 'ボ';
+
+  @override
+  String get developmentOutputRate => '開発率';
+
+  @override
   String get developmentCurrentFlagship => '現在の旗艦';
 
   @override

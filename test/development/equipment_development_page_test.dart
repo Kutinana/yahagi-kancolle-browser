@@ -101,6 +101,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('development-recipe-row-0')), findsOneWidget);
+    for (final header in [
+      '秘书舰',
+      '油',
+      '弹',
+      '钢',
+      '铝',
+      '总资源',
+      '池类型',
+      '出货率',
+      '失败率',
+    ]) {
+      expect(find.text(header), findsOneWidget);
+    }
     await tester.tap(find.byKey(const Key('development-recipe-row-0')));
     await tester.pumpAndSettle();
     expect(find.text('11'), findsWidgets);

@@ -2708,6 +2708,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developmentEquipmentType => '类型';
 
   @override
+  String get developmentSecretary => '秘书舰';
+
+  @override
+  String get developmentFuelShort => '油';
+
+  @override
+  String get developmentAmmoShort => '弹';
+
+  @override
+  String get developmentSteelShort => '钢';
+
+  @override
+  String get developmentBauxiteShort => '铝';
+
+  @override
+  String get developmentOutputRate => '出货率';
+
+  @override
   String get developmentCurrentFlagship => '当前旗舰';
 
   @override
@@ -5494,6 +5512,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developmentEquipmentType => '類型';
+
+  @override
+  String get developmentSecretary => '秘書艦';
+
+  @override
+  String get developmentFuelShort => '油';
+
+  @override
+  String get developmentAmmoShort => '彈';
+
+  @override
+  String get developmentSteelShort => '鋼';
+
+  @override
+  String get developmentBauxiteShort => '鋁';
+
+  @override
+  String get developmentOutputRate => '出貨率';
 
   @override
   String get developmentCurrentFlagship => '當前旗艦';
