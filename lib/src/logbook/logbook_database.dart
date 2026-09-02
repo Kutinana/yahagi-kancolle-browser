@@ -40,6 +40,20 @@ final class SortieFilterCatalog {
   final List<String> statuses;
 }
 
+final class SortieRecordQuery {
+  const SortieRecordQuery({
+    this.sinceTimestamp,
+    this.maps = const <SortieMapIdentity>[],
+    this.status,
+    this.rank,
+  });
+
+  final int? sinceTimestamp;
+  final List<SortieMapIdentity> maps;
+  final String? status;
+  final String? rank;
+}
+
 final class MapResourceLogEntry {
   const MapResourceLogEntry({
     required this.eventKey,
@@ -655,8 +669,41 @@ class LogbookDatabase extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> getSortieRecords({
     int limit = 50,
     int offset = 0,
+    SortieRecordQuery query = const SortieRecordQuery(),
   }) async {
     final db = await database;
+    final clauses = <String>[];
+    final arguments = <Object>[];
+    if (query.sinceTimestamp case final since?) {
+      clauses.add('timestamp >= ?');
+      arguments.add(since);
+    }
+    if (query.maps.isNotEmpty) {
+      clauses.add(
+        '(${query.maps.map((_) => '(map_area = ? AND map_no = ? AND map_name = ? AND map_difficulty = ?)').join(' OR ')})',
+      );
+      for (final map in query.maps) {
+        arguments.addAll(<Object>[
+          map.mapArea,
+          map.mapNo,
+          map.mapName,
+          map.mapDifficulty,
+        ]);
+      }
+    }
+    final status = query.status?.trim() ?? '';
+    if (status == '资源获得') {
+      clauses.add("record_type = 'resource'");
+    } else if (status.isNotEmpty) {
+      clauses.add("record_type = 'battle' AND CAST(node_type AS TEXT) = ?");
+      arguments.add(status);
+    }
+    final rank = query.rank?.trim().toUpperCase() ?? '';
+    if (rank.isNotEmpty) {
+      clauses.add("record_type = 'battle' AND UPPER(rank) = ?");
+      arguments.add(rank);
+    }
+    final whereClause = clauses.isEmpty ? '' : 'WHERE ${clauses.join(' AND ')}';
     return db.rawQuery(
       '''
       SELECT * FROM (
@@ -691,10 +738,11 @@ class LogbookDatabase extends ChangeNotifier {
           fuel_delta, ammo_delta, steel_delta, bauxite_delta, radar_reduced
         FROM map_resource_logs
       )
+      $whereClause
       ORDER BY timestamp DESC, id DESC
       LIMIT ? OFFSET ?
       ''',
-      <Object>[limit, offset],
+      <Object>[...arguments, limit, offset],
     );
   }
 

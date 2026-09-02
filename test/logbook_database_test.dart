@@ -570,6 +570,131 @@ void main() {
     },
   );
 
+  test('sortie record query filters the union before pagination', () async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final raw = await database.database;
+    final batch = raw.batch();
+
+    void insertBattle({
+      required int timestamp,
+      required int mapArea,
+      required int mapNo,
+      required String nodeType,
+      required String rank,
+    }) {
+      batch.insert('battle_logs', <String, Object?>{
+        'timestamp': timestamp,
+        'map_area': mapArea,
+        'map_no': mapNo,
+        'map_name': mapArea == 9 ? '历史海域' : '其他海域',
+        'node': 1,
+        'node_type': nodeType,
+        'rank': rank,
+        'enemy_fleet_name': '-',
+        'friend_fleet_state': '-',
+        'enemy_fleet_state': '-',
+      });
+    }
+
+    for (var index = 0; index < 55; index++) {
+      insertBattle(
+        timestamp: 1000 + index,
+        mapArea: 9,
+        mapNo: 9,
+        nodeType: '普通战斗',
+        rank: 's',
+      );
+    }
+    insertBattle(
+      timestamp: 2000,
+      mapArea: 9,
+      mapNo: 9,
+      nodeType: '路线选择',
+      rank: 's',
+    );
+    insertBattle(
+      timestamp: 2001,
+      mapArea: 9,
+      mapNo: 9,
+      nodeType: '普通战斗',
+      rank: 'a',
+    );
+    insertBattle(
+      timestamp: 100,
+      mapArea: 9,
+      mapNo: 9,
+      nodeType: '普通战斗',
+      rank: 's',
+    );
+    insertBattle(
+      timestamp: 2002,
+      mapArea: 2,
+      mapNo: 2,
+      nodeType: '普通战斗',
+      rank: 's',
+    );
+    await batch.commit(noResult: true);
+    await database.insertMapResourceRecord(
+      MapResourceLogEntry(
+        eventKey: 'query-resource',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(2003),
+        mapArea: 9,
+        mapNo: 9,
+        mapName: '历史海域',
+        node: 2,
+      ),
+    );
+
+    const targetMap = SortieMapIdentity(
+      mapArea: 9,
+      mapNo: 9,
+      mapName: '历史海域',
+      mapDifficulty: 0,
+    );
+    const query = SortieRecordQuery(
+      sinceTimestamp: 1000,
+      maps: <SortieMapIdentity>[targetMap],
+      status: '普通战斗',
+      rank: 'S',
+    );
+    final firstPage = await database.getSortieRecords(query: query);
+    final secondPage = await database.getSortieRecords(
+      query: query,
+      offset: 50,
+    );
+
+    expect(firstPage, hasLength(50));
+    expect(secondPage, hasLength(5));
+    expect(
+      <Object?>{
+        ...firstPage.map((row) => row['id']),
+      }.intersection(<Object?>{...secondPage.map((row) => row['id'])}),
+      isEmpty,
+    );
+    expect(
+      [...firstPage, ...secondPage].every(
+        (row) =>
+            row['record_type'] == 'battle' &&
+            row['map_area'] == 9 &&
+            row['map_no'] == 9 &&
+            row['node_type'] == '普通战斗' &&
+            row['rank'] == 's' &&
+            (row['timestamp'] as int) >= 1000,
+      ),
+      isTrue,
+    );
+
+    final resources = await database.getSortieRecords(
+      query: const SortieRecordQuery(
+        maps: <SortieMapIdentity>[targetMap],
+        status: '资源获得',
+      ),
+    );
+    expect(resources, hasLength(1));
+    expect(resources.single['record_type'], 'resource');
+  });
+
   test('map resource event keys are idempotent', () async {
     final database = await LogbookDatabase.openForTesting();
     addTearDown(database.close);
