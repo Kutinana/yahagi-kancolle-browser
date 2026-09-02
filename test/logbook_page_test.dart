@@ -1110,8 +1110,56 @@ void main() {
 
       expect(find.text('历史海域 (9-9)'), findsOneWidget);
       expect(find.text('巴士岛近海 (2-2)'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('logbook-filter-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('logbook-filter-reset')));
+      await tester.tap(find.byKey(const Key('logbook-filter-apply')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('巴士岛近海 (2-2)'), findsWidgets);
+      expect(find.text('历史海域 (9-9)'), findsNothing);
     },
   );
+
+  testWidgets('sortie filter catalog refreshes after a new map record', (
+    tester,
+  ) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await database.insertMapResourceRecord(
+      MapResourceLogEntry(
+        eventKey: 'new-filter-map',
+        timestamp: DateTime(2026, 9, 2, 12),
+        mapArea: 7,
+        mapNo: 1,
+        mapName: '新海域',
+        node: 1,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+
+    final dropdown = tester.widget<DropdownButton<String>>(
+      find.descendant(
+        of: find.byKey(const Key('logbook-filter-field-map')),
+        matching: find.byType(DropdownButton<String>),
+      ),
+    );
+    expect(dropdown.items!.map((item) => item.value), contains('新海域 (7-1)'));
+  });
 
   testWidgets('sortie filter options match recorded statuses and all ranks', (
     tester,
