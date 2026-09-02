@@ -9,6 +9,7 @@ import '../battle/battle_models.dart';
 import '../game_state/game_state.dart';
 
 const String _unknownAirSuperiority = '未知';
+const String sortieResourceStatusToken = 'resource';
 
 enum LogbookChangeCategory {
   battle,
@@ -44,13 +45,13 @@ final class SortieRecordQuery {
   const SortieRecordQuery({
     this.sinceTimestamp,
     this.maps = const <SortieMapIdentity>[],
-    this.status,
+    this.statuses = const <String>[],
     this.rank,
   });
 
   final int? sinceTimestamp;
   final List<SortieMapIdentity> maps;
-  final String? status;
+  final List<String> statuses;
   final String? rank;
 }
 
@@ -691,12 +692,21 @@ class LogbookDatabase extends ChangeNotifier {
         ]);
       }
     }
-    final status = query.status?.trim() ?? '';
-    if (status == '资源获得') {
-      clauses.add("record_type = 'resource'");
-    } else if (status.isNotEmpty) {
-      clauses.add("record_type = 'battle' AND CAST(node_type AS TEXT) = ?");
-      arguments.add(status);
+    if (query.statuses.isNotEmpty) {
+      final statusClauses = <String>[];
+      if (query.statuses.contains(sortieResourceStatusToken)) {
+        statusClauses.add("record_type = 'resource'");
+      }
+      final battleStatuses = query.statuses
+          .where((status) => status != sortieResourceStatusToken)
+          .toList(growable: false);
+      if (battleStatuses.isNotEmpty) {
+        statusClauses.add(
+          "(record_type = 'battle' AND CAST(node_type AS TEXT) IN (${List.filled(battleStatuses.length, '?').join(', ')}))",
+        );
+        arguments.addAll(battleStatuses);
+      }
+      clauses.add('(${statusClauses.join(' OR ')})');
     }
     final rank = query.rank?.trim().toUpperCase() ?? '';
     if (rank.isNotEmpty) {
@@ -761,7 +771,7 @@ class LogbookDatabase extends ChangeNotifier {
       FROM battle_logs
       WHERE TRIM(CAST(node_type AS TEXT)) <> ''
       UNION
-      SELECT '资源获得' AS status
+      SELECT '$sortieResourceStatusToken' AS status
       FROM map_resource_logs
       ORDER BY status
     ''');

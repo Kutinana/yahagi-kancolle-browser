@@ -1070,7 +1070,14 @@ void main() {
         });
       }
 
-      insertBattle(timestamp: 1, mapArea: 9, mapNo: 9, mapName: '历史海域');
+      for (var index = 0; index < 55; index++) {
+        insertBattle(
+          timestamp: 1 + index,
+          mapArea: 9,
+          mapNo: 9,
+          mapName: '历史海域',
+        );
+      }
       for (var index = 0; index < 50; index++) {
         insertBattle(
           timestamp: 100 + index,
@@ -1108,8 +1115,31 @@ void main() {
       await tester.tap(find.byKey(const Key('logbook-filter-apply')));
       await tester.pumpAndSettle();
 
-      expect(find.text('历史海域 (9-9)'), findsOneWidget);
+      expect(find.text('历史海域 (9-9)'), findsWidgets);
       expect(find.text('巴士岛近海 (2-2)'), findsNothing);
+      expect(
+        tester
+            .widget<FrozenDataTable>(
+              find.byKey(const Key('logbook-table-sortie')),
+            )
+            .rowHeights,
+        hasLength(50),
+      );
+
+      await tester.drag(
+        find.byKey(const Key('logbook-sortie-body-scroll')),
+        const Offset(0, -5000),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<FrozenDataTable>(
+              find.byKey(const Key('logbook-table-sortie')),
+            )
+            .rowHeights,
+        hasLength(55),
+      );
 
       await tester.tap(find.byKey(const Key('logbook-filter-button')));
       await tester.pumpAndSettle();
@@ -1159,6 +1189,38 @@ void main() {
       ),
     );
     expect(dropdown.items!.map((item) => item.value), contains('新海域 (7-1)'));
+  });
+
+  testWidgets('clearing logs removes stale sortie rows', (tester) async {
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertMapResourceRecord(
+      MapResourceLogEntry(
+        eventKey: 'row-to-clear',
+        timestamp: DateTime(2026, 9, 2, 13),
+        mapArea: 7,
+        mapNo: 2,
+        mapName: '待清空海域',
+        node: 1,
+      ),
+    );
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('待清空海域 (7-2)'), findsOneWidget);
+
+    await database.clearAll();
+    await tester.pumpAndSettle();
+
+    expect(find.text('待清空海域 (7-2)'), findsNothing);
+    expect(find.text('暂无记录'), findsOneWidget);
   });
 
   testWidgets('sortie filter options match recorded statuses and all ranks', (
@@ -1241,6 +1303,18 @@ void main() {
       'friend_fleet_state': '6/6',
       'enemy_fleet_state': '0/6',
     });
+    await db.insert('battle_logs', <String, Object?>{
+      'timestamp': DateTime(2026, 8, 13, 13).millisecondsSinceEpoch,
+      'map_area': 1,
+      'map_no': 1,
+      'node': 2,
+      'node_type': ' 路线选择 ',
+      'rank': 's',
+      'drop_ship_id': null,
+      'enemy_fleet_name': '—',
+      'friend_fleet_state': '6/6',
+      'enemy_fleet_state': '0/6',
+    });
     final controller = BattleController(gameState: () => GameState.empty);
     addTearDown(controller.dispose);
     await tester.pumpWidget(
@@ -1263,6 +1337,27 @@ void main() {
     final options = dropdown.items!.map((item) => item.value).toList();
     expect(options, contains('旧版记录'));
     expect(options, isNot(contains('进击')));
+
+    await tester.tap(find.byKey(const Key('logbook-filter-field-status')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('旧版记录').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('logbook-filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('旧版记录'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('logbook-filter-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('logbook-filter-field-status')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('路线选择').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('logbook-filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('路线选择'), findsOneWidget);
+    expect(find.text('旧版记录'), findsNothing);
   });
 
   testWidgets('retirement filter omits the ship-name field', (tester) async {

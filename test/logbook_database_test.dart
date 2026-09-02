@@ -565,7 +565,7 @@ void main() {
       );
       expect(
         catalog.statuses,
-        unorderedEquals(<String>['普通战斗', '路线选择', '资源获得']),
+        unorderedEquals(<String>['普通战斗', '路线选择', sortieResourceStatusToken]),
       );
     },
   );
@@ -655,7 +655,7 @@ void main() {
     const query = SortieRecordQuery(
       sinceTimestamp: 1000,
       maps: <SortieMapIdentity>[targetMap],
-      status: '普通战斗',
+      statuses: <String>['普通战斗'],
       rank: 'S',
     );
     final firstPage = await database.getSortieRecords(query: query);
@@ -688,7 +688,7 @@ void main() {
     final resources = await database.getSortieRecords(
       query: const SortieRecordQuery(
         maps: <SortieMapIdentity>[targetMap],
-        status: '资源获得',
+        statuses: <String>[sortieResourceStatusToken],
       ),
     );
     expect(resources, hasLength(1));

@@ -246,6 +246,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
   SortieFilterCatalog? _sortieFilterCatalog;
   Future<void>? _sortieCatalogLoading;
   Map<String, List<SortieMapIdentity>> _sortieMapsByLabel = const {};
+  Map<String, List<String>> _sortieStatusesByLabel = const {};
   int _catalogGeneration = 0;
   int _queryGeneration = 0;
 
@@ -267,6 +268,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       _catalogGeneration += 1;
       _sortieFilterCatalog = null;
       _sortieMapsByLabel = const {};
+      _sortieStatusesByLabel = const {};
       _loadSortieFilterCatalog();
     }
     _refreshLatest();
@@ -299,7 +301,14 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
     final generation = _queryGeneration;
     try {
       final latest = await _queryRecords();
-      if (!mounted || generation != _queryGeneration || latest.isEmpty) return;
+      if (!mounted || generation != _queryGeneration) return;
+      if (latest.isEmpty) {
+        setState(() {
+          _records.clear();
+          _hasMore = false;
+        });
+        return;
+      }
       final latestIds = latest.map((row) => row['id']).toSet();
       final older = _records
           .where((row) => !latestIds.contains(row['id']))
@@ -340,11 +349,11 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
     if (widget.category != _LogbookCategory.sortie) {
       return Future<void>.value();
     }
-    if (!force && _sortieFilterCatalog != null) {
-      return Future<void>.value();
-    }
     final existing = _sortieCatalogLoading;
-    if (!force && existing != null) return existing;
+    if (!force) {
+      if (existing != null) return existing;
+      if (_sortieFilterCatalog != null) return Future<void>.value();
+    }
 
     final generation = ++_catalogGeneration;
     late final Future<void> operation;
@@ -362,14 +371,28 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
             });
             mapsByLabel.putIfAbsent(label, () => []).add(map);
           }
+          final statusesByLabel = <String, List<String>>{};
+          for (final status in catalog.statuses) {
+            final label = status == sortieResourceStatusToken
+                ? _l10n.logbookResourceNode
+                : sortieStatusLabel(status);
+            statusesByLabel.putIfAbsent(label, () => []).add(status);
+          }
           final selectedMap = _filters['map'];
+          final selectedStatus = _filters['status'];
           setState(() {
             _sortieFilterCatalog = catalog;
             _sortieMapsByLabel = mapsByLabel;
+            _sortieStatusesByLabel = statusesByLabel;
             if (selectedMap != null &&
                 selectedMap != '全部海域' &&
                 !mapsByLabel.containsKey(selectedMap)) {
               _filters = <String, String>{..._filters, 'map': '全部海域'};
+            }
+            if (selectedStatus != null &&
+                selectedStatus != '全部状态' &&
+                !statusesByLabel.containsKey(selectedStatus)) {
+              _filters = <String, String>{..._filters, 'status': '全部状态'};
             }
           });
         })
@@ -402,7 +425,9 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       maps: map == '全部海域'
           ? const <SortieMapIdentity>[]
           : _sortieMapsByLabel[map] ?? const <SortieMapIdentity>[],
-      status: status == '全部状态' ? null : status,
+      statuses: status == '全部状态'
+          ? const <String>[]
+          : _sortieStatusesByLabel[status] ?? const <String>[],
       rank: rank == '全部评价' ? null : rank,
     );
   }
@@ -562,10 +587,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
             '全部状态',
             _sortieFilterCatalog == null
                 ? _records.map(_sortieStatus)
-                : _sortieFilterCatalog!.statuses.map(
-                    (status) =>
-                        status == '资源获得' ? status : sortieStatusLabel(status),
-                  ),
+                : _sortieStatusesByLabel.keys,
           ),
         ),
         const LogbookFilterField(
