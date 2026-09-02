@@ -516,6 +516,60 @@ void main() {
     },
   );
 
+  test(
+    'sortie filter catalog includes all historical maps and statuses',
+    () async {
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+      final raw = await database.database;
+      await raw.insert('battle_logs', <String, Object?>{
+        'timestamp': 100,
+        'map_area': 9,
+        'map_no': 9,
+        'map_name': '历史海域',
+        'node': 1,
+        'node_type': '普通战斗',
+        'rank': 's',
+        'enemy_fleet_name': '-',
+        'friend_fleet_state': '-',
+        'enemy_fleet_state': '-',
+      });
+      await raw.insert('battle_logs', <String, Object?>{
+        'timestamp': 200,
+        'map_area': 2,
+        'map_no': 2,
+        'map_name': '巴士岛近海',
+        'node': 1,
+        'node_type': '路线选择',
+        'rank': 'a',
+        'enemy_fleet_name': '-',
+        'friend_fleet_state': '-',
+        'enemy_fleet_state': '-',
+      });
+      await database.insertMapResourceRecord(
+        MapResourceLogEntry(
+          eventKey: 'catalog-resource',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(300),
+          mapArea: 2,
+          mapNo: 2,
+          mapName: '巴士岛近海',
+          node: 2,
+        ),
+      );
+
+      final catalog = await database.getSortieFilterCatalog();
+
+      expect(
+        catalog.maps.map((map) => '${map.mapArea}-${map.mapNo}'),
+        unorderedEquals(<String>['2-2', '9-9']),
+      );
+      expect(
+        catalog.statuses,
+        unorderedEquals(<String>['普通战斗', '路线选择', '资源获得']),
+      );
+    },
+  );
+
   test('map resource event keys are idempotent', () async {
     final database = await LogbookDatabase.openForTesting();
     addTearDown(database.close);

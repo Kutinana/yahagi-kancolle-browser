@@ -19,6 +19,27 @@ enum LogbookChangeCategory {
   retirement,
 }
 
+final class SortieMapIdentity {
+  const SortieMapIdentity({
+    required this.mapArea,
+    required this.mapNo,
+    required this.mapName,
+    required this.mapDifficulty,
+  });
+
+  final int mapArea;
+  final int mapNo;
+  final String mapName;
+  final int mapDifficulty;
+}
+
+final class SortieFilterCatalog {
+  const SortieFilterCatalog({required this.maps, required this.statuses});
+
+  final List<SortieMapIdentity> maps;
+  final List<String> statuses;
+}
+
 final class MapResourceLogEntry {
   const MapResourceLogEntry({
     required this.eventKey,
@@ -674,6 +695,42 @@ class LogbookDatabase extends ChangeNotifier {
       LIMIT ? OFFSET ?
       ''',
       <Object>[limit, offset],
+    );
+  }
+
+  Future<SortieFilterCatalog> getSortieFilterCatalog() async {
+    final db = await database;
+    final mapRows = await db.rawQuery('''
+      SELECT map_area, map_no, map_name, map_difficulty
+      FROM battle_logs
+      UNION
+      SELECT map_area, map_no, map_name, map_difficulty
+      FROM map_resource_logs
+      ORDER BY map_area, map_no, map_difficulty, map_name
+    ''');
+    final statusRows = await db.rawQuery('''
+      SELECT CAST(node_type AS TEXT) AS status
+      FROM battle_logs
+      WHERE TRIM(CAST(node_type AS TEXT)) <> ''
+      UNION
+      SELECT '资源获得' AS status
+      FROM map_resource_logs
+      ORDER BY status
+    ''');
+    return SortieFilterCatalog(
+      maps: List<SortieMapIdentity>.unmodifiable(
+        mapRows.map(
+          (row) => SortieMapIdentity(
+            mapArea: row['map_area'] as int? ?? 0,
+            mapNo: row['map_no'] as int? ?? 0,
+            mapName: row['map_name']?.toString() ?? '',
+            mapDifficulty: row['map_difficulty'] as int? ?? 0,
+          ),
+        ),
+      ),
+      statuses: List<String>.unmodifiable(
+        statusRows.map((row) => row['status']?.toString() ?? ''),
+      ),
     );
   }
 
