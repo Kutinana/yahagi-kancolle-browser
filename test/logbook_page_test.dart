@@ -1038,6 +1038,81 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'sortie filter discovers and loads a map outside the first page',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1400, 600);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+      final raw = await database.database;
+      final batch = raw.batch();
+
+      void insertBattle({
+        required int timestamp,
+        required int mapArea,
+        required int mapNo,
+        required String mapName,
+      }) {
+        batch.insert('battle_logs', <String, Object?>{
+          'timestamp': timestamp,
+          'map_area': mapArea,
+          'map_no': mapNo,
+          'map_name': mapName,
+          'node': 1,
+          'node_type': '普通战斗',
+          'rank': 's',
+          'enemy_fleet_name': '-',
+          'friend_fleet_state': '-',
+          'enemy_fleet_state': '-',
+        });
+      }
+
+      insertBattle(timestamp: 1, mapArea: 9, mapNo: 9, mapName: '历史海域');
+      for (var index = 0; index < 50; index++) {
+        insertBattle(
+          timestamp: 100 + index,
+          mapArea: 2,
+          mapNo: 2,
+          mapName: '巴士岛近海',
+        );
+      }
+      await batch.commit(noResult: true);
+      final controller = BattleController(gameState: () => GameState.empty);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: LogbookPage(battleController: controller, database: database),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('logbook-filter-button')));
+      await tester.pumpAndSettle();
+      final dropdown = tester.widget<DropdownButton<String>>(
+        find.descendant(
+          of: find.byKey(const Key('logbook-filter-field-map')),
+          matching: find.byType(DropdownButton<String>),
+        ),
+      );
+      expect(dropdown.items!.map((item) => item.value), contains('历史海域 (9-9)'));
+
+      await tester.tap(find.byKey(const Key('logbook-filter-field-map')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('历史海域 (9-9)').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('logbook-filter-apply')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('历史海域 (9-9)'), findsOneWidget);
+      expect(find.text('巴士岛近海 (2-2)'), findsNothing);
+    },
+  );
+
   testWidgets('sortie filter options match recorded statuses and all ranks', (
     tester,
   ) async {

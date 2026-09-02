@@ -243,11 +243,17 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
   bool _refreshQueued = false;
   bool _hasMore = true;
   Map<String, String> _filters = const <String, String>{};
+  SortieFilterCatalog? _sortieFilterCatalog;
+  Future<void>? _sortieCatalogLoading;
+  Map<String, List<SortieMapIdentity>> _sortieMapsByLabel = const {};
+  int _catalogGeneration = 0;
+  int _queryGeneration = 0;
 
   @override
   void initState() {
     super.initState();
     _changeSignal(widget).addListener(_refreshLatest);
+    _loadSortieFilterCatalog();
     _loadMore();
   }
 
@@ -258,6 +264,10 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
         oldWidget.category != widget.category) {
       _changeSignal(oldWidget).removeListener(_refreshLatest);
       _changeSignal(widget).addListener(_refreshLatest);
+      _catalogGeneration += 1;
+      _sortieFilterCatalog = null;
+      _sortieMapsByLabel = const {};
+      _loadSortieFilterCatalog();
     }
     _refreshLatest();
   }
@@ -280,14 +290,16 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
 
   Future<void> _refreshLatest() async {
     if (!mounted) return;
+    _loadSortieFilterCatalog(force: true);
     if (_refreshing || _loading) {
       _refreshQueued = true;
       return;
     }
     _refreshing = true;
+    final generation = _queryGeneration;
     try {
       final latest = await _queryRecords();
-      if (!mounted || latest.isEmpty) return;
+      if (!mounted || generation != _queryGeneration || latest.isEmpty) return;
       final latestIds = latest.map((row) => row['id']).toSet();
       final older = _records
           .where((row) => !latestIds.contains(row['id']))
@@ -299,7 +311,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
           ..addAll(older);
       });
     } finally {
-      _refreshing = false;
+      if (generation == _queryGeneration) _refreshing = false;
       if (_refreshQueued && mounted) {
         _refreshQueued = false;
         Future<void>.microtask(_refreshLatest);
@@ -310,17 +322,89 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
   Future<void> _loadMore() async {
     if (_loading || !_hasMore) return;
     _loading = true;
+    final generation = _queryGeneration;
     try {
       final beforeId = _records.isEmpty ? null : _records.last['id'] as int?;
       final next = await _queryRecords(beforeId: beforeId);
-      if (!mounted) return;
+      if (!mounted || generation != _queryGeneration) return;
       setState(() {
         _records.addAll(next);
         _hasMore = next.length == _batchSize;
       });
     } finally {
-      _loading = false;
+      if (generation == _queryGeneration) _loading = false;
     }
+  }
+
+  Future<void> _loadSortieFilterCatalog({bool force = false}) {
+    if (widget.category != _LogbookCategory.sortie) {
+      return Future<void>.value();
+    }
+    if (!force && _sortieFilterCatalog != null) {
+      return Future<void>.value();
+    }
+    final existing = _sortieCatalogLoading;
+    if (!force && existing != null) return existing;
+
+    final generation = ++_catalogGeneration;
+    late final Future<void> operation;
+    operation = widget.database
+        .getSortieFilterCatalog()
+        .then((catalog) {
+          if (!mounted || generation != _catalogGeneration) return;
+          final mapsByLabel = <String, List<SortieMapIdentity>>{};
+          for (final map in catalog.maps) {
+            final label = _formatMapLabel(<String, Object?>{
+              'map_area': map.mapArea,
+              'map_no': map.mapNo,
+              'map_name': map.mapName,
+              'map_difficulty': map.mapDifficulty,
+            });
+            mapsByLabel.putIfAbsent(label, () => []).add(map);
+          }
+          final selectedMap = _filters['map'];
+          setState(() {
+            _sortieFilterCatalog = catalog;
+            _sortieMapsByLabel = mapsByLabel;
+            if (selectedMap != null &&
+                selectedMap != '全部海域' &&
+                !mapsByLabel.containsKey(selectedMap)) {
+              _filters = <String, String>{..._filters, 'map': '全部海域'};
+            }
+          });
+        })
+        .catchError((Object _) {})
+        .whenComplete(() {
+          if (identical(_sortieCatalogLoading, operation)) {
+            _sortieCatalogLoading = null;
+          }
+        });
+    _sortieCatalogLoading = operation;
+    return operation;
+  }
+
+  SortieRecordQuery get _sortieRecordQuery {
+    final date = _filters['date'] ?? '全部日期';
+    final days = switch (date) {
+      '最近 7 天' => 7,
+      '最近 30 天' => 30,
+      _ => null,
+    };
+    final map = _filters['map'] ?? '全部海域';
+    final status = _filters['status'] ?? '全部状态';
+    final rank = _filters['rank'] ?? '全部评价';
+    return SortieRecordQuery(
+      sinceTimestamp: days == null
+          ? null
+          : DateTime.now()
+                .subtract(Duration(days: days))
+                .millisecondsSinceEpoch,
+      maps: map == '全部海域'
+          ? const <SortieMapIdentity>[]
+          : _sortieMapsByLabel[map] ?? const <SortieMapIdentity>[],
+      status: status == '全部状态' ? null : status,
+      rank: rank == '全部评价' ? null : rank,
+    );
   }
 
   Future<List<Map<String, dynamic>>> _queryRecords({int? beforeId}) =>
@@ -328,6 +412,7 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
         _LogbookCategory.sortie => widget.database.getSortieRecords(
           limit: _batchSize,
           offset: beforeId == null ? 0 : _records.length,
+          query: _sortieRecordQuery,
         ),
         _LogbookCategory.expedition => widget.database.getExpeditionRecords(
           limit: _batchSize,
@@ -463,12 +548,25 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
         LogbookFilterField(
           keyName: 'map',
           label: '海域',
-          options: _distinct('全部海域', _records.map(_fullMapLabel)),
+          options: _distinct(
+            '全部海域',
+            _sortieFilterCatalog == null
+                ? _records.map(_fullMapLabel)
+                : _sortieMapsByLabel.keys,
+          ),
         ),
         LogbookFilterField(
           keyName: 'status',
           label: '状态',
-          options: _distinct('全部状态', _records.map(_sortieStatus)),
+          options: _distinct(
+            '全部状态',
+            _sortieFilterCatalog == null
+                ? _records.map(_sortieStatus)
+                : _sortieFilterCatalog!.statuses.map(
+                    (status) =>
+                        status == '资源获得' ? status : sortieStatusLabel(status),
+                  ),
+          ),
         ),
         const LogbookFilterField(
           keyName: 'rank',
@@ -563,6 +661,10 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
   }
 
   Future<void> _showFilter() async {
+    if (widget.category == _LogbookCategory.sortie) {
+      await _loadSortieFilterCatalog();
+      if (!mounted) return;
+    }
     final button =
         _filterButtonAnchor.currentContext?.findRenderObject() as RenderBox?;
     if (button == null) return;
@@ -576,7 +678,21 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       values: <String, String>{...defaults, ..._filters},
       defaults: defaults,
     );
-    if (selected != null && mounted) setState(() => _filters = selected);
+    if (selected == null || !mounted) return;
+    if (widget.category != _LogbookCategory.sortie) {
+      setState(() => _filters = selected);
+      return;
+    }
+    _queryGeneration += 1;
+    _loading = false;
+    _refreshing = false;
+    _refreshQueued = false;
+    setState(() {
+      _filters = selected;
+      _records.clear();
+      _hasMore = true;
+    });
+    await _loadMore();
   }
 
   @override
