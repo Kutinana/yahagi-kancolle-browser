@@ -761,6 +761,7 @@ void main() {
               'api_useitem_id': 68,
               'api_useitem_name': '秋刀魚',
             },
+            'api_get_exmap_useitem_id': 61,
             'api_get_ship': <String, Object?>{'api_ship_id': 101},
             'api_get_eventitem': <Object?>[
               <String, Object?>{'api_type': 1, 'api_id': 57, 'api_value': 1},
@@ -781,6 +782,12 @@ void main() {
           id: 68,
           count: 1,
           name: '秋刀鱼',
+        ),
+        BattleRewardItem(
+          kind: BattleRewardKind.item,
+          id: 61,
+          count: 1,
+          name: '甲种勋章',
         ),
         BattleRewardItem(
           kind: BattleRewardKind.item,
@@ -831,13 +838,30 @@ void main() {
     () async {
       final reducer = GameStateReducer();
       var state = reducer.reduce(GameState.empty, start2Event);
-      state = reducer.reduce(state, portEvent);
+      state = reducer
+          .reduce(state, portEvent)
+          .copyWith(combinedFleetType: CombinedFleetType.surfaceTaskForce);
       final controller = BattleController(gameState: () => state);
       addTearDown(controller.dispose);
 
       controller
         ..accept(mapStartEvent)
-        ..accept(dayBattleEvent)
+        ..accept(
+          kcsapiEvent(
+            '/kcsapi/api_req_combined_battle/battle',
+            <String, Object?>{
+              'api_deck_id': 1,
+              'api_f_nowhps': <int>[-1, 30, 15],
+              'api_f_maxhps': <int>[-1, 30, 15],
+              'api_f_nowhps_combined': <int>[-1, 15],
+              'api_f_maxhps_combined': <int>[-1, 15],
+              'api_e_nowhps': <int>[-1, 20],
+              'api_e_maxhps': <int>[-1, 20],
+              'api_ship_ke': <int>[-1, 501],
+            },
+            sequence: 224,
+          ),
+        )
         ..accept(
           kcsapiEvent(
             '/kcsapi/api_req_combined_battle/battleresult',
@@ -845,35 +869,48 @@ void main() {
               'api_win_rank': 'S',
               'api_get_exmap_useitem_id': 57,
             },
-            sequence: 224,
+            sequence: 225,
           ),
         );
       await controller.idle;
 
+      expect(
+        controller.current!.context.combinedFleetType,
+        CombinedFleetType.surfaceTaskForce,
+      );
+      expect(controller.current!.friendEscort, hasLength(1));
       expect(controller.current!.rewardItems.single.id, 57);
       expect(controller.current!.rewardItems.single.name, '勋章');
     },
   );
 
   test('ignores invalid extra-map useitem reward ids', () async {
-    final reducer = GameStateReducer();
-    var state = reducer.reduce(GameState.empty, start2Event);
-    state = reducer.reduce(state, portEvent);
-    final controller = BattleController(gameState: () => state);
-    addTearDown(controller.dispose);
+    final invalidIds = <Object?>[null, '', 0, -1, 'not-a-number'];
 
-    controller
-      ..accept(mapStartEvent)
-      ..accept(dayBattleEvent)
-      ..accept(
-        kcsapiEvent('/kcsapi/api_req_sortie/battleresult', <String, Object?>{
-          'api_win_rank': 'S',
-          'api_get_exmap_useitem_id': 'not-a-number',
-        }, sequence: 225),
+    for (var index = 0; index < invalidIds.length; index++) {
+      final reducer = GameStateReducer();
+      var state = reducer.reduce(GameState.empty, start2Event);
+      state = reducer.reduce(state, portEvent);
+      final controller = BattleController(gameState: () => state);
+
+      controller
+        ..accept(mapStartEvent)
+        ..accept(dayBattleEvent)
+        ..accept(
+          kcsapiEvent('/kcsapi/api_req_sortie/battleresult', <String, Object?>{
+            'api_win_rank': 'S',
+            'api_get_exmap_useitem_id': invalidIds[index],
+          }, sequence: 225 + index),
+        );
+      await controller.idle;
+
+      expect(
+        controller.current!.rewardItems,
+        isEmpty,
+        reason: 'invalid id ${invalidIds[index]} must be ignored',
       );
-    await controller.idle;
-
-    expect(controller.current!.rewardItems, isEmpty);
+      controller.dispose();
+    }
   });
 
   test('map itemget exposes one signed resource group and map items', () async {
