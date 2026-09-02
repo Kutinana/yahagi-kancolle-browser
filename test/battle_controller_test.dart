@@ -798,6 +798,84 @@ void main() {
     },
   );
 
+  test('records string extra-map useitem reward from sortie result', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer.reduce(state, portEvent);
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    controller
+      ..accept(mapStartEvent)
+      ..accept(dayBattleEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_req_sortie/battleresult', <String, Object?>{
+          'api_win_rank': 'S',
+          'api_get_exmap_useitem_id': '57',
+        }, sequence: 223),
+      );
+    await controller.idle;
+
+    expect(controller.current!.rewardItems, const <BattleRewardItem>[
+      BattleRewardItem(
+        kind: BattleRewardKind.item,
+        id: 57,
+        count: 1,
+        name: '勋章',
+      ),
+    ]);
+  });
+
+  test(
+    'records numeric extra-map useitem reward from combined result',
+    () async {
+      final reducer = GameStateReducer();
+      var state = reducer.reduce(GameState.empty, start2Event);
+      state = reducer.reduce(state, portEvent);
+      final controller = BattleController(gameState: () => state);
+      addTearDown(controller.dispose);
+
+      controller
+        ..accept(mapStartEvent)
+        ..accept(dayBattleEvent)
+        ..accept(
+          kcsapiEvent(
+            '/kcsapi/api_req_combined_battle/battleresult',
+            <String, Object?>{
+              'api_win_rank': 'S',
+              'api_get_exmap_useitem_id': 57,
+            },
+            sequence: 224,
+          ),
+        );
+      await controller.idle;
+
+      expect(controller.current!.rewardItems.single.id, 57);
+      expect(controller.current!.rewardItems.single.name, '勋章');
+    },
+  );
+
+  test('ignores invalid extra-map useitem reward ids', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer.reduce(state, portEvent);
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    controller
+      ..accept(mapStartEvent)
+      ..accept(dayBattleEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_req_sortie/battleresult', <String, Object?>{
+          'api_win_rank': 'S',
+          'api_get_exmap_useitem_id': 'not-a-number',
+        }, sequence: 225),
+      );
+    await controller.idle;
+
+    expect(controller.current!.rewardItems, isEmpty);
+  });
+
   test('map itemget exposes one signed resource group and map items', () async {
     final reducer = GameStateReducer();
     var state = reducer.reduce(GameState.empty, start2Event);
