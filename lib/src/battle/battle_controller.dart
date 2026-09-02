@@ -650,6 +650,7 @@ final class BattleController extends ChangeNotifier
     final enemyInfo = _optionalMap(data['api_enemy_info']);
     final getShip = _optionalMap(data['api_get_ship']);
     final getItem = _optionalMap(data['api_get_useitem']);
+    final extraMapUseItemId = _positive(data['api_get_exmap_useitem_id'], 0);
     final eventRewards = _eventRewards(data['api_get_eventitem']);
     final eventShipIds = eventRewards
         .where((reward) => reward.$1 == 2)
@@ -667,6 +668,13 @@ final class BattleController extends ChangeNotifier
           id: id,
           count: 1,
           name: expeditionRewardName(id, _string(getItem?['api_useitem_name'])),
+        ),
+      if (extraMapUseItemId > 0)
+        BattleRewardItem(
+          kind: BattleRewardKind.item,
+          id: extraMapUseItemId,
+          count: 1,
+          name: expeditionRewardName(extraMapUseItemId),
         ),
       for (final reward in eventRewards)
         if (reward.$1 != 2) _eventRewardItem(reward, gameState()),
