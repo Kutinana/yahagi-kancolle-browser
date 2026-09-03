@@ -865,6 +865,28 @@ void main() {
     await tester.pump();
     expect(find.text('当前无进行中任务'), findsOneWidget);
     expect(find.text('0/5'), findsNothing);
+
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_get_member/questlist', <String, Object?>{
+        'api_exec_count': 4,
+        'api_list': <Object?>[
+          <String, Object?>{
+            'api_no': 101,
+            'api_title': '已同步任务',
+            'api_detail': '详情',
+            'api_category': 1,
+            'api_type': 1,
+            'api_state': 2,
+            'api_progress_flag': 0,
+            'api_get_material': <int>[0, 0, 0, 0],
+          },
+        ],
+      }),
+    );
+    await controller.idle;
+    await tester.pump();
+    expect(find.text('已同步任务'), findsOneWidget);
+    expect(find.text('需进入任务界面同步信息'), findsOneWidget);
   });
 
   testWidgets('known quest completion appears immediately on home', (

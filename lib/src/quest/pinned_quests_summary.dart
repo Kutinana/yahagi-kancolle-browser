@@ -27,12 +27,8 @@ class PinnedQuestsSummary extends StatelessWidget {
         final quests = controller.state.quests.values;
         final pinnedQuests = quests.where((q) => q.isAccepted).toList();
         final state = controller.state;
-        final missingQuestCount = state.hasQuestData
-            ? (state.activeQuestCount - pinnedQuests.length).clamp(
-                0,
-                state.activeQuestCount,
-              )
-            : 1;
+        final hasMissingQuests =
+            !state.hasQuestData || state.activeQuestCount > pinnedQuests.length;
         final l10n =
             AppLocalizations.of(context) ??
             lookupAppLocalizations(const Locale('zh'));
@@ -122,7 +118,7 @@ class PinnedQuestsSummary extends StatelessWidget {
                     ),
                   ),
                 ),
-                for (var index = 0; index < missingQuestCount; index++)
+                if (hasMissingQuests)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     child: Text(
