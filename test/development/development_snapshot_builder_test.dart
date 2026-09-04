@@ -11,6 +11,10 @@ void main() {
   );
 
   final start2 = <String, Object?>{
+    'api_mst_stype': <Object?>[
+      {'api_id': 2, 'api_name': '駆逐艦'},
+      {'api_id': 3, 'api_name': '軽巡洋艦'},
+    ],
     'api_mst_ship': <Object?>[
       {
         'api_id': 1,
@@ -59,7 +63,7 @@ void main() {
                 '开发池名称': '水雷系-测试',
                 '开发池ID': 2,
                 '舰种': ['DD'],
-                '舰型': ['绫波型'],
+                '舰型': ['1'],
                 '舰名': ['一号'],
                 '舰ID': [3],
                 '不包含舰ID': [3, 1],
@@ -83,6 +87,18 @@ void main() {
             'ja': '水雷系-テスト-門限',
           },
         },
+        localizedShipTypeNames: const {
+          'DD': {'zh': '测试驱逐舰', 'zh_Hant': '測試驅逐艦'},
+        },
+        localizedShipNames: const {
+          'zh': {1: '一号舰', 3: '三号舰'},
+          'zh_Hant': {1: '一號艦', 3: '三號艦'},
+        },
+        localizedCtypeNames: const {
+          'zh': {1: '绫波型'},
+          'zh_Hant': {1: '綾波型'},
+          'ja': {1: '綾波型'},
+        },
         source: source,
         generatedAt: DateTime.utc(2026, 9, 1),
       );
@@ -98,6 +114,11 @@ void main() {
     // then exclusions remove only the first 3 and first 1.
     expect(first['ship_ids'], [2, 1, 2, 1, 2]);
     expect(first['pool_key'], '水雷系-测试#2');
+    expect(first['descriptions'], {
+      'zh': '测试驱逐舰,绫波型,一号舰,不包含三号舰(3),一号舰(1),三号舰(3)',
+      'zh_Hant': '測試驅逐艦,綾波型,一號艦,不包含三號艦(3),一號艦(1),三號艦(3)',
+      'ja': '駆逐艦,綾波型,一号,除外三号(3),一号(1),三号(3)',
+    });
     expect(jsonEncode(output), jsonEncode(build()));
   });
 
@@ -146,6 +167,20 @@ void main() {
         ],
       ),
       throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => build(
+        pools: const [
+          {
+            '开发池名称': '水雷系-测试',
+            '开发池ID': 2,
+            '舰型': ['999'],
+            '出货率': {'7': 1},
+          },
+        ],
+      ),
+      throwsA(isA<FormatException>()),
+      reason: '未知数字舰级不能直接泄漏到用户界面',
     );
   });
 }

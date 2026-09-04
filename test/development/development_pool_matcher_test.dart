@@ -113,6 +113,7 @@ Map<String, Object?> _pool(
   'pool_key': key,
   'name': key.split('#').first,
   'labels': {'zh': key, 'zh_Hant': key, 'ja': key},
+  'descriptions': {'zh': '测试秘书舰', 'zh_Hant': '測試秘書艦', 'ja': 'テスト秘書艦'},
   'pool_id': id,
   'ship_ids': ships,
   'minimum_resources': ?minimum,

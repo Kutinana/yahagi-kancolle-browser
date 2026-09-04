@@ -25,7 +25,24 @@ Future<void> main(List<String> arguments) async {
     final poolNames = File(
       '${sourceDirectory.path}${Platform.pathSeparator}src${Platform.pathSeparator}i18n${Platform.pathSeparator}names${Platform.pathSeparator}poolNames.ts',
     );
-    for (final file in [developmentPool, start2, ctype, poolNames]) {
+    final stypeNames = File(
+      '${sourceDirectory.path}${Platform.pathSeparator}src${Platform.pathSeparator}i18n${Platform.pathSeparator}names${Platform.pathSeparator}stypeNames.ts',
+    );
+    final zhHansShips = _i18nFile(sourceDirectory, 'zh-Hans', 'ships.json');
+    final zhHantShips = _i18nFile(sourceDirectory, 'zh-Hant', 'ships.json');
+    final zhHantCtypes = _i18nFile(sourceDirectory, 'zh-Hant', 'ctype.json');
+    final jaCtypes = _i18nFile(sourceDirectory, 'ja', 'ctype.json');
+    for (final file in [
+      developmentPool,
+      start2,
+      ctype,
+      poolNames,
+      stypeNames,
+      zhHansShips,
+      zhHantShips,
+      zhHantCtypes,
+      jaCtypes,
+    ]) {
       if (!await file.exists()) {
         throw StateError('Missing source file: ${file.path}');
       }
@@ -75,6 +92,11 @@ Future<void> main(List<String> arguments) async {
       'start2.json': start2,
       'ctype.json': ctype,
       'poolNames.ts': poolNames,
+      'stypeNames.ts': stypeNames,
+      'i18n/zh-Hans/ships.json': zhHansShips,
+      'i18n/zh-Hant/ships.json': zhHantShips,
+      'i18n/zh-Hant/ctype.json': zhHantCtypes,
+      'i18n/ja/ctype.json': jaCtypes,
     };
     final hashes = <String, String>{};
     for (final entry in sourceFiles.entries) {
@@ -86,17 +108,34 @@ Future<void> main(List<String> arguments) async {
     final decodedPools = jsonDecode(await developmentPool.readAsString());
     final decodedStart2 = jsonDecode(await start2.readAsString());
     final decodedCtype = jsonDecode(await ctype.readAsString());
+    final decodedZhHansShips = jsonDecode(await zhHansShips.readAsString());
+    final decodedZhHantShips = jsonDecode(await zhHantShips.readAsString());
+    final decodedZhHantCtypes = jsonDecode(await zhHantCtypes.readAsString());
+    final decodedJaCtypes = jsonDecode(await jaCtypes.readAsString());
     if (decodedPools is! List ||
         decodedStart2 is! Map ||
         decodedCtype is! Map) {
       throw const FormatException('Source JSON root types are invalid');
     }
     final labels = _parsePoolLabels(await poolNames.readAsString());
+    final shipTypeLabels = _parseShipTypeLabels(
+      await stypeNames.readAsString(),
+    );
     final snapshot = buildDevelopmentSnapshot(
       pools: decodedPools.cast<Object?>(),
       start2: decodedStart2.map((key, value) => MapEntry('$key', value)),
       ctypeNames: decodedCtype.map((key, value) => MapEntry('$key', '$value')),
       poolLabels: labels,
+      localizedShipTypeNames: shipTypeLabels,
+      localizedShipNames: {
+        'zh': _numericNameMap(decodedZhHansShips, 'zh-Hans ships'),
+        'zh_Hant': _numericNameMap(decodedZhHantShips, 'zh-Hant ships'),
+      },
+      localizedCtypeNames: {
+        'zh': _numericNameMap(decodedCtype, 'zh-Hans ctypes'),
+        'zh_Hant': _numericNameMap(decodedZhHantCtypes, 'zh-Hant ctypes'),
+        'ja': _numericNameMap(decodedJaCtypes, 'ja ctypes'),
+      },
       source: DevelopmentSourceMetadata(
         repository: _repository,
         commit: commit,
@@ -122,6 +161,24 @@ Future<void> main(List<String> arguments) async {
     stderr.writeln('development data sync failed: $error');
     exitCode = 64;
   }
+}
+
+File _i18nFile(Directory sourceDirectory, String locale, String name) => File(
+  '${sourceDirectory.path}${Platform.pathSeparator}public${Platform.pathSeparator}data${Platform.pathSeparator}i18n${Platform.pathSeparator}$locale${Platform.pathSeparator}$name',
+);
+
+Map<int, String> _numericNameMap(Object? source, String label) {
+  if (source is! Map) throw FormatException('$label must be an object');
+  final result = <int, String>{};
+  for (final entry in source.entries) {
+    final id = int.tryParse('${entry.key}');
+    final value = entry.value;
+    if (id == null || value is! String || value.isEmpty) {
+      throw FormatException('$label contains an invalid entry: ${entry.key}');
+    }
+    result[id] = value;
+  }
+  return result;
 }
 
 _SyncOptions _parseArguments(List<String> arguments) {
@@ -166,6 +223,24 @@ Map<String, Map<String, String>> _parsePoolLabels(String source) {
   }
   if (result.isEmpty) {
     throw const FormatException('poolNames.ts contains no pool labels');
+  }
+  return result;
+}
+
+Map<String, Map<String, String>> _parseShipTypeLabels(String source) {
+  final result = <String, Map<String, String>>{};
+  final pattern = RegExp(
+    r"^\s*([A-Z]+):\s*\{\s*'zh-Hans':\s*'([^']+)',\s*'zh-Hant':\s*'([^']+)',\s*en:\s*'[^']+',?\s*\}",
+    multiLine: true,
+  );
+  for (final match in pattern.allMatches(source)) {
+    result[match.group(1)!] = <String, String>{
+      'zh': match.group(2)!,
+      'zh_Hant': match.group(3)!,
+    };
+  }
+  if (result.isEmpty) {
+    throw const FormatException('stypeNames.ts contains no ship type labels');
   }
   return result;
 }

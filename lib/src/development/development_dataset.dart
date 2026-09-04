@@ -158,12 +158,14 @@ class DevelopmentPoolRecord {
     required this.key,
     required this.name,
     required Map<String, String> labels,
+    Map<String, String> descriptions = const {},
     required this.poolId,
     required List<int> shipIds,
     required this.minimumResources,
     required Map<int, double> dropRates,
     required this.criteria,
   }) : labels = UnmodifiableMapView(labels),
+       descriptions = UnmodifiableMapView(descriptions),
        shipIds = List.unmodifiable(shipIds),
        shipIdSet = Set.unmodifiable(shipIds),
        dropRates = UnmodifiableMapView(dropRates);
@@ -178,11 +180,20 @@ class DevelopmentPoolRecord {
         throw FormatException('Pool is missing label $locale');
       }
     }
+    final descriptions = <String, String>{};
+    final descriptionsRaw = _map(json['descriptions'], 'pool.descriptions');
+    for (final locale in const ['zh', 'zh_Hant', 'ja']) {
+      descriptions[locale] = _string(
+        descriptionsRaw[locale],
+        'pool.descriptions.$locale',
+      );
+    }
     final minimumRaw = json['minimum_resources'];
     return DevelopmentPoolRecord(
       key: _string(json['pool_key'], 'pool.pool_key'),
       name: _string(json['name'], 'pool.name'),
       labels: labels,
+      descriptions: descriptions,
       poolId: _integer(json['pool_id'], 'pool.pool_id'),
       shipIds: _integerList(json['ship_ids'], 'pool.ship_ids'),
       minimumResources: minimumRaw == null
@@ -198,6 +209,7 @@ class DevelopmentPoolRecord {
   final String key;
   final String name;
   final Map<String, String> labels;
+  final Map<String, String> descriptions;
   final int poolId;
   final List<int> shipIds;
   final Set<int> shipIdSet;
@@ -214,6 +226,15 @@ class DevelopmentPoolRecord {
         (locale.scriptCode == 'Hant' ||
             const {'TW', 'HK', 'MO'}.contains(locale.countryCode));
     return labels[traditional ? 'zh_Hant' : 'zh']!;
+  }
+
+  String description(Locale locale) {
+    if (locale.languageCode == 'ja') return descriptions['ja'] ?? '';
+    final traditional =
+        locale.languageCode == 'zh' &&
+        (locale.scriptCode == 'Hant' ||
+            const {'TW', 'HK', 'MO'}.contains(locale.countryCode));
+    return descriptions[traditional ? 'zh_Hant' : 'zh'] ?? '';
   }
 }
 

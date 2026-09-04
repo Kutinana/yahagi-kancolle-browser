@@ -29,6 +29,7 @@ void main() {
             'pool_key': 'carrier-other#1',
             'name': '空母系-其它',
             'labels': {'zh': '空母系-其它', 'zh_Hant': '空母系-其它', 'ja': '空母系-その他'},
+            'descriptions': {'zh': '正规空母', 'zh_Hant': '正規空母', 'ja': '正規空母'},
             'pool_id': 1,
             'ship_ids': [1, 1, 2],
             'drop_rates': {unknownEquipment ? '999' : '20': 2},
@@ -62,6 +63,16 @@ void main() {
       dataset.pool('carrier-other#1').label(const Locale('ja')),
       '空母系-その他',
     );
+    final localizedPool = dataset.pool('carrier-other#1');
+    expect(localizedPool.description(const Locale('zh')), '正规空母');
+    expect(
+      localizedPool.description(
+        const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+      ),
+      '正規空母',
+    );
+    expect(localizedPool.description(const Locale('zh', 'TW')), '正規空母');
+    expect(localizedPool.description(const Locale('ja')), '正規空母');
     expect(dataset.poolsByName['空母系-其它'], hasLength(1));
     expect(dataset.pool('carrier-other#1').shipIds, [1, 1, 2]);
     expect(dataset.pool('carrier-other#1').shipIdSet, {1, 2});
@@ -80,6 +91,15 @@ void main() {
     );
   });
 
+  test('dataset requires all localized pool descriptions', () {
+    final input = snapshot();
+    final pool =
+        (input['pools']! as List<Object?>).single as Map<String, Object?>;
+    pool.remove('descriptions');
+
+    expect(() => DevelopmentDataset.fromJson(input), throwsFormatException);
+  });
+
   test(
     'bundled snapshot loads with the expected authoritative counts',
     () async {
@@ -93,6 +113,12 @@ void main() {
       expect(dataset.selectablePools, hasLength(45));
       expect(dataset.equipment, hasLength(102));
       expect(dataset.source.commit, 'd065120');
+      expect(dataset.source.hashes, contains('stypeNames.ts'));
+      expect(
+        dataset.pool('炮战系-意#1').description(const Locale('zh')),
+        '利托里奥,罗马,扎拉,波拉',
+      );
+      expect(dataset.pool('水雷系-意驱#1').description(const Locale('zh')), '西北风级');
     },
   );
 

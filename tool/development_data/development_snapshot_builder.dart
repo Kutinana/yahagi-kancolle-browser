@@ -41,6 +41,9 @@ Map<String, Object?> buildDevelopmentSnapshot({
   required Map<String, Object?> start2,
   required Map<String, String> ctypeNames,
   required Map<String, Map<String, String>> poolLabels,
+  required Map<String, Map<String, String>> localizedShipTypeNames,
+  Map<String, Map<int, String>> localizedShipNames = const {},
+  Map<String, Map<int, String>> localizedCtypeNames = const {},
   required DevelopmentSourceMetadata source,
   required DateTime generatedAt,
 }) {
@@ -49,6 +52,9 @@ Map<String, Object?> buildDevelopmentSnapshot({
   }
 
   final ships = _parseShips(start2['api_mst_ship']);
+  final japaneseShipTypeNames = _parseJapaneseShipTypeNames(
+    start2['api_mst_stype'],
+  );
   final equipment = _parseEquipment(start2['api_mst_slotitem']);
   final shipOrder = ships.keys.toList(growable: false);
   final chains = _buildShipChains(ships, shipOrder);
@@ -161,6 +167,21 @@ Map<String, Object?> buildDevelopmentSnapshot({
       'pool_key': key,
       'name': name,
       'labels': _sortedStringMap(labels),
+      'descriptions': _buildDescriptions(
+        stypes: stypes,
+        ctypes: ctypes,
+        shipNames: shipNames,
+        directIds: directIds,
+        excludedIds: excludedIds,
+        ships: ships,
+        shipOrder: shipOrder,
+        ctypeIds: ctypeIds,
+        ctypeNames: ctypeNames,
+        localizedShipNames: localizedShipNames,
+        localizedCtypeNames: localizedCtypeNames,
+        localizedShipTypeNames: localizedShipTypeNames,
+        japaneseShipTypeNames: japaneseShipTypeNames,
+      ),
       'pool_id': poolId,
       'ship_ids': expandedIds,
       'minimum_resources': ?minimum,
@@ -246,6 +267,104 @@ Map<String, Object?> buildDevelopmentSnapshot({
     'equipment': equipmentOutput,
     'secretaries': secretaries,
   };
+}
+
+Map<String, String> _buildDescriptions({
+  required List<String> stypes,
+  required List<String> ctypes,
+  required List<String> shipNames,
+  required List<int> directIds,
+  required List<int> excludedIds,
+  required Map<int, _Ship> ships,
+  required List<int> shipOrder,
+  required Map<String, int> ctypeIds,
+  required Map<String, String> ctypeNames,
+  required Map<String, Map<int, String>> localizedShipNames,
+  required Map<String, Map<int, String>> localizedCtypeNames,
+  required Map<String, Map<String, String>> localizedShipTypeNames,
+  required Map<int, String> japaneseShipTypeNames,
+}) {
+  String shipLabel(int id, String locale) =>
+      localizedShipNames[locale]?[id] ?? ships[id]?.name ?? '';
+
+  String ctypeLabel(String value, String locale) {
+    final numericId = int.tryParse(value);
+    final id = numericId ?? ctypeIds[value];
+    if (id == null) return value;
+    final localized =
+        localizedCtypeNames[locale]?[id] ??
+        (locale == 'zh' ? ctypeNames['$id'] : null) ??
+        (numericId == null ? value : null);
+    if (localized == null || localized.isEmpty) {
+      throw FormatException(
+        'Missing $locale ctype label for numeric development ctype $value',
+      );
+    }
+    return localized;
+  }
+
+  int? shipNameId(String name) => shipOrder.cast<int?>().firstWhere(
+    (id) => id != null && ships[id]?.name == name,
+    orElse: () => null,
+  );
+
+  String shipTypeLabel(String code, String locale) {
+    String? value;
+    if (locale == 'ja') {
+      value = code == 'FBB'
+          ? '高速戦艦'
+          : japaneseShipTypeNames[_shipTypeIds[code]];
+    } else {
+      value = localizedShipTypeNames[code]?[locale];
+    }
+    if (value == null || value.isEmpty) {
+      throw FormatException('Missing $locale ship type label for $code');
+    }
+    return value;
+  }
+
+  return <String, String>{
+    for (final locale in const ['zh', 'zh_Hant', 'ja'])
+      locale: () {
+        final parts = <String>[
+          for (final code in stypes) shipTypeLabel(code, locale),
+          for (final value in ctypes) ctypeLabel(value, locale),
+          for (final name in shipNames)
+            if (shipNameId(name) case final id?)
+              shipLabel(id, locale)
+            else
+              name,
+        ];
+        final excluded = excludedIds
+            .map((id) {
+              final name = shipLabel(id, locale);
+              return name.isEmpty ? '' : '$name($id)';
+            })
+            .where((value) => value.isNotEmpty)
+            .toList(growable: false);
+        if (excluded.isNotEmpty) {
+          parts.add('${locale == 'ja' ? '除外' : '不包含'}${excluded.join(',')}');
+        }
+        for (final id in directIds) {
+          final name = shipLabel(id, locale);
+          if (name.isNotEmpty) parts.add('$name($id)');
+        }
+        return parts.join(',');
+      }(),
+  };
+}
+
+Map<int, String> _parseJapaneseShipTypeNames(Object? raw) {
+  if (raw is! List) {
+    throw const FormatException('start2.api_mst_stype must be a list');
+  }
+  final result = <int, String>{};
+  for (var index = 0; index < raw.length; index++) {
+    final map = _objectMap(raw[index], 'api_mst_stype[$index]');
+    result[_requiredInt(map, 'api_id', 'api_mst_stype[$index]')] =
+        _requiredString(map, 'api_name', 'api_mst_stype[$index]');
+  }
+  return result;
 }
 
 Map<int, _Ship> _parseShips(Object? raw) {

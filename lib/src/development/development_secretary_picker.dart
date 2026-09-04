@@ -105,7 +105,7 @@ class DevelopmentSecretaryPicker extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  selected?.label(locale) ?? '—',
+                  selected == null ? '—' : _poolDisplayLabel(selected, locale),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -281,10 +281,13 @@ class _DevelopmentSecretaryPickerDialogState
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      _poolLabelParts(
-                                        pool.label(widget.locale),
-                                        widget.otherLabel,
-                                      ).$2,
+                                      _poolDisplayLabel(
+                                        pool,
+                                        widget.locale,
+                                        otherLabel: widget.otherLabel,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontWeight: selected
                                             ? FontWeight.w800
@@ -314,6 +317,18 @@ class _DevelopmentSecretaryPickerDialogState
       ),
     );
   }
+}
+
+String _poolDisplayLabel(
+  DevelopmentPoolRecord pool,
+  Locale locale, {
+  String? otherLabel,
+}) {
+  final label = otherLabel == null
+      ? pool.label(locale)
+      : _poolLabelParts(pool.label(locale), otherLabel).$2;
+  final description = pool.description(locale).trim();
+  return description.isEmpty ? label : '$label（$description）';
 }
 
 (String, String) _poolLabelParts(String label, String otherLabel) {

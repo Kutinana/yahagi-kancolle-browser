@@ -26,9 +26,9 @@ void main() {
         home: Scaffold(
           body: DevelopmentSecretaryPicker(
             pools: [
-              _pool('akagi#1', '空母系-赤城'),
-              _pool('kongo#1', '炮战系-金刚级'),
-              _pool('nevada#1', '炮战系-内华达级'),
+              _pool('akagi#1', '空母系-赤城', description: '赤城'),
+              _pool('kongo#1', '炮战系-金刚级', description: '金刚型'),
+              _pool('nevada#1', '炮战系-内华达级', description: '内华达'),
             ],
             selectedPoolKey: 'akagi#1',
             locale: const Locale('zh'),
@@ -41,6 +41,8 @@ void main() {
       ),
     );
 
+    expect(find.text('空母系-赤城（赤城）'), findsOneWidget);
+
     await tester.tap(find.byKey(const Key('development-secretary-picker')));
     await tester.pumpAndSettle();
     expect(
@@ -50,6 +52,7 @@ void main() {
 
     await tester.tap(find.text('炮战系'));
     await tester.pumpAndSettle();
+    expect(find.text('内华达级（内华达）'), findsOneWidget);
     await tester.tap(
       find.byKey(const Key('development-secretary-option-nevada#1')),
     );
@@ -63,10 +66,15 @@ void main() {
   });
 }
 
-DevelopmentPoolRecord _pool(String key, String label) => DevelopmentPoolRecord(
+DevelopmentPoolRecord _pool(
+  String key,
+  String label, {
+  String description = '',
+}) => DevelopmentPoolRecord(
   key: key,
   name: key.split('#').first,
   labels: {'zh': label, 'zh_Hant': label, 'ja': label},
+  descriptions: {'zh': description, 'zh_Hant': description, 'ja': description},
   poolId: 1,
   shipIds: const [1],
   minimumResources: null,

@@ -279,6 +279,7 @@ Map<String, Object?> _pool(
   'pool_key': key,
   'name': name,
   'labels': {'zh': name, 'zh_Hant': name, 'ja': name},
+  'descriptions': {'zh': '测试秘书舰', 'zh_Hant': '測試秘書艦', 'ja': 'テスト秘書艦'},
   'pool_id': id,
   'ship_ids': ships,
   'drop_rates': rates,
