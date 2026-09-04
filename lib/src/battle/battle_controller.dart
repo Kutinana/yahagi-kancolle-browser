@@ -895,17 +895,16 @@ final class BattleController extends ChangeNotifier
       return const <BattleShipSnapshot>[];
     }
     final escapedIds = state.combatState.escapedShipIds;
+    // Match POI: only a confirmed escape is retreat state. Negative HP slots
+    // mean that the ship did not participate and must not create that state.
     if (previous != null) {
       return <BattleShipSnapshot>[
         for (var index = 0; index < previous.length; index++)
           () {
             final ship = previous[index];
-            final isSlotRetreated =
-                index < nowHp.length && _int(nowHp[index]) < 0;
             final isEscaped =
-                (ship.ownedShipId != null &&
-                    escapedIds.contains(ship.ownedShipId!)) ||
-                isSlotRetreated;
+                ship.ownedShipId != null &&
+                escapedIds.contains(ship.ownedShipId!);
             return isEscaped && !ship.isEscaped
                 ? ship.copyWith(isEscaped: true)
                 : ship;
@@ -919,10 +918,7 @@ final class BattleController extends ChangeNotifier
     return <BattleShipSnapshot>[
       for (var index = 0; index < ownedShips.length; index++)
         () {
-          final isSlotRetreated =
-              index < nowHp.length && _int(nowHp[index]) < 0;
-          final isEscaped =
-              escapedIds.contains(ownedShips[index].id) || isSlotRetreated;
+          final isEscaped = escapedIds.contains(ownedShips[index].id);
           return BattleShipSnapshot(
             masterId: ownedShips[index].masterId,
             ownedShipId: ownedShips[index].id,

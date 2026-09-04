@@ -2301,10 +2301,7 @@ class GameStateReducer {
     final landBases = _applyLandBaseRaid(state.landBases, data, mapArea);
 
     final currentCombat = isStart ? CombatState.empty : state.combatState;
-    final nextEscaped = isStart
-        ? const <int>{}
-        : (Set<int>.from(currentCombat.escapedShipIds)
-            ..addAll(currentCombat.pendingEscapeShipIds));
+    final nextEscaped = isStart ? const <int>{} : currentCombat.escapedShipIds;
 
     return state.copyWith(
       landBases: landBases,
@@ -2518,16 +2515,14 @@ class GameStateReducer {
       final rawEscape = escapeObj?['api_escape_idx'] ?? data['api_escape_idx'];
       final rawTow = escapeObj?['api_tow_idx'] ?? data['api_tow_idx'];
 
-      int firstPositiveIndex(Object? raw) {
-        for (final value in _intList(raw)) {
-          if (value > 0) return value;
-        }
-        return _asInt(raw);
+      int firstEscapeIndex(Object? raw) {
+        final values = _optionalList(raw);
+        return values.isEmpty ? _asInt(raw) : _asInt(values.first);
       }
 
       final indices = <int>[];
-      final escapeIndex = firstPositiveIndex(rawEscape);
-      final towIndex = firstPositiveIndex(rawTow);
+      final escapeIndex = firstEscapeIndex(rawEscape);
+      final towIndex = firstEscapeIndex(rawTow);
       if (escapeIndex > 0) indices.add(escapeIndex);
       if (towIndex > 0) indices.add(towIndex);
 

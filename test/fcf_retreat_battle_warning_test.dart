@@ -204,6 +204,41 @@ void main() {
       expect(state.combatState.pendingEscapeShipIds, <int>[202, 203]);
     });
 
+    test('uses only the first escape and tow array entries like POI', () {
+      var state = GameState.empty.copyWith(
+        fleets: const <Fleet>[
+          Fleet(
+            id: 1,
+            name: '主力',
+            shipIds: <int>[101, 102, 103, 104, 105, 106],
+          ),
+          Fleet(
+            id: 2,
+            name: '随伴',
+            shipIds: <int>[201, 202, 203, 204, 205, 206],
+          ),
+        ],
+        combinedFleetType: CombinedFleetType.carrierTaskForce,
+        combatState: const CombatState(sortieFleetId: 1),
+      );
+
+      state = reducer.reduce(
+        state,
+        kcsapiEvent(
+          '/kcsapi/api_req_combined_battle/battleresult',
+          <String, Object?>{
+            'api_escape_flag': 1,
+            'api_escape': <String, Object?>{
+              'api_escape_idx': <int>[0, 8],
+              'api_tow_idx': <int>[0, 9],
+            },
+          },
+        ),
+      );
+
+      expect(state.combatState.pendingEscapeShipIds, isEmpty);
+    });
+
     test('deduplicates an escape and tow index that resolve to one ship', () {
       var state = GameState.empty.copyWith(
         fleets: const <Fleet>[
@@ -610,7 +645,7 @@ void main() {
       expect(status?.label, '退避');
     });
 
-    test('map/next automatically commits pending escape ship IDs', () {
+    test('map/next does not confirm pending escape ship IDs', () {
       final state = GameState.empty.copyWith(
         combatState: const CombatState(pendingEscapeShipIds: <int>[203, 202]),
       );
@@ -625,12 +660,12 @@ void main() {
       );
 
       final nextState = reducer.reduce(state, nextEvent);
-      expect(nextState.combatState.escapedShipIds, <int>{203, 202});
-      expect(nextState.combatState.pendingEscapeShipIds, isEmpty);
+      expect(nextState.combatState.escapedShipIds, isEmpty);
+      expect(nextState.combatState.pendingEscapeShipIds, <int>[203, 202]);
     });
 
     test(
-      'BattleController auto-detects retreated ship when battle nowHp is negative',
+      'BattleController does not infer escort retreats from negative battle HP slots',
       () async {
         final state = GameState.empty.copyWith(
           fleets: const <Fleet>[
@@ -684,15 +719,16 @@ void main() {
 
         final controller = BattleController(gameState: () => state);
 
-        // In Node F battle packet: 敷波 (index 2 in escort) has nowHp = -1 because she retreated
+        // A negative HP slot only means the ship did not participate in this
+        // packet. Without a confirmed escape, POI does not mark it retreated.
         final battleEvent = kcsapiEvent(
           '/kcsapi/api_req_combined_battle/ld_airbattle',
           <String, Object?>{
             'api_deck_id': 1,
             'api_f_nowhps': <int>[99],
             'api_f_maxhps': <int>[99],
-            'api_f_nowhps_combined': <int>[42, 32, -1],
-            'api_f_maxhps_combined': <int>[60, 34, -1],
+            'api_f_nowhps_combined': <int>[-1, -1, -1],
+            'api_f_maxhps_combined': <int>[-1, -1, -1],
             'api_ship_ke': <int>[1501],
             'api_e_nowhps': <int>[200],
             'api_e_maxhps': <int>[200],
@@ -707,15 +743,18 @@ void main() {
         expect(escort.length, 3);
         expect(escort[0].name, '矢矧改二乙');
         expect(escort[0].isEscaped, isFalse);
+        expect(escort[0].currentHp, 42);
         expect(escort[1].name, '朝霜改二补');
         expect(escort[1].isEscaped, isFalse);
+        expect(escort[1].currentHp, 32);
         expect(escort[2].name, '敷波');
-        expect(escort[2].isEscaped, isTrue); // Auto-detected as escaped!
+        expect(escort[2].isEscaped, isFalse);
+        expect(escort[2].currentHp, 2);
       },
     );
 
     test(
-      'BattleController auto-detects retreated ship in a later battle phase',
+      'BattleController preserves prior HP when a later phase reports negative HP',
       () async {
         final state = GameState.empty.copyWith(
           fleets: const <Fleet>[
@@ -788,7 +827,8 @@ void main() {
         );
         await controller.idle;
 
-        // Later phase: 敷波 (index 2 in escort) has nowHp = -1 because she retreated.
+        // Later phase: a negative HP slot must not create retreat state or
+        // overwrite the last real HP value from the earlier phase.
         controller.accept(
           kcsapiEvent(
             '/kcsapi/api_req_combined_battle/ld_airbattle',
@@ -813,7 +853,8 @@ void main() {
         expect(escort[0].isEscaped, isFalse);
         expect(escort[1].isEscaped, isFalse);
         expect(escort[2].name, '敷波');
-        expect(escort[2].isEscaped, isTrue); // Auto-detected as escaped!
+        expect(escort[2].isEscaped, isFalse);
+        expect(escort[2].currentHp, 15);
       },
     );
 

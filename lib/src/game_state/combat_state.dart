@@ -60,7 +60,7 @@ class CombatState {
       currentNode: nextNode,
       isActive: true,
       escapedShipIds: escapedShipIds,
-      pendingEscapeShipIds: const <int>[],
+      pendingEscapeShipIds: pendingEscapeShipIds,
       // Clear previous battle data
       enemyFleetName: null,
       airSuperiority: null,
