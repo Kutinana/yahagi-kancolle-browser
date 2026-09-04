@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/app_localizations.dart';
 import '../logbook/logbook_database.dart';
@@ -146,6 +147,16 @@ class _ResourceTrendPageState extends State<ResourceTrendPage>
       _error = false;
       if (clear) _data = null;
     });
+    // Dialogs have their own subtree: the page's setState alone cannot publish
+    // loading/cleared state to an already open fullscreen chart.
+    if (WidgetsBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && generation == _generation) _chartRevision.value++;
+      });
+    } else {
+      _chartRevision.value++;
+    }
     try {
       final data = widget.loadLogs == null
           ? await loadResourceTrend(_database, window)
