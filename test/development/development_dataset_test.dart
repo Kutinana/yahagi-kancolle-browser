@@ -134,6 +134,22 @@ void main() {
   });
 
   test(
+    'equipment labels tolerate a null localization map after hot reload',
+    () {
+      const equipment = DevelopmentEquipmentRecord(
+        id: 20,
+        name: '九七式艦攻',
+        names: null,
+        typeId: 8,
+        minimumResources: DevelopmentResources(10, 20, 30, 40),
+      );
+
+      expect(equipment.label(const Locale('zh')), '九七式艦攻');
+      expect(equipment.searchableNames, contains('九七式艦攻'));
+    },
+  );
+
+  test(
     'repository caches success and retries after a loading failure',
     () async {
       var calls = 0;

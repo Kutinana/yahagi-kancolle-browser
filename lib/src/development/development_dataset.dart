@@ -305,20 +305,20 @@ class DevelopmentEquipmentRecord {
 
   final int id;
   final String name;
-  final Map<String, String> names;
+  final Map<String, String>? names;
   final int typeId;
   final int iconId;
   final DevelopmentResources minimumResources;
 
-  Iterable<String> get searchableNames => {name, ...names.values};
+  Iterable<String> get searchableNames => {name, ...?names?.values};
 
   String label(Locale locale) {
-    if (locale.languageCode == 'ja') return names['ja'] ?? name;
+    if (locale.languageCode == 'ja') return names?['ja'] ?? name;
     final traditional =
         locale.languageCode == 'zh' &&
         (locale.scriptCode == 'Hant' ||
             const {'TW', 'HK', 'MO'}.contains(locale.countryCode));
-    return names[traditional ? 'zh_Hant' : 'zh'] ?? name;
+    return names?[traditional ? 'zh_Hant' : 'zh'] ?? name;
   }
 }
 
