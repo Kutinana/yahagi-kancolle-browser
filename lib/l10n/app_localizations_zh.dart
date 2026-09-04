@@ -2675,6 +2675,23 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get shipEquipmentCompatibilitySelectCategory => '选择装备分类';
+
+  @override
+  String get shipEquipmentCompatibilitySearchTitle => '搜索装备';
+
+  @override
+  String get shipEquipmentCompatibilitySearchHint => '输入装备名称';
+
+  @override
+  String shipEquipmentCompatibilityOwnedCount(int count) {
+    return '持有 X$count';
+  }
+
+  @override
+  String get shipEquipmentCompatibilityEmpty => '没有找到可装备的装备';
+
+  @override
   String get equipmentDevelopment => '装备开发';
 
   @override
@@ -5485,6 +5502,23 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String equipmentCompatibilityShipClassId(int id) {
     return '艦級 #$id';
   }
+
+  @override
+  String get shipEquipmentCompatibilitySelectCategory => '選擇裝備分類';
+
+  @override
+  String get shipEquipmentCompatibilitySearchTitle => '搜尋裝備';
+
+  @override
+  String get shipEquipmentCompatibilitySearchHint => '輸入裝備名稱';
+
+  @override
+  String shipEquipmentCompatibilityOwnedCount(int count) {
+    return '持有 X$count';
+  }
+
+  @override
+  String get shipEquipmentCompatibilityEmpty => '找不到可裝備的裝備';
 
   @override
   String get equipmentDevelopment => '裝備開發';

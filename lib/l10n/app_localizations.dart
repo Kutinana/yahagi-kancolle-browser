@@ -5032,6 +5032,36 @@ abstract class AppLocalizations {
   /// **'舰级 #{id}'**
   String equipmentCompatibilityShipClassId(int id);
 
+  /// No description provided for @shipEquipmentCompatibilitySelectCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择装备分类'**
+  String get shipEquipmentCompatibilitySelectCategory;
+
+  /// No description provided for @shipEquipmentCompatibilitySearchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索装备'**
+  String get shipEquipmentCompatibilitySearchTitle;
+
+  /// No description provided for @shipEquipmentCompatibilitySearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入装备名称'**
+  String get shipEquipmentCompatibilitySearchHint;
+
+  /// No description provided for @shipEquipmentCompatibilityOwnedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'持有 X{count}'**
+  String shipEquipmentCompatibilityOwnedCount(int count);
+
+  /// No description provided for @shipEquipmentCompatibilityEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到可装备的装备'**
+  String get shipEquipmentCompatibilityEmpty;
+
   /// No description provided for @equipmentDevelopment.
   ///
   /// In zh, this message translates to:

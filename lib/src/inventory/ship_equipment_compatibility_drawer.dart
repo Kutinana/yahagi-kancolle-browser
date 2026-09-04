@@ -134,7 +134,8 @@ class _ShipEquipmentCompatibilityDrawerState
                                             'ship-equipment-compatibility-category-button',
                                           ),
                                           icon: Icons.filter_alt_rounded,
-                                          tooltip: l10n.inventoryFilterResults,
+                                          tooltip: l10n
+                                              .shipEquipmentCompatibilitySelectCategory,
                                           active:
                                               _category !=
                                               EquipmentInventoryCategory.all,
@@ -146,8 +147,8 @@ class _ShipEquipmentCompatibilityDrawerState
                                             'ship-equipment-compatibility-search-button',
                                           ),
                                           icon: Icons.search_rounded,
-                                          tooltip:
-                                              l10n.developmentSearchEquipment,
+                                          tooltip: l10n
+                                              .shipEquipmentCompatibilitySearchTitle,
                                           active: _query.isNotEmpty,
                                           onPressed: _showSearchDialog,
                                         ),
@@ -182,9 +183,11 @@ class _ShipEquipmentCompatibilityDrawerState
                               ),
                             )
                           else if (groups.isEmpty)
-                            const SliverFillRemaining(
+                            SliverFillRemaining(
                               hasScrollBody: false,
-                              child: _Message(text: '没有找到可装备的装备'),
+                              child: _Message(
+                                text: l10n.shipEquipmentCompatibilityEmpty,
+                              ),
                             )
                           else
                             _EquipmentList(groups: groups),
@@ -218,8 +221,8 @@ class _ShipEquipmentCompatibilityDrawerState
       context: context,
       builder: (context) => StandaloneTextInputDialog(
         key: const Key('ship-equipment-compatibility-search-dialog'),
-        title: l10n.developmentSearchEquipment,
-        label: l10n.developmentSearchHint,
+        title: l10n.shipEquipmentCompatibilitySearchTitle,
+        label: l10n.shipEquipmentCompatibilitySearchHint,
         initialValue: _query,
         fieldKey: const Key('ship-equipment-compatibility-search-dialog-field'),
         cancelKey: const Key(
@@ -391,7 +394,7 @@ class _CategoryDialog extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    l10n.inventoryFilterResults,
+                    l10n.shipEquipmentCompatibilitySelectCategory,
                     style: const TextStyle(
                       color: Color(0xfff2f7f9),
                       fontSize: 16,
@@ -771,7 +774,7 @@ class _EquipmentRow extends StatelessWidget {
                 ),
                 alignment: Alignment.centerRight,
                 child: Text(
-                  '持有 X${row.ownedCount}',
+                  l10n.shipEquipmentCompatibilityOwnedCount(row.ownedCount),
                   textAlign: TextAlign.right,
                   style: const TextStyle(
                     color: Color(0xfff2c96d),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/equipment_type_icon.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_portrait.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
@@ -381,6 +382,43 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('localizes drawer-specific copy in Japanese', (tester) async {
+    await _pumpDrawer(
+      tester,
+      ownedShip: const OwnedShip(id: 500, masterId: 100, level: 98),
+      locale: const Locale('ja'),
+    );
+
+    expect(find.text('所持 X3'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const Key('ship-equipment-compatibility-category-button')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('装備カテゴリを選択'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const Key('ship-equipment-compatibility-category-all')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('ship-equipment-compatibility-search-button')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('装備を検索'), findsOneWidget);
+    expect(find.text('装備名を入力'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('ship-equipment-compatibility-search-dialog-field')),
+      'missing',
+    );
+    await tester.tap(
+      find.byKey(
+        const Key('ship-equipment-compatibility-search-dialog-confirm'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('装備可能な装備が見つかりません'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpDrawer(
@@ -389,10 +427,13 @@ Future<void> _pumpDrawer(
   MasterShip ship = _ship,
   OwnedShip? ownedShip,
   VoidCallback? onClose,
+  Locale locale = const Locale('zh'),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
-      locale: const Locale('zh'),
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: ShipEquipmentCompatibilityDrawer(
           state: state ?? _state(),

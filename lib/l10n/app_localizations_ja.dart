@@ -2700,6 +2700,23 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get shipEquipmentCompatibilitySelectCategory => '装備カテゴリを選択';
+
+  @override
+  String get shipEquipmentCompatibilitySearchTitle => '装備を検索';
+
+  @override
+  String get shipEquipmentCompatibilitySearchHint => '装備名を入力';
+
+  @override
+  String shipEquipmentCompatibilityOwnedCount(int count) {
+    return '所持 X$count';
+  }
+
+  @override
+  String get shipEquipmentCompatibilityEmpty => '装備可能な装備が見つかりません';
+
+  @override
   String get equipmentDevelopment => '装備開発';
 
   @override
