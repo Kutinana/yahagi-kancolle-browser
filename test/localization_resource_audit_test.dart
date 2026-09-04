@@ -165,6 +165,8 @@ void main() {
       'notCompleted',
       // “分享” is the standard action label in both Chinese scripts.
       'diagnosticShareAction',
+      // “持有 X{count}” is the reviewed compact count label in both scripts.
+      'shipEquipmentCompatibilityOwnedCount',
       // HTTP and its numeric status placeholder are protocol terminology.
       'kcwikiReportFailureHttp',
       // “高刷”是简中和繁中统一采用的帧率档位产品名称。

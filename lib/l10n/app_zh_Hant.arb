@@ -930,6 +930,7 @@
   "shipEquipmentCompatibilitySearchTitle": "搜尋裝備",
   "shipEquipmentCompatibilitySearchHint": "輸入裝備名稱",
   "shipEquipmentCompatibilityOwnedCount": "持有 X{count}",
+  "@shipEquipmentCompatibilityOwnedCount": {"placeholders": {"count": {"type": "int"}}},
   "shipEquipmentCompatibilityEmpty": "找不到可裝備的裝備",
   "equipmentDevelopment": "裝備開發",
   "developmentCommandTitle": "開發指揮台",

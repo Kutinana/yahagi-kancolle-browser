@@ -930,6 +930,7 @@
   "shipEquipmentCompatibilitySearchTitle": "装備を検索",
   "shipEquipmentCompatibilitySearchHint": "装備名を入力",
   "shipEquipmentCompatibilityOwnedCount": "所持 X{count}",
+  "@shipEquipmentCompatibilityOwnedCount": {"placeholders": {"count": {"type": "int"}}},
   "shipEquipmentCompatibilityEmpty": "装備可能な装備が見つかりません",
   "equipmentDevelopment": "装備開発",
   "developmentCommandTitle": "開発指揮卓",
