@@ -38,7 +38,7 @@
 - 修改：`android/app/src/main/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheMode.kt`
 - 修改：`android/app/src/test/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheEngineTest.kt`
 
-- [ ] **步骤 1：编写失败的 Dart 迁移测试**
+- [x] **步骤 1：编写失败的 Dart 迁移测试**
 
 在 `test/game_resource_cache_store_test.dart` 断言空值、`none` 均得到 `temporary`，`light` 仍得到 `full`：
 
@@ -48,13 +48,13 @@ expect(GameResourceCacheModeWire.fromWireName('none'), GameResourceCacheMode.tem
 expect(GameResourceCacheModeWire.fromWireName('light'), GameResourceCacheMode.full);
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 运行：`flutter test test/game_resource_cache_store_test.dart test/game_resource_cache_controller_test.dart`
 
 预期：FAIL，`GameResourceCacheMode.temporary` 尚不存在。
 
-- [ ] **步骤 3：实现 Dart 模式迁移**
+- [x] **步骤 3：实现 Dart 模式迁移**
 
 保留旧枚举值用于源代码兼容，但所有持久化入口迁移到新模式：
 
@@ -70,7 +70,7 @@ static GameResourceCacheMode fromWireName(String? value) => switch (value) {
 
 将控制器和 `GameResourceCacheStatus.empty` 的默认值改为 `temporary`。
 
-- [ ] **步骤 4：实现 Android 模式迁移**
+- [x] **步骤 4：实现 Android 模式迁移**
 
 在 `GameResourceCacheMode.kt` 增加：
 
@@ -81,13 +81,13 @@ FULL("full"),
 
 保留 `NONE` 和 `LIGHT` 枚举值，避免一次性破坏现有测试和内部调用；持久化解析不再返回这两个旧值。`fromWireName` 将 `null`、`none` 和未知值映射到 `TEMPORARY`，将 `light` 映射到 `FULL`。`TEMPORARY` 与 `FULL` 均允许读取和写入缓存。
 
-- [ ] **步骤 5：运行模式相关测试**
+- [x] **步骤 5：运行模式相关测试**
 
 运行：`flutter test test/game_resource_cache_store_test.dart test/game_resource_cache_controller_test.dart`
 
 预期：PASS。
 
-- [ ] **步骤 6：提交模式迁移**
+- [x] **步骤 6：提交模式迁移**
 
 ```bash
 git add lib/src/browser/game_resource_cache_store.dart lib/src/browser/game_resource_cache_channel.dart lib/src/browser/game_resource_cache_controller.dart lib/src/browser/game_resource_manifest_consumer.dart test/game_resource_cache_store_test.dart test/game_resource_cache_controller_test.dart android/app/src/main/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheMode.kt android/app/src/test/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheEngineTest.kt
@@ -104,7 +104,7 @@ git commit -m "refactor(缓存): 引入临时资源缓存模式"
 - 修改：`android/app/src/test/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheStoreTest.kt`
 - 修改：`android/app/src/test/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheEngineTest.kt`
 
-- [ ] **步骤 1：编写失败的存储策略测试**
+- [x] **步骤 1：编写失败的存储策略测试**
 
 新增以下完整测试：
 
@@ -176,13 +176,13 @@ fun `full policy keeps old entries`() {
 }
 ```
 
-- [ ] **步骤 2：运行 Kotlin 测试确认失败**
+- [x] **步骤 2：运行 Kotlin 测试确认失败**
 
 运行：`android/gradlew.bat :app:testDebugUnitTest --tests "app.yahagi.kancollebrowser.browser.GameResourceCacheStoreTest" --no-daemon`
 
 预期：FAIL，`GameResourceCachePolicy` 和 `enforcePolicy` 尚不存在。
 
-- [ ] **步骤 3：实现动态缓存策略**
+- [x] **步骤 3：实现动态缓存策略**
 
 在 `GameResourceCacheStore.kt` 增加：
 
@@ -201,7 +201,7 @@ companion object {
 
 构造函数接受 `policyProvider`，`maxBytes` 改为动态 getter。读取、元数据检查与写入前调用统一的过期判断；`enforcePolicy()` 先删除过期条目，再按 `lastAccessedAt` 收缩到当前容量上限。
 
-- [ ] **步骤 4：接入模式策略**
+- [x] **步骤 4：接入模式策略**
 
 `MainActivity.kt` 根据当前模式返回：
 
@@ -217,13 +217,13 @@ when (gameResourceCacheMode) {
 
 `GameResourceCacheEngine` 暴露 `enforcePolicy()`；`GameResourceCacheManager.configure` 在 `onModeChanged(mode)` 后于 IO 线程执行该方法，再重置预下载协调器状态。
 
-- [ ] **步骤 5：运行 Kotlin 缓存测试**
+- [x] **步骤 5：运行 Kotlin 缓存测试**
 
 运行：`android/gradlew.bat :app:testDebugUnitTest --tests "app.yahagi.kancollebrowser.browser.GameResourceCacheStoreTest" --tests "app.yahagi.kancollebrowser.browser.GameResourceCacheEngineTest" --no-daemon`
 
 预期：PASS。
 
-- [ ] **步骤 6：提交缓存策略**
+- [x] **步骤 6：提交缓存策略**
 
 ```bash
 git add android/app/src/main/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheStore.kt android/app/src/main/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheEngine.kt android/app/src/main/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheManager.kt android/app/src/main/kotlin/app/yahagi/kancollebrowser/MainActivity.kt android/app/src/test/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheStoreTest.kt android/app/src/test/kotlin/app/yahagi/kancollebrowser/browser/GameResourceCacheEngineTest.kt
@@ -238,17 +238,17 @@ git commit -m "feat(缓存): 添加七天临时缓存策略"
 - 修改：`android/app/src/main/kotlin/app/yahagi/kancollebrowser/browser/GameResourceDownloadCoordinator.kt`
 - 修改：`android/app/src/test/kotlin/app/yahagi/kancollebrowser/browser/GameResourceDownloadCoordinatorTest.kt`
 
-- [ ] **步骤 1：编写失败的清单测试**
+- [x] **步骤 1：编写失败的清单测试**
 
 将原轻度清单测试替换为：临时模式收到 `start2` 后不调用 `setManifest`；完整模式仍提交 `full` 清单。Android 侧断言临时模式下 `startDownload()` 返回 `false`。
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 运行：`flutter test test/game_resource_manifest_consumer_test.dart`
 
 预期：FAIL，临时模式尚未被明确旁路。
 
-- [ ] **步骤 3：实现预下载旁路**
+- [x] **步骤 3：实现预下载旁路**
 
 `GameResourceManifestConsumer._rebuild` 仅在 `full` 模式构建清单：
 
@@ -262,7 +262,7 @@ if (mode != GameResourceCacheMode.full) return;
 if (mode != GameResourceCacheMode.FULL || urls.isEmpty()) return false
 ```
 
-- [ ] **步骤 4：运行清单与协调器测试**
+- [x] **步骤 4：运行清单与协调器测试**
 
 运行：`flutter test test/game_resource_manifest_consumer_test.dart`
 
@@ -270,7 +270,7 @@ if (mode != GameResourceCacheMode.FULL || urls.isEmpty()) return false
 
 预期：PASS。
 
-- [ ] **步骤 5：提交预下载边界**
+- [x] **步骤 5：提交预下载边界**
 
 ```bash
 git add lib/src/browser/game_resource_manifest_consumer.dart test/game_resource_manifest_consumer_test.dart android/app/src/main/kotlin/app/yahagi/kancollebrowser/browser/GameResourceDownloadCoordinator.kt android/app/src/test/kotlin/app/yahagi/kancollebrowser/browser/GameResourceDownloadCoordinatorTest.kt
@@ -290,7 +290,7 @@ git commit -m "fix(缓存): 禁止临时模式启动预下载"
 - 修改：`test/game_resource_cache_section_test.dart`
 - 修改：`test/data_settings_page_test.dart`
 
-- [ ] **步骤 1：编写失败的组件测试**
+- [x] **步骤 1：编写失败的组件测试**
 
 断言设置页显示「临时缓存」和新说明，并在临时模式下隐藏：
 
@@ -305,13 +305,13 @@ expect(find.byKey(const Key('cache-repair')), findsNothing);
 expect(find.byKey(const Key('cache-clear')), findsOneWidget);
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 运行：`flutter test test/game_resource_cache_section_test.dart test/data_settings_page_test.dart`
 
 预期：FAIL，页面仍显示「无本地缓存」。
 
-- [ ] **步骤 3：更新界面与 ARB 文案**
+- [x] **步骤 3：更新界面与 ARB 文案**
 
 复用现有本地化键，避免无意义 API 扩散：
 
@@ -323,19 +323,19 @@ expect(find.byKey(const Key('cache-clear')), findsOneWidget);
 
 繁体中文和日文采用等义表述。设置页将该 tile 绑定到 `GameResourceCacheMode.temporary`；下载、检查和修复操作仅在 `full` 模式显示。
 
-- [ ] **步骤 4：重新生成本地化代码**
+- [x] **步骤 4：重新生成本地化代码**
 
 运行：`flutter gen-l10n`
 
 预期：`app_localizations*.dart` 与三个 ARB 文件一致。
 
-- [ ] **步骤 5：运行设置页测试**
+- [x] **步骤 5：运行设置页测试**
 
 运行：`flutter test test/game_resource_cache_section_test.dart test/data_settings_page_test.dart`
 
 预期：PASS。
 
-- [ ] **步骤 6：提交设置页与文案**
+- [x] **步骤 6：提交设置页与文案**
 
 ```bash
 git add lib/src/settings/game_resource_cache_section.dart lib/l10n/app_zh.arb lib/l10n/app_zh_Hant.arb lib/l10n/app_ja.arb lib/l10n/app_localizations.dart lib/l10n/app_localizations_zh.dart lib/l10n/app_localizations_ja.dart test/game_resource_cache_section_test.dart test/data_settings_page_test.dart
@@ -348,7 +348,7 @@ git commit -m "feat(设置): 将无缓存改为临时缓存"
 - 修改：`docs/superpowers/specs/2026-09-05-temporary-game-resource-cache-design.md`
 - 修改：`docs/superpowers/plans/2026-09-05-temporary-game-resource-cache.md`
 
-- [ ] **步骤 1：运行格式化与静态检查**
+- [x] **步骤 1：运行格式化与静态检查**
 
 运行：`dart format lib/src/browser/game_resource_cache_store.dart lib/src/browser/game_resource_cache_channel.dart lib/src/browser/game_resource_cache_controller.dart lib/src/browser/game_resource_manifest_consumer.dart lib/src/settings/game_resource_cache_section.dart test/game_resource_cache_store_test.dart test/game_resource_cache_controller_test.dart test/game_resource_manifest_consumer_test.dart test/game_resource_cache_section_test.dart test/data_settings_page_test.dart`
 
@@ -356,33 +356,40 @@ git commit -m "feat(设置): 将无缓存改为临时缓存"
 
 预期：无错误。
 
-- [ ] **步骤 2：运行缓存相关 Flutter 测试**
+- [x] **步骤 2：运行缓存相关 Flutter 测试**
 
 运行：`flutter test test/game_resource_cache_store_test.dart test/game_resource_cache_controller_test.dart test/game_resource_manifest_consumer_test.dart test/game_resource_cache_section_test.dart test/data_settings_page_test.dart test/game_connector_cache_compatibility_test.dart`
 
 预期：全部通过。
 
-- [ ] **步骤 3：运行缓存相关 Android 测试**
+- [x] **步骤 3：运行缓存相关 Android 测试**
 
 运行：`android/gradlew.bat :app:testDebugUnitTest --tests "app.yahagi.kancollebrowser.browser.GameResourceCacheStoreTest" --tests "app.yahagi.kancollebrowser.browser.GameResourceCacheEngineTest" --tests "app.yahagi.kancollebrowser.browser.GameResourceDownloadCoordinatorTest" --no-daemon`
 
 预期：全部通过。若宿主机继续报 `Unable to establish loopback connection`，记录环境阻塞并改用已连接设备上的 Android instrumentation 测试验证可运行部分。
 
-- [ ] **步骤 4：构建 Debug APK**
+- [ ] **步骤 4：构建 Debug APK（被宿主机 Gradle 回环连接异常阻塞）**
 
 运行：`flutter build apk --debug`
 
 预期：生成 `build/app/outputs/flutter-apk/app-debug.apk`。
 
-- [ ] **步骤 5：检查变更范围**
+- [x] **步骤 5：检查变更范围**
 
 运行：`git diff --check 23220e3..HEAD`、`git status --short`。
 
 预期：无空白错误；不包含用户现有的 `test/ship_equipment_compatibility_drawer_test.dart`。
 
-- [ ] **步骤 6：提交规格勘误与计划状态**
+- [x] **步骤 6：提交规格勘误与计划状态**
 
 ```bash
 git add -f docs/superpowers/specs/2026-09-05-temporary-game-resource-cache-design.md docs/superpowers/plans/2026-09-05-temporary-game-resource-cache.md
 git commit -m "docs(缓存): 完成临时缓存实施记录"
 ```
+
+## 实施记录
+
+- 2026-09-05：缓存相关 Flutter 测试 25 项通过。
+- 2026-09-05：缓存核心 Kotlin 源码使用项目锁定的 Kotlin 2.2.20 独立编译通过，相关 JUnit 测试 50 项通过。
+- 2026-09-05：`flutter analyze` 返回成功；项目仍有 81 条既有 warning/info，本次改动文件未新增诊断。
+- 2026-09-05：Gradle 单测与 Debug APK 构建在任务执行前被宿主机 `Unable to establish loopback connection` 阻塞，未进入 Kotlin/Android 构建阶段。
