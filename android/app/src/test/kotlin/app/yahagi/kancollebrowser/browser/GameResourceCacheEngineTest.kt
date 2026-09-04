@@ -204,7 +204,7 @@ class GameResourceCacheEngineTest {
 
     private fun engine(
         fetcher: GameResourceFetcher,
-        mode: GameResourceCacheMode = GameResourceCacheMode.LIGHT,
+        mode: GameResourceCacheMode = GameResourceCacheMode.TEMPORARY,
         clock: () -> Long = System::currentTimeMillis,
     ): GameResourceCacheEngine {
         val root = temporaryFolder.newFolder()

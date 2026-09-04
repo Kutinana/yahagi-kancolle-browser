@@ -160,12 +160,14 @@ class GameResourceCacheStore(
         index.snapshot()
             .filter { isExpired(it, now, policy) }
             .forEach { remove(GameResourceCacheKey(it.key)) }
-        index.snapshot()
-            .sortedBy { it.lastAccessedAt }
-            .forEach { entry ->
-                if (totalBytes() <= policy.maxBytes) return@forEach
-                remove(GameResourceCacheKey(entry.key))
+        var usedBytes = totalBytes()
+        if (usedBytes <= policy.maxBytes) return
+        for (entry in index.snapshot().sortedBy { it.lastAccessedAt }) {
+            if (usedBytes <= policy.maxBytes) break
+            if (remove(GameResourceCacheKey(entry.key))) {
+                usedBytes -= entry.byteLength
             }
+        }
     }
 
     @Synchronized

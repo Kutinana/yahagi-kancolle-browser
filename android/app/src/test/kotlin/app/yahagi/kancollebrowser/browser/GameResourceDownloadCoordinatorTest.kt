@@ -69,7 +69,7 @@ class GameResourceDownloadCoordinatorTest {
 
         val restored = GameResourceDownloadCoordinator(
             fixture.engine,
-            { GameResourceCacheMode.LIGHT },
+            { GameResourceCacheMode.FULL },
             stateFile,
         )
         assertEquals(1, restored.status().targetBytes)
@@ -351,7 +351,7 @@ class GameResourceDownloadCoordinatorTest {
         fixture.coordinator.pauseDownload()
         fixture.coordinator.dispose()
 
-        val restored = GameResourceDownloadCoordinator(fixture.engine, { GameResourceCacheMode.LIGHT }, stateFile)
+        val restored = GameResourceDownloadCoordinator(fixture.engine, { GameResourceCacheMode.FULL }, stateFile)
         val status = restored.status()
         assertEquals(GameResourceDownloadState.PAUSED, status.state)
         assertEquals(1, status.missingCount)
@@ -399,7 +399,7 @@ class GameResourceDownloadCoordinatorTest {
 
         val restored = GameResourceDownloadCoordinator(
             fixture.engine,
-            { GameResourceCacheMode.LIGHT },
+            { GameResourceCacheMode.FULL },
             stateFile,
         )
 
@@ -421,7 +421,7 @@ class GameResourceDownloadCoordinatorTest {
 
         val restored = GameResourceDownloadCoordinator(
             fixture.engine,
-            { GameResourceCacheMode.LIGHT },
+            { GameResourceCacheMode.FULL },
             stateFile,
         )
 
@@ -449,7 +449,7 @@ class GameResourceDownloadCoordinatorTest {
         network = GameResourceNetworkState(connected = true, metered = false)
         val restored = GameResourceDownloadCoordinator(
             fixture.engine,
-            { GameResourceCacheMode.LIGHT },
+            { GameResourceCacheMode.FULL },
             stateFile,
             { network },
         )
@@ -597,7 +597,7 @@ class GameResourceDownloadCoordinatorTest {
         fixture.coordinator.dispose()
         val restored = GameResourceDownloadCoordinator(
             fixture.engine,
-            { GameResourceCacheMode.LIGHT },
+            { GameResourceCacheMode.FULL },
             stateFile,
         )
         assertEquals(1, restored.status().targetBytes)
