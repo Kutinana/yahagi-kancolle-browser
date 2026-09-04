@@ -79,6 +79,13 @@ void main() {
 
       expect(memory.formationFor(mapAreaId: 1, mapInfoNo: 1, node: 1), 1);
       expect(store.saveCount, 1);
+      expect(controller.records.single.detail, isNotNull);
+      expect(
+        controller.records.single.detail!.stages.expand(
+          (stage) => stage.attacks,
+        ),
+        isNotEmpty,
+      );
     });
 
     test('practice battle result does not update formation memory', () async {

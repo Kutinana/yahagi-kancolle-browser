@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:yahagi_kancolle_browser/src/battle/battle_detail_models.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/logbook/logbook_database.dart';
@@ -841,6 +842,102 @@ void main() {
     expect(rows.single['enemy_formation'], 0);
     expect(rows.single['air_superiority'], '未知');
     expect(rows.single['heavy_damage_ship_names_json'], '[]');
+  });
+
+  test(
+    'battle detail is stored and loaded separately from the sortie list',
+    () async {
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+      const detail = BattleDetailSnapshot(
+        completedAtMillis: 2000,
+        mapLabel: '1-1',
+        nodeLabel: 'A点',
+        rank: 'S',
+        enemyFleetName: '敌舰队',
+      );
+
+      final id = await database.insertBattleRecord(
+        BattleRecord(
+          battle: const LiveBattle(
+            context: BattleContext(mapAreaId: 1, mapInfoNo: 1, node: 1),
+            rank: BattleRank.s,
+          ),
+          completedAt: DateTime.fromMillisecondsSinceEpoch(2000),
+          detail: detail,
+        ),
+      );
+
+      final sortie = await database.getSortieRecords();
+      expect(sortie.single['has_detail'], 1);
+      final loaded = await database.getBattleDetail(id);
+      expect(loaded?.mapLabel, '1-1');
+      expect(loaded?.rank, 'S');
+    },
+  );
+
+  test('upgrades v10 records without inventing battle detail', () async {
+    sqfliteFfiInit();
+    final directory = await Directory.systemTemp.createTemp(
+      'yahagi-logbook-v10-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final path = '${directory.path}${Platform.pathSeparator}logbook.db';
+    final oldDatabase = await databaseFactoryFfiNoIsolate.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 10,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE battle_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp INTEGER NOT NULL,
+              map_area INTEGER NOT NULL,
+              map_no INTEGER NOT NULL,
+              map_name TEXT NOT NULL DEFAULT '',
+              node INTEGER NOT NULL,
+              node_label TEXT NOT NULL DEFAULT '',
+              node_type INTEGER NOT NULL,
+              map_difficulty INTEGER NOT NULL DEFAULT 0,
+              rank TEXT NOT NULL,
+              drop_ship_id INTEGER,
+              drop_ship_ids_json TEXT NOT NULL DEFAULT '[]',
+              enemy_fleet_name TEXT NOT NULL,
+              friend_fleet_state TEXT NOT NULL,
+              enemy_fleet_state TEXT NOT NULL,
+              friend_formation INTEGER NOT NULL DEFAULT 0,
+              enemy_formation INTEGER NOT NULL DEFAULT 0,
+              air_superiority TEXT NOT NULL DEFAULT '未知',
+              heavy_damage_ship_names_json TEXT NOT NULL DEFAULT '[]',
+              flagship_name TEXT NOT NULL DEFAULT '—',
+              escort_flagship_name TEXT NOT NULL DEFAULT '—',
+              mvp_name TEXT NOT NULL DEFAULT '—',
+              escort_mvp_name TEXT NOT NULL DEFAULT '—',
+              reward_items_json TEXT NOT NULL DEFAULT '[]'
+            )
+          ''');
+        },
+      ),
+    );
+    final id = await oldDatabase.insert('battle_logs', <String, Object?>{
+      'timestamp': 1,
+      'map_area': 1,
+      'map_no': 1,
+      'node': 1,
+      'node_type': '普通战斗',
+      'rank': 's',
+      'enemy_fleet_name': 'v10 旧记录',
+      'friend_fleet_state': '6/6',
+      'enemy_fleet_state': '0/6',
+    });
+    await oldDatabase.close();
+
+    final upgraded = await LogbookDatabase.openForTesting(path: path);
+    addTearDown(upgraded.close);
+    final rows = await upgraded.getBattleRecords();
+
+    expect(rows.single['detail_json'], isNull);
+    expect(await upgraded.getBattleDetail(id), isNull);
   });
 }
 

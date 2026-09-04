@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../battle/battle_models.dart';
+import '../battle/battle_detail_models.dart';
 import '../game_state/game_state.dart';
 
 const String _unknownAirSuperiority = '未知';
@@ -156,7 +157,7 @@ final class RetirementLogEntry {
 }
 
 class LogbookDatabase extends ChangeNotifier {
-  static const int schemaVersion = 10;
+  static const int schemaVersion = 11;
   static final LogbookDatabase instance = LogbookDatabase._init();
 
   final Future<Database> Function()? _databaseOpener;
@@ -318,7 +319,8 @@ class LogbookDatabase extends ChangeNotifier {
         escort_flagship_name TEXT NOT NULL DEFAULT '—',
         mvp_name TEXT NOT NULL DEFAULT '—',
         escort_mvp_name TEXT NOT NULL DEFAULT '—',
-        reward_items_json TEXT NOT NULL DEFAULT '[]'
+        reward_items_json TEXT NOT NULL DEFAULT '[]',
+        detail_json TEXT
       )
     ''');
 
@@ -559,10 +561,13 @@ class LogbookDatabase extends ChangeNotifier {
         "ALTER TABLE battle_logs ADD COLUMN heavy_damage_ship_names_json TEXT NOT NULL DEFAULT '[]'",
       );
     }
+    if (oldVersion < 11) {
+      await db.execute('ALTER TABLE battle_logs ADD COLUMN detail_json TEXT');
+    }
   }
 
   /// Add a battle record to the log
-  Future<void> insertBattleRecord(
+  Future<int> insertBattleRecord(
     BattleRecord record, {
     int mapDifficulty = 0,
     String mapName = '',
@@ -587,7 +592,7 @@ class LogbookDatabase extends ChangeNotifier {
       }
     }
     final isPractice = battle.context.practice || battle.context.mapAreaId == 0;
-    await db.insert('battle_logs', {
+    final id = await db.insert('battle_logs', {
       'timestamp': record.completedAt.millisecondsSinceEpoch,
       'map_area': isPractice ? 0 : battle.context.mapAreaId,
       'map_no': isPractice ? 0 : battle.context.mapInfoNo,
@@ -625,8 +630,35 @@ class LogbookDatabase extends ChangeNotifier {
       'mvp_name': mainMvp,
       'escort_mvp_name': escortMvp,
       'reward_items_json': jsonEncode(_rewardItemRows(battle.rewardItems)),
+      'detail_json': record.detail == null
+          ? null
+          : jsonEncode(record.detail!.toJson()),
     });
     _notifyChange(LogbookChangeCategory.battle);
+    return id;
+  }
+
+  Future<BattleDetailSnapshot?> getBattleDetail(int id) async {
+    final db = await database;
+    final rows = await db.query(
+      'battle_logs',
+      columns: const <String>['detail_json'],
+      where: 'id = ?',
+      whereArgs: <Object>[id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final raw = rows.single['detail_json']?.toString().trim() ?? '';
+    if (raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      return BattleDetailSnapshot.fromJson(
+        decoded.map((key, value) => MapEntry(key.toString(), value)),
+      );
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Get battle records with pagination
@@ -728,6 +760,8 @@ class LogbookDatabase extends ChangeNotifier {
           heavy_damage_ship_names_json, flagship_name,
           escort_flagship_name, mvp_name, escort_mvp_name,
           reward_items_json,
+          CASE WHEN detail_json IS NOT NULL AND TRIM(detail_json) <> ''
+            THEN 1 ELSE 0 END AS has_detail,
           0 AS fuel_delta, 0 AS ammo_delta, 0 AS steel_delta,
           0 AS bauxite_delta, 0 AS radar_reduced
         FROM battle_logs
@@ -744,7 +778,7 @@ class LogbookDatabase extends ChangeNotifier {
           0 AS enemy_formation, '$_unknownAirSuperiority' AS air_superiority,
           '[]' AS heavy_damage_ship_names_json, '-' AS flagship_name,
           '-' AS escort_flagship_name, '-' AS mvp_name,
-          '-' AS escort_mvp_name, reward_items_json,
+          '-' AS escort_mvp_name, reward_items_json, 0 AS has_detail,
           fuel_delta, ammo_delta, steel_delta, bauxite_delta, radar_reduced
         FROM map_resource_logs
       )

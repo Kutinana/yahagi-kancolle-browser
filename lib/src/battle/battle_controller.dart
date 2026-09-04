@@ -23,6 +23,8 @@ import '../performance/frame_notification_coalescer.dart';
 import '../fleet/ship_damage_level.dart';
 import '../settings/battle_status_effect_settings.dart';
 import 'battle_damage_alert.dart';
+import 'battle_detail_models.dart';
+import 'battle_detail_replay_builder.dart';
 
 final class BattleController extends ChangeNotifier
     implements GameApiEventConsumer {
@@ -718,9 +720,25 @@ final class BattleController extends ChangeNotifier
             }),
       );
     }
+    final state = gameState();
+    BattleDetailSnapshot? detail;
+    final session = _session;
+    if (session != null && session.packets.isNotEmpty) {
+      try {
+        detail = const BattleDetailReplayBuilder().build(
+          session: session,
+          battle: confirmed,
+          completedAt: event.capturedAt,
+          gameState: state,
+        );
+      } catch (error) {
+        debugPrint('战斗详情生成失败: $error');
+      }
+    }
     final record = BattleRecord(
       battle: confirmed,
       completedAt: event.capturedAt,
+      detail: detail,
     );
     _records.insert(0, record);
     if (_records.length > maxRecords) {
@@ -732,7 +750,6 @@ final class BattleController extends ChangeNotifier
     }
 
     // Log to persistent database
-    final state = gameState();
     final isPractice =
         confirmed.context.practice || confirmed.context.mapAreaId == 0;
     LogbookDatabase.instance
@@ -779,6 +796,7 @@ final class BattleController extends ChangeNotifier
         _records[0] = BattleRecord(
           battle: _current!,
           completedAt: _records[0].completedAt,
+          detail: _records[0].detail,
         );
       }
     }
