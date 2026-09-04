@@ -15,6 +15,7 @@ import '../widgets/frozen_data_table.dart';
 import 'owned_inventory_projection.dart';
 import 'owned_inventory_sort_state.dart';
 import 'equipment_compatibility_drawer.dart';
+import 'ship_equipment_compatibility_drawer.dart';
 import 'unowned_inventory_projection.dart';
 
 class OwnedInventoryPage extends StatefulWidget {
@@ -59,6 +60,8 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   List<EquipmentInventoryGroup>? _cachedEquipmentGroups;
   final _equipmentRowHeightCache = _EquipmentRowHeightCache();
   int? _selectedEquipmentMasterId;
+  int? _selectedOwnedShipInstanceId;
+  int? _selectedUnownedShipMasterId;
 
   bool get _showShips => widget.showShips ?? _localShowShips;
   bool get _showOwned => widget.showOwned ?? _localShowOwned;
@@ -78,13 +81,17 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     final previousShowOwned = oldWidget.showOwned ?? _localShowOwned;
     final previousShowShips = oldWidget.showShips ?? _localShowShips;
     if (previousShowOwned != _showOwned || previousShowShips != _showShips) {
-      _selectedEquipmentMasterId = null;
+      _clearDrawerSelection();
     }
     if (!identical(oldWidget.controller, widget.controller)) {
       oldWidget.controller.removeListener(_handleControllerChanged);
       _state = widget.controller.state;
       if (!_selectedEquipmentIsValid(_state)) {
         _selectedEquipmentMasterId = null;
+      }
+      if (!_selectedShipIsValid(_state)) {
+        _selectedOwnedShipInstanceId = null;
+        _selectedUnownedShipMasterId = null;
       }
       _inventoryDependencies = _InventoryDependencies.from(_state);
       _clearDerivedData();
@@ -114,16 +121,19 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     final serverOriginChanged =
         _inventoryDependencies.serverOrigin != nextDependencies.serverOrigin;
     final drawerChanged =
-        _selectedEquipmentMasterId != null &&
+        (_selectedEquipmentMasterId != null || _hasSelectedShip) &&
         !_inventoryDependencies.matchesCompatibilityDrawer(nextDependencies);
     final selectedEquipmentInvalid =
         _selectedEquipmentMasterId != null &&
         !_selectedEquipmentIsValid(nextState);
+    final selectedShipInvalid =
+        _hasSelectedShip && !_selectedShipIsValid(nextState);
     if (!shipProjectionChanged &&
         !equipmentProjectionChanged &&
         !serverOriginChanged &&
         !drawerChanged &&
-        !selectedEquipmentInvalid) {
+        !selectedEquipmentInvalid &&
+        !selectedShipInvalid) {
       return;
     }
 
@@ -132,13 +142,49 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     if (shipProjectionChanged) _cachedShipRows = null;
     if (equipmentProjectionChanged) _cachedEquipmentGroups = null;
     if (selectedEquipmentInvalid) _selectedEquipmentMasterId = null;
+    if (selectedShipInvalid) {
+      _selectedOwnedShipInstanceId = null;
+      _selectedUnownedShipMasterId = null;
+    }
 
     final activeTableChanged = _showShips
         ? shipProjectionChanged || serverOriginChanged
         : equipmentProjectionChanged;
-    if (activeTableChanged || drawerChanged || selectedEquipmentInvalid) {
+    if (activeTableChanged ||
+        drawerChanged ||
+        selectedEquipmentInvalid ||
+        selectedShipInvalid) {
       setState(() {});
     }
+  }
+
+  bool get _hasSelectedShip =>
+      _selectedOwnedShipInstanceId != null ||
+      _selectedUnownedShipMasterId != null;
+
+  void _clearDrawerSelection() {
+    _selectedEquipmentMasterId = null;
+    _selectedOwnedShipInstanceId = null;
+    _selectedUnownedShipMasterId = null;
+  }
+
+  bool _selectedShipIsValid(GameState state) {
+    final instanceId = _selectedOwnedShipInstanceId;
+    if (instanceId != null) {
+      final ownedShip = state.ships[instanceId];
+      return _showOwned &&
+          _showShips &&
+          ownedShip != null &&
+          state.masterShips.containsKey(ownedShip.masterId);
+    }
+    final masterId = _selectedUnownedShipMasterId;
+    if (masterId == null || _showOwned || !_showShips) return false;
+    if (!state.masterShips.containsKey(masterId)) return false;
+    final projection = UnownedInventoryProjection(state);
+    final familyRoot = projection.familyRootOf(masterId);
+    return projection.unownedShipFamilies.any(
+      (row) => row.familyRootId == familyRoot,
+    );
   }
 
   bool _selectedEquipmentIsValid(GameState state) {
@@ -178,10 +224,11 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     if (widget.showShips == null) {
       setState(() {
         _localShowShips = value;
-        if (changed) _selectedEquipmentMasterId = null;
+        if (changed) _clearDrawerSelection();
       });
-    } else if (changed && _selectedEquipmentMasterId != null) {
-      setState(() => _selectedEquipmentMasterId = null);
+    } else if (changed &&
+        (_selectedEquipmentMasterId != null || _hasSelectedShip)) {
+      setState(_clearDrawerSelection);
     }
     widget.onSectionChanged?.call(value);
   }
@@ -191,10 +238,11 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     if (widget.showOwned == null) {
       setState(() {
         _localShowOwned = value;
-        if (changed) _selectedEquipmentMasterId = null;
+        if (changed) _clearDrawerSelection();
       });
-    } else if (changed && _selectedEquipmentMasterId != null) {
-      setState(() => _selectedEquipmentMasterId = null);
+    } else if (changed &&
+        (_selectedEquipmentMasterId != null || _hasSelectedShip)) {
+      setState(_clearDrawerSelection);
     }
     widget.onOwnershipChanged?.call(value);
   }
@@ -274,6 +322,12 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     final filteredExcludedCount = unownedShipRows
         .where((row) => excludedFamilyIds.contains(row.familyRootId))
         .length;
+    final selectedOwnedShip = _selectedOwnedShipInstanceId == null
+        ? null
+        : _state.ships[_selectedOwnedShipInstanceId];
+    final selectedShipMaster = selectedOwnedShip == null
+        ? _state.masterShips[_selectedUnownedShipMasterId]
+        : _state.masterShips[selectedOwnedShip.masterId];
     return ColoredBox(
       color: const Color(0xff081923),
       child: Padding(
@@ -389,20 +443,56 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
             const SizedBox(height: 4),
             Expanded(
               child: _showShips
-                  ? _showOwned
-                        ? _ShipInventoryTable(
-                            state: _state,
-                            rows: shipRows,
-                            sortState: _sortState,
-                            onSort: _tapShipSort,
-                            onLongPressSort: _longPressShipSort,
-                          )
-                        : UnownedInventoryView(
-                            state: _state,
-                            showShips: true,
-                            reminderController: widget.reminderController,
-                            shipRows: unownedShipRows,
-                          )
+                  ? Stack(
+                      children: [
+                        Positioned.fill(
+                          child: _showOwned
+                              ? _ShipInventoryTable(
+                                  state: _state,
+                                  rows: shipRows,
+                                  sortState: _sortState,
+                                  selectedShipInstanceId:
+                                      _selectedOwnedShipInstanceId,
+                                  onShipTap: (instanceId) => setState(() {
+                                    _selectedEquipmentMasterId = null;
+                                    _selectedOwnedShipInstanceId = instanceId;
+                                    _selectedUnownedShipMasterId = null;
+                                  }),
+                                  onSort: _tapShipSort,
+                                  onLongPressSort: _longPressShipSort,
+                                )
+                              : UnownedInventoryView(
+                                  state: _state,
+                                  showShips: true,
+                                  reminderController: widget.reminderController,
+                                  shipRows: unownedShipRows,
+                                  selectedShipMasterId:
+                                      _selectedUnownedShipMasterId,
+                                  onShipTap: (masterId) => setState(() {
+                                    _selectedEquipmentMasterId = null;
+                                    _selectedOwnedShipInstanceId = null;
+                                    _selectedUnownedShipMasterId = masterId;
+                                  }),
+                                ),
+                        ),
+                        if (selectedShipMaster != null)
+                          Positioned.fill(
+                            left: math.max(
+                              0,
+                              MediaQuery.sizeOf(context).width - 458,
+                            ),
+                            child: ShipEquipmentCompatibilityDrawer(
+                              state: _state,
+                              ship: selectedShipMaster,
+                              ownedShip: selectedOwnedShip,
+                              onClose: () => setState(() {
+                                _selectedOwnedShipInstanceId = null;
+                                _selectedUnownedShipMasterId = null;
+                              }),
+                            ),
+                          ),
+                      ],
+                    )
                   : Stack(
                       children: [
                         Positioned.fill(
@@ -414,6 +504,8 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                                   selectedEquipmentMasterId:
                                       _selectedEquipmentMasterId,
                                   onEquipmentTap: (masterId) => setState(() {
+                                    _selectedOwnedShipInstanceId = null;
+                                    _selectedUnownedShipMasterId = null;
                                     _selectedEquipmentMasterId = masterId;
                                   }),
                                   onSort: _tapEquipmentSort,
@@ -426,6 +518,8 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
                                   selectedEquipmentMasterId:
                                       _selectedEquipmentMasterId,
                                   onEquipmentTap: (masterId) => setState(() {
+                                    _selectedOwnedShipInstanceId = null;
+                                    _selectedUnownedShipMasterId = null;
                                     _selectedEquipmentMasterId = masterId;
                                   }),
                                 ),
@@ -513,6 +607,8 @@ class UnownedInventoryView extends StatelessWidget {
     this.reminderController,
     this.shipRows,
     this.equipmentRows,
+    this.selectedShipMasterId,
+    this.onShipTap,
     this.selectedEquipmentMasterId,
     this.onEquipmentTap,
   });
@@ -522,6 +618,8 @@ class UnownedInventoryView extends StatelessWidget {
   final NewShipReminderController? reminderController;
   final List<UnownedShipFamilyRow>? shipRows;
   final List<UnownedEquipmentRow>? equipmentRows;
+  final int? selectedShipMasterId;
+  final ValueChanged<int>? onShipTap;
   final int? selectedEquipmentMasterId;
   final ValueChanged<int>? onEquipmentTap;
 
@@ -533,6 +631,8 @@ class UnownedInventoryView extends StatelessWidget {
             state: state,
             rows: shipRows ?? projection.unownedShipFamilies,
             reminderController: reminderController,
+            selectedShipMasterId: selectedShipMasterId,
+            onShipTap: onShipTap,
           )
         : _UnownedEquipmentView(
             rows: equipmentRows ?? projection.unownedEquipment,
@@ -547,11 +647,15 @@ class _UnownedShipsView extends StatelessWidget {
     required this.state,
     required this.rows,
     this.reminderController,
+    this.selectedShipMasterId,
+    this.onShipTap,
   });
 
   final GameState state;
   final List<UnownedShipFamilyRow> rows;
   final NewShipReminderController? reminderController;
+  final int? selectedShipMasterId;
+  final ValueChanged<int>? onShipTap;
 
   @override
   Widget build(BuildContext context) {
@@ -570,6 +674,10 @@ class _UnownedShipsView extends StatelessWidget {
                   state: state,
                   row: row,
                   excluded: excluded.contains(row.familyRootId),
+                  selected: row.master.id == selectedShipMasterId,
+                  onTap: onShipTap == null
+                      ? null
+                      : () => onShipTap!(row.master.id),
                   onChanged: reminderController == null
                       ? null
                       : (value) => reminderController!.setFamilyExcluded(
@@ -627,11 +735,15 @@ class _UnownedShipCard extends StatelessWidget {
     required this.state,
     required this.row,
     required this.excluded,
+    required this.selected,
+    this.onTap,
     this.onChanged,
   });
   final GameState state;
   final UnownedShipFamilyRow row;
   final bool excluded;
+  final bool selected;
+  final VoidCallback? onTap;
   final ValueChanged<bool?>? onChanged;
 
   @override
@@ -639,50 +751,67 @@ class _UnownedShipCard extends StatelessWidget {
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
-    return Container(
-      key: Key('unowned-ship-${row.familyRootId}'),
-      width: 210,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color(0xff102b39),
-        border: Border.all(color: const Color(0xff315064)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: ShipPortrait(
-              ship: row.master,
-              serverOrigin: state.serverOrigin,
-              width: 78,
-              height: 51,
+    final borderRadius = BorderRadius.circular(8);
+    return Semantics(
+      button: onTap != null,
+      selected: selected,
+      child: SizedBox(
+        key: Key('unowned-ship-${row.familyRootId}'),
+        width: 210,
+        child: Material(
+          color: selected ? const Color(0xff183f4e) : const Color(0xff102b39),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(
+              color: selected
+                  ? const Color(0xff62cbd0)
+                  : const Color(0xff315064),
             ),
+            borderRadius: borderRadius,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  row.master.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  row.typeName.isEmpty ? l10n.otherType : row.typeName,
-                  style: const TextStyle(
-                    color: Color(0xff8fa9b7),
-                    fontSize: 12,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: ShipPortrait(
+                      ship: row.master,
+                      serverOrigin: state.serverOrigin,
+                      width: 78,
+                      height: 51,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          row.master.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          row.typeName.isEmpty ? l10n.otherType : row.typeName,
+                          style: const TextStyle(
+                            color: Color(0xff8fa9b7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Checkbox(value: excluded, onChanged: onChanged),
+                ],
+              ),
             ),
           ),
-          Checkbox(value: excluded, onChanged: onChanged),
-        ],
+        ),
       ),
     );
   }
@@ -1117,12 +1246,16 @@ class _ShipInventoryTable extends StatelessWidget {
     required this.state,
     required this.rows,
     required this.sortState,
+    required this.selectedShipInstanceId,
+    required this.onShipTap,
     required this.onSort,
     required this.onLongPressSort,
   });
   final GameState state;
   final List<ShipInventoryRow> rows;
   final ShipInventorySortState sortState;
+  final int? selectedShipInstanceId;
+  final ValueChanged<int> onShipTap;
   final ValueChanged<ShipInventorySortField> onSort;
   final ValueChanged<ShipInventorySortField> onLongPressSort;
 
@@ -1200,10 +1333,15 @@ class _ShipInventoryTable extends StatelessWidget {
       );
     }
 
+    final selectedRowIndex = rows.indexWhere(
+      (row) => row.ship.id == selectedShipInstanceId,
+    );
     return FrozenDataTable(
       key: const Key('owned-inventory-table-ships'),
       keyPrefix: 'owned-inventory',
       rowHeights: List<double>.filled(rows.length, 56),
+      selectedRowIndex: selectedRowIndex >= 0 ? selectedRowIndex : null,
+      onRowTap: (index) => onShipTap(rows[index].ship.id),
       frozenColumnWidths: const <double>[240],
       frozenHeaders: <Widget>[
         header(
@@ -1213,7 +1351,12 @@ class _ShipInventoryTable extends StatelessWidget {
         ),
       ],
       frozenCells: (index) => <Widget>[
-        _ShipNameCell(state: state, row: rows[index]),
+        _ShipNameCell(
+          state: state,
+          row: rows[index],
+          selected: rows[index].ship.id == selectedShipInstanceId,
+          onTap: () => onShipTap(rows[index].ship.id),
+        ),
       ],
       scrollableColumnWidths: widths,
       scrollableHeaders: [
@@ -1267,50 +1410,69 @@ class _ShipInventoryTable extends StatelessWidget {
 }
 
 class _ShipNameCell extends StatelessWidget {
-  const _ShipNameCell({required this.state, required this.row});
+  const _ShipNameCell({
+    required this.state,
+    required this.row,
+    required this.selected,
+    required this.onTap,
+  });
   final GameState state;
   final ShipInventoryRow row;
+  final bool selected;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    child: Row(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: ShipPortrait(
-            key: Key('owned-ship-portrait-${row.ship.id}'),
-            ship: row.master,
-            serverOrigin: state.serverOrigin,
-            width: 78,
-            height: 51,
-            decodeHeight: (53 * MediaQuery.devicePixelRatioOf(context)).ceil(),
-          ),
-        ),
-        const SizedBox(width: 7),
-        Expanded(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              row.master?.name ?? '—',
-              style: const TextStyle(
-                color: Color(0xffe8f0f4),
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) => Semantics(
+    key: Key('owned-ship-name-row-${row.ship.id}'),
+    button: true,
+    selected: selected,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: ShipPortrait(
+                  key: Key('owned-ship-portrait-${row.ship.id}'),
+                  ship: row.master,
+                  serverOrigin: state.serverOrigin,
+                  width: 78,
+                  height: 51,
+                  decodeHeight: (53 * MediaQuery.devicePixelRatioOf(context))
+                      .ceil(),
+                ),
               ),
-            ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    row.master?.name ?? '—',
+                    style: const TextStyle(
+                      color: Color(0xffe8f0f4),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+              if (row.fleetNumber != null)
+                Text(
+                  _circledNumber(row.fleetNumber!),
+                  style: const TextStyle(
+                    color: Color(0xff59d8ce),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+            ],
           ),
         ),
-        if (row.fleetNumber != null)
-          Text(
-            _circledNumber(row.fleetNumber!),
-            style: const TextStyle(
-              color: Color(0xff59d8ce),
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-      ],
+      ),
     ),
   );
 }

@@ -438,6 +438,306 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('持有舰娘打开可装备装备抽屉', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = await _equipmentCompatibilityController(
+      includeUnownedEquipment: true,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+
+    final row = find.byKey(const Key('owned-ship-name-row-9001'));
+    expect(row, findsOneWidget);
+    expect(tester.widget<Semantics>(row).properties.selected, isFalse);
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Semantics>(row).properties.selected, isTrue);
+
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsOneWidget,
+    );
+    expect(find.text('夕張'), findsWidgets);
+    expect(find.textContaining('Lv.98'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('owned-ship-name-row-9003')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Lv.76'), findsOneWidget);
+    expect(find.textContaining('Lv.98'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const Key('ship-equipment-compatibility-close')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('未持有舰娘卡片打开抽屉且复选框只切换排除', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController();
+    addTearDown(controller.dispose);
+    final reminderController = NewShipReminderController(
+      stateProvider: () => controller.state,
+      store: NewShipReminderStore(await SharedPreferences.getInstance()),
+      onPublish: (_) {},
+    );
+    addTearDown(reminderController.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            reminderController: reminderController,
+            showOwned: false,
+          ),
+        ),
+      ),
+    );
+
+    final card = find.byKey(const Key('unowned-ship-103'));
+    expect(card, findsOneWidget);
+    final checkbox = find.descendant(of: card, matching: find.byType(Checkbox));
+    await tester.tap(checkbox);
+    await tester.pump();
+    expect(reminderController.excludedFamilyIds, contains(103));
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+    final drawer = find.byKey(const Key('ship-equipment-compatibility-drawer'));
+    expect(drawer, findsOneWidget);
+    expect(
+      find.descendant(of: drawer, matching: find.text('白雪')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: drawer, matching: find.textContaining('Lv.')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('舰娘抽屉在切换范围及选中对象失效时关闭', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('owned-ship-name-row-9001')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-unowned')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const Key('unowned-ship-103')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-equipment')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-ships')));
+    await tester.tap(find.byKey(const Key('owned-inventory-tab-owned')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('owned-ship-name-row-9001')));
+    await tester.pumpAndSettle();
+    controller.accept(
+      kcsapiEvent(
+        '/kcsapi/api_port/port',
+        _compatibilityPortData(
+          ships: _compatibilityPortShips()
+              .where((ship) => ship['api_id'] != 9001)
+              .toList(),
+        ),
+      ),
+    );
+    await controller.idle;
+    await tester.pump();
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('未持有舰娘变为持有时卡片与抽屉关闭', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(controller: controller, showOwned: false),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('unowned-ship-103')));
+    await tester.pumpAndSettle();
+    final ships = _compatibilityPortShips()
+      ..add(<String, Object?>{
+        ..._compatibilityPortShips().first,
+        'api_id': 9010,
+        'api_ship_id': 103,
+        'api_lv': 1,
+      });
+    controller.accept(
+      kcsapiEvent(
+        '/kcsapi/api_port/port',
+        _compatibilityPortData(ships: ships),
+      ),
+    );
+    await controller.idle;
+    await tester.pump();
+
+    expect(find.byKey(const Key('unowned-ship-103')), findsNothing);
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('舰娘抽屉在装备状态更新后保持打开并刷新', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController(
+      includeUnownedEquipment: true,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('owned-ship-name-row-9001')));
+    await tester.pumpAndSettle();
+    final existingItems =
+        jsonDecode(slotItemEvent.responseBody)['api_data']! as List<Object?>;
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_get_member/slot_item', <Object?>[
+        ...existingItems,
+        <String, Object?>{
+          'api_id': 7999,
+          'api_slotitem_id': 201,
+          'api_level': 0,
+          'api_alv': 0,
+        },
+      ]),
+    );
+    await controller.idle;
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsOneWidget,
+    );
+    final count = find.byKey(
+      const Key('ship-equipment-compatibility-owned-count-201'),
+    );
+    expect(
+      find.descendant(of: count, matching: find.text('持有 X3')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('受控范围更新与 controller 替换遵守舰娘选择有效性', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final firstController = await _equipmentCompatibilityController();
+    final replacementController = GameStateController();
+    addTearDown(firstController.dispose);
+    addTearDown(replacementController.dispose);
+    var activeController = firstController;
+    var showOwned = true;
+    late StateSetter rebuild;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return OwnedInventoryPage(
+                controller: activeController,
+                showOwned: showOwned,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('owned-ship-name-row-9001')));
+    await tester.pumpAndSettle();
+    rebuild(() => showOwned = false);
+    await tester.pump();
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const Key('unowned-ship-103')));
+    await tester.pumpAndSettle();
+    rebuild(() => activeController = replacementController);
+    await tester.pump();
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsNothing,
+    );
+  });
+
   testWidgets(
     'equipment row opens, replaces, and closes compatibility drawer',
     (tester) async {
@@ -2773,6 +3073,36 @@ void main() {
   });
 }
 
+List<Map<String, Object?>> _compatibilityPortShips() {
+  final envelope = jsonDecode(portEvent.responseBody) as Map<String, Object?>;
+  final data =
+      jsonDecode(jsonEncode(envelope['api_data'])) as Map<String, Object?>;
+  final ships = (data['api_ship']! as List<Object?>)
+      .cast<Map<String, Object?>>();
+  final first = ships.first..['api_lv'] = 98;
+  for (final (instanceId, level) in <(int, int)>[(9003, 76), (9004, 45)]) {
+    ships.add(<String, Object?>{
+      ...first,
+      'api_id': instanceId,
+      'api_lv': level,
+      'api_slot': const <int>[-1, -1, -1, -1],
+      'api_onslot': const <int>[0, 0, 0, 0],
+    });
+  }
+  return ships;
+}
+
+Map<String, Object?> _compatibilityPortData({
+  required List<Map<String, Object?>> ships,
+}) {
+  final envelope = jsonDecode(portEvent.responseBody) as Map<String, Object?>;
+  final data =
+      jsonDecode(jsonEncode(envelope['api_data'])) as Map<String, Object?>;
+  (data['api_basic']! as Map<String, Object?>)['api_member_id'] = 1001;
+  data['api_ship'] = ships;
+  return data;
+}
+
 Future<GameStateController> _equipmentCompatibilityController({
   bool includeOwnedUnknownType = false,
   bool includeUnownedEquipment = false,
@@ -2845,6 +3175,7 @@ Future<GameStateController> _equipmentCompatibilityController({
       jsonDecode(portEvent.responseBody) as Map<String, Object?>;
   final portData =
       jsonDecode(jsonEncode(portEnvelope['api_data'])) as Map<String, Object?>;
+  (portData['api_basic']! as Map<String, Object?>)['api_member_id'] = 1001;
   final ownedShips = portData['api_ship']! as List<Object?>;
   final firstOwnedShip = ownedShips.first! as Map<String, Object?>;
   firstOwnedShip['api_lv'] = 98;
