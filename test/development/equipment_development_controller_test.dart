@@ -90,6 +90,17 @@ void main() {
     );
   });
 
+  test('equipment search matches every localized name', () async {
+    final controller = EquipmentDevelopmentController(
+      repository: _repository(),
+    );
+    await controller.initialize(_stateWithFlagship(101));
+
+    controller.setEquipmentSearch('測試主砲');
+
+    expect(controller.filteredEquipment.map((item) => item.id), [7]);
+  });
+
   test('default recipe ordering preserves calculator tie breakers', () async {
     final controller = EquipmentDevelopmentController(
       repository: _repository(),
@@ -241,6 +252,7 @@ Map<String, Object?> _snapshot() => {
     {
       'id': 7,
       'name': '主炮',
+      'names': {'zh': '测试主炮', 'zh_Hant': '測試主砲', 'ja': 'テスト主砲'},
       'type_id': 1,
       'minimum_resources': [10, 10, 10, 10],
     },

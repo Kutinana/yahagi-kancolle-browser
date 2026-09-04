@@ -322,7 +322,7 @@ class _EquipmentOption extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  controller.equipmentName(equipment),
+                  equipment.label(Localizations.localeOf(context)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

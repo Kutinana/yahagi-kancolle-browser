@@ -83,6 +83,25 @@ void main() {
     },
   );
 
+  testWidgets(
+    'equipment names follow the current locale instead of game data',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(
+          size: const Size(1000, 700),
+          locale: const Locale.fromSubtags(
+            languageCode: 'zh',
+            scriptCode: 'Hant',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('測試艦攻'), findsOneWidget);
+      expect(find.text('テスト艦攻'), findsNothing);
+    },
+  );
+
   testWidgets('workbench switches modes and preserves calculator resources', (
     tester,
   ) async {
@@ -468,10 +487,11 @@ Widget _app({
   required Size size,
   GameState state = _state,
   DevelopmentWorkbenchStateStore? stateStore,
+  Locale locale = const Locale('zh'),
 }) => MediaQuery(
   data: MediaQueryData(size: size),
   child: MaterialApp(
-    locale: const Locale('zh'),
+    locale: locale,
     localizationsDelegates: const [
       AppLocalizations.delegate,
       GlobalMaterialLocalizations.delegate,
@@ -514,7 +534,7 @@ const _state = GameState(
   ],
   masterShips: {101: MasterShip(id: 101, name: '赤城', shipTypeId: 11)},
   masterSlotItems: {
-    7: MasterSlotItem(id: 7, name: '测试舰攻', type: [0, 0, 8]),
+    7: MasterSlotItem(id: 7, name: 'テスト艦攻', type: [0, 0, 8]),
     8: MasterSlotItem(id: 8, name: '测试雷达', type: [0, 0, 12]),
     9: MasterSlotItem(id: 9, name: '测试爆雷', type: [0, 0, 15]),
     10: MasterSlotItem(id: 10, name: '高耗测试装备', type: [0, 0, 1]),
@@ -551,7 +571,8 @@ final _snapshot = <String, Object?>{
   'equipment': [
     {
       'id': 7,
-      'name': '测试舰攻',
+      'name': 'テスト艦攻',
+      'names': {'zh': '测试舰攻', 'zh_Hant': '測試艦攻', 'ja': 'テスト艦攻'},
       'type_id': 8,
       'icon_id': 5,
       'minimum_resources': [10, 10, 10, 10],

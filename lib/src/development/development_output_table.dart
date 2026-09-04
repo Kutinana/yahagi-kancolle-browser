@@ -136,8 +136,8 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
                                 ),
                                 const SizedBox(width: 7),
                                 Text(
-                                  widget.controller.equipmentName(
-                                    item.equipment,
+                                  item.equipment.label(
+                                    Localizations.localeOf(context),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,

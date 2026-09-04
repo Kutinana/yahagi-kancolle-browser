@@ -330,9 +330,7 @@ class _FormulaBody extends StatelessWidget {
                   width: 23,
                   height: 23,
                 ),
-                label: Text(
-                  controller.equipmentName(controller.dataset!.equipment[id]!),
-                ),
+                label: Text(controller.dataset!.equipment[id]!.label(locale)),
                 onDeleted: () => controller.toggleTarget(id),
               ),
           ],

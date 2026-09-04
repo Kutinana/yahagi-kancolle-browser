@@ -104,7 +104,13 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     final output = data.equipment.values.where((item) {
       if (typeIds != null && !typeIds.contains(item.typeId)) return false;
       if (query.isEmpty) return true;
-      return equipmentName(item).toLowerCase().contains(query) ||
+      return item.searchableNames.any(
+            (name) => name.toLowerCase().contains(query),
+          ) ||
+          (_gameState.masterSlotItems[item.id]?.name.toLowerCase().contains(
+                query,
+              ) ??
+              false) ||
           item.id.toString() == query;
     }).toList();
     output.sort((left, right) {
@@ -115,9 +121,6 @@ class EquipmentDevelopmentController extends ChangeNotifier {
     });
     return output;
   }
-
-  String equipmentName(DevelopmentEquipmentRecord item) =>
-      _gameState.masterSlotItems[item.id]?.name ?? item.name;
 
   String equipmentTypeName(int typeId) =>
       _gameState.masterSlotItemTypes[typeId] ?? '—';
