@@ -132,7 +132,7 @@ class _LogbookPageState extends State<LogbookPage>
             database: database,
             battleController: widget.battleController,
           ),
-          const ResourceTrendPage(),
+          ResourceTrendPage(database: database),
         ],
       ),
     );

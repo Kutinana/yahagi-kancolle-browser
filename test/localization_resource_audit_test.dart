@@ -86,6 +86,10 @@ void main() {
     // Each entry is intentionally shared: product/game terminology, numerals,
     // protocol names, or a language self-name. Adding a key requires review.
     const reviewedZhHant = <String>{
+      // Numeric period and established material/inventory labels share spelling.
+      'resourceTrend90d',
+      'resourceTrendBuildMaterial',
+      'resourceTrendLatest',
       'appTitle',
       'repair',
       'construction',
@@ -237,6 +241,8 @@ void main() {
       'developmentFuelShort',
     };
     const reviewedJa = <String>{
+      // The in-game instant construction material has the same Chinese spelling.
+      'resourceTrendBuildMaterial',
       'appTitle',
       'construction',
       'settingsTabNotification',

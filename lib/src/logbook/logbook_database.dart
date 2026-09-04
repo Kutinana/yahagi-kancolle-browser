@@ -1310,6 +1310,59 @@ class LogbookDatabase extends ChangeNotifier {
     return value is num ? value.toInt() : 0;
   }
 
+  /// The actual observation used as the range baseline; never synthesizes a
+  /// midnight snapshot from a later observation.
+  Future<Map<String, dynamic>?> getResourceSnapshotAtOrBefore(
+    DateTime at,
+  ) async {
+    final db = await database;
+    final rows = await db.query(
+      'resource_logs',
+      where: 'timestamp <= ?',
+      whereArgs: [at.millisecondsSinceEpoch],
+      orderBy: 'timestamp DESC, id DESC',
+      limit: 1,
+    );
+    return rows.singleOrNull;
+  }
+
+  /// Keyset pagination in observation order, including backdated imports and
+  /// multiple changes captured in the same millisecond. Export keeps its
+  /// existing id-ordered stream below.
+  Stream<Map<String, dynamic>> streamResourceLogsByTimestamp({
+    required DateTime start,
+    required DateTime end,
+    int pageSize = 1000,
+  }) async* {
+    assert(pageSize > 0);
+    final db = await database;
+    int? lastTime;
+    var lastId = 0;
+    while (true) {
+      final rows = await db.query(
+        'resource_logs',
+        where:
+            'timestamp >= ? AND timestamp <= ?'
+            '${lastTime == null ? '' : ' AND (timestamp > ? OR (timestamp = ? AND id > ?))'}',
+        whereArgs: [
+          // Move the indexed lower bound with the cursor; otherwise SQLite
+          // rescans all earlier pages before evaluating the tie-breaking OR.
+          lastTime ?? start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+          if (lastTime != null) ...[lastTime, lastTime, lastId],
+        ],
+        orderBy: 'timestamp ASC, id ASC',
+        limit: pageSize,
+      );
+      for (final row in rows) {
+        yield row;
+      }
+      if (rows.length < pageSize) return;
+      lastTime = (rows.last['timestamp'] as num).toInt();
+      lastId = (rows.last['id'] as num).toInt();
+    }
+  }
+
   Stream<Map<String, dynamic>> streamResourceLogs({
     DateTime? start,
     DateTime? end,

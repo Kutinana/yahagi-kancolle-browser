@@ -9,6 +9,76 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get resourceTrend90d => '90天';
+
+  @override
+  String get resourceTrendInventoryTitle => '库存趋势';
+
+  @override
+  String get resourceTrendCustomize => '显示资源';
+
+  @override
+  String get resourceTrendAtLeastOne => '至少保留一项资源';
+
+  @override
+  String get resourceTrendBuildMaterial => '高速建造材';
+
+  @override
+  String get resourceTrendRepairMaterial => '高速修复材';
+
+  @override
+  String get resourceTrendDevMaterial => '开发资材';
+
+  @override
+  String get resourceTrendImproveMaterial => '改修资材';
+
+  @override
+  String get resourceTrendLatest => '最新存量';
+
+  @override
+  String get resourceTrendChange => '区间增减';
+
+  @override
+  String resourceTrendBaseline(String time) {
+    return '增减基准：$time JST';
+  }
+
+  @override
+  String resourceTrendObserved(String time) {
+    return '最后记录：$time JST';
+  }
+
+  @override
+  String get resourceTrendPartial => '缺少期初记录，按首条记录计算增减';
+
+  @override
+  String get resourceTrendInsufficient => '可比较的记录不足';
+
+  @override
+  String get resourceTrendNoPeriodData => '此时段暂无资源记录';
+
+  @override
+  String get resourceTrendLoadError => '资源记录加载失败';
+
+  @override
+  String get resourceTrendSaveError => '资源显示设置未能保存';
+
+  @override
+  String get resourceTrendInspect => '滑动查看';
+
+  @override
+  String get resourceTrendExpand => '放大图表';
+
+  @override
+  String get resourceTrendSampled => '长时段图表已保留峰谷，读数对应实际采样记录';
+
+  @override
+  String get resourceTrendLocalScale => '纵轴随存量范围缩放';
+
+  @override
+  String get resourceTrendBaseShort => '基准';
+
+  @override
   String get diagnosticLoggingSection => '客户端诊断日志';
 
   @override
@@ -2839,6 +2909,76 @@ class AppLocalizationsZh extends AppLocalizations {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get resourceTrend90d => '90天';
+
+  @override
+  String get resourceTrendInventoryTitle => '庫存趨勢';
+
+  @override
+  String get resourceTrendCustomize => '顯示資源';
+
+  @override
+  String get resourceTrendAtLeastOne => '至少保留一項資源';
+
+  @override
+  String get resourceTrendBuildMaterial => '高速建造材';
+
+  @override
+  String get resourceTrendRepairMaterial => '高速修復材';
+
+  @override
+  String get resourceTrendDevMaterial => '開發資材';
+
+  @override
+  String get resourceTrendImproveMaterial => '改修資材';
+
+  @override
+  String get resourceTrendLatest => '最新存量';
+
+  @override
+  String get resourceTrendChange => '區間增減';
+
+  @override
+  String resourceTrendBaseline(String time) {
+    return '增減基準：$time JST';
+  }
+
+  @override
+  String resourceTrendObserved(String time) {
+    return '最後紀錄：$time JST';
+  }
+
+  @override
+  String get resourceTrendPartial => '缺少期初紀錄，按首條紀錄計算增減';
+
+  @override
+  String get resourceTrendInsufficient => '可比較的紀錄不足';
+
+  @override
+  String get resourceTrendNoPeriodData => '此時段暫無資源紀錄';
+
+  @override
+  String get resourceTrendLoadError => '資源紀錄載入失敗';
+
+  @override
+  String get resourceTrendSaveError => '資源顯示設定未能儲存';
+
+  @override
+  String get resourceTrendInspect => '滑動查看';
+
+  @override
+  String get resourceTrendExpand => '放大圖表';
+
+  @override
+  String get resourceTrendSampled => '長時段圖表已保留峰谷，讀數對應實際取樣紀錄';
+
+  @override
+  String get resourceTrendLocalScale => '縱軸隨存量範圍縮放';
+
+  @override
+  String get resourceTrendBaseShort => '基準';
 
   @override
   String get diagnosticLoggingSection => '用戶端診斷日誌';

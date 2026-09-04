@@ -1,290 +1,332 @@
-import 'package:fl_chart/fl_chart.dart';
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/app_localizations.dart';
-import '../game_state/game_state.dart';
 import '../logbook/logbook_database.dart';
-import 'resource_trend_sampler.dart';
+import '../widgets/filter_controls.dart';
+import 'resource_trend_chart.dart';
+import 'resource_trend_data.dart';
 
 typedef ResourceTrendLoader =
     Future<List<Map<String, dynamic>>> Function(int selectedDays);
+const resourceTrendVisibleResourcesKey = 'resource_trend_visible_resources_v1';
 
-class _SeriesSpec {
-  const _SeriesSpec({
-    required this.key,
-    required this.iconId,
-    required this.color,
-  });
-
-  final String key;
-  final String iconId;
+class _Resource {
+  const _Resource(this.key, this.icon, this.color);
+  final String key, icon;
   final Color color;
+  String label(AppLocalizations l) => switch (key) {
+    'fuel' => l.fuel,
+    'ammo' => l.ammo,
+    'steel' => l.steel,
+    'bauxite' => l.bauxite,
+    'bucket' => l.resourceTrendRepairMaterial,
+    'devmat' => l.resourceTrendDevMaterial,
+    'blowtorch' => l.resourceTrendBuildMaterial,
+    _ => l.resourceTrendImproveMaterial,
+  };
 }
 
-const List<_SeriesSpec> _mainSeries = <_SeriesSpec>[
-  _SeriesSpec(key: 'fuel', iconId: '01', color: Color(0xff4caf50)),
-  _SeriesSpec(key: 'ammo', iconId: '02', color: Color(0xffff9800)),
-  _SeriesSpec(key: 'steel', iconId: '03', color: Color(0xff9e9e9e)),
-  _SeriesSpec(key: 'bauxite', iconId: '04', color: Color(0xffffc107)),
+const _resources = [
+  _Resource('fuel', '01', Color(0xff6bcd91)),
+  _Resource('ammo', '02', Color(0xffe7a666)),
+  _Resource('steel', '03', Color(0xffb1c7d3)),
+  _Resource('bauxite', '04', Color(0xffe2c05a)),
+  _Resource('blowtorch', '05', Color(0xffeab079)),
+  _Resource('bucket', '06', Color(0xff88ce9f)),
+  _Resource('devmat', '07', Color(0xff69c7db)),
+  _Resource('screw', '08', Color(0xffbf9bdf)),
 ];
-
-const List<_SeriesSpec> _auxSeries = <_SeriesSpec>[
-  _SeriesSpec(key: 'bucket', iconId: '06', color: Color(0xff8bc34a)),
-  _SeriesSpec(key: 'devmat', iconId: '07', color: Color(0xff00bcd4)),
-  _SeriesSpec(key: 'blowtorch', iconId: '05', color: Color(0xffff5722)),
-  _SeriesSpec(key: 'screw', iconId: '08', color: Color(0xff9c27b0)),
-];
-
-final List<_SeriesSpec> _allSeries = <_SeriesSpec>[
-  ..._mainSeries,
-  ..._auxSeries,
-];
-
-String _seriesLabel(String key) {
-  switch (key) {
-    case 'fuel':
-      return GameResourceType.fuel.label;
-    case 'ammo':
-      return GameResourceType.ammunition.label;
-    case 'steel':
-      return GameResourceType.steel.label;
-    case 'bauxite':
-      return GameResourceType.bauxite.label;
-    case 'bucket':
-      return GameResourceType.instantRepair.label;
-    case 'blowtorch':
-      return GameResourceType.instantBuild.label;
-    case 'devmat':
-      return GameResourceType.developmentMaterial.label;
-    case 'screw':
-      return GameResourceType.improvementMaterial.label;
-    default:
-      return key;
-  }
-}
 
 class ResourceTrendPage extends StatefulWidget {
-  const ResourceTrendPage({super.key, this.database, this.loadLogs});
-
+  const ResourceTrendPage({super.key, this.database, this.loadLogs, this.now});
   final LogbookDatabase? database;
   final ResourceTrendLoader? loadLogs;
-
+  final DateTime Function()? now;
   @override
   State<ResourceTrendPage> createState() => _ResourceTrendPageState();
 }
 
-class _ResourceTrendPageState extends State<ResourceTrendPage> {
-  static const int _maxChartPoints = 500;
-  static const int _maxDotsPoints = 80;
-  static const int _maxCurvePoints = 200;
-
-  int _selectedDays = 1; // 1, 7, 30, -1 (all)
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _data = const <Map<String, dynamic>>[];
-  Map<String, List<FlSpot>> _spots = const <String, List<FlSpot>>{};
-  int _loadGeneration = 0;
-  final Map<String, bool> _visibleSeries = <String, bool>{
-    for (final spec in _allSeries) spec.key: true,
-  };
+class _ResourceTrendPageState extends State<ResourceTrendPage>
+    with WidgetsBindingObserver {
+  int _days = 1, _generation = 0;
+  String _selected = 'fuel';
+  Set<String> _visible = _resources.map((r) => r.key).toSet();
+  ResourceTrendData? _data;
+  bool _loading = true, _error = false, _preferencesEdited = false;
+  Timer? _midnight, _refreshDebounce;
+  final _chartRevision = ValueNotifier(0);
+  LogbookDatabase get _database => widget.database ?? LogbookDatabase.instance;
+  DateTime get _now => widget.now?.call() ?? DateTime.now();
+  AppLocalizations get _l =>
+      AppLocalizations.of(context) ??
+      lookupAppLocalizations(const Locale('zh'));
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    final generation = ++_loadGeneration;
-    setState(() => _isLoading = true);
-    try {
-      final raw =
-          await (widget.loadLogs?.call(_selectedDays) ??
-              _loadStoredLogs(_selectedDays));
-      final data = downsampleResourceLogs(raw, maxPoints: _maxChartPoints);
-      final spots = <String, List<FlSpot>>{};
-      for (final spec in _allSeries) {
-        spots[spec.key] = _buildSpots(data, spec.key);
-      }
-      if (!mounted || generation != _loadGeneration) return;
-      setState(() {
-        _data = data;
-        _spots = spots;
-        _isLoading = false;
-      });
-    } catch (error) {
-      debugPrint('资源趋势数据加载失败: $error');
-      if (!mounted || generation != _loadGeneration) return;
-      setState(() {
-        _data = const <Map<String, dynamic>>[];
-        _spots = const <String, List<FlSpot>>{};
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _loadStoredLogs(int selectedDays) async {
-    final database = widget.database ?? LogbookDatabase.instance;
-    final end = DateTime.now();
-    final start = selectedDays < 0
-        ? null
-        : end.subtract(Duration(days: selectedDays));
-    final count = await database.countResourceLogs(start: start, end: end);
-    final sampler = ResourceTrendStreamSampler(
-      expectedRows: count,
-      maxPoints: _maxChartPoints,
-    );
-    await for (final row in database.streamResourceLogs(
-      start: start,
-      end: end,
-    )) {
-      sampler.add(row);
-    }
-    return sampler.finish();
-  }
-
-  List<FlSpot> _buildSpots(List<Map<String, dynamic>> data, String key) {
-    final spots = <FlSpot>[
-      for (var i = 0; i < data.length; i++)
-        FlSpot(i.toDouble(), (data[i][key] as num?)?.toDouble() ?? 0),
-    ];
-    // A single record would collapse the X axis; duplicate it so a flat line
-    // can still be drawn without a zero-width axis range.
-    if (spots.length == 1) {
-      spots.add(FlSpot(1, spots.first.y));
-    }
-    return spots;
-  }
-
-  double get _maxX => (_data.length <= 1 ? 1 : _data.length - 1).toDouble();
-
-  void _onFilterChanged(int days) {
-    if (_selectedDays == days) return;
-    setState(() => _selectedDays = days);
-    _loadData();
-  }
-
-  void _toggleSeries(String key) {
-    setState(() {
-      _visibleSeries[key] = !(_visibleSeries[key] ?? true);
-    });
-  }
-
-  ({double minY, double maxY}) _bounds(
-    List<_SeriesSpec> series,
-    double fallbackMax,
-  ) {
-    var minVal = double.infinity;
-    var maxVal = 0.0;
-    var any = false;
-    for (final spec in series) {
-      if (_visibleSeries[spec.key] != true) continue;
-      for (final spot in _spots[spec.key] ?? const <FlSpot>[]) {
-        any = true;
-        if (spot.y < minVal) minVal = spot.y;
-        if (spot.y > maxVal) maxVal = spot.y;
-      }
-    }
-    if (!any || minVal == double.infinity) {
-      return (minY: 0, maxY: fallbackMax);
-    }
-    if (maxVal == 0) maxVal = fallbackMax;
-    // Guarantee a positive-height axis range even when every visible value is
-    // identical; fl_chart divides by (maxY - minY) while mapping points.
-    if (maxVal <= minVal) maxVal = minVal + fallbackMax;
-
-    final pad = (maxVal - minVal) * 0.1;
-    var minY = minVal - pad;
-    var maxY = maxVal + pad;
-    if (minY < 0) minY = 0;
-    if (maxY <= minY) maxY = minY + fallbackMax;
-    return (minY: minY, maxY: maxY);
+    WidgetsBinding.instance.addObserver(this);
+    _database
+        .changesFor(LogbookChangeCategory.resource)
+        .addListener(_recordsChanged);
+    _restorePreferences();
+    _load();
+    _scheduleMidnight();
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return ColoredBox(
-      color: const Color(0xff081521),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Container(
-            color: const Color(0xff142735),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _buildFilterButton(l10n?.resourceTrend24h ?? '24小时', 1),
-                _buildFilterButton(l10n?.resourceTrend7d ?? '7天', 7),
-                _buildFilterButton(l10n?.resourceTrend30d ?? '30天', 30),
-                _buildFilterButton(l10n?.resourceTrendAll ?? '全部记录', -1),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _data.isEmpty
-                ? Center(
-                    child: Text(
-                      l10n?.noResourceRecords ?? '暂无资源记录',
-                      style: const TextStyle(color: Color(0xff8197a5)),
-                    ),
-                  )
-                : Column(
-                    children: <Widget>[
-                      _buildStatsGrid(),
-                      _buildLegend(),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
-                          child: RepaintBoundary(
-                            key: const Key('resource-trend-chart'),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: <Widget>[
-                                _buildMainChart(),
-                                _buildAuxChart(),
-                                _axisGroupLabels(l10n),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
-      ),
+  void didUpdateWidget(covariant ResourceTrendPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.database != widget.database) {
+      (oldWidget.database ?? LogbookDatabase.instance)
+          .changesFor(LogbookChangeCategory.resource)
+          .removeListener(_recordsChanged);
+      _database
+          .changesFor(LogbookChangeCategory.resource)
+          .addListener(_recordsChanged);
+    }
+    if (oldWidget.database != widget.database ||
+        oldWidget.loadLogs != widget.loadLogs ||
+        oldWidget.now != widget.now) {
+      _load(clear: true);
+      _scheduleMidnight();
+    }
+  }
+
+  void _recordsChanged() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 200), _load);
+  }
+
+  void _scheduleMidnight() {
+    _midnight?.cancel();
+    final now = _now;
+    final today = ResourceTrendWindow.at(now, 1).start;
+    _midnight = Timer(
+      today.add(const Duration(days: 1)).difference(now.toUtc()) +
+          const Duration(milliseconds: 50),
+      () {
+        _load(clear: true);
+        _scheduleMidnight();
+      },
     );
   }
 
-  Widget _buildFilterButton(String label, int days) {
-    final isActive = _selectedDays == days;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-      child: InkWell(
-        onTap: () => _onFilterChanged(days),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: isActive ? const Color(0xff403923) : Colors.transparent,
-            border: Border.all(
-              color: isActive ? const Color(0xffb98a28) : Colors.transparent,
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _load(clear: true);
+      _scheduleMidnight();
+    }
+  }
+
+  Future<void> _restorePreferences() async {
+    try {
+      final saved = (await SharedPreferences.getInstance()).getStringList(
+        resourceTrendVisibleResourcesKey,
+      );
+      if (!mounted || saved == null || _preferencesEdited) return;
+      final valid = _resources.map((r) => r.key).where(saved.contains).toSet();
+      if (valid.isEmpty) return;
+      setState(() {
+        _visible = valid;
+        if (!valid.contains(_selected)) _selected = valid.first;
+      });
+    } catch (error) {
+      debugPrint('Resource display preferences could not be read: $error');
+    }
+  }
+
+  Future<void> _load({bool clear = false}) async {
+    final generation = ++_generation;
+    final window = ResourceTrendWindow.at(_now, _days);
+    setState(() {
+      _loading = true;
+      _error = false;
+      if (clear) _data = null;
+    });
+    try {
+      final data = widget.loadLogs == null
+          ? await loadResourceTrend(_database, window)
+          : ResourceTrendData.fromRows(window, await widget.loadLogs!(_days));
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _data = data;
+        _loading = false;
+      });
+      _chartRevision.value++;
+    } catch (error) {
+      debugPrint('Resource history could not be loaded: $error');
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _error = true;
+        _loading = false;
+        _data = null;
+      });
+      _chartRevision.value++;
+    }
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    _midnight?.cancel();
+    _refreshDebounce?.cancel();
+    _database
+        .changesFor(LogbookChangeCategory.resource)
+        .removeListener(_recordsChanged);
+    WidgetsBinding.instance.removeObserver(this);
+    _chartRevision.dispose();
+    super.dispose();
+  }
+
+  Future<void> _customize() async {
+    final draft = {..._visible};
+    final result = await showDialog<Set<String>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          backgroundColor: const Color(0xff102532),
+          title: Text(_l.resourceTrendCustomize),
+          content: SizedBox(
+            width: 360,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final resource in _resources)
+                    CheckboxListTile(
+                      key: ValueKey('resource-filter-${resource.key}'),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: const Color(0xffbd9349),
+                      value: draft.contains(resource.key),
+                      secondary: Image.asset(
+                        'assets/images/material/${resource.icon}.png',
+                        width: 22,
+                        height: 22,
+                      ),
+                      title: Text(
+                        resource.label(_l),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      onChanged: (value) => update(() {
+                        if (value == true) {
+                          draft.add(resource.key);
+                        } else {
+                          draft.remove(resource.key);
+                        }
+                      }),
+                    ),
+                  if (draft.isEmpty)
+                    Text(
+                      _l.resourceTrendAtLeastOne,
+                      style: const TextStyle(
+                        color: Color(0xffffaa91),
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
             ),
-            borderRadius: BorderRadius.circular(20),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive
-                  ? const Color(0xffffc857)
-                  : const Color(0xff9eb2bd),
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(_l.cancel),
+            ),
+            TextButton(
+              onPressed: draft.isEmpty
+                  ? null
+                  : () => Navigator.pop(context, draft),
+              child: Text(_l.confirm),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    _preferencesEdited = true;
+    setState(() {
+      _visible = result;
+      if (!result.contains(_selected)) {
+        _selected = _resources.firstWhere((r) => result.contains(r.key)).key;
+      }
+    });
+    try {
+      final saved = await (await SharedPreferences.getInstance()).setStringList(
+        resourceTrendVisibleResourcesKey,
+        _resources
+            .where((r) => result.contains(r.key))
+            .map((r) => r.key)
+            .toList(),
+      );
+      if (!saved) {
+        throw StateError('Saving resource display preferences returned false');
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_l.resourceTrendSaveError)));
+      }
+    }
+  }
+
+  Widget _chart(double height, {bool expanded = false, VoidCallback? onClose}) {
+    final resource = _resources.firstWhere((r) => r.key == _selected);
+    return ResourceTrendChart(
+      key: ValueKey(
+        expanded ? 'resource-trend-fullscreen' : 'resource-trend-chart',
+      ),
+      data: _data!,
+      resourceKey: resource.key,
+      label: resource.label(_l),
+      color: resource.color,
+      iconId: resource.icon,
+      plotHeight: height,
+      expanded: expanded,
+      onExpand: onClose ?? _expand,
+    );
+  }
+
+  void _expand() {
+    showDialog<void>(
+      context: context,
+      useSafeArea: false,
+      builder: (dialogContext) => Dialog.fullscreen(
+        backgroundColor: const Color(0xff091b28),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => ValueListenableBuilder(
+              valueListenable: _chartRevision,
+              builder: (context, revision, child) => SingleChildScrollView(
+                padding: const EdgeInsets.all(8),
+                child: _data == null
+                    ? Column(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                              tooltip: _l.close,
+                              onPressed: () => Navigator.pop(dialogContext),
+                              icon: const Icon(Icons.close),
+                            ),
+                          ),
+                          _status(),
+                        ],
+                      )
+                    : _chart(
+                        math.max(
+                          140,
+                          constraints.maxHeight -
+                              (constraints.maxHeight < 500 ? 118 : 290),
+                        ),
+                        expanded: true,
+                        onClose: () => Navigator.pop(dialogContext),
+                      ),
+              ),
             ),
           ),
         ),
@@ -292,494 +334,317 @@ class _ResourceTrendPageState extends State<ResourceTrendPage> {
     );
   }
 
-  Widget _buildStatsGrid() {
-    if (_data.isEmpty) return const SizedBox.shrink();
-    final startRecord = _data.first;
-    final endRecord = _data.last;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final crossAxisCount = constraints.maxWidth > 800 ? 4 : 2;
-          return GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              mainAxisExtent: 40,
-            ),
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _allSeries.length,
-            itemBuilder: (context, index) =>
-                _buildStatCard(_allSeries[index], startRecord, endRecord),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-    _SeriesSpec spec,
-    Map<String, dynamic> startRecord,
-    Map<String, dynamic> endRecord,
-  ) {
-    final isVisible = _visibleSeries[spec.key] ?? true;
-    final startVal = (startRecord[spec.key] as num?)?.toInt() ?? 0;
-    final endVal = (endRecord[spec.key] as num?)?.toInt() ?? 0;
-    final delta = endVal - startVal;
-    final trendColor = delta > 0
-        ? const Color(0xff4caf50)
-        : (delta < 0 ? const Color(0xfff44336) : const Color(0xff5c7482));
-    final trendSymbol = delta > 0 ? '▲+' : (delta < 0 ? '▼' : '');
-    final trendText = delta == 0
-        ? '-'
-        : '$trendSymbol${NumberFormat.decimalPattern().format(delta)}';
-
-    return InkWell(
-      key: Key('resource-trend-card-${spec.key}'),
-      onTap: () => _toggleSeries(spec.key),
-      borderRadius: BorderRadius.circular(6),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          decoration: BoxDecoration(
-            color: isVisible
-                ? const Color(0x66294052)
-                : const Color(0x33141e28),
-            // A uniform border is required for a rounded BoxDecoration;
-            // the colored accent is drawn as a separate leading bar.
-            border: Border.all(
-              color: isVisible ? const Color(0x14ffffff) : Colors.transparent,
-            ),
-          ),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 3,
-                color: isVisible ? spec.color : Colors.transparent,
-              ),
-              const SizedBox(width: 8),
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: isVisible
-                      ? spec.color.withAlpha(38)
-                      : const Color(0x199e9e9e),
-                  borderRadius: BorderRadius.circular(6),
+  Widget _status() => SizedBox(
+    height: 310,
+    child: Center(
+      child: _loading
+          ? const CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xffbfa16b),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _l.resourceTrendLoadError,
+                  style: const TextStyle(color: Color(0xffa7bbc6)),
                 ),
-                alignment: Alignment.center,
-                child: Opacity(
-                  opacity: isVisible ? 1.0 : 0.4,
-                  child: Image.asset(
-                    'assets/images/material/${spec.iconId}.png',
-                    width: 20,
-                    height: 20,
-                    filterQuality: FilterQuality.medium,
-                  ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  key: const ValueKey('resource-trend-retry'),
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(_l.developmentRetry),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            NumberFormat.decimalPattern().format(endVal),
-                            maxLines: 1,
-                            style: TextStyle(
-                              color: isVisible ? Colors.white : Colors.white54,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+              ],
+            ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: const Color(0xff091b28),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final size = MediaQuery.sizeOf(context);
+        final landscape =
+            size.width > size.height && constraints.maxWidth >= 600;
+        final columns = landscape
+            ? 4
+            : constraints.maxWidth >= 600
+            ? 2
+            : 1;
+        final compact = landscape && constraints.maxWidth < 960;
+        final gap = 8.0;
+        final width =
+            (constraints.maxWidth - 24 - gap * (columns - 1)) / columns;
+        final plotHeight = landscape && size.height < 500
+            ? 270.0
+            : !landscape && constraints.maxWidth >= 600
+            ? 410.0
+            : constraints.maxWidth >= 1100
+            ? 340.0
+            : 310.0;
+        return SingleChildScrollView(
+          key: const PageStorageKey('resource-trend-scroll'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                color: const Color(0xff142735),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Flexible(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final days in [1, 7, 30, 90])
+                              Padding(
+                                padding: const EdgeInsets.only(right: 3),
+                                child: Semantics(
+                                  selected: days == _days,
+                                  child: TextButton(
+                                    key: ValueKey('resource-range-$days'),
+                                    onPressed: () {
+                                      if (_days == days) return;
+                                      setState(() => _days = days);
+                                      _load(clear: true);
+                                    },
+                                    style: TextButton.styleFrom(
+                                      minimumSize: const Size(0, 32),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 13,
+                                      ),
+                                      foregroundColor: days == _days
+                                          ? const Color(0xffffc857)
+                                          : const Color(0xff9eb2bd),
+                                      backgroundColor: days == _days
+                                          ? const Color(0xff403923)
+                                          : Colors.transparent,
+                                      side: BorderSide(
+                                        color: days == _days
+                                            ? const Color(0xffb98a28)
+                                            : Colors.transparent,
+                                      ),
+                                      shape: const StadiumBorder(),
+                                      textStyle: TextStyle(
+                                        fontFamily: Theme.of(
+                                          context,
+                                        ).textTheme.labelLarge?.fontFamily,
+                                        fontSize: 12,
+                                        fontWeight: days == _days
+                                            ? FontWeight.w700
+                                            : FontWeight.w400,
+                                      ),
+                                    ),
+                                    child: Text(switch (days) {
+                                      1 => _l.senkaToday,
+                                      7 => _l.resourceTrend7d,
+                                      30 => _l.resourceTrend30d,
+                                      _ => _l.resourceTrend90d,
+                                    }),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      if (delta != 0) ...<Widget>[
-                        const SizedBox(width: 8),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: constraints.maxWidth * 0.42,
-                          ),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              trendText,
-                              maxLines: 1,
-                              style: TextStyle(
-                                color: isVisible ? trendColor : Colors.grey,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    ),
+                    const SizedBox(width: 6),
+                    HeaderFilterIconButton(
+                      key: const ValueKey('resource-trend-filter'),
+                      icon: Icons.filter_alt_outlined,
+                      active: _visible.length != _resources.length,
+                      tooltip: _l.resourceTrendCustomize,
+                      onPressed: _customize,
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: [
+                        for (final resource in _resources.where(
+                          (r) => _visible.contains(r.key),
+                        ))
+                          SizedBox(
+                            width: width,
+                            child: _ResourceCapsule(
+                              key: ValueKey('resource-card-${resource.key}'),
+                              resource: resource,
+                              label: resource.label(_l),
+                              current: _data?.current(resource.key),
+                              delta: _data?.delta(resource.key),
+                              selected: resource.key == _selected,
+                              fontSize: compact ? 14 : 16,
+                              onTap: () =>
+                                  setState(() => _selected = resource.key),
                             ),
                           ),
-                        ),
-                        // Keep a comfortable margin from the card's right edge
-                        // (about one icon width) so the delta is not cramped.
-                        const SizedBox(width: 30),
                       ],
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_data == null || _error)
+                      _status()
+                    else
+                      _chart(plotHeight),
+                    if (_loading && _data != null)
+                      const LinearProgressIndicator(
+                        minHeight: 2,
+                        color: Color(0xffbfa16b),
+                      ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
+}
 
-  Widget _buildLegend() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 2,
-              children: <Widget>[
-                for (final spec in _mainSeries) _legendItem(spec),
-              ],
+class _ResourceCapsule extends StatelessWidget {
+  const _ResourceCapsule({
+    super.key,
+    required this.resource,
+    required this.label,
+    required this.current,
+    required this.delta,
+    required this.selected,
+    required this.fontSize,
+    required this.onTap,
+  });
+  final _Resource resource;
+  final String label;
+  final int? current, delta;
+  final bool selected;
+  final double fontSize;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final value = resourceTrendNumber(current);
+    final change = delta == null
+        ? '—'
+        : '${delta! > 0
+              ? '▲+'
+              : delta! < 0
+              ? '▼'
+              : ''}${resourceTrendNumber(delta)}';
+    final changeColor = delta == null || delta == 0
+        ? const Color(0xff8da8b8)
+        : delta! > 0
+        ? const Color(0xff70d7b2)
+        : const Color(0xffff7464);
+    return Semantics(
+      button: true,
+      onTap: onTap,
+      selected: selected,
+      label: '$label, $value, $change',
+      excludeSemantics: true,
+      child: Tooltip(
+        message: label,
+        child: Material(
+          color: selected ? const Color(0xff1b3543) : const Color(0xff142735),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: BorderSide(
+              color: selected
+                  ? resource.color.withValues(alpha: .7)
+                  : const Color(0xff29404e),
             ),
           ),
-          Expanded(
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 2,
-              alignment: WrapAlignment.end,
-              children: <Widget>[
-                for (final spec in _auxSeries) _legendItem(spec),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _legendItem(_SeriesSpec spec) {
-    final isVisible = _visibleSeries[spec.key] ?? true;
-    final color = isVisible ? spec.color : const Color(0xff5c7482);
-    return InkWell(
-      key: Key('resource-trend-legend-${spec.key}'),
-      onTap: () => _toggleSeries(spec.key),
-      borderRadius: BorderRadius.circular(8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          _legendLine(spec, color),
-          const SizedBox(width: 5),
-          Text(
-            _seriesLabel(spec.key),
-            style: TextStyle(
-              fontSize: 13,
-              color: isVisible
-                  ? const Color(0xff9eb2bd)
-                  : const Color(0xff5c7482),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _legendLine(_SeriesSpec spec, Color color) {
-    // Main resources use solid line markers, auxiliary resources use dashed
-    // ones, matching the chart so users can tell the two groups apart.
-    if (_mainSeries.contains(spec)) {
-      return Container(width: 20, height: 4, color: color);
-    }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Container(width: 5, height: 4, color: color),
-        const SizedBox(width: 2),
-        Container(width: 5, height: 4, color: color),
-        const SizedBox(width: 2),
-        Container(width: 5, height: 4, color: color),
-      ],
-    );
-  }
-
-  Widget _axisGroupLabels(AppLocalizations? l10n) {
-    const style = TextStyle(
-      color: Colors.white,
-      fontSize: 20,
-      fontWeight: FontWeight.w700,
-      height: 1.2,
-    );
-    return Positioned(
-      top: 0,
-      left: 44,
-      right: 40,
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Text(
-              l10n?.resourceTrendMainGroup ?? '四项资源',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: style,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            l10n?.resourceTrendAuxGroup ?? '辅助资源',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: style,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainChart() {
-    final bounds = _bounds(_mainSeries, 1000);
-    final showDots = _data.length <= _maxDotsPoints;
-    final curved = _data.length <= _maxCurvePoints;
-    final lines = <LineChartBarData>[
-      for (final spec in _mainSeries)
-        if (_visibleSeries[spec.key] == true)
-          _mainLine(spec, showDots: showDots, curved: curved),
-    ];
-    return LineChart(
-      LineChartData(
-        clipData: const FlClipData.all(),
-        lineTouchData: _buildTouchData(),
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: true,
-          getDrawingHorizontalLine: (value) =>
-              const FlLine(color: Color(0xff294052), strokeWidth: 1),
-          getDrawingVerticalLine: (value) =>
-              const FlLine(color: Color(0xff294052), strokeWidth: 1),
-        ),
-        titlesData: FlTitlesData(
-          leftTitles: _leftTitles(),
-          rightTitles: _reservedTitles(40),
-          topTitles: _reservedTitles(26),
-          bottomTitles: _bottomTitles(),
-        ),
-        borderData: FlBorderData(show: false),
-        minX: 0,
-        maxX: _maxX,
-        minY: bounds.minY,
-        maxY: bounds.maxY,
-        lineBarsData: lines,
-      ),
-      duration: Duration.zero,
-    );
-  }
-
-  Widget _buildAuxChart() {
-    final bounds = _bounds(_auxSeries, 100);
-    final lines = <LineChartBarData>[
-      for (final spec in _auxSeries)
-        if (_visibleSeries[spec.key] == true) _auxLine(spec),
-    ];
-    return LineChart(
-      LineChartData(
-        clipData: const FlClipData.all(),
-        lineTouchData: const LineTouchData(enabled: false),
-        gridData: const FlGridData(show: false),
-        titlesData: FlTitlesData(
-          // Keep the same reserved sizes as the main chart so both plot
-          // rectangles overlap exactly; hidden titles still reserve space.
-          leftTitles: _reservedTitles(44),
-          rightTitles: _rightTitles(),
-          topTitles: _reservedTitles(26),
-          bottomTitles: _reservedTitles(28),
-        ),
-        borderData: FlBorderData(show: false),
-        minX: 0,
-        maxX: _maxX,
-        minY: bounds.minY,
-        maxY: bounds.maxY,
-        lineBarsData: lines,
-      ),
-      duration: Duration.zero,
-    );
-  }
-
-  LineChartBarData _mainLine(
-    _SeriesSpec spec, {
-    required bool showDots,
-    required bool curved,
-  }) {
-    return LineChartBarData(
-      spots: _spots[spec.key] ?? const <FlSpot>[],
-      isCurved: curved,
-      curveSmoothness: 0.2,
-      color: spec.color,
-      barWidth: 2,
-      isStrokeCapRound: true,
-      dotData: FlDotData(
-        show: showDots,
-        getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-          radius: 3,
-          color: const Color(0xff081521),
-          strokeWidth: 2,
-          strokeColor: spec.color,
-        ),
-      ),
-      // No area fills: overlapping translucent fills wash out the series
-      // below them and add large fill paths for every data point.
-      belowBarData: BarAreaData(show: false),
-    );
-  }
-
-  LineChartBarData _auxLine(_SeriesSpec spec) {
-    return LineChartBarData(
-      spots: _spots[spec.key] ?? const <FlSpot>[],
-      isCurved: false,
-      color: spec.color,
-      barWidth: 2,
-      isStrokeCapRound: true,
-      dashArray: const <int>[5, 5],
-      dotData: const FlDotData(show: false),
-      belowBarData: BarAreaData(show: false),
-    );
-  }
-
-  AxisTitles _leftTitles() {
-    return AxisTitles(
-      sideTitles: SideTitles(
-        showTitles: true,
-        reservedSize: 44,
-        getTitlesWidget: (value, meta) => Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: Text(
-            _compactNumber(value),
-            textAlign: TextAlign.right,
-            style: const TextStyle(color: Color(0xff8197a5), fontSize: 11),
-          ),
-        ),
-      ),
-    );
-  }
-
-  AxisTitles _rightTitles() {
-    return AxisTitles(
-      sideTitles: SideTitles(
-        showTitles: true,
-        reservedSize: 40,
-        getTitlesWidget: (value, meta) => Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: Text(
-            _compactNumber(value),
-            textAlign: TextAlign.left,
-            style: const TextStyle(color: Color(0xff8197a5), fontSize: 11),
-          ),
-        ),
-      ),
-    );
-  }
-
-  AxisTitles _reservedTitles(double size) {
-    return AxisTitles(
-      sideTitles: SideTitles(
-        showTitles: true,
-        reservedSize: size,
-        getTitlesWidget: (value, meta) => const SizedBox.shrink(),
-      ),
-    );
-  }
-
-  AxisTitles _bottomTitles() {
-    return AxisTitles(
-      sideTitles: SideTitles(
-        showTitles: true,
-        reservedSize: 28,
-        interval: _xInterval(),
-        getTitlesWidget: (value, meta) {
-          final index = value.round();
-          if (index < 0 || index >= _data.length) {
-            return const SizedBox.shrink();
-          }
-          final timestamp = _data[index]['timestamp'] as int?;
-          if (timestamp == null) return const SizedBox.shrink();
-          final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-          final String text;
-          if (_selectedDays == 1) {
-            // Snap to the nearest whole hour so the 24-hour axis reads as
-            // integer hours (e.g. 06:00, 09:00) instead of raw timestamps.
-            final rounded = date.add(const Duration(minutes: 30));
-            text = '${rounded.hour.toString().padLeft(2, '0')}:00';
-          } else if (_selectedDays == 7 || _selectedDays == 30) {
-            text = DateFormat('MM-dd').format(date);
-          } else {
-            text = DateFormat('yyyy-MM-dd').format(date);
-          }
-          return Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              text,
-              style: const TextStyle(color: Color(0xff8197a5), fontSize: 11),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  double _xInterval() {
-    final n = _data.length;
-    if (n <= 1) return 1;
-    if (_selectedDays == 1) {
-      final start = _data.first['timestamp'] as num;
-      final end = _data.last['timestamp'] as num;
-      final hours = (end - start) / 3600000;
-      if (hours <= 0) return 1;
-      final width = MediaQuery.of(context).size.width;
-      final maxTicks = width < 600 ? 5 : 8;
-      final ticks = (hours / 3).round().clamp(2, maxTicks);
-      return (n - 1) / ticks;
-    }
-    final width = MediaQuery.of(context).size.width;
-    final labelCount = width < 600 ? 3 : 5;
-    final raw = (n - 1) / labelCount;
-    return raw < 1 ? 1 : raw;
-  }
-
-  String _compactNumber(double value) {
-    if (value >= 10000) return '${(value / 10000).toStringAsFixed(2)}w';
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(0)}k';
-    return value.toInt().toString();
-  }
-
-  LineTouchData _buildTouchData() {
-    return LineTouchData(
-      handleBuiltInTouches: true,
-      touchTooltipData: LineTouchTooltipData(
-        getTooltipColor: (touchedSpot) =>
-            const Color(0xff142735).withAlpha(230),
-        getTooltipItems: (touchedSpots) => <LineTooltipItem>[
-          for (final spot in touchedSpots)
-            LineTooltipItem(
-              '${_seriesLabelForColor(spot.bar.color)}  '
-              '${NumberFormat.decimalPattern().format(spot.y)}',
-              TextStyle(
-                color: spot.bar.color ?? Colors.white,
-                fontWeight: FontWeight.bold,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: resource.color, width: 3),
+                ),
+              ),
+              padding: const EdgeInsets.only(left: 7, right: 9),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final style = TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  );
+                  final scaler = MediaQuery.textScalerOf(context);
+                  double measure(String s) => (TextPainter(
+                    text: TextSpan(
+                      text: s,
+                      style: DefaultTextStyle.of(context).style.merge(style),
+                    ),
+                    textDirection: TextDirection.ltr,
+                    textScaler: scaler,
+                  )..layout()).width;
+                  final contentWidth = math.max(
+                    constraints.maxWidth,
+                    26 + 8 + measure(value) + 12 + measure(change) + 1,
+                  );
+                  return FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: contentWidth,
+                      height: 40,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: resource.color.withValues(alpha: .12),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            alignment: Alignment.center,
+                            child: Image.asset(
+                              'assets/images/material/${resource.icon}.png',
+                              width: scaler.scale(fontSize),
+                              height: scaler.scale(fontSize),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            value,
+                            style: style.copyWith(
+                              color: const Color(0xffeff5f8),
+                            ),
+                          ),
+                          const Spacer(),
+                          const SizedBox(width: 12),
+                          Text(
+                            change,
+                            style: style.copyWith(color: changeColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-        ],
+          ),
+        ),
       ),
     );
-  }
-
-  String _seriesLabelForColor(Color? color) {
-    for (final spec in _allSeries) {
-      if (spec.color == color) return _seriesLabel(spec.key);
-    }
-    return '';
   }
 }

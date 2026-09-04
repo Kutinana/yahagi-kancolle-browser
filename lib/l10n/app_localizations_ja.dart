@@ -9,6 +9,76 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get resourceTrend90d => '90日';
+
+  @override
+  String get resourceTrendInventoryTitle => '在庫推移';
+
+  @override
+  String get resourceTrendCustomize => '表示する資源';
+
+  @override
+  String get resourceTrendAtLeastOne => '資源を1つ以上選んでください';
+
+  @override
+  String get resourceTrendBuildMaterial => '高速建造材';
+
+  @override
+  String get resourceTrendRepairMaterial => '高速修復材';
+
+  @override
+  String get resourceTrendDevMaterial => '開発資材';
+
+  @override
+  String get resourceTrendImproveMaterial => '改修資材';
+
+  @override
+  String get resourceTrendLatest => '最新の在庫';
+
+  @override
+  String get resourceTrendChange => '期間の増減';
+
+  @override
+  String resourceTrendBaseline(String time) {
+    return '増減の基準：$time JST';
+  }
+
+  @override
+  String resourceTrendObserved(String time) {
+    return '最終記録：$time JST';
+  }
+
+  @override
+  String get resourceTrendPartial => '開始時点の記録がないため、最初の記録から増減を計算';
+
+  @override
+  String get resourceTrendInsufficient => '比較できる記録が不足しています';
+
+  @override
+  String get resourceTrendNoPeriodData => 'この期間には資源の記録がありません';
+
+  @override
+  String get resourceTrendLoadError => '資源の記録を読み込めませんでした';
+
+  @override
+  String get resourceTrendSaveError => '資源の表示設定を保存できませんでした';
+
+  @override
+  String get resourceTrendInspect => 'スライドで確認';
+
+  @override
+  String get resourceTrendExpand => 'グラフを拡大';
+
+  @override
+  String get resourceTrendSampled => '長期間のグラフは極値を保持し、選択時は実際の抽出記録を表示';
+
+  @override
+  String get resourceTrendLocalScale => '縦軸は在庫の範囲に合わせて拡大';
+
+  @override
+  String get resourceTrendBaseShort => '基準';
+
+  @override
   String get diagnosticLoggingSection => 'クライアント診断ログ';
 
   @override

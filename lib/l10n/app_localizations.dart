@@ -99,6 +99,138 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @resourceTrend90d.
+  ///
+  /// In zh, this message translates to:
+  /// **'90天'**
+  String get resourceTrend90d;
+
+  /// No description provided for @resourceTrendInventoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'库存趋势'**
+  String get resourceTrendInventoryTitle;
+
+  /// No description provided for @resourceTrendCustomize.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示资源'**
+  String get resourceTrendCustomize;
+
+  /// No description provided for @resourceTrendAtLeastOne.
+  ///
+  /// In zh, this message translates to:
+  /// **'至少保留一项资源'**
+  String get resourceTrendAtLeastOne;
+
+  /// No description provided for @resourceTrendBuildMaterial.
+  ///
+  /// In zh, this message translates to:
+  /// **'高速建造材'**
+  String get resourceTrendBuildMaterial;
+
+  /// No description provided for @resourceTrendRepairMaterial.
+  ///
+  /// In zh, this message translates to:
+  /// **'高速修复材'**
+  String get resourceTrendRepairMaterial;
+
+  /// No description provided for @resourceTrendDevMaterial.
+  ///
+  /// In zh, this message translates to:
+  /// **'开发资材'**
+  String get resourceTrendDevMaterial;
+
+  /// No description provided for @resourceTrendImproveMaterial.
+  ///
+  /// In zh, this message translates to:
+  /// **'改修资材'**
+  String get resourceTrendImproveMaterial;
+
+  /// No description provided for @resourceTrendLatest.
+  ///
+  /// In zh, this message translates to:
+  /// **'最新存量'**
+  String get resourceTrendLatest;
+
+  /// No description provided for @resourceTrendChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'区间增减'**
+  String get resourceTrendChange;
+
+  /// No description provided for @resourceTrendBaseline.
+  ///
+  /// In zh, this message translates to:
+  /// **'增减基准：{time} JST'**
+  String resourceTrendBaseline(String time);
+
+  /// No description provided for @resourceTrendObserved.
+  ///
+  /// In zh, this message translates to:
+  /// **'最后记录：{time} JST'**
+  String resourceTrendObserved(String time);
+
+  /// No description provided for @resourceTrendPartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少期初记录，按首条记录计算增减'**
+  String get resourceTrendPartial;
+
+  /// No description provided for @resourceTrendInsufficient.
+  ///
+  /// In zh, this message translates to:
+  /// **'可比较的记录不足'**
+  String get resourceTrendInsufficient;
+
+  /// No description provided for @resourceTrendNoPeriodData.
+  ///
+  /// In zh, this message translates to:
+  /// **'此时段暂无资源记录'**
+  String get resourceTrendNoPeriodData;
+
+  /// No description provided for @resourceTrendLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源记录加载失败'**
+  String get resourceTrendLoadError;
+
+  /// No description provided for @resourceTrendSaveError.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源显示设置未能保存'**
+  String get resourceTrendSaveError;
+
+  /// No description provided for @resourceTrendInspect.
+  ///
+  /// In zh, this message translates to:
+  /// **'滑动查看'**
+  String get resourceTrendInspect;
+
+  /// No description provided for @resourceTrendExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'放大图表'**
+  String get resourceTrendExpand;
+
+  /// No description provided for @resourceTrendSampled.
+  ///
+  /// In zh, this message translates to:
+  /// **'长时段图表已保留峰谷，读数对应实际采样记录'**
+  String get resourceTrendSampled;
+
+  /// No description provided for @resourceTrendLocalScale.
+  ///
+  /// In zh, this message translates to:
+  /// **'纵轴随存量范围缩放'**
+  String get resourceTrendLocalScale;
+
+  /// No description provided for @resourceTrendBaseShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'基准'**
+  String get resourceTrendBaseShort;
+
   /// No description provided for @diagnosticLoggingSection.
   ///
   /// In zh, this message translates to:
