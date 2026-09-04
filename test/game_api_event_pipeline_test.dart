@@ -277,6 +277,29 @@ void main() {
     expect(consumer.events.map((event) => event.sequence), <int>[1, 2]);
   });
 
+  test('dispatchIdle does not wait for unrelated consumer work', () async {
+    final consumer = _BlockingConsumer();
+    final pipeline = GameApiEventPipeline(
+      consumers: <GameApiEventConsumer>[consumer],
+    );
+    addTearDown(() async {
+      consumer.release();
+      await pipeline.idle;
+    });
+
+    pipeline.add(_event('/kcsapi/api_port/port', _body(1), sequence: 7));
+    await pipeline.dispatchIdle.timeout(const Duration(seconds: 1));
+
+    expect(consumer.events.map((event) => event.sequence), <int>[7]);
+    var fullIdleCompleted = false;
+    final fullIdle = pipeline.idle.then((_) => fullIdleCompleted = true);
+    await Future<void>.delayed(Duration.zero);
+    expect(fullIdleCompleted, isFalse);
+
+    consumer.release();
+    await fullIdle;
+  });
+
   test(
     'idle waits for consumer queues after every event is dispatched',
     () async {

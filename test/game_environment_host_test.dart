@@ -462,7 +462,7 @@ void main() {
             ),
             withBattleWarning: (child) => BattleResultWarningOverlay(
               gameCaptureController: gameCaptureController,
-              battleController: battleController,
+              loadSafetyState: () async => GameState.empty,
               safetySettingsController: safetySettingsController,
               damageAlertPort: const _NoopDamageAlertPort(),
               child: child,
@@ -543,7 +543,7 @@ void main() {
         ),
         withBattleWarning: (child) => BattleResultWarningOverlay(
           gameCaptureController: gameCaptureController,
-          battleController: battleController,
+          loadSafetyState: () async => GameState.empty,
           safetySettingsController: safetyController,
           damageAlertPort: const _NoopDamageAlertPort(),
           child: child,

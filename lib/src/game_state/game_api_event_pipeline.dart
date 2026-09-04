@@ -139,6 +139,10 @@ final class GameApiEventPipeline {
     ]);
   }
 
+  /// Waits until every currently queued event has been decoded and dispatched,
+  /// without waiting for unrelated asynchronous work owned by consumers.
+  Future<void> get dispatchIdle => _queue;
+
   Future<
     ({
       int decodeMicros,

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../battle/battle_controller.dart';
 import '../battle/battle_damage_alert.dart';
 import '../battle/battle_models.dart';
 import '../game_state/game_state.dart';
@@ -36,18 +35,50 @@ bool shouldShowPostBattleWarning(LiveBattle? battle) {
   });
 }
 
+bool shouldShowAdvanceWarning(GameState state) {
+  final combat = state.combatState;
+  final sortieFleetId = combat.sortieFleetId;
+  if (!combat.isActive || sortieFleetId <= 0) {
+    return false;
+  }
+
+  final escapedShipIds = combat.escapedShipIds;
+  bool hasHeavyDamage(int fleetId, {bool ignoreFlagship = false}) {
+    final ships = state.shipsForFleet(fleetId);
+    for (var position = 0; position < ships.length; position += 1) {
+      final ship = ships[position];
+      if ((ignoreFlagship && position == 0) ||
+          escapedShipIds.contains(ship.id)) {
+        continue;
+      }
+      if (shipDamageLevel(currentHp: ship.currentHp, maxHp: ship.maxHp) ==
+          ShipDamageLevel.heavy) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (hasHeavyDamage(sortieFleetId)) {
+    return true;
+  }
+  final isCombinedSortie =
+      sortieFleetId == 1 && state.combinedFleetType != CombinedFleetType.none;
+  return isCombinedSortie && hasHeavyDamage(2, ignoreFlagship: true);
+}
+
 class BattleResultWarningOverlay extends StatefulWidget {
   const BattleResultWarningOverlay({
     super.key,
     required this.gameCaptureController,
-    required this.battleController,
+    required this.loadSafetyState,
     required this.safetySettingsController,
     required this.damageAlertPort,
     required this.child,
   });
 
   final GameCaptureController gameCaptureController;
-  final BattleController battleController;
+  final Future<GameState> Function() loadSafetyState;
   final SafetySettingsController safetySettingsController;
   final BattleDamageAlertPort damageAlertPort;
   final Widget child;
@@ -59,7 +90,7 @@ class BattleResultWarningOverlay extends StatefulWidget {
 
 class _BattleResultWarningOverlayState
     extends State<BattleResultWarningOverlay> {
-  bool _pendingAdvanceWarning = false;
+  int _advanceCheckGeneration = 0;
   bool _warningDialogVisible = false;
 
   @override
@@ -95,35 +126,37 @@ class _BattleResultWarningOverlayState
     final event = widget.gameCaptureController.latestEvent;
     if (event == null || event.apiResult != 1) return;
 
-    if (event.path.endsWith('/battleresult')) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _pendingAdvanceWarning = shouldShowPostBattleWarning(
-          widget.battleController.current,
-        );
-      });
+    if (event.path == '/kcsapi/api_port/port') {
+      _advanceCheckGeneration += 1;
       return;
     }
 
-    if (_isRetreatOrPortPath(event.path)) {
-      _pendingAdvanceWarning = false;
+    final isAdvance =
+        event.path == '/kcsapi/api_req_map/start' ||
+        event.path == '/kcsapi/api_req_map/next';
+    if (!isAdvance) {
       return;
     }
 
-    if (event.path != '/kcsapi/api_req_map/next' || !_pendingAdvanceWarning) {
-      return;
-    }
-
-    _pendingAdvanceWarning = false;
-    if (mounted) _showPendingWarning();
+    final generation = ++_advanceCheckGeneration;
+    unawaited(_checkAdvanceSafety(generation));
   }
 
-  bool _isRetreatOrPortPath(String path) =>
-      path == '/kcsapi/api_req_sortie/goback_port' ||
-      path == '/kcsapi/api_req_combined_battle/goback_port' ||
-      path == '/kcsapi/api_port/port';
+  Future<void> _checkAdvanceSafety(int generation) async {
+    try {
+      final state = await widget.loadSafetyState();
+      if (!mounted || generation != _advanceCheckGeneration) {
+        return;
+      }
+      if (shouldShowAdvanceWarning(state)) {
+        _showAdvanceWarning();
+      }
+    } catch (error) {
+      debugPrint('Advance safety check failed: $error');
+    }
+  }
 
-  void _showPendingWarning() {
+  void _showAdvanceWarning() {
     final mode = widget.safetySettingsController.battleWarningMode;
     if (mode == BattleWarningMode.off) return;
     if (widget.safetySettingsController.battleStatusEffects.vibrates(

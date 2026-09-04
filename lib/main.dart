@@ -768,7 +768,12 @@ class YahagiApp extends StatelessWidget {
   Widget _buildGameSurface() {
     Widget withBattleWarning(Widget child) => BattleResultWarningOverlay(
       gameCaptureController: gameCaptureController,
-      battleController: battleController,
+      loadSafetyState: () async {
+        await gameApiEventPipeline?.dispatchIdle;
+        await battleController.idle;
+        await gameStateController.idle;
+        return gameStateController.state;
+      },
       safetySettingsController: safetySettingsController,
       damageAlertPort: const MethodChannelBattleDamageAlertPort(),
       child: child,
