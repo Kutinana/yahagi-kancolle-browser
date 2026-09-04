@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import 'development_dataset.dart';
 import 'development_recipe_calculator.dart';
 import 'development_resources.dart';
+import 'development_sort_header.dart';
 import 'development_workbench_state_store.dart';
 import 'equipment_development_controller.dart';
 
@@ -40,7 +41,7 @@ class DevelopmentRecipeTable extends StatelessWidget {
             child: DataTable(
               key: const Key('development-recipe-table'),
               showCheckboxColumn: false,
-              sortColumnIndex: _sortColumn(controller.recipeSort),
+              sortColumnIndex: null,
               sortAscending: controller.sortAscending,
               headingRowColor: const WidgetStatePropertyAll(Color(0xff0d2935)),
               headingRowHeight: 34,
@@ -89,21 +90,39 @@ class DevelopmentRecipeTable extends StatelessWidget {
                 ),
                 DataColumn(
                   numeric: true,
-                  label: Text(l10n.developmentTotalResources),
+                  label: DevelopmentSortHeader(
+                    label: l10n.developmentTotalResources,
+                    active:
+                        controller.recipeSort ==
+                        DevelopmentRecipeSortField.totalResources,
+                    ascending: controller.sortAscending,
+                  ),
                   onSort: (_, _) => controller.sortRecipes(
                     DevelopmentRecipeSortField.totalResources,
                   ),
                 ),
                 DataColumn(
                   numeric: true,
-                  label: Text(l10n.developmentOutputRate),
+                  label: DevelopmentSortHeader(
+                    label: l10n.developmentOutputRate,
+                    active:
+                        controller.recipeSort ==
+                        DevelopmentRecipeSortField.targetRate,
+                    ascending: controller.sortAscending,
+                  ),
                   onSort: (_, _) => controller.sortRecipes(
                     DevelopmentRecipeSortField.targetRate,
                   ),
                 ),
                 DataColumn(
                   numeric: true,
-                  label: Text(l10n.developmentFailureRate),
+                  label: DevelopmentSortHeader(
+                    label: l10n.developmentFailureRate,
+                    active:
+                        controller.recipeSort ==
+                        DevelopmentRecipeSortField.failureRate,
+                    ascending: controller.sortAscending,
+                  ),
                   onSort: (_, _) => controller.sortRecipes(
                     DevelopmentRecipeSortField.failureRate,
                   ),
@@ -250,12 +269,6 @@ class _EmptyRecipes extends StatelessWidget {
     ),
   );
 }
-
-int _sortColumn(DevelopmentRecipeSortField field) => switch (field) {
-  DevelopmentRecipeSortField.targetRate => 6,
-  DevelopmentRecipeSortField.totalResources => 5,
-  DevelopmentRecipeSortField.failureRate => 7,
-};
 
 String _rate(double value) => value == value.roundToDouble()
     ? '${value.round()}'

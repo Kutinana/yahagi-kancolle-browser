@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../fleet/equipment_type_icon.dart';
 import 'development_projection.dart';
+import 'development_sort_header.dart';
 import 'equipment_development_controller.dart';
 
 List<DevelopmentEquipmentProjection> visibleDevelopmentOutput({
@@ -106,19 +107,11 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
                       numeric: true,
                       onSort: (_, _) =>
                           setState(() => _ascending = !_ascending),
-                      label: Row(
+                      label: DevelopmentSortHeader(
                         key: const Key('development-output-probability-sort'),
-                        children: [
-                          Text(widget.finalProbabilityLabel),
-                          const SizedBox(width: 4),
-                          Icon(
-                            _ascending
-                                ? Icons.arrow_upward
-                                : Icons.arrow_downward,
-                            size: 14,
-                            color: const Color(0xffffc85a),
-                          ),
-                        ],
+                        label: widget.finalProbabilityLabel,
+                        active: true,
+                        ascending: _ascending,
                       ),
                     ),
                   ],

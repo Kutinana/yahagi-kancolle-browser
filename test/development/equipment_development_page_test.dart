@@ -56,6 +56,18 @@ void main() {
       expect(table.headingRowHeight, 34);
       expect(table.dataRowMinHeight, 44);
       expect(table.dataRowMaxHeight, 44);
+      final outputSortLabel = tester.widget<Text>(find.text('最终概率 ▼'));
+      expect(outputSortLabel.style?.color, const Color(0xffffc85a));
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('development-output-probability-sort')),
+          matching: find.byIcon(Icons.arrow_downward),
+        ),
+        findsNothing,
+      );
+      table.columns[2].onSort!(2, false);
+      await tester.pump();
+      expect(find.text('最终概率 ▲'), findsOneWidget);
       final equipmentName = tester.widget<Text>(find.text('测试舰攻'));
       expect(equipmentName.style?.fontSize, 12);
       expect(equipmentName.style?.fontWeight, FontWeight.w800);
@@ -125,12 +137,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('development-recipe-table')), findsOneWidget);
     expect(find.widgetWithText(InputChip, '测试舰攻'), findsOneWidget);
-    expect(
-      tester
-          .widget<DataTable>(find.byKey(const Key('development-recipe-table')))
-          .sortColumnIndex,
-      5,
-    );
+    expect(find.text('总资源 ▲'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('development-mode-calculator')));
     await tester.pumpAndSettle();
@@ -214,7 +221,9 @@ void main() {
     expect(table.horizontalMargin, 8);
     expect(table.columnSpacing, 16);
     expect(table.columns.length, 9);
-    expect(table.sortColumnIndex, 6);
+    expect(table.sortColumnIndex, isNull);
+    final defaultSortLabel = tester.widget<Text>(find.text('出货率 ▼'));
+    expect(defaultSortLabel.style?.color, const Color(0xffffc85a));
     const resourceLabels = ['燃料', '弹药', '钢材', '铝土'];
     for (var index = 0; index < 4; index++) {
       final resourceIcon = find.byKey(
@@ -250,13 +259,16 @@ void main() {
 
     table.columns[5].onSort!(5, true);
     await tester.pump();
-    expect(tester.widget<DataTable>(tableFinder).sortColumnIndex, 5);
+    expect(find.text('总资源 ▲'), findsOneWidget);
+    expect(find.text('出货率'), findsOneWidget);
     tester.widget<DataTable>(tableFinder).columns[6].onSort!(6, true);
     await tester.pump();
-    expect(tester.widget<DataTable>(tableFinder).sortColumnIndex, 6);
+    expect(find.text('出货率 ▼'), findsOneWidget);
+    expect(find.text('总资源'), findsOneWidget);
     tester.widget<DataTable>(tableFinder).columns[7].onSort!(7, true);
     await tester.pump();
-    expect(tester.widget<DataTable>(tableFinder).sortColumnIndex, 7);
+    expect(find.text('失败率 ▲'), findsOneWidget);
+    expect(find.text('出货率'), findsOneWidget);
     await tester.tap(find.byKey(const Key('development-recipe-row-0')));
     await tester.pumpAndSettle();
     expect(find.text('11'), findsWidgets);
