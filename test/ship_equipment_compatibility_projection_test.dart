@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
+import 'package:yahagi_kancolle_browser/src/inventory/equipment_compatibility.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/equipment_compatibility_projection.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/ship_equipment_compatibility_projection.dart';
@@ -12,13 +13,14 @@ void main() {
         name: '矢矧改二乙',
         shipTypeId: 3,
         classTypeId: 42,
-        equipTypeIds: <int>{1, 6, 15, 29},
+        equipTypeIds: <int>{0, 1, 6, 15, 29, 31},
         limitedEquipmentIdsByType: <int, Set<int>>{
           29: <int>{999},
         },
       ),
     },
     masterSlotItemTypes: <int, String>{
+      0: '无效类型',
       1: '小口径主炮',
       6: '舰上战斗机',
       15: '对空机枪',
@@ -172,12 +174,23 @@ void main() {
   });
 
   test('invalid master equipment is excluded', () {
+    const service = EquipmentCompatibilityService(state);
+    for (final id in <int>[90, 91, 92, 93]) {
+      expect(
+        service.resolve(shipMasterId: 100, equipmentMasterId: id)?.canEquip,
+        isTrue,
+        reason: 'fixture equipment $id must otherwise be compatible',
+      );
+    }
     final ids = projection
         .groups(shipMasterId: 100)
         .expand((group) => group.rows)
         .map((row) => row.master.id);
 
-    expect(ids, isNot(containsAll(<int>[90, 91, 92, 93])));
+    expect(ids, isNot(contains(90)));
+    expect(ids, isNot(contains(91)));
+    expect(ids, isNot(contains(92)));
+    expect(ids, isNot(contains(93)));
   });
 
   test('unknown ship produces no groups', () {
