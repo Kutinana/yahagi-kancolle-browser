@@ -894,6 +894,7 @@ class _InventoryDependencies {
     required this.masterShips,
     required this.masterShipTypes,
     required this.masterSlotItems,
+    required this.masterSlotItemTypes,
     required this.expansionSlotEquipmentTypeIds,
     required this.expansionSlotSpecialRules,
     required this.expansionSlotLimitsByShipId,
@@ -909,6 +910,7 @@ class _InventoryDependencies {
         masterShips: state.masterShips,
         masterShipTypes: state.masterShipTypes,
         masterSlotItems: state.masterSlotItems,
+        masterSlotItemTypes: state.masterSlotItemTypes,
         expansionSlotEquipmentTypeIds: state.expansionSlotEquipmentTypeIds,
         expansionSlotSpecialRules: state.expansionSlotSpecialRules,
         expansionSlotLimitsByShipId: state.expansionSlotLimitsByShipId,
@@ -922,6 +924,7 @@ class _InventoryDependencies {
   final Object masterShips;
   final Object masterShipTypes;
   final Object masterSlotItems;
+  final Object masterSlotItemTypes;
   final Object expansionSlotEquipmentTypeIds;
   final Object expansionSlotSpecialRules;
   final Object expansionSlotLimitsByShipId;
@@ -949,6 +952,7 @@ class _InventoryDependencies {
       identical(masterShips, other.masterShips) &&
       identical(masterShipTypes, other.masterShipTypes) &&
       identical(masterSlotItems, other.masterSlotItems) &&
+      identical(masterSlotItemTypes, other.masterSlotItemTypes) &&
       identical(
         expansionSlotEquipmentTypeIds,
         other.expansionSlotEquipmentTypeIds,

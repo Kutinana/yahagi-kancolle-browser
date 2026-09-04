@@ -5,7 +5,10 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_page.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/unowned_inventory_projection.dart';
@@ -688,6 +691,53 @@ void main() {
       find.descendant(of: count, matching: find.text('持有 X3')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('舰娘抽屉在仅装备类型名称更新时保持打开并刷新', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final sourceController = await _equipmentCompatibilityController(
+      includeUnownedEquipment: true,
+    );
+    final reducer = _MutableInventoryReducer(sourceController.state);
+    final controller = GameStateController(reducer: reducer);
+    addTearDown(sourceController.dispose);
+    addTearDown(controller.dispose);
+    controller.accept(
+      kcsapiEvent('/test/inventory-state', const <String, Object?>{}),
+    );
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(body: OwnedInventoryPage(controller: controller)),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('owned-ship-name-row-9001')));
+    await tester.pumpAndSettle();
+    expect(find.text('小口径主炮'), findsOneWidget);
+
+    reducer.nextState = controller.state.copyWith(
+      masterSlotItemTypes: <int, String>{
+        ...controller.state.masterSlotItemTypes,
+        1: '更新后主炮类型',
+      },
+    );
+    controller.accept(
+      kcsapiEvent('/test/inventory-state', const <String, Object?>{}),
+    );
+    await controller.idle;
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-drawer')),
+      findsOneWidget,
+    );
+    expect(find.text('更新后主炮类型'), findsOneWidget);
+    expect(find.text('小口径主炮'), findsNothing);
   });
 
   testWidgets('受控范围更新与 controller 替换遵守舰娘选择有效性', (tester) async {
@@ -3101,6 +3151,15 @@ Map<String, Object?> _compatibilityPortData({
   (data['api_basic']! as Map<String, Object?>)['api_member_id'] = 1001;
   data['api_ship'] = ships;
   return data;
+}
+
+class _MutableInventoryReducer extends GameStateReducer {
+  _MutableInventoryReducer(this.nextState);
+
+  GameState nextState;
+
+  @override
+  GameState reduce(GameState state, CapturedApiEvent event) => nextState;
 }
 
 Future<GameStateController> _equipmentCompatibilityController({
