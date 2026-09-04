@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/equipment_type_icon.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/ship_portrait.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/ship_equipment_compatibility_drawer.dart';
@@ -31,6 +33,7 @@ void main() {
       expect(find.text('矢矧改二乙'), findsOneWidget);
       expect(find.textContaining('轻巡洋舰'), findsOneWidget);
       expect(find.textContaining('Lv.98'), findsOneWidget);
+      expect(find.byType(ShipPortrait), findsOneWidget);
       expect(find.text('持有 3'), findsOneWidget);
       expect(find.text('全部 5'), findsOneWidget);
       expect(
@@ -43,6 +46,15 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Alpha Gun'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const Key('ship-equipment-compatibility-equipment-10'),
+          ),
+          matching: find.byType(EquipmentTypeIconImage),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('普通槽'), findsWidgets);
       expect(find.text('普通槽＋增设栏'), findsOneWidget);
       final ownedCount = find.byKey(
@@ -79,6 +91,29 @@ void main() {
         find.byKey(
           Key('ship-equipment-compatibility-category-${category.name}'),
         ),
+        findsOneWidget,
+      );
+    }
+    const expectedLabels = <String>[
+      '全部',
+      '主炮',
+      '副炮／高角炮',
+      '机枪',
+      '鱼雷／甲标',
+      '舰载机',
+      '水上机',
+      '陆航',
+      '对潜',
+      '电探',
+      '登陆／运输',
+      '辅助／其他',
+    ];
+    final dialog = find.byKey(
+      const Key('ship-equipment-compatibility-category-dialog'),
+    );
+    for (final label in expectedLabels) {
+      expect(
+        find.descendant(of: dialog, matching: find.text(label)),
         findsOneWidget,
       );
     }
@@ -248,6 +283,29 @@ void main() {
     expect(find.text('没有找到可装备的装备'), findsNothing);
   });
 
+  testWidgets('shows an empty result when ready rules match no equipment', (
+    tester,
+  ) async {
+    await _pumpDrawer(tester);
+    await tester.tap(
+      find.byKey(const Key('ship-equipment-compatibility-search-button')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('ship-equipment-compatibility-search-dialog-field')),
+      '不存在的装备',
+    );
+    await tester.tap(
+      find.byKey(
+        const Key('ship-equipment-compatibility-search-dialog-confirm'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('没有找到可装备的装备'), findsOneWidget);
+    expect(find.text('装备规则数据等待更新'), findsNothing);
+  });
+
   testWidgets('header and results share one scroll viewport', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 320);
@@ -267,7 +325,7 @@ void main() {
     );
   });
 
-  testWidgets('rebuilds projection when state or ship changes', (tester) async {
+  testWidgets('rebuilds projection when ship changes', (tester) async {
     final state = _state();
     await _pumpDrawer(tester, state: state);
     expect(
@@ -287,6 +345,39 @@ void main() {
     );
     expect(
       find.byKey(const Key('ship-equipment-compatibility-equipment-20')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('rebuilds projection when state changes', (tester) async {
+    final initialState = _state();
+    await _pumpDrawer(tester, state: initialState);
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-equipment-10')),
+      findsOneWidget,
+    );
+
+    final replacementState = initialState.copyWith(
+      masterSlotItems: const <int, MasterSlotItem>{
+        50: MasterSlotItem(
+          id: 50,
+          name: 'Replacement Gun',
+          sortNo: 1,
+          type: <int>[1, 0, 1, 1],
+        ),
+      },
+      slotItems: const <int, OwnedSlotItem>{
+        5001: OwnedSlotItem(instanceId: 5001, masterSlotItemId: 50),
+      },
+    );
+    await _pumpDrawer(tester, state: replacementState);
+
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-equipment-10')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('ship-equipment-compatibility-equipment-50')),
       findsOneWidget,
     );
   });
