@@ -17,6 +17,19 @@ class GameResourceDownloadCoordinatorTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
+    fun `temporary mode never starts manifest download`() {
+        val fixture = fixture(mode = GameResourceCacheMode.TEMPORARY)
+        fixture.coordinator.setManifest(
+            "temporary",
+            listOf(official("/kcs2/resources/a.png")),
+            1,
+        )
+
+        assertFalse(fixture.coordinator.startDownload())
+        fixture.coordinator.dispose()
+    }
+
+    @Test
     fun `manifest is deduplicated and download completes`() {
         val calls = AtomicInteger()
         val fixture = fixture(fetcher = GameResourceFetcher { _, _, _ ->
@@ -625,7 +638,7 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     private fun fixture(
-        mode: GameResourceCacheMode = GameResourceCacheMode.LIGHT,
+        mode: GameResourceCacheMode = GameResourceCacheMode.FULL,
         maxBytes: Long = 10_000,
         stateFile: File = temporaryFolder.newFile(),
         fetcher: GameResourceFetcher = GameResourceFetcher { _, _, _ -> response(byteArrayOf(1)) },

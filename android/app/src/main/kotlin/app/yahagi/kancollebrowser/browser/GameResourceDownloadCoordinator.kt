@@ -294,7 +294,7 @@ class GameResourceDownloadCoordinator(
     private fun startDownloadInternal(allowMetered: Boolean): Boolean {
         val mode = modeProvider()
         ensureManifestLoaded()
-        if (mode == GameResourceCacheMode.NONE || urls.isEmpty()) return false
+        if (mode != GameResourceCacheMode.FULL || urls.isEmpty()) return false
         val remainingEstimate = (targetBytes - cachedManifestBytes()).coerceAtLeast(0L)
         val reclaimableBudget = engine.availableDeviceBytes().let { available ->
             val used = engine.status().usedBytes

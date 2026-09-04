@@ -33,7 +33,7 @@ class GameResourceCacheManager(
                 onModeChanged(mode)
                 runIo(result) {
                     engine.enforcePolicy()
-                    coordinator.configureModeChange(mode.wireName, mode == GameResourceCacheMode.NONE) {
+                    coordinator.configureModeChange(mode.wireName, mode != GameResourceCacheMode.FULL) {
                         modeEpoch.get() == capturedEpoch && modeProvider() == mode
                     }
                 }
@@ -104,7 +104,7 @@ class GameResourceCacheManager(
                                 modeEpoch.get() == manifest.modeEpoch && modeProvider() == expectedMode
                             }
                             if (applied && modeEpoch.get() == manifest.modeEpoch &&
-                                expectedMode != GameResourceCacheMode.NONE
+                                expectedMode == GameResourceCacheMode.FULL
                             ) coordinator.startAutoUpdate()
                             applied
                         } finally {
@@ -146,7 +146,7 @@ class GameResourceCacheManager(
                             modeEpoch.get() == capturedEpoch && modeProvider() == expectedMode
                         }
                         if (applied && modeEpoch.get() == capturedEpoch &&
-                            expectedMode != GameResourceCacheMode.NONE
+                            expectedMode == GameResourceCacheMode.FULL
                         ) coordinator.startAutoUpdate()
                         applied
                     } finally {

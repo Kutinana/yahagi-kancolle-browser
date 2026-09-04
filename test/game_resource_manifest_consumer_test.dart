@@ -12,63 +12,53 @@ import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_store.da
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_manifest_consumer.dart';
 
 void main() {
-  test(
-    'consumes decoded start2 once and submits manifest for current mode',
-    () async {
-      final port = RecordingPort();
-      final controller = GameResourceCacheController(
-        store: MemoryStore(GameResourceCacheMode.light),
-        port: port,
-      );
-      await controller.initialize();
-      final consumer = GameResourceManifestConsumer(
-        controller: controller,
-        ownedShipMasterIds: () => const <int>{1},
-        ownedSlotItemMasterIds: () => const <int>{100},
-        staticUrlsLoader: () async => const <String>['/kcs2/js/main.js'],
-      );
-      final start2 = <String, Object?>{
-        'api_mst_shipgraph': <Object?>[
-          <String, Object?>{
-            'api_id': 1,
-            'api_filename': 'ship_a',
-            'api_version': <Object?>['2', '3', '4'],
-          },
-        ],
-        'api_mst_ship': <Object?>[
-          <String, Object?>{'api_id': 1, 'api_name': 'A'},
-        ],
-        'api_mst_slotitem': <Object?>[
-          <String, Object?>{'api_id': 100, 'api_version': '5'},
-        ],
-      };
-      final event = CapturedApiEvent(
-        path: '/kcsapi/api_start2/getData',
-        responseBody: jsonEncode(<String, Object?>{
-          'api_result': 1,
-          'api_data': start2,
-        }),
-        decodedEnvelope: <String, Object?>{'api_result': 1, 'api_data': start2},
-        source: CaptureSource.xhr,
-        sourceOrigin: 'https://w01y.kancolle-server.com',
-        capturedAt: DateTime.utc(2026),
-      );
+  test('temporary mode does not build or submit a preload manifest', () async {
+    final port = RecordingPort();
+    final controller = GameResourceCacheController(
+      store: MemoryStore(GameResourceCacheMode.temporary),
+      port: port,
+    );
+    await controller.initialize();
+    final consumer = GameResourceManifestConsumer(
+      controller: controller,
+      ownedShipMasterIds: () => const <int>{1},
+      ownedSlotItemMasterIds: () => const <int>{100},
+      staticUrlsLoader: () async => const <String>['/kcs2/js/main.js'],
+    );
+    final start2 = <String, Object?>{
+      'api_mst_shipgraph': <Object?>[
+        <String, Object?>{
+          'api_id': 1,
+          'api_filename': 'ship_a',
+          'api_version': <Object?>['2', '3', '4'],
+        },
+      ],
+      'api_mst_ship': <Object?>[
+        <String, Object?>{'api_id': 1, 'api_name': 'A'},
+      ],
+      'api_mst_slotitem': <Object?>[
+        <String, Object?>{'api_id': 100, 'api_version': '5'},
+      ],
+    };
+    final event = CapturedApiEvent(
+      path: '/kcsapi/api_start2/getData',
+      responseBody: jsonEncode(<String, Object?>{
+        'api_result': 1,
+        'api_data': start2,
+      }),
+      decodedEnvelope: <String, Object?>{'api_result': 1, 'api_data': start2},
+      source: CaptureSource.xhr,
+      sourceOrigin: 'https://w01y.kancolle-server.com',
+      capturedAt: DateTime.utc(2026),
+    );
 
-      consumer.accept(event);
-      await consumer.idle;
+    consumer.accept(event);
+    await consumer.idle;
 
-      expect(port.manifests, hasLength(1));
-      expect(port.manifests.single.profile, 'light');
-      expect(
-        port.manifests.single.urls.any(
-          (url) => url.contains('_ship_a.png?version=2'),
-        ),
-        isTrue,
-      );
-      consumer.dispose();
-      controller.dispose();
-    },
-  );
+    expect(port.manifests, isEmpty);
+    consumer.dispose();
+    controller.dispose();
+  });
 
   test('ignores paths other than start2', () {
     final controller = GameResourceCacheController(
@@ -91,7 +81,7 @@ void main() {
   test('rapid mode changes build only the latest manifest', () async {
     final port = RecordingPort();
     final controller = GameResourceCacheController(
-      store: MemoryStore(GameResourceCacheMode.light),
+      store: MemoryStore(GameResourceCacheMode.full),
       port: port,
     );
     await controller.initialize();
@@ -102,9 +92,10 @@ void main() {
       ownedShipMasterIds: () => const <int>{1},
       ownedSlotItemMasterIds: () => const <int>{100},
       staticUrlsLoader: () async => const <String>['/kcs2/js/main.js'],
-      waitForGameState: () async {
+      baselineLoader: () async {
         if (!entered.isCompleted) entered.complete();
         await release.future;
+        return _baselineBytes();
       },
     );
     final start2 = <String, Object?>{
@@ -137,13 +128,11 @@ void main() {
     );
     await entered.future;
 
-    await controller.setMode(GameResourceCacheMode.full);
-    await controller.setMode(GameResourceCacheMode.light);
+    await controller.setMode(GameResourceCacheMode.temporary);
     release.complete();
     await consumer.idle;
 
-    expect(port.manifests, hasLength(1));
-    expect(port.manifests.single.profile, 'light');
+    expect(port.manifests, isEmpty);
     consumer.dispose();
     controller.dispose();
   });
