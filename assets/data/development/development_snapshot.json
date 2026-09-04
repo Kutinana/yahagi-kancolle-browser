@@ -8,8 +8,11 @@
       "DevelopmentPool.json": "abe856fc9dc879ffeeccf4e31b303e82665a4974a139b88502fb2e5860071051",
       "ctype.json": "df4d5b1b8921d452a55e40dbd6b1b84c22160c1ae0fb35f047942c64e319dffc",
       "i18n/ja/ctype.json": "efa6a035d23f6fecf53204afc7625d525413677cf13e150ac4e233e035aae762",
+      "i18n/ja/items.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "i18n/zh-Hans/items.json": "9caa5e8b18c6239391d6ea3a0219a93a02ef01307fa0a41ee665134312ec7bea",
       "i18n/zh-Hans/ships.json": "b41584ed77a04c09f0753218919e849c98110b0bb3a11094f41e8c78d8ff89b8",
       "i18n/zh-Hant/ctype.json": "381b2b69da4f0cdf52b70dd030a85e2922ff0110c54dbf5b133beb3e2a48668e",
+      "i18n/zh-Hant/items.json": "2943074b0a644067a34a79a3a7ed5e13c37d06ac0b1e0d4ed4beab395c1c1f09",
       "i18n/zh-Hant/ships.json": "19e5c52dfa0aa33964ac59cb0ac2db02b5eed5e66cce6866032123a1d36c35a8",
       "poolNames.ts": "675e4549e535c1e5438fe1dc7750c1d14576c332011c62c971d613660400aaa0",
       "start2.json": "22049a99ae4883bbf056d284638b0426ec8e4d323c04e51d05f0b0f6365d878e",
@@ -7576,6 +7579,11 @@
     {
       "id": 1,
       "name": "12cm単装砲",
+      "names": {
+        "ja": "12cm単装砲",
+        "zh": "12cm单装炮",
+        "zh_Hant": "12cm單裝炮"
+      },
       "type_id": 1,
       "icon_id": 1,
       "minimum_resources": [
@@ -7588,6 +7596,11 @@
     {
       "id": 2,
       "name": "12.7cm連装砲",
+      "names": {
+        "ja": "12.7cm連装砲",
+        "zh": "12.7cm连装炮",
+        "zh_Hant": "12.7cm聯裝炮"
+      },
       "type_id": 1,
       "icon_id": 1,
       "minimum_resources": [
@@ -7600,6 +7613,11 @@
     {
       "id": 3,
       "name": "10cm連装高角砲",
+      "names": {
+        "ja": "10cm連装高角砲",
+        "zh": "10cm连装高角炮",
+        "zh_Hant": "10cm聯裝高射炮"
+      },
       "type_id": 1,
       "icon_id": 16,
       "minimum_resources": [
@@ -7612,6 +7630,11 @@
     {
       "id": 4,
       "name": "14cm単装砲",
+      "names": {
+        "ja": "14cm単装砲",
+        "zh": "14cm单装炮",
+        "zh_Hant": "14cm單裝炮"
+      },
       "type_id": 2,
       "icon_id": 2,
       "minimum_resources": [
@@ -7624,6 +7647,11 @@
     {
       "id": 5,
       "name": "15.5cm三連装砲",
+      "names": {
+        "ja": "15.5cm三連装砲",
+        "zh": "15.5cm三连装炮",
+        "zh_Hant": "15.5cm三聯裝炮"
+      },
       "type_id": 2,
       "icon_id": 2,
       "minimum_resources": [
@@ -7636,6 +7664,11 @@
     {
       "id": 6,
       "name": "20.3cm連装砲",
+      "names": {
+        "ja": "20.3cm連装砲",
+        "zh": "20.3cm连装炮",
+        "zh_Hant": "20.3cm聯裝炮"
+      },
       "type_id": 2,
       "icon_id": 2,
       "minimum_resources": [
@@ -7648,6 +7681,11 @@
     {
       "id": 7,
       "name": "35.6cm連装砲",
+      "names": {
+        "ja": "35.6cm連装砲",
+        "zh": "35.6cm连装炮",
+        "zh_Hant": "35.6cm聯裝炮"
+      },
       "type_id": 3,
       "icon_id": 3,
       "minimum_resources": [
@@ -7660,6 +7698,11 @@
     {
       "id": 8,
       "name": "41cm連装砲",
+      "names": {
+        "ja": "41cm連装砲",
+        "zh": "41cm连装炮",
+        "zh_Hant": "41cm聯裝炮"
+      },
       "type_id": 3,
       "icon_id": 3,
       "minimum_resources": [
@@ -7672,6 +7715,11 @@
     {
       "id": 9,
       "name": "46cm三連装砲",
+      "names": {
+        "ja": "46cm三連装砲",
+        "zh": "46cm三连装炮",
+        "zh_Hant": "46cm三聯裝炮"
+      },
       "type_id": 3,
       "icon_id": 3,
       "minimum_resources": [
@@ -7684,6 +7732,11 @@
     {
       "id": 10,
       "name": "12.7cm連装高角砲",
+      "names": {
+        "ja": "12.7cm連装高角砲",
+        "zh": "12.7cm连装高角炮",
+        "zh_Hant": "12.7cm聯裝高射炮"
+      },
       "type_id": 4,
       "icon_id": 16,
       "minimum_resources": [
@@ -7696,6 +7749,11 @@
     {
       "id": 11,
       "name": "15.2cm単装砲",
+      "names": {
+        "ja": "15.2cm単装砲",
+        "zh": "15.2cm单装炮",
+        "zh_Hant": "15.2cm單裝炮"
+      },
       "type_id": 4,
       "icon_id": 4,
       "minimum_resources": [
@@ -7708,6 +7766,11 @@
     {
       "id": 12,
       "name": "15.5cm三連装副砲",
+      "names": {
+        "ja": "15.5cm三連装副砲",
+        "zh": "15.5cm三连装副炮",
+        "zh_Hant": "15.5cm三聯裝副炮"
+      },
       "type_id": 4,
       "icon_id": 4,
       "minimum_resources": [
@@ -7720,6 +7783,11 @@
     {
       "id": 13,
       "name": "61cm三連装魚雷",
+      "names": {
+        "ja": "61cm三連装魚雷",
+        "zh": "61cm三连装鱼雷",
+        "zh_Hant": "61cm三聯裝魚雷"
+      },
       "type_id": 5,
       "icon_id": 5,
       "minimum_resources": [
@@ -7732,6 +7800,11 @@
     {
       "id": 14,
       "name": "61cm四連装魚雷",
+      "names": {
+        "ja": "61cm四連装魚雷",
+        "zh": "61cm四连装鱼雷",
+        "zh_Hant": "61cm四聯裝魚雷"
+      },
       "type_id": 5,
       "icon_id": 5,
       "minimum_resources": [
@@ -7744,6 +7817,11 @@
     {
       "id": 15,
       "name": "61cm四連装(酸素)魚雷",
+      "names": {
+        "ja": "61cm四連装(酸素)魚雷",
+        "zh": "61cm四连装（酸素）鱼雷",
+        "zh_Hant": "61cm四聯裝氧氣魚雷"
+      },
       "type_id": 5,
       "icon_id": 5,
       "minimum_resources": [
@@ -7756,6 +7834,11 @@
     {
       "id": 16,
       "name": "九七式艦攻",
+      "names": {
+        "ja": "九七式艦攻",
+        "zh": "九七式舰攻",
+        "zh_Hant": "九七式艦攻 B5N2"
+      },
       "type_id": 8,
       "icon_id": 8,
       "minimum_resources": [
@@ -7768,6 +7851,11 @@
     {
       "id": 17,
       "name": "天山",
+      "names": {
+        "ja": "天山",
+        "zh": "天山",
+        "zh_Hant": "天山 B6N2"
+      },
       "type_id": 8,
       "icon_id": 8,
       "minimum_resources": [
@@ -7780,6 +7868,11 @@
     {
       "id": 18,
       "name": "流星",
+      "names": {
+        "ja": "流星",
+        "zh": "流星",
+        "zh_Hant": "流星 B7A2"
+      },
       "type_id": 8,
       "icon_id": 8,
       "minimum_resources": [
@@ -7792,6 +7885,11 @@
     {
       "id": 19,
       "name": "九六式艦戦",
+      "names": {
+        "ja": "九六式艦戦",
+        "zh": "九六式舰战",
+        "zh_Hant": "九六式艦戰 A5M2"
+      },
       "type_id": 6,
       "icon_id": 6,
       "minimum_resources": [
@@ -7804,6 +7902,11 @@
     {
       "id": 20,
       "name": "零式艦戦21型",
+      "names": {
+        "ja": "零式艦戦21型",
+        "zh": "零式舰战21型",
+        "zh_Hant": "零式艦戰21型 A6M2b"
+      },
       "type_id": 6,
       "icon_id": 6,
       "minimum_resources": [
@@ -7816,6 +7919,11 @@
     {
       "id": 21,
       "name": "零式艦戦52型",
+      "names": {
+        "ja": "零式艦戦52型",
+        "zh": "零式舰战52型",
+        "zh_Hant": "零式艦戰52型 A6M5"
+      },
       "type_id": 6,
       "icon_id": 6,
       "minimum_resources": [
@@ -7828,6 +7936,11 @@
     {
       "id": 22,
       "name": "試製烈風 後期型",
+      "names": {
+        "ja": "試製烈風 後期型",
+        "zh": "试制烈风 后期型",
+        "zh_Hant": "烈風晚期原型 A7M1"
+      },
       "type_id": 6,
       "icon_id": 6,
       "minimum_resources": [
@@ -7840,6 +7953,11 @@
     {
       "id": 23,
       "name": "九九式艦爆",
+      "names": {
+        "ja": "九九式艦爆",
+        "zh": "九九式舰爆",
+        "zh_Hant": "九九式艦爆 D3A1"
+      },
       "type_id": 7,
       "icon_id": 7,
       "minimum_resources": [
@@ -7852,6 +7970,11 @@
     {
       "id": 24,
       "name": "彗星",
+      "names": {
+        "ja": "彗星",
+        "zh": "彗星",
+        "zh_Hant": "彗星 D4Y2"
+      },
       "type_id": 7,
       "icon_id": 7,
       "minimum_resources": [
@@ -7864,6 +7987,11 @@
     {
       "id": 25,
       "name": "零式水上偵察機",
+      "names": {
+        "ja": "零式水上偵察機",
+        "zh": "零式水上侦察机",
+        "zh_Hant": "零式水偵 E13A1"
+      },
       "type_id": 10,
       "icon_id": 10,
       "minimum_resources": [
@@ -7876,6 +8004,11 @@
     {
       "id": 26,
       "name": "瑞雲",
+      "names": {
+        "ja": "瑞雲",
+        "zh": "瑞云",
+        "zh_Hant": "瑞雲 E16A1"
+      },
       "type_id": 11,
       "icon_id": 10,
       "minimum_resources": [
@@ -7888,6 +8021,11 @@
     {
       "id": 27,
       "name": "13号対空電探",
+      "names": {
+        "ja": "13号対空電探",
+        "zh": "13号对空电探",
+        "zh_Hant": "13號對空雷達"
+      },
       "type_id": 12,
       "icon_id": 11,
       "minimum_resources": [
@@ -7900,6 +8038,11 @@
     {
       "id": 28,
       "name": "22号対水上電探",
+      "names": {
+        "ja": "22号対水上電探",
+        "zh": "22号对水上电探",
+        "zh_Hant": "22號對海面雷達"
+      },
       "type_id": 12,
       "icon_id": 11,
       "minimum_resources": [
@@ -7912,6 +8055,11 @@
     {
       "id": 29,
       "name": "33号対水上電探",
+      "names": {
+        "ja": "33号対水上電探",
+        "zh": "33号对水上电探",
+        "zh_Hant": "33號對海面雷達"
+      },
       "type_id": 12,
       "icon_id": 11,
       "minimum_resources": [
@@ -7924,6 +8072,11 @@
     {
       "id": 30,
       "name": "21号対空電探",
+      "names": {
+        "ja": "21号対空電探",
+        "zh": "21号对空电探",
+        "zh_Hant": "21號對空雷達"
+      },
       "type_id": 13,
       "icon_id": 11,
       "minimum_resources": [
@@ -7936,6 +8089,11 @@
     {
       "id": 31,
       "name": "32号対水上電探",
+      "names": {
+        "ja": "32号対水上電探",
+        "zh": "32号对水上电探",
+        "zh_Hant": "32號對海面雷達"
+      },
       "type_id": 13,
       "icon_id": 11,
       "minimum_resources": [
@@ -7948,6 +8106,11 @@
     {
       "id": 32,
       "name": "42号対空電探",
+      "names": {
+        "ja": "42号対空電探",
+        "zh": "42号对空电探",
+        "zh_Hant": "42號對空雷達"
+      },
       "type_id": 13,
       "icon_id": 11,
       "minimum_resources": [
@@ -7960,6 +8123,11 @@
     {
       "id": 33,
       "name": "改良型艦本式タービン",
+      "names": {
+        "ja": "改良型艦本式タービン",
+        "zh": "改良型舰船涡轮机",
+        "zh_Hant": "改良型艦本式渦輪"
+      },
       "type_id": 17,
       "icon_id": 19,
       "minimum_resources": [
@@ -7972,6 +8140,11 @@
     {
       "id": 34,
       "name": "強化型艦本式缶",
+      "names": {
+        "ja": "強化型艦本式缶",
+        "zh": "强化型舰船锅炉",
+        "zh_Hant": "強化型艦本式鍋爐"
+      },
       "type_id": 17,
       "icon_id": 19,
       "minimum_resources": [
@@ -7984,6 +8157,11 @@
     {
       "id": 35,
       "name": "三式弾",
+      "names": {
+        "ja": "三式弾",
+        "zh": "三式弹",
+        "zh_Hant": "三式燒霰彈"
+      },
       "type_id": 18,
       "icon_id": 12,
       "minimum_resources": [
@@ -7996,6 +8174,11 @@
     {
       "id": 36,
       "name": "九一式徹甲弾",
+      "names": {
+        "ja": "九一式徹甲弾",
+        "zh": "九一式穿甲弹",
+        "zh_Hant": "九一式穿甲彈"
+      },
       "type_id": 19,
       "icon_id": 13,
       "minimum_resources": [
@@ -8008,6 +8191,11 @@
     {
       "id": 37,
       "name": "7.7mm機銃",
+      "names": {
+        "ja": "7.7mm機銃",
+        "zh": "7.7mm机枪",
+        "zh_Hant": "7.7mm單裝機槍"
+      },
       "type_id": 21,
       "icon_id": 15,
       "minimum_resources": [
@@ -8020,6 +8208,11 @@
     {
       "id": 38,
       "name": "12.7mm単装機銃",
+      "names": {
+        "ja": "12.7mm単装機銃",
+        "zh": "12.7mm机枪",
+        "zh_Hant": "12.7mm單裝機槍"
+      },
       "type_id": 21,
       "icon_id": 15,
       "minimum_resources": [
@@ -8032,6 +8225,11 @@
     {
       "id": 39,
       "name": "25mm連装機銃",
+      "names": {
+        "ja": "25mm連装機銃",
+        "zh": "25mm连装机枪",
+        "zh_Hant": "25mm聯裝機炮"
+      },
       "type_id": 21,
       "icon_id": 15,
       "minimum_resources": [
@@ -8044,6 +8242,11 @@
     {
       "id": 40,
       "name": "25mm三連装機銃",
+      "names": {
+        "ja": "25mm三連装機銃",
+        "zh": "25mm三连装机枪",
+        "zh_Hant": "25mm三聯裝機炮"
+      },
       "type_id": 21,
       "icon_id": 15,
       "minimum_resources": [
@@ -8056,6 +8259,11 @@
     {
       "id": 41,
       "name": "甲標的 甲型",
+      "names": {
+        "ja": "甲標的 甲型",
+        "zh": "甲标的 甲型",
+        "zh_Hant": "甲標的甲型 微型潛艇"
+      },
       "type_id": 22,
       "icon_id": 5,
       "minimum_resources": [
@@ -8068,6 +8276,11 @@
     {
       "id": 44,
       "name": "九四式爆雷投射機",
+      "names": {
+        "ja": "九四式爆雷投射機",
+        "zh": "九四式爆雷投射机",
+        "zh_Hant": "九四式深水炸彈投射器"
+      },
       "type_id": 15,
       "icon_id": 17,
       "minimum_resources": [
@@ -8080,6 +8293,11 @@
     {
       "id": 45,
       "name": "三式爆雷投射機",
+      "names": {
+        "ja": "三式爆雷投射機",
+        "zh": "三式爆雷投射机",
+        "zh_Hant": "三式深水炸彈投射器"
+      },
       "type_id": 15,
       "icon_id": 17,
       "minimum_resources": [
@@ -8092,6 +8310,11 @@
     {
       "id": 46,
       "name": "九三式水中聴音機",
+      "names": {
+        "ja": "九三式水中聴音機",
+        "zh": "九三式水中听音机",
+        "zh_Hant": "九三式被動式聲納"
+      },
       "type_id": 14,
       "icon_id": 18,
       "minimum_resources": [
@@ -8104,6 +8327,11 @@
     {
       "id": 47,
       "name": "三式水中探信儀",
+      "names": {
+        "ja": "三式水中探信儀",
+        "zh": "三式水中探信仪",
+        "zh_Hant": "三式主動式聲納"
+      },
       "type_id": 14,
       "icon_id": 18,
       "minimum_resources": [
@@ -8116,6 +8344,11 @@
     {
       "id": 48,
       "name": "12cm単装高角砲",
+      "names": {
+        "ja": "12cm単装高角砲",
+        "zh": "12cm单装高角炮",
+        "zh_Hant": "12cm單裝高射炮"
+      },
       "type_id": 1,
       "icon_id": 16,
       "minimum_resources": [
@@ -8128,6 +8361,11 @@
     {
       "id": 49,
       "name": "25mm単装機銃",
+      "names": {
+        "ja": "25mm単装機銃",
+        "zh": "25mm单装机枪",
+        "zh_Hant": "25mm單裝機炮"
+      },
       "type_id": 21,
       "icon_id": 15,
       "minimum_resources": [
@@ -8140,6 +8378,11 @@
     {
       "id": 51,
       "name": "12cm30連装噴進砲",
+      "names": {
+        "ja": "12cm30連装噴進砲",
+        "zh": "12cm30连装喷进炮",
+        "zh_Hant": "12cm三十管對空火箭炮"
+      },
       "type_id": 21,
       "icon_id": 15,
       "minimum_resources": [
@@ -8152,6 +8395,11 @@
     {
       "id": 52,
       "name": "流星改",
+      "names": {
+        "ja": "流星改",
+        "zh": "流星改",
+        "zh_Hant": "流星改 B7A2b"
+      },
       "type_id": 8,
       "icon_id": 8,
       "minimum_resources": [
@@ -8164,6 +8412,11 @@
     {
       "id": 54,
       "name": "彩雲",
+      "names": {
+        "ja": "彩雲",
+        "zh": "彩云",
+        "zh_Hant": "彩雲 C6N1"
+      },
       "type_id": 9,
       "icon_id": 9,
       "minimum_resources": [
@@ -8176,6 +8429,11 @@
     {
       "id": 55,
       "name": "紫電改二",
+      "names": {
+        "ja": "紫電改二",
+        "zh": "紫电改二",
+        "zh_Hant": "紫電改二艦載原型 N1K3-A"
+      },
       "type_id": 6,
       "icon_id": 6,
       "minimum_resources": [
@@ -8188,6 +8446,11 @@
     {
       "id": 57,
       "name": "彗星一二型甲",
+      "names": {
+        "ja": "彗星一二型甲",
+        "zh": "彗星一二型甲",
+        "zh_Hant": "彗星一二型甲 D4Y2a"
+      },
       "type_id": 7,
       "icon_id": 7,
       "minimum_resources": [
@@ -8200,6 +8463,11 @@
     {
       "id": 59,
       "name": "零式水上観測機",
+      "names": {
+        "ja": "零式水上観測機",
+        "zh": "零式水上观测机",
+        "zh_Hant": "零式水觀 F1M2"
+      },
       "type_id": 10,
       "icon_id": 10,
       "minimum_resources": [
@@ -8212,6 +8480,11 @@
     {
       "id": 60,
       "name": "零式艦戦62型(爆戦)",
+      "names": {
+        "ja": "零式艦戦62型(爆戦)",
+        "zh": "零式舰战62型（爆战）",
+        "zh_Hant": "零式艦戰62型(戰轟) A6M7"
+      },
       "type_id": 7,
       "icon_id": 7,
       "minimum_resources": [
@@ -8224,6 +8497,11 @@
     {
       "id": 61,
       "name": "二式艦上偵察機",
+      "names": {
+        "ja": "二式艦上偵察機",
+        "zh": "二式舰上侦察机",
+        "zh_Hant": "二式艦載偵察機 D4Y1-R"
+      },
       "type_id": 9,
       "icon_id": 9,
       "minimum_resources": [
@@ -8236,6 +8514,11 @@
     {
       "id": 65,
       "name": "15.2cm連装砲",
+      "names": {
+        "ja": "15.2cm連装砲",
+        "zh": "15.2cm连装炮",
+        "zh_Hant": "15.2cm聯裝炮"
+      },
       "type_id": 2,
       "icon_id": 2,
       "minimum_resources": [
@@ -8248,6 +8531,11 @@
     {
       "id": 66,
       "name": "8cm高角砲",
+      "names": {
+        "ja": "8cm高角砲",
+        "zh": "8cm连装高角炮",
+        "zh_Hant": "8cm聯裝高射炮"
+      },
       "type_id": 4,
       "icon_id": 16,
       "minimum_resources": [
@@ -8260,6 +8548,11 @@
     {
       "id": 68,
       "name": "大発動艇",
+      "names": {
+        "ja": "大発動艇",
+        "zh": "大发动艇",
+        "zh_Hant": "大型登陸艇"
+      },
       "type_id": 24,
       "icon_id": 20,
       "minimum_resources": [
@@ -8272,6 +8565,11 @@
     {
       "id": 69,
       "name": "カ号観測機",
+      "names": {
+        "ja": "カ号観測機",
+        "zh": "KA号观测机",
+        "zh_Hant": "卡號自轉旋翼機 Ka-1"
+      },
       "type_id": 25,
       "icon_id": 21,
       "minimum_resources": [
@@ -8284,6 +8582,11 @@
     {
       "id": 70,
       "name": "三式指揮連絡機(対潜)",
+      "names": {
+        "ja": "三式指揮連絡機(対潜)",
+        "zh": "三式指挥联络机（对潜）",
+        "zh_Hant": "三式指揮聯絡機(反潛) Ki-76"
+      },
       "type_id": 26,
       "icon_id": 22,
       "minimum_resources": [
@@ -8296,6 +8599,11 @@
     {
       "id": 71,
       "name": "10cm連装高角砲(砲架)",
+      "names": {
+        "ja": "10cm連装高角砲(砲架)",
+        "zh": "10cm连装高角炮（炮架）",
+        "zh_Hant": "10cm聯裝高射炮(炮架)"
+      },
       "type_id": 4,
       "icon_id": 16,
       "minimum_resources": [
@@ -8308,6 +8616,11 @@
     {
       "id": 72,
       "name": "増設バルジ(中型艦)",
+      "names": {
+        "ja": "増設バルジ(中型艦)",
+        "zh": "增设装甲板（中型舰）",
+        "zh_Hant": "增設防雷鼓包(中型艦隻)"
+      },
       "type_id": 27,
       "icon_id": 23,
       "minimum_resources": [
@@ -8320,6 +8633,11 @@
     {
       "id": 73,
       "name": "増設バルジ(大型艦)",
+      "names": {
+        "ja": "増設バルジ(大型艦)",
+        "zh": "增设装甲板（大型舰）",
+        "zh_Hant": "增設防雷鼓包(大型艦隻)"
+      },
       "type_id": 28,
       "icon_id": 23,
       "minimum_resources": [
@@ -8332,6 +8650,11 @@
     {
       "id": 74,
       "name": "探照灯",
+      "names": {
+        "ja": "探照灯",
+        "zh": "探照灯",
+        "zh_Hant": "探照燈"
+      },
       "type_id": 29,
       "icon_id": 24,
       "minimum_resources": [
@@ -8344,6 +8667,11 @@
     {
       "id": 75,
       "name": "ドラム缶(輸送用)",
+      "names": {
+        "ja": "ドラム缶(輸送用)",
+        "zh": "桶（运输用）",
+        "zh_Hant": "運輸桶"
+      },
       "type_id": 30,
       "icon_id": 25,
       "minimum_resources": [
@@ -8356,6 +8684,11 @@
     {
       "id": 78,
       "name": "12.7cm単装砲",
+      "names": {
+        "ja": "12.7cm単装砲",
+        "zh": "12.7cm单装炮",
+        "zh_Hant": "12.7cm單裝炮"
+      },
       "type_id": 1,
       "icon_id": 1,
       "minimum_resources": [
@@ -8368,6 +8701,11 @@
     {
       "id": 90,
       "name": "20.3cm(2号)連装砲",
+      "names": {
+        "ja": "20.3cm(2号)連装砲",
+        "zh": "20.3cm（2号）连装炮",
+        "zh_Hant": "20.3cm(2號)聯裝炮"
+      },
       "type_id": 2,
       "icon_id": 2,
       "minimum_resources": [
@@ -8380,6 +8718,11 @@
     {
       "id": 102,
       "name": "九八式水上偵察機(夜偵)",
+      "names": {
+        "ja": "九八式水上偵察機(夜偵)",
+        "zh": "九八式水上侦察机（夜侦）",
+        "zh_Hant": "九八式水偵(夜間偵察機) E11A1"
+      },
       "type_id": 10,
       "icon_id": 50,
       "minimum_resources": [
@@ -8392,6 +8735,11 @@
     {
       "id": 117,
       "name": "試製46cm連装砲",
+      "names": {
+        "ja": "試製46cm連装砲",
+        "zh": "试制46cm连装炮",
+        "zh_Hant": "46cm聯裝炮原型"
+      },
       "type_id": 3,
       "icon_id": 3,
       "minimum_resources": [
@@ -8404,6 +8752,11 @@
     {
       "id": 120,
       "name": "91式高射装置",
+      "names": {
+        "ja": "91式高射装置",
+        "zh": "91式高射装置",
+        "zh_Hant": "91式對空射控系統"
+      },
       "type_id": 36,
       "icon_id": 30,
       "minimum_resources": [
@@ -8416,6 +8769,11 @@
     {
       "id": 147,
       "name": "120mm/50 連装砲",
+      "names": {
+        "ja": "120mm/50 連装砲",
+        "zh": "120mm/50连装炮",
+        "zh_Hant": "120mm 50倍徑聯裝炮"
+      },
       "type_id": 1,
       "icon_id": 1,
       "minimum_resources": [
@@ -8428,6 +8786,11 @@
     {
       "id": 163,
       "name": "Ro.43水偵",
+      "names": {
+        "ja": "Ro.43水偵",
+        "zh": "Ro.43水侦",
+        "zh_Hant": "Ro.43水偵"
+      },
       "type_id": 10,
       "icon_id": 10,
       "minimum_resources": [
@@ -8440,6 +8803,11 @@
     {
       "id": 168,
       "name": "九六式陸攻",
+      "names": {
+        "ja": "九六式陸攻",
+        "zh": "九六式陆攻",
+        "zh_Hant": "九六式陸攻 G3M2"
+      },
       "type_id": 47,
       "icon_id": 37,
       "minimum_resources": [
@@ -8452,6 +8820,11 @@
     {
       "id": 176,
       "name": "三式戦 飛燕",
+      "names": {
+        "ja": "三式戦 飛燕",
+        "zh": "三式战 飞燕",
+        "zh_Hant": "三式戰鬥機「飛燕」Ki-61-Ib"
+      },
       "type_id": 48,
       "icon_id": 44,
       "minimum_resources": [
@@ -8464,6 +8837,11 @@
     {
       "id": 181,
       "name": "零式艦戦32型",
+      "names": {
+        "ja": "零式艦戦32型",
+        "zh": "零式舰战32型",
+        "zh_Hant": "零式艦戰32型 A6M3"
+      },
       "type_id": 6,
       "icon_id": 6,
       "minimum_resources": [
@@ -8476,6 +8854,11 @@
     {
       "id": 194,
       "name": "Laté 298B",
+      "names": {
+        "ja": "Laté 298B",
+        "zh": "Laté 298B",
+        "zh_Hant": "Latécoère 298B"
+      },
       "type_id": 11,
       "icon_id": 10,
       "minimum_resources": [
@@ -8488,6 +8871,11 @@
     {
       "id": 195,
       "name": "SBD",
+      "names": {
+        "ja": "SBD",
+        "zh": "SBD",
+        "zh_Hant": "SBD 無畏"
+      },
       "type_id": 7,
       "icon_id": 7,
       "minimum_resources": [
@@ -8500,6 +8888,11 @@
     {
       "id": 197,
       "name": "F4F-3",
+      "names": {
+        "ja": "F4F-3",
+        "zh": "F4F-3",
+        "zh_Hant": "F4F-3 野貓"
+      },
       "type_id": 6,
       "icon_id": 6,
       "minimum_resources": [
@@ -8512,6 +8905,11 @@
     {
       "id": 201,
       "name": "紫電一一型",
+      "names": {
+        "ja": "紫電一一型",
+        "zh": "紫电一一型",
+        "zh_Hant": "紫電一一型 N1K1-J"
+      },
       "type_id": 48,
       "icon_id": 38,
       "minimum_resources": [
@@ -8524,6 +8922,11 @@
     {
       "id": 207,
       "name": "瑞雲(六三一空)",
+      "names": {
+        "ja": "瑞雲(六三一空)",
+        "zh": "瑞云（六三一空）",
+        "zh_Hant": "瑞雲(第六三一航空隊) E16A1"
+      },
       "type_id": 11,
       "icon_id": 10,
       "minimum_resources": [
@@ -8536,6 +8939,11 @@
     {
       "id": 210,
       "name": "潜水艦搭載電探&水防式望遠鏡",
+      "names": {
+        "ja": "潜水艦搭載電探&水防式望遠鏡",
+        "zh": "潜艇搭载电探&水防式望远镜",
+        "zh_Hant": "潛水艇搭載主動雷達及防水望遠鏡"
+      },
       "type_id": 51,
       "icon_id": 42,
       "minimum_resources": [
@@ -8548,6 +8956,11 @@
     {
       "id": 213,
       "name": "後期型艦首魚雷(6門)",
+      "names": {
+        "ja": "後期型艦首魚雷(6門)",
+        "zh": "后期型舰首鱼雷（6门）",
+        "zh_Hant": "潛水艇艦艏氧氣魚雷(6門)(晚期型號)"
+      },
       "type_id": 32,
       "icon_id": 5,
       "minimum_resources": [
@@ -8560,6 +8973,11 @@
     {
       "id": 221,
       "name": "一式戦 隼II型",
+      "names": {
+        "ja": "一式戦 隼II型",
+        "zh": "一式战 隼II型",
+        "zh_Hant": "一式戰鬥機二型「隼」 Ki-43-II"
+      },
       "type_id": 48,
       "icon_id": 44,
       "minimum_resources": [
@@ -8572,6 +8990,11 @@
     {
       "id": 226,
       "name": "九五式爆雷",
+      "names": {
+        "ja": "九五式爆雷",
+        "zh": "九五式爆雷",
+        "zh_Hant": "九五式深水炸彈"
+      },
       "type_id": 15,
       "icon_id": 17,
       "minimum_resources": [
@@ -8584,6 +9007,11 @@
     {
       "id": 242,
       "name": "Swordfish",
+      "names": {
+        "ja": "Swordfish",
+        "zh": "Swordfish",
+        "zh_Hant": "劍魚 Mk.I"
+      },
       "type_id": 8,
       "icon_id": 8,
       "minimum_resources": [
@@ -8596,6 +9024,11 @@
     {
       "id": 245,
       "name": "38cm四連装砲",
+      "names": {
+        "ja": "38cm四連装砲",
+        "zh": "38cm四连装炮",
+        "zh_Hant": "38cm四聯裝炮"
+      },
       "type_id": 3,
       "icon_id": 3,
       "minimum_resources": [
@@ -8608,6 +9041,11 @@
     {
       "id": 249,
       "name": "Fulmar",
+      "names": {
+        "ja": "Fulmar",
+        "zh": "Fulmar",
+        "zh_Hant": "管鼻燕"
+      },
       "type_id": 6,
       "icon_id": 6,
       "minimum_resources": [
@@ -8620,6 +9058,11 @@
     {
       "id": 250,
       "name": "Spitfire Mk.I",
+      "names": {
+        "ja": "Spitfire Mk.I",
+        "zh": "Spitfire Mk.I",
+        "zh_Hant": "噴火 Mk I"
+      },
       "type_id": 48,
       "icon_id": 44,
       "minimum_resources": [
@@ -8632,6 +9075,11 @@
     {
       "id": 298,
       "name": "16inch Mk.I三連装砲",
+      "names": {
+        "ja": "16inch Mk.I三連装砲",
+        "zh": "16inch Mk.I 三连装炮",
+        "zh_Hant": "16英吋Mk I三聯裝炮"
+      },
       "type_id": 3,
       "icon_id": 3,
       "minimum_resources": [
@@ -8644,6 +9092,11 @@
     {
       "id": 301,
       "name": "20連装7inch UP Rocket Launchers",
+      "names": {
+        "ja": "20連装7inch UP Rocket Launchers",
+        "zh": "20连装7inch UP火箭发射器",
+        "zh_Hant": "20管7英吋「非旋轉投射」對空火箭炮"
+      },
       "type_id": 21,
       "icon_id": 15,
       "minimum_resources": [
@@ -8656,6 +9109,11 @@
     {
       "id": 346,
       "name": "二式12cm迫撃砲改",
+      "names": {
+        "ja": "二式12cm迫撃砲改",
+        "zh": "二式12cm迫击炮改",
+        "zh_Hant": "二式12cm迫擊炮改"
+      },
       "type_id": 15,
       "icon_id": 17,
       "minimum_resources": [
@@ -8668,6 +9126,11 @@
     {
       "id": 382,
       "name": "12cm単装高角砲E型",
+      "names": {
+        "ja": "12cm単装高角砲E型",
+        "zh": "12cm单装高角炮E型",
+        "zh_Hant": "12cm E型單裝高射炮"
+      },
       "type_id": 1,
       "icon_id": 16,
       "minimum_resources": [
@@ -8680,6 +9143,11 @@
     {
       "id": 414,
       "name": "SOC Seagull",
+      "names": {
+        "ja": "SOC Seagull",
+        "zh": "SOC Seagull",
+        "zh_Hant": "SOC 海鷗"
+      },
       "type_id": 10,
       "icon_id": 10,
       "minimum_resources": [
@@ -8692,6 +9160,11 @@
     {
       "id": 440,
       "name": "21inch艦首魚雷発射管6門(初期型)",
+      "names": {
+        "ja": "21inch艦首魚雷発射管6門(初期型)",
+        "zh": "21inch舰首鱼雷发射管6门（初期型）",
+        "zh_Hant": "21英吋艦艏魚雷發射管(6門)(早期型號)"
+      },
       "type_id": 32,
       "icon_id": 5,
       "minimum_resources": [
@@ -8704,6 +9177,11 @@
     {
       "id": 442,
       "name": "潜水艦後部魚雷発射管4門(初期型)",
+      "names": {
+        "ja": "潜水艦後部魚雷発射管4門(初期型)",
+        "zh": "潜艇后部鱼雷发射管4门（初期型）",
+        "zh_Hant": "潛水艇艦艉魚雷發射管(4門)(早期型號)"
+      },
       "type_id": 32,
       "icon_id": 5,
       "minimum_resources": [
@@ -8716,6 +9194,11 @@
     {
       "id": 445,
       "name": "二式複戦 屠龍",
+      "names": {
+        "ja": "二式複戦 屠龍",
+        "zh": "二式复战 屠龙",
+        "zh_Hant": "二式雙座戰鬥機 屠龍 Ki-45 KAI"
+      },
       "type_id": 48,
       "icon_id": 44,
       "minimum_resources": [
@@ -8728,6 +9211,11 @@
     {
       "id": 457,
       "name": "後期型艦首魚雷(4門)",
+      "names": {
+        "ja": "後期型艦首魚雷(4門)",
+        "zh": "后期型舰首鱼雷（4门）",
+        "zh_Hant": "潛水艇艦艏氧氣魚雷(4門)(晚期型號)"
+      },
       "type_id": 32,
       "icon_id": 5,
       "minimum_resources": [
@@ -8740,6 +9228,11 @@
     {
       "id": 500,
       "name": "発煙装置(煙幕)",
+      "names": {
+        "ja": "発煙装置(煙幕)",
+        "zh": "发烟装置（烟幕）",
+        "zh_Hant": "發煙裝置(煙幕)"
+      },
       "type_id": 54,
       "icon_id": 54,
       "minimum_resources": [
@@ -8752,6 +9245,11 @@
     {
       "id": 507,
       "name": "14inch/45 連装砲",
+      "names": {
+        "ja": "14inch/45 連装砲",
+        "zh": "14inch/45 连装炮",
+        "zh_Hant": "14inch/45 連裝砲"
+      },
       "type_id": 3,
       "icon_id": 3,
       "minimum_resources": [
@@ -8764,6 +9262,11 @@
     {
       "id": 511,
       "name": "21inch艦首魚雷発射管4門(初期型)",
+      "names": {
+        "ja": "21inch艦首魚雷発射管4門(初期型)",
+        "zh": "21inch舰首鱼雷发射管4门（初期型）",
+        "zh_Hant": "21inch艦首魚雷發射管4門(初期型)"
+      },
       "type_id": 32,
       "icon_id": 5,
       "minimum_resources": [
@@ -8776,6 +9279,11 @@
     {
       "id": 541,
       "name": "SBD(Yellow Wings)",
+      "names": {
+        "ja": "SBD(Yellow Wings)",
+        "zh": "SBD（黄翼涂装）",
+        "zh_Hant": "SBD(Yellow Wings)"
+      },
       "type_id": 7,
       "icon_id": 7,
       "minimum_resources": [
@@ -8788,6 +9296,11 @@
     {
       "id": 542,
       "name": "TBD(Yellow Wings)",
+      "names": {
+        "ja": "TBD(Yellow Wings)",
+        "zh": "TBD（黄翼涂装）",
+        "zh_Hant": "TBD(Yellow Wings)"
+      },
       "type_id": 8,
       "icon_id": 8,
       "minimum_resources": [

@@ -30,6 +30,9 @@ Future<void> main(List<String> arguments) async {
     );
     final zhHansShips = _i18nFile(sourceDirectory, 'zh-Hans', 'ships.json');
     final zhHantShips = _i18nFile(sourceDirectory, 'zh-Hant', 'ships.json');
+    final zhHansItems = _i18nFile(sourceDirectory, 'zh-Hans', 'items.json');
+    final zhHantItems = _i18nFile(sourceDirectory, 'zh-Hant', 'items.json');
+    final jaItems = _i18nFile(sourceDirectory, 'ja', 'items.json');
     final zhHantCtypes = _i18nFile(sourceDirectory, 'zh-Hant', 'ctype.json');
     final jaCtypes = _i18nFile(sourceDirectory, 'ja', 'ctype.json');
     for (final file in [
@@ -40,6 +43,9 @@ Future<void> main(List<String> arguments) async {
       stypeNames,
       zhHansShips,
       zhHantShips,
+      zhHansItems,
+      zhHantItems,
+      jaItems,
       zhHantCtypes,
       jaCtypes,
     ]) {
@@ -95,6 +101,9 @@ Future<void> main(List<String> arguments) async {
       'stypeNames.ts': stypeNames,
       'i18n/zh-Hans/ships.json': zhHansShips,
       'i18n/zh-Hant/ships.json': zhHantShips,
+      'i18n/zh-Hans/items.json': zhHansItems,
+      'i18n/zh-Hant/items.json': zhHantItems,
+      'i18n/ja/items.json': jaItems,
       'i18n/zh-Hant/ctype.json': zhHantCtypes,
       'i18n/ja/ctype.json': jaCtypes,
     };
@@ -110,6 +119,9 @@ Future<void> main(List<String> arguments) async {
     final decodedCtype = jsonDecode(await ctype.readAsString());
     final decodedZhHansShips = jsonDecode(await zhHansShips.readAsString());
     final decodedZhHantShips = jsonDecode(await zhHantShips.readAsString());
+    final decodedZhHansItems = jsonDecode(await zhHansItems.readAsString());
+    final decodedZhHantItems = jsonDecode(await zhHantItems.readAsString());
+    final decodedJaItems = jsonDecode(await jaItems.readAsString());
     final decodedZhHantCtypes = jsonDecode(await zhHantCtypes.readAsString());
     final decodedJaCtypes = jsonDecode(await jaCtypes.readAsString());
     if (decodedPools is! List ||
@@ -135,6 +147,11 @@ Future<void> main(List<String> arguments) async {
         'zh': _numericNameMap(decodedCtype, 'zh-Hans ctypes'),
         'zh_Hant': _numericNameMap(decodedZhHantCtypes, 'zh-Hant ctypes'),
         'ja': _numericNameMap(decodedJaCtypes, 'ja ctypes'),
+      },
+      localizedEquipmentNames: {
+        'zh': _numericNameMap(decodedZhHansItems, 'zh-Hans items'),
+        'zh_Hant': _numericNameMap(decodedZhHantItems, 'zh-Hant items'),
+        'ja': _numericNameMap(decodedJaItems, 'ja items'),
       },
       source: DevelopmentSourceMetadata(
         repository: _repository,

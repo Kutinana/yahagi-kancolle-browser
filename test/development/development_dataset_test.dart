@@ -46,6 +46,7 @@ void main() {
           {
             'id': 20,
             'name': '九七式艦攻',
+            'names': {'zh': '九七式舰攻', 'zh_Hant': '九七式艦攻', 'ja': '九七式艦攻'},
             'type_id': 8,
             'icon_id': 17,
             'minimum_resources': [10, 20, 30, 40],
@@ -81,6 +82,9 @@ void main() {
       const DevelopmentResources(10, 20, 30, 40),
     );
     expect(dataset.equipment[20]!.iconId, 17);
+    expect(dataset.equipment[20]!.label(const Locale('zh')), '九七式舰攻');
+    expect(dataset.equipment[20]!.label(const Locale('zh', 'TW')), '九七式艦攻');
+    expect(dataset.equipment[20]!.label(const Locale('ja')), '九七式艦攻');
     expect(dataset.secretaries[1]!.poolKey, 'carrier-other#1');
   });
 

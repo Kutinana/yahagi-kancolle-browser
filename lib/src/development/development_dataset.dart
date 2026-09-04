@@ -274,30 +274,52 @@ class DevelopmentEquipmentRecord {
   const DevelopmentEquipmentRecord({
     required this.id,
     required this.name,
+    this.names = const {},
     required this.typeId,
     this.iconId = 0,
     required this.minimumResources,
   });
 
-  factory DevelopmentEquipmentRecord.fromJson(Map<String, Object?> json) =>
-      DevelopmentEquipmentRecord(
-        id: _integer(json['id'], 'equipment.id'),
-        name: _string(json['name'], 'equipment.name'),
-        typeId: _integer(json['type_id'], 'equipment.type_id'),
-        iconId: json['icon_id'] == null
-            ? _integer(json['type_id'], 'equipment.type_id')
-            : _integer(json['icon_id'], 'equipment.icon_id'),
-        minimumResources: _resources(
-          json['minimum_resources'],
-          'equipment.minimum_resources',
-        ),
-      );
+  factory DevelopmentEquipmentRecord.fromJson(Map<String, Object?> json) {
+    final names = <String, String>{};
+    final rawNames = json['names'];
+    if (rawNames != null) {
+      for (final entry in _map(rawNames, 'equipment.names').entries) {
+        names[entry.key] = _string(entry.value, 'equipment.names.${entry.key}');
+      }
+    }
+    return DevelopmentEquipmentRecord(
+      id: _integer(json['id'], 'equipment.id'),
+      name: _string(json['name'], 'equipment.name'),
+      names: names,
+      typeId: _integer(json['type_id'], 'equipment.type_id'),
+      iconId: json['icon_id'] == null
+          ? _integer(json['type_id'], 'equipment.type_id')
+          : _integer(json['icon_id'], 'equipment.icon_id'),
+      minimumResources: _resources(
+        json['minimum_resources'],
+        'equipment.minimum_resources',
+      ),
+    );
+  }
 
   final int id;
   final String name;
+  final Map<String, String> names;
   final int typeId;
   final int iconId;
   final DevelopmentResources minimumResources;
+
+  Iterable<String> get searchableNames => {name, ...names.values};
+
+  String label(Locale locale) {
+    if (locale.languageCode == 'ja') return names['ja'] ?? name;
+    final traditional =
+        locale.languageCode == 'zh' &&
+        (locale.scriptCode == 'Hant' ||
+            const {'TW', 'HK', 'MO'}.contains(locale.countryCode));
+    return names[traditional ? 'zh_Hant' : 'zh'] ?? name;
+  }
 }
 
 class DevelopmentSecretaryRecord {
