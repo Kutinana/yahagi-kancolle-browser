@@ -3848,19 +3848,19 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheDesc.
   ///
   /// In zh, this message translates to:
-  /// **'资源从舰队 Collection 官方服务器获取；切换模式不会删除已有缓存。'**
+  /// **'资源从舰队 Collection 官方服务器获取；缓存可随时清除。'**
   String get gameResourceCacheDesc;
 
   /// No description provided for @gameResourceCacheNone.
   ///
   /// In zh, this message translates to:
-  /// **'无本地缓存'**
+  /// **'临时缓存'**
   String get gameResourceCacheNone;
 
   /// No description provided for @gameResourceCacheNoneDesc.
   ///
   /// In zh, this message translates to:
-  /// **'不预下载资源，已缓存的文件仍会保留。'**
+  /// **'不预下载资源；游玩时按需缓存，缓存最多保留 7 天且占用不超过 1 GB，过期或超出上限时将自动清理。'**
   String get gameResourceCacheNoneDesc;
 
   /// No description provided for @gameResourceCacheLight.

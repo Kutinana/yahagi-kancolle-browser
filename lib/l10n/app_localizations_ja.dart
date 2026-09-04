@@ -2009,13 +2009,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get gameResourceCacheDesc =>
-      '艦隊これくしょんの公式サーバーから取得します。モードを切り替えても既存キャッシュは残ります。';
+      'リソースは艦隊 Collection 公式サーバーから取得します。キャッシュはいつでも削除できます。';
 
   @override
-  String get gameResourceCacheNone => 'ローカルキャッシュなし';
+  String get gameResourceCacheNone => '一時キャッシュ';
 
   @override
-  String get gameResourceCacheNoneDesc => '事前ダウンロードを行いません。既存のキャッシュは保持します。';
+  String get gameResourceCacheNoneDesc =>
+      'リソースは事前ダウンロードせず、プレイ中に必要な分だけキャッシュします。保存期間は最長 7 日、使用量は最大 1 GB で、期限切れまたは上限超過時に自動削除されます。';
 
   @override
   String get gameResourceCacheLight => '軽量キャッシュ';

@@ -49,6 +49,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
       builder: (context, _) {
         final controller = widget.controller;
         final status = controller.status;
+        final isFullCache = controller.mode == GameResourceCacheMode.full;
         final hasIntegrityIssues =
             status.missingCount > 0 ||
             status.damagedCount > 0 ||
@@ -57,7 +58,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             _modeTile(
-              mode: GameResourceCacheMode.none,
+              mode: GameResourceCacheMode.temporary,
               title: l10n.gameResourceCacheNone,
               subtitle: l10n.gameResourceCacheNoneDesc,
             ),
@@ -68,7 +69,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
               subtitle: l10n.gameResourceCacheFullDesc,
             ),
             const Divider(color: Color(0xff294052), height: 1),
-            if (status.capacityBlocked)
+            if (isFullCache && status.capacityBlocked)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
@@ -76,7 +77,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                   style: const TextStyle(color: Color(0xffffb4a9)),
                 ),
               ),
-            if (status.waitingForWifi)
+            if (isFullCache && status.waitingForWifi)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
@@ -101,7 +102,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (controller.mode != GameResourceCacheMode.none)
+                  if (isFullCache)
                     FilledButton.icon(
                       key: const Key('cache-download-toggle'),
                       onPressed: controller.busy
@@ -124,13 +125,15 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                         _ => l10n.gameResourceCacheStart,
                       }),
                     ),
-                  OutlinedButton.icon(
-                    key: const Key('cache-check-integrity'),
-                    onPressed: controller.busy ? null : _checkIntegrity,
-                    icon: const Icon(Icons.fact_check_outlined),
-                    label: Text(l10n.gameResourceCacheCheck),
-                  ),
-                  if (_integrityChecked &&
+                  if (isFullCache)
+                    OutlinedButton.icon(
+                      key: const Key('cache-check-integrity'),
+                      onPressed: controller.busy ? null : _checkIntegrity,
+                      icon: const Icon(Icons.fact_check_outlined),
+                      label: Text(l10n.gameResourceCacheCheck),
+                    ),
+                  if (isFullCache &&
+                      _integrityChecked &&
                       (status.missingCount > 0 ||
                           status.damagedCount > 0 ||
                           status.outdatedCount > 0))
@@ -153,7 +156,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                 ],
               ),
             ),
-            if (_integrityChecked && hasIntegrityIssues)
+            if (isFullCache && _integrityChecked && hasIntegrityIssues)
               Container(
                 key: const Key('cache-integrity-result'),
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),

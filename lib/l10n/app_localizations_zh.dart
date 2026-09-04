@@ -1994,13 +1994,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gameResourceCacheTitle => '游戏资源本地缓存';
 
   @override
-  String get gameResourceCacheDesc => '资源从舰队 Collection 官方服务器获取；切换模式不会删除已有缓存。';
+  String get gameResourceCacheDesc => '资源从舰队 Collection 官方服务器获取；缓存可随时清除。';
 
   @override
-  String get gameResourceCacheNone => '无本地缓存';
+  String get gameResourceCacheNone => '临时缓存';
 
   @override
-  String get gameResourceCacheNoneDesc => '不预下载资源，已缓存的文件仍会保留。';
+  String get gameResourceCacheNoneDesc =>
+      '不预下载资源；游玩时按需缓存，缓存最多保留 7 天且占用不超过 1 GB，过期或超出上限时将自动清理。';
 
   @override
   String get gameResourceCacheLight => '轻度缓存';
@@ -4823,13 +4824,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get gameResourceCacheTitle => '遊戲資源本機快取';
 
   @override
-  String get gameResourceCacheDesc => '資源從艦隊 Collection 官方伺服器取得；切換模式不會刪除既有快取。';
+  String get gameResourceCacheDesc => '資源從艦隊 Collection 官方伺服器取得；快取可隨時清除。';
 
   @override
-  String get gameResourceCacheNone => '無本機快取';
+  String get gameResourceCacheNone => '暫存快取';
 
   @override
-  String get gameResourceCacheNoneDesc => '不預先下載資源，已快取的檔案仍會保留。';
+  String get gameResourceCacheNoneDesc =>
+      '不預先下載資源；遊玩時按需快取，最多保留 7 天且占用不超過 1 GB，過期或超出上限時將自動清理。';
 
   @override
   String get gameResourceCacheLight => '輕度快取';

@@ -217,7 +217,7 @@ void main() {
       );
 
       final titleDx = tester.getTopLeft(find.text('游戏资源本地缓存')).dx;
-      final noneDx = tester.getTopLeft(find.text('无本地缓存')).dx;
+      final noneDx = tester.getTopLeft(find.text('临时缓存')).dx;
       final fullDx = tester.getTopLeft(find.text('本地缓存')).dx;
       final completenessDx = tester
           .getTopLeft(find.byKey(const Key('cache-completeness-line')))

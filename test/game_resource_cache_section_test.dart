@@ -24,7 +24,7 @@ void main() {
 
     await tester.pumpWidget(app(controller));
 
-    expect(find.byKey(const Key('cache-mode-none')), findsOneWidget);
+    expect(find.byKey(const Key('cache-mode-temporary')), findsOneWidget);
     expect(find.byKey(const Key('cache-mode-light')), findsNothing);
     expect(find.byKey(const Key('cache-mode-full')), findsOneWidget);
     expect(find.text('本地缓存'), findsOneWidget);
@@ -42,7 +42,7 @@ void main() {
         .dy;
     expect((textCenterY - buttonCenterY).abs(), lessThan(4.0));
 
-    final noneLeft = tester.getTopLeft(find.text('无本地缓存')).dx;
+    final noneLeft = tester.getTopLeft(find.text('临时缓存')).dx;
     final fullLeft = tester.getTopLeft(find.text('本地缓存')).dx;
     final completenessLeft = tester
         .getTopLeft(find.byKey(const Key('cache-completeness-line')))
@@ -51,12 +51,33 @@ void main() {
     expect(completenessLeft, noneLeft);
   });
 
+  testWidgets('temporary mode explains its limits and hides preload actions', (
+    tester,
+  ) async {
+    final controller = GameResourceCacheController(
+      store: _MemoryStore(GameResourceCacheMode.temporary),
+      port: _FakePort(),
+    );
+    await controller.initialize();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(app(controller));
+
+    expect(find.text('临时缓存'), findsOneWidget);
+    expect(find.textContaining('最多保留 7 天'), findsOneWidget);
+    expect(find.textContaining('不超过 1 GB'), findsOneWidget);
+    expect(find.byKey(const Key('cache-download-toggle')), findsNothing);
+    expect(find.byKey(const Key('cache-check-integrity')), findsNothing);
+    expect(find.byKey(const Key('cache-repair')), findsNothing);
+    expect(find.byKey(const Key('cache-clear')), findsOneWidget);
+  });
+
   testWidgets('integrity check distinguishes retained pending resources', (
     tester,
   ) async {
     final port = _FakePort();
     final controller = GameResourceCacheController(
-      store: _MemoryStore(GameResourceCacheMode.light),
+      store: _MemoryStore(GameResourceCacheMode.full),
       port: port,
     );
     await controller.initialize();
@@ -78,7 +99,7 @@ void main() {
   testWidgets('changing mode keeps existing files', (tester) async {
     final port = _FakePort();
     final controller = GameResourceCacheController(
-      store: _MemoryStore(GameResourceCacheMode.light),
+      store: _MemoryStore(GameResourceCacheMode.temporary),
       port: port,
     );
     await controller.initialize();
@@ -97,7 +118,7 @@ void main() {
   ) async {
     final port = _FakePort()..metered = true;
     final controller = GameResourceCacheController(
-      store: _MemoryStore(GameResourceCacheMode.light),
+      store: _MemoryStore(GameResourceCacheMode.full),
       port: port,
     );
     await controller.initialize();
