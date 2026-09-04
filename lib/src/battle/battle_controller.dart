@@ -772,8 +772,9 @@ final class BattleController extends ChangeNotifier
               ? '-'
               : (confirmed.context.nodeDisplayLabel?.trim() ?? ''),
         )
-        .catchError((error) {
+        .catchError((Object error) {
           debugPrint('战斗记录写入失败: $error');
+          return -1;
         });
   }
 
