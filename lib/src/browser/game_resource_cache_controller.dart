@@ -19,7 +19,7 @@ final class GameResourceCacheController extends ChangeNotifier {
 
   final GameResourceCacheStore _store;
   final GameResourceCachePort _port;
-  GameResourceCacheMode _mode = GameResourceCacheMode.none;
+  GameResourceCacheMode _mode = GameResourceCacheMode.temporary;
   GameResourceCacheStatus _status = GameResourceCacheStatus.empty;
   bool _initialized = false;
   bool _busy = false;

@@ -49,10 +49,10 @@ final class GameResourceCacheStatus {
   });
 
   static const empty = GameResourceCacheStatus(
-    mode: GameResourceCacheMode.none,
+    mode: GameResourceCacheMode.temporary,
     state: GameResourceCacheState.idle,
     cachedBytes: 0,
-    maxBytes: 50000000000,
+    maxBytes: 1000000000,
     targetBytes: 0,
     downloadedBytes: 0,
     bytesPerSecond: 0,

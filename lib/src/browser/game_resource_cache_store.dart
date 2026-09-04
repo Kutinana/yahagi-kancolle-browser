@@ -1,16 +1,16 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum GameResourceCacheMode { none, light, full }
+enum GameResourceCacheMode { temporary, full, light, none }
 
 extension GameResourceCacheModeWire on GameResourceCacheMode {
   String get wireName => name;
 
   static GameResourceCacheMode fromWireName(String? value) {
-    if (value == 'light') return GameResourceCacheMode.full;
-    return GameResourceCacheMode.values.firstWhere(
-      (mode) => mode.wireName == value,
-      orElse: () => GameResourceCacheMode.none,
-    );
+    return switch (value) {
+      'full' || 'light' => GameResourceCacheMode.full,
+      'temporary' || 'none' || null => GameResourceCacheMode.temporary,
+      _ => GameResourceCacheMode.temporary,
+    };
   }
 }
 

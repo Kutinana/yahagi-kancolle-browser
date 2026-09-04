@@ -86,7 +86,10 @@ final class GameResourceManifestConsumer implements GameApiEventConsumer {
   Future<void> _rebuild(int generation) async {
     if (_disposed || generation != _generation) return;
     final mode = controller.mode;
-    if (mode == GameResourceCacheMode.none) return;
+    if (mode == GameResourceCacheMode.temporary ||
+        mode == GameResourceCacheMode.none) {
+      return;
+    }
     final start2Body = _start2Body;
     final origin = _resourceOrigin;
     if (start2Body == null || origin == null) return;
@@ -212,6 +215,9 @@ void _manifestBuildWorker(_ManifestBuildMessage message) {
     ),
     GameResourceCacheMode.none => throw StateError(
       'Disabled cache mode cannot build a manifest',
+    ),
+    GameResourceCacheMode.temporary => throw StateError(
+      'Temporary cache mode cannot build a manifest',
     ),
   };
   Isolate.exit(message.sendPort, manifest);

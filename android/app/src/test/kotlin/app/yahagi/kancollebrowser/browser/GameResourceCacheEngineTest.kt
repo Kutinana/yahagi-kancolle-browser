@@ -17,6 +17,14 @@ class GameResourceCacheEngineTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
+    fun `legacy and missing modes migrate to supported profiles`() {
+        assertEquals(GameResourceCacheMode.TEMPORARY, GameResourceCacheMode.fromWireName(null))
+        assertEquals(GameResourceCacheMode.TEMPORARY, GameResourceCacheMode.fromWireName("none"))
+        assertEquals(GameResourceCacheMode.TEMPORARY, GameResourceCacheMode.fromWireName("unknown"))
+        assertEquals(GameResourceCacheMode.FULL, GameResourceCacheMode.fromWireName("light"))
+    }
+
+    @Test
     fun `second exact request is served from disk`() {
         val fetcher = QueueFetcher(result(byteArrayOf(1, 2, 3)))
         val engine = engine(fetcher)

@@ -7,17 +7,17 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  test('defaults to no local cache', () async {
+  test('defaults to temporary cache', () async {
     final store = SharedPreferencesGameResourceCacheStore();
 
-    expect(await store.load(), GameResourceCacheMode.none);
+    expect(await store.load(), GameResourceCacheMode.temporary);
   });
 
-  test('persists all cache modes by stable wire name', () async {
+  test('persists supported cache modes by stable wire name', () async {
     final store = SharedPreferencesGameResourceCacheStore();
 
     for (final mode in const <GameResourceCacheMode>[
-      GameResourceCacheMode.none,
+      GameResourceCacheMode.temporary,
       GameResourceCacheMode.full,
     ]) {
       await store.save(mode);
@@ -27,6 +27,21 @@ void main() {
     expect(
       GameResourceCacheModeWire.fromWireName('light'),
       GameResourceCacheMode.full,
+    );
+  });
+
+  test('migrates disabled and missing modes to temporary cache', () {
+    expect(
+      GameResourceCacheModeWire.fromWireName(null),
+      GameResourceCacheMode.temporary,
+    );
+    expect(
+      GameResourceCacheModeWire.fromWireName('none'),
+      GameResourceCacheMode.temporary,
+    );
+    expect(
+      GameResourceCacheModeWire.fromWireName('unknown'),
+      GameResourceCacheMode.temporary,
     );
   });
 }
