@@ -127,6 +127,43 @@ void main() {
       expect(map621.percentage, closeTo(200 / 300, 0.01));
     });
 
+    test('treats member map info as an authoritative snapshot', () {
+      final reducer = GameStateReducer();
+      const staleMap = MemberMapInfo(
+        id: 16,
+        mapAreaId: 1,
+        mapNo: 6,
+        name: '鎮守府近海航路',
+        cleared: true,
+        defeatCount: 7,
+        requiredDefeatCount: 7,
+      );
+
+      final state = reducer.reduce(
+        const GameState(memberMapInfos: <int, MemberMapInfo>{106: staleMap}),
+        kcsapiEvent('/kcsapi/api_get_member/mapinfo', <String, Object?>{
+          'api_map_info': <Object?>[
+            <String, Object?>{
+              'api_id': 56,
+              'api_cleared': 0,
+              'api_defeat_count': 0,
+              'api_required_defeat_count': 5,
+            },
+            <String, Object?>{
+              'api_id': 74,
+              'api_cleared': 0,
+              'api_defeat_count': 0,
+              'api_required_defeat_count': 3,
+            },
+          ],
+        }),
+      );
+
+      expect(state.memberMapInfos.keys, unorderedEquals(<int>[506, 704]));
+      expect(state.memberMapInfos[506]?.currentGaugeValue, 5);
+      expect(state.memberMapInfos[704]?.currentGaugeValue, 3);
+    });
+
     test('serializes and deserializes memberMapInfos', () {
       final state = GameState(
         memberMapInfos: <int, MemberMapInfo>{
