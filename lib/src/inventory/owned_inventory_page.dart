@@ -75,16 +75,16 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
   @override
   void didUpdateWidget(covariant OwnedInventoryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final previousShowOwned = oldWidget.showOwned ?? _localShowOwned;
+    final previousShowShips = oldWidget.showShips ?? _localShowShips;
+    if (previousShowOwned != _showOwned || previousShowShips != _showShips) {
+      _selectedEquipmentMasterId = null;
+    }
     if (!identical(oldWidget.controller, widget.controller)) {
       oldWidget.controller.removeListener(_handleControllerChanged);
       _state = widget.controller.state;
-      if (_selectedEquipmentMasterId case final masterId?) {
-        final stillOwned = _state.slotItems.values.any(
-          (item) => item.masterSlotItemId == masterId,
-        );
-        if (!stillOwned || !_state.masterSlotItems.containsKey(masterId)) {
-          _selectedEquipmentMasterId = null;
-        }
+      if (!_selectedEquipmentIsValid(_state)) {
+        _selectedEquipmentMasterId = null;
       }
       _inventoryDependencies = _InventoryDependencies.from(_state);
       _clearDerivedData();
@@ -116,17 +116,14 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     final drawerChanged =
         _selectedEquipmentMasterId != null &&
         !_inventoryDependencies.matchesCompatibilityDrawer(nextDependencies);
-    final selectedEquipmentRemoved =
+    final selectedEquipmentInvalid =
         _selectedEquipmentMasterId != null &&
-        (!nextState.masterSlotItems.containsKey(_selectedEquipmentMasterId) ||
-            !nextState.slotItems.values.any(
-              (item) => item.masterSlotItemId == _selectedEquipmentMasterId,
-            ));
+        !_selectedEquipmentIsValid(nextState);
     if (!shipProjectionChanged &&
         !equipmentProjectionChanged &&
         !serverOriginChanged &&
         !drawerChanged &&
-        !selectedEquipmentRemoved) {
+        !selectedEquipmentInvalid) {
       return;
     }
 
@@ -134,14 +131,25 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
     _inventoryDependencies = nextDependencies;
     if (shipProjectionChanged) _cachedShipRows = null;
     if (equipmentProjectionChanged) _cachedEquipmentGroups = null;
-    if (selectedEquipmentRemoved) _selectedEquipmentMasterId = null;
+    if (selectedEquipmentInvalid) _selectedEquipmentMasterId = null;
 
     final activeTableChanged = _showShips
         ? shipProjectionChanged || serverOriginChanged
         : equipmentProjectionChanged;
-    if (activeTableChanged || drawerChanged || selectedEquipmentRemoved) {
+    if (activeTableChanged || drawerChanged || selectedEquipmentInvalid) {
       setState(() {});
     }
+  }
+
+  bool _selectedEquipmentIsValid(GameState state) {
+    final masterId = _selectedEquipmentMasterId;
+    if (masterId == null || !state.masterSlotItems.containsKey(masterId)) {
+      return false;
+    }
+    final isOwned = state.slotItems.values.any(
+      (item) => item.masterSlotItemId == masterId,
+    );
+    return isOwned == _showOwned;
   }
 
   void _clearDerivedData() {
@@ -166,21 +174,27 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
       );
 
   void _changeSection(bool value) {
+    final changed = value != _showShips;
     if (widget.showShips == null) {
       setState(() {
         _localShowShips = value;
-        if (value) _selectedEquipmentMasterId = null;
+        if (changed) _selectedEquipmentMasterId = null;
       });
+    } else if (changed && _selectedEquipmentMasterId != null) {
+      setState(() => _selectedEquipmentMasterId = null);
     }
     widget.onSectionChanged?.call(value);
   }
 
   void _changeOwnership(bool value) {
+    final changed = value != _showOwned;
     if (widget.showOwned == null) {
       setState(() {
         _localShowOwned = value;
-        if (!value) _selectedEquipmentMasterId = null;
+        if (changed) _selectedEquipmentMasterId = null;
       });
+    } else if (changed && _selectedEquipmentMasterId != null) {
+      setState(() => _selectedEquipmentMasterId = null);
     }
     widget.onOwnershipChanged?.call(value);
   }
@@ -374,37 +388,47 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
             ],
             const SizedBox(height: 4),
             Expanded(
-              child: !_showOwned
-                  ? UnownedInventoryView(
-                      state: _state,
-                      showShips: _showShips,
-                      reminderController: widget.reminderController,
-                      shipRows: unownedShipRows,
-                      equipmentRows: unownedEquipmentRows,
-                    )
-                  : _showShips
-                  ? _ShipInventoryTable(
-                      state: _state,
-                      rows: shipRows,
-                      sortState: _sortState,
-                      onSort: _tapShipSort,
-                      onLongPressSort: _longPressShipSort,
-                    )
+              child: _showShips
+                  ? _showOwned
+                        ? _ShipInventoryTable(
+                            state: _state,
+                            rows: shipRows,
+                            sortState: _sortState,
+                            onSort: _tapShipSort,
+                            onLongPressSort: _longPressShipSort,
+                          )
+                        : UnownedInventoryView(
+                            state: _state,
+                            showShips: true,
+                            reminderController: widget.reminderController,
+                            shipRows: unownedShipRows,
+                          )
                   : Stack(
                       children: [
                         Positioned.fill(
-                          child: _EquipmentInventoryTable(
-                            groups: equipmentGroups,
-                            rowHeightCache: _equipmentRowHeightCache,
-                            sortState: _equipmentSortState,
-                            selectedEquipmentMasterId:
-                                _selectedEquipmentMasterId,
-                            onEquipmentTap: (masterId) => setState(() {
-                              _selectedEquipmentMasterId = masterId;
-                            }),
-                            onSort: _tapEquipmentSort,
-                            onLongPressSort: _longPressEquipmentSort,
-                          ),
+                          child: _showOwned
+                              ? _EquipmentInventoryTable(
+                                  groups: equipmentGroups,
+                                  rowHeightCache: _equipmentRowHeightCache,
+                                  sortState: _equipmentSortState,
+                                  selectedEquipmentMasterId:
+                                      _selectedEquipmentMasterId,
+                                  onEquipmentTap: (masterId) => setState(() {
+                                    _selectedEquipmentMasterId = masterId;
+                                  }),
+                                  onSort: _tapEquipmentSort,
+                                  onLongPressSort: _longPressEquipmentSort,
+                                )
+                              : UnownedInventoryView(
+                                  state: _state,
+                                  showShips: false,
+                                  equipmentRows: unownedEquipmentRows,
+                                  selectedEquipmentMasterId:
+                                      _selectedEquipmentMasterId,
+                                  onEquipmentTap: (masterId) => setState(() {
+                                    _selectedEquipmentMasterId = masterId;
+                                  }),
+                                ),
                         ),
                         if (_selectedEquipmentMasterId case final masterId?)
                           if (_state.masterSlotItems[masterId]
@@ -489,6 +513,8 @@ class UnownedInventoryView extends StatelessWidget {
     this.reminderController,
     this.shipRows,
     this.equipmentRows,
+    this.selectedEquipmentMasterId,
+    this.onEquipmentTap,
   });
 
   final GameState state;
@@ -496,6 +522,8 @@ class UnownedInventoryView extends StatelessWidget {
   final NewShipReminderController? reminderController;
   final List<UnownedShipFamilyRow>? shipRows;
   final List<UnownedEquipmentRow>? equipmentRows;
+  final int? selectedEquipmentMasterId;
+  final ValueChanged<int>? onEquipmentTap;
 
   @override
   Widget build(BuildContext context) {
@@ -508,6 +536,8 @@ class UnownedInventoryView extends StatelessWidget {
           )
         : _UnownedEquipmentView(
             rows: equipmentRows ?? projection.unownedEquipment,
+            selectedEquipmentMasterId: selectedEquipmentMasterId,
+            onEquipmentTap: onEquipmentTap,
           );
   }
 }
@@ -556,8 +586,14 @@ class _UnownedShipsView extends StatelessWidget {
 }
 
 class _UnownedEquipmentView extends StatelessWidget {
-  const _UnownedEquipmentView({required this.rows});
+  const _UnownedEquipmentView({
+    required this.rows,
+    this.selectedEquipmentMasterId,
+    this.onEquipmentTap,
+  });
   final List<UnownedEquipmentRow> rows;
+  final int? selectedEquipmentMasterId;
+  final ValueChanged<int>? onEquipmentTap;
 
   @override
   Widget build(BuildContext context) {
@@ -569,7 +605,16 @@ class _UnownedEquipmentView extends StatelessWidget {
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [for (final row in rows) _UnownedEquipmentCard(row: row)],
+            children: [
+              for (final row in rows)
+                _UnownedEquipmentCard(
+                  row: row,
+                  selected: row.master.id == selectedEquipmentMasterId,
+                  onTap: onEquipmentTap == null
+                      ? null
+                      : () => onEquipmentTap!(row.master.id),
+                ),
+            ],
           ),
         ),
       ),
@@ -644,44 +689,72 @@ class _UnownedShipCard extends StatelessWidget {
 }
 
 class _UnownedEquipmentCard extends StatelessWidget {
-  const _UnownedEquipmentCard({required this.row});
+  const _UnownedEquipmentCard({
+    required this.row,
+    required this.selected,
+    this.onTap,
+  });
   final UnownedEquipmentRow row;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: Key('unowned-equipment-${row.master.id}'),
-    width: 210,
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: const Color(0xff102b39),
-      border: Border.all(color: const Color(0xff315064)),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Row(
-      children: [
-        _EquipmentIcon(master: row.master),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                row.master.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800),
+  Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.circular(8);
+    return Semantics(
+      button: onTap != null,
+      selected: selected,
+      child: SizedBox(
+        key: Key('unowned-equipment-${row.master.id}'),
+        width: 210,
+        child: Material(
+          color: selected ? const Color(0xff183f4e) : const Color(0xff102b39),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(
+              color: selected
+                  ? const Color(0xff62cbd0)
+                  : const Color(0xff315064),
+            ),
+            borderRadius: borderRadius,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  _EquipmentIcon(master: row.master),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          row.master.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          row.typeName,
+                          style: const TextStyle(
+                            color: Color(0xff8fa9b7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 3),
-              Text(
-                row.typeName,
-                style: const TextStyle(color: Color(0xff8fa9b7), fontSize: 12),
-              ),
-            ],
+            ),
           ),
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _InventoryDependencies {
