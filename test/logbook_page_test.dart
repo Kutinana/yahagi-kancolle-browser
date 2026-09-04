@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
+import 'package:yahagi_kancolle_browser/src/battle/battle_detail_models.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_models.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/resource_trend_page.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
@@ -101,6 +102,85 @@ void main() {
     expect(tester.getRect(find.text('东部奥廖尔海 (2-3)')).left, mapBefore);
     expect(tester.getRect(find.text('节点')).left, lessThan(nodeBefore));
     expect(find.byKey(const Key('logbook-table-sortie')), findsOneWidget);
+  });
+
+  testWidgets('only a new battle row with captured detail opens the viewer', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final database = await LogbookDatabase.openForTesting();
+    addTearDown(database.close);
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(mapAreaId: 1, mapInfoNo: 1, node: 1),
+          rank: BattleRank.a,
+        ),
+        completedAt: DateTime.utc(2026, 9, 5, 1),
+      ),
+      mapName: '旧战斗海域',
+    );
+    await database.insertBattleRecord(
+      BattleRecord(
+        battle: const LiveBattle(
+          context: BattleContext(mapAreaId: 6, mapInfoNo: 2, node: 5),
+          rank: BattleRank.s,
+        ),
+        completedAt: DateTime.utc(2026, 9, 5, 2),
+        detail: const BattleDetailSnapshot(
+          completedAtMillis: 1788534000000,
+          mapLabel: '6-2',
+          nodeLabel: 'E点',
+          rank: 'S',
+          enemyFleetName: '新战斗敌舰队',
+        ),
+      ),
+      mapName: '新战斗海域',
+      nodeLabel: 'E',
+    );
+    await database.insertMapResourceRecord(
+      MapResourceLogEntry(
+        eventKey: 'detail-row-resource',
+        timestamp: DateTime.utc(2026, 9, 5, 3),
+        mapArea: 2,
+        mapNo: 2,
+        mapName: '资源海域',
+        node: 2,
+      ),
+    );
+    final controller = BattleController(gameState: () => GameState.empty);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LogbookPage(battleController: controller, database: database),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('旧战斗海域 (1-1)'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('battle-detail-page')), findsNothing);
+
+    await tester.tap(find.text('资源海域 (2-2)'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('battle-detail-page')), findsNothing);
+
+    await tester.tap(find.text('新战斗海域 (6-2)'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('battle-detail-page')), findsOneWidget);
+    expect(find.text('战斗详情 · 6-2 E点'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('battle-detail-back')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('logbook-table-sortie')), findsOneWidget);
+    expect(find.text('共 3 条'), findsOneWidget);
+    expect(find.text('新战斗海域 (6-2)'), findsOneWidget);
   });
 
   testWidgets('sortie table shows resource and item drop columns', (

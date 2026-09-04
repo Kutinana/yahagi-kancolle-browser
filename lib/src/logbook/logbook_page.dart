@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../battle/battle_controller.dart';
+import '../battle/battle_detail_models.dart';
 import '../battle/battle_pills.dart';
 import '../fleet/equipment_type_icon.dart';
 import '../fleet/header_resource_catalog.dart';
@@ -13,6 +14,7 @@ import '../game_state/game_state.dart';
 import '../widgets/filter_controls.dart';
 import '../widgets/frozen_data_table.dart';
 import 'expedition_log_catalog.dart';
+import 'battle_detail_page.dart';
 import 'logbook_database.dart';
 import 'logbook_filter_panel.dart';
 
@@ -249,6 +251,8 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
   Map<String, List<String>> _sortieStatusesByLabel = const {};
   int _catalogGeneration = 0;
   int _queryGeneration = 0;
+  BattleDetailSnapshot? _selectedDetail;
+  int? _loadingDetailRowId;
 
   @override
   void initState() {
@@ -269,6 +273,8 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
       _sortieFilterCatalog = null;
       _sortieMapsByLabel = const {};
       _sortieStatusesByLabel = const {};
+      _selectedDetail = null;
+      _loadingDetailRowId = null;
       _loadSortieFilterCatalog();
     }
     _refreshLatest();
@@ -720,6 +726,22 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
   @override
   Widget build(BuildContext context) {
     final rows = _visibleRecords;
+    return IndexedStack(
+      index: _selectedDetail == null ? 0 : 1,
+      children: <Widget>[
+        _buildRecordList(rows),
+        if (_selectedDetail case final detail?)
+          BattleDetailPage(
+            detail: detail,
+            onBack: () => setState(() => _selectedDetail = null),
+          )
+        else
+          const SizedBox.shrink(),
+      ],
+    );
+  }
+
+  Widget _buildRecordList(List<Map<String, dynamic>> rows) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       child: Column(
@@ -808,9 +830,34 @@ class _LogbookTablePageState extends State<_LogbookTablePage> {
           scrollableCells: (index) => spec.cells(rows[index]),
           rowHeights: [for (final row in rows) _rowHeight(row, context)],
           onEndReached: _loadMore,
+          onRowTap: widget.category == _LogbookCategory.sortie
+              ? (index) => _openBattleDetail(rows[index])
+              : null,
+          rowTapEnabled: (index) => _hasBattleDetail(rows[index]),
+          selectedRowIndex: _loadingDetailRowId == null
+              ? null
+              : rows.indexWhere((row) => row['id'] == _loadingDetailRowId),
         );
       },
     );
+  }
+
+  bool _hasBattleDetail(Map<String, dynamic> row) =>
+      widget.category == _LogbookCategory.sortie &&
+      row['record_type'] == 'battle' &&
+      (row['has_detail'] as int? ?? 0) == 1;
+
+  Future<void> _openBattleDetail(Map<String, dynamic> row) async {
+    if (!_hasBattleDetail(row) || _loadingDetailRowId != null) return;
+    final rowId = row['id'] as int?;
+    if (rowId == null) return;
+    setState(() => _loadingDetailRowId = rowId);
+    final detail = await widget.database.getBattleDetail(rowId ~/ 2);
+    if (!mounted || _loadingDetailRowId != rowId) return;
+    setState(() {
+      _loadingDetailRowId = null;
+      _selectedDetail = detail;
+    });
   }
 
   double _rowHeight(Map<String, dynamic> row, BuildContext context) {

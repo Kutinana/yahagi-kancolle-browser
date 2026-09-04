@@ -13,6 +13,7 @@ class FrozenDataTable extends StatefulWidget {
     this.keyPrefix = 'frozen-table',
     this.onEndReached,
     this.onRowTap,
+    this.rowTapEnabled,
     this.selectedRowIndex,
   }) : assert(frozenColumnWidths.length == frozenHeaders.length),
        assert(scrollableColumnWidths.length == scrollableHeaders.length);
@@ -30,6 +31,7 @@ class FrozenDataTable extends StatefulWidget {
   final String keyPrefix;
   final VoidCallback? onEndReached;
   final ValueChanged<int>? onRowTap;
+  final bool Function(int index)? rowTapEnabled;
   final int? selectedRowIndex;
 
   @override
@@ -180,7 +182,9 @@ class _FrozenDataTableState extends State<FrozenDataTable> {
       required bool exposeButtonSemantics,
     }) {
       final onTap = widget.onRowTap;
-      if (onTap == null) return child;
+      if (onTap == null || widget.rowTapEnabled?.call(index) == false) {
+        return child;
+      }
       final tappable = GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => onTap(index),
