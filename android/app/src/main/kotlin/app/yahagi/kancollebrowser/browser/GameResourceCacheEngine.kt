@@ -90,11 +90,16 @@ class GameResourceCacheEngine(
         }
     }
 
-    fun status(): GameResourceCacheStatus = GameResourceCacheStatus(
-        usedBytes = store.totalBytes(),
-        maxBytes = store.maxBytes,
-        fileCount = store.entries().size,
-    )
+    fun status(): GameResourceCacheStatus {
+        store.enforcePolicy()
+        return GameResourceCacheStatus(
+            usedBytes = store.totalBytes(),
+            maxBytes = store.maxBytes,
+            fileCount = store.entries().size,
+        )
+    }
+
+    fun enforcePolicy() = store.enforcePolicy()
 
     fun clear() = store.clear()
 

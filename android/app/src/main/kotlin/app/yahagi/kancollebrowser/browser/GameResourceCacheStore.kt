@@ -18,14 +18,31 @@ data class GameResourceStoredInspection(
     val entry: GameResourceCacheEntry? = null,
 )
 
+data class GameResourceCachePolicy(
+    val maxBytes: Long,
+    val maxIdleAgeMs: Long? = null,
+) {
+    init {
+        require(maxBytes >= 0L) { "Cache capacity must not be negative" }
+        require(maxIdleAgeMs == null || maxIdleAgeMs > 0L) {
+            "Cache idle age must be positive"
+        }
+    }
+}
+
 class GameResourceCacheStore(
     private val root: File,
     private val index: GameResourceCacheIndex,
-    val maxBytes: Long = DEFAULT_MAX_BYTES,
+    maxBytes: Long = DEFAULT_MAX_BYTES,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val policyProvider: () -> GameResourceCachePolicy = {
+        GameResourceCachePolicy(maxBytes = maxBytes)
+    },
 ) {
     private val filesDirectory = root.resolve("files")
     private val temporaryDirectory = root.resolve("tmp")
+    val maxBytes: Long
+        get() = policyProvider().maxBytes
 
     init {
         filesDirectory.mkdirs()
@@ -35,12 +52,12 @@ class GameResourceCacheStore(
 
     @Synchronized
     fun read(key: GameResourceCacheKey): GameResourceCachedValue? {
-        val entry = index.get(key) ?: return null
+        val now = clock()
+        val entry = liveEntry(key, now) ?: return null
         val file = safeFile(entry.fileName) ?: return invalidate(key, entry)
         if (!file.isFile || file.length() != entry.byteLength) return invalidate(key, entry)
         val bytes = runCatching { file.readBytes() }.getOrNull() ?: return invalidate(key, entry)
         if (sha256(bytes) != entry.sha256) return invalidate(key, entry)
-        val now = clock()
         val touched = if (now - entry.lastAccessedAt >= ACCESS_TIME_WRITE_INTERVAL_MS) {
             entry.copy(lastAccessedAt = now).also(index::put)
         } else {
@@ -51,7 +68,7 @@ class GameResourceCacheStore(
 
     @Synchronized
     fun contains(key: GameResourceCacheKey): Boolean {
-        val entry = index.get(key) ?: return false
+        val entry = liveEntry(key, clock()) ?: return false
         val file = safeFile(entry.fileName) ?: return false
         return file.isFile && file.length() == entry.byteLength
     }
@@ -77,15 +94,17 @@ class GameResourceCacheStore(
         etag: String? = null,
         lastModified: String? = null,
     ): GameResourceCacheEntry? {
-        if (bytes.size.toLong() > maxBytes) return null
+        enforcePolicy()
+        val capacity = maxBytes
+        if (bytes.size.toLong() > capacity) return null
         val checksum = sha256(bytes)
         val fileName = "$checksum.cache"
         val destination = filesDirectory.resolve(fileName)
         val temporary = temporaryDirectory.resolve("${UUID.randomUUID()}.part")
         val previous = index.get(key)
         temporary.writeBytes(bytes)
-        evictForReplacement(key, bytes.size.toLong(), previous?.byteLength ?: 0L)
-        if (projectedBytes(previous?.byteLength ?: 0L, bytes.size.toLong()) > maxBytes) {
+        evictForReplacement(key, bytes.size.toLong(), previous?.byteLength ?: 0L, capacity)
+        if (projectedBytes(previous?.byteLength ?: 0L, bytes.size.toLong()) > capacity) {
             temporary.delete()
             return null
         }
@@ -111,14 +130,15 @@ class GameResourceCacheStore(
         currentKey: GameResourceCacheKey,
         newBytes: Long,
         replacedBytes: Long,
+        capacity: Long,
     ) {
-        if (projectedBytes(replacedBytes, newBytes) <= maxBytes) return
+        if (projectedBytes(replacedBytes, newBytes) <= capacity) return
         index.snapshot()
             .asSequence()
             .filterNot { it.key == currentKey.value }
             .sortedBy { it.lastAccessedAt }
             .forEach { entry ->
-                if (projectedBytes(replacedBytes, newBytes) <= maxBytes) return@forEach
+                if (projectedBytes(replacedBytes, newBytes) <= capacity) return@forEach
                 remove(GameResourceCacheKey(entry.key))
             }
     }
@@ -132,6 +152,21 @@ class GameResourceCacheStore(
     @Synchronized
     fun wouldExceedCapacity(requiredBytes: Long): Boolean =
         requiredBytes > maxBytes || totalBytes() > maxBytes - requiredBytes
+
+    @Synchronized
+    fun enforcePolicy() {
+        val policy = policyProvider()
+        val now = clock()
+        index.snapshot()
+            .filter { isExpired(it, now, policy) }
+            .forEach { remove(GameResourceCacheKey(it.key)) }
+        index.snapshot()
+            .sortedBy { it.lastAccessedAt }
+            .forEach { entry ->
+                if (totalBytes() <= policy.maxBytes) return@forEach
+                remove(GameResourceCacheKey(entry.key))
+            }
+    }
 
     @Synchronized
     fun evictToFit(
@@ -185,7 +220,7 @@ class GameResourceCacheStore(
 
     @Synchronized
     fun inspectMetadata(key: GameResourceCacheKey): GameResourceStoredInspection {
-        val entry = index.get(key)
+        val entry = liveEntry(key, clock())
             ?: return GameResourceStoredInspection(GameResourceStoredState.MISSING)
         val file = safeFile(entry.fileName)
         if (file == null || !file.isFile || file.length() != entry.byteLength) {
@@ -210,6 +245,19 @@ class GameResourceCacheStore(
         deleteIfUnreferenced(entry.fileName)
         return null
     }
+
+    private fun liveEntry(key: GameResourceCacheKey, now: Long): GameResourceCacheEntry? {
+        val entry = index.get(key) ?: return null
+        if (!isExpired(entry, now, policyProvider())) return entry
+        remove(key)
+        return null
+    }
+
+    private fun isExpired(
+        entry: GameResourceCacheEntry,
+        now: Long,
+        policy: GameResourceCachePolicy,
+    ): Boolean = policy.maxIdleAgeMs?.let { now - entry.lastAccessedAt >= it } == true
 
     private fun deleteIfUnreferenced(fileName: String) {
         if (index.snapshot().none { it.fileName == fileName }) safeFile(fileName)?.delete()
@@ -239,6 +287,8 @@ class GameResourceCacheStore(
 
     companion object {
         const val DEFAULT_MAX_BYTES: Long = 50_000_000_000L
+        const val TEMPORARY_MAX_BYTES: Long = 1_000_000_000L
+        const val TEMPORARY_MAX_IDLE_AGE_MS: Long = 7L * 24L * 60L * 60L * 1000L
         private const val ACCESS_TIME_WRITE_INTERVAL_MS = 60_000L
     }
 }

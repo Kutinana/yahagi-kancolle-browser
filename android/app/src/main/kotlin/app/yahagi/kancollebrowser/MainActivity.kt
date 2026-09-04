@@ -53,6 +53,7 @@ import app.yahagi.kancollebrowser.browser.GameFrameReloadManager
 import app.yahagi.kancollebrowser.browser.GameResourceCacheEngine
 import app.yahagi.kancollebrowser.browser.GameResourceCacheIndex
 import app.yahagi.kancollebrowser.browser.GameResourceCacheMode
+import app.yahagi.kancollebrowser.browser.GameResourceCachePolicy
 import app.yahagi.kancollebrowser.browser.GameResourceCacheStore
 import app.yahagi.kancollebrowser.browser.HttpUrlConnectionGameResourceFetcher
 import app.yahagi.kancollebrowser.browser.OriginCookieManagerChannel
@@ -193,7 +194,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
     private var gameResourceCacheEngine: GameResourceCacheEngine? = null
     private var gameResourceCacheManager: GameResourceCacheManager? = null
     @Volatile
-    private var gameResourceCacheMode: GameResourceCacheMode = GameResourceCacheMode.NONE
+    private var gameResourceCacheMode: GameResourceCacheMode = GameResourceCacheMode.TEMPORARY
     private var diagnosticPlatformHandler: DiagnosticPlatformHandler? = null
     private val diagnosticDirectoryPickerUi by lazy {
         DiagnosticDirectoryPickerUi(
@@ -313,6 +314,18 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
             GameResourceCacheStore(
                 resourceCacheRoot,
                 GameResourceCacheIndex(File(resourceCacheRoot, "index.json")),
+                policyProvider = {
+                    if (gameResourceCacheMode == GameResourceCacheMode.TEMPORARY) {
+                        GameResourceCachePolicy(
+                            maxBytes = GameResourceCacheStore.TEMPORARY_MAX_BYTES,
+                            maxIdleAgeMs = GameResourceCacheStore.TEMPORARY_MAX_IDLE_AGE_MS,
+                        )
+                    } else {
+                        GameResourceCachePolicy(
+                            maxBytes = GameResourceCacheStore.DEFAULT_MAX_BYTES,
+                        )
+                    }
+                },
             ),
             HttpUrlConnectionGameResourceFetcher(
                 proxyProvider = {

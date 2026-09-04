@@ -22,6 +22,72 @@ class GameResourceCacheStoreTest {
     }
 
     @Test
+    fun `temporary policy expires entries after seven idle days`() {
+        var now = 1L
+        val root = temporaryFolder.newFolder("expiry")
+        val store = GameResourceCacheStore(
+            root,
+            GameResourceCacheIndex(root.resolve("index.json")),
+            clock = { now },
+            policyProvider = {
+                GameResourceCachePolicy(
+                    maxBytes = 10,
+                    maxIdleAgeMs = GameResourceCacheStore.TEMPORARY_MAX_IDLE_AGE_MS,
+                )
+            },
+        )
+        val key = GameResourceCacheKey("/kcs2/resources/a.png")
+        store.commit(key, byteArrayOf(1), mimeType = "image/png")
+
+        now += GameResourceCacheStore.TEMPORARY_MAX_IDLE_AGE_MS
+
+        assertNull(store.read(key))
+        assertFalse(store.contains(key))
+    }
+
+    @Test
+    fun `enforce policy shrinks cache by least recent access`() {
+        var now = 1L
+        var policy = GameResourceCachePolicy(maxBytes = 10)
+        val root = temporaryFolder.newFolder("shrink")
+        val store = GameResourceCacheStore(
+            root,
+            GameResourceCacheIndex(root.resolve("index.json")),
+            clock = { now++ },
+            policyProvider = { policy },
+        )
+        val oldest = GameResourceCacheKey("/kcs2/resources/old.png")
+        val newest = GameResourceCacheKey("/kcs2/resources/new.png")
+        store.commit(oldest, byteArrayOf(1, 2, 3, 4), mimeType = "image/png")
+        store.commit(newest, byteArrayOf(5, 6, 7, 8), mimeType = "image/png")
+
+        policy = GameResourceCachePolicy(maxBytes = 4)
+        store.enforcePolicy()
+
+        assertFalse(store.contains(oldest))
+        assertTrue(store.contains(newest))
+        assertEquals(4L, store.totalBytes())
+    }
+
+    @Test
+    fun `full policy keeps old entries`() {
+        var now = 1L
+        val root = temporaryFolder.newFolder("persistent")
+        val store = GameResourceCacheStore(
+            root,
+            GameResourceCacheIndex(root.resolve("index.json")),
+            clock = { now },
+            policyProvider = { GameResourceCachePolicy(maxBytes = 10) },
+        )
+        val key = GameResourceCacheKey("/kcs2/resources/a.png")
+        store.commit(key, byteArrayOf(1), mimeType = "image/png")
+
+        now += GameResourceCacheStore.TEMPORARY_MAX_IDLE_AGE_MS * 2
+
+        assertArrayEquals(byteArrayOf(1), store.read(key)?.bytes)
+    }
+
+    @Test
     fun `atomic commit survives index reload`() {
         val root = temporaryFolder.newFolder("cache")
         val key = GameResourceCacheKey("/kcs2/resources/a.png?version=21")
