@@ -1,6 +1,7 @@
 import '../../battle_models.dart';
 import '../battle_prediction_engine.dart';
 import 'poi_battle_replay_state.dart';
+import 'poi_battle_rules.dart';
 
 /// POI-compatible engine that rebuilds the simulator from the opening state
 /// whenever a new battle packet arrives.
@@ -184,49 +185,13 @@ final class _PoiBattleSimulator {
       enemyEscort: false,
     );
 
-    final enemyCombined = path.contains('/ec_') || path.contains('/each_');
-    final type = _fleetTypeForPath(path);
-    if (type == 0 && !enemyCombined) {
-      shell('api_hougeki1');
-      shell('api_hougeki2');
-      torpedo();
-    } else if (type == 0) {
-      shell('api_hougeki1');
-      torpedo();
-      shell('api_hougeki2');
-      shell('api_hougeki3');
-    } else if (type == 2) {
-      shell('api_hougeki1');
-      shell('api_hougeki2');
-      shell('api_hougeki3');
-      torpedo();
-    } else if (!enemyCombined) {
-      shell('api_hougeki1');
-      torpedo();
-      shell('api_hougeki2');
-      shell('api_hougeki3');
-    } else {
-      shell('api_hougeki1');
-      shell('api_hougeki2');
-      torpedo();
-      shell('api_hougeki3');
+    for (final key in poiDayShellingOrder(path, fleetType)) {
+      if (key == 'api_raigeki') {
+        torpedo();
+      } else {
+        shell(key);
+      }
     }
-  }
-
-  int _fleetTypeForPath(String path) {
-    if (path == '/kcsapi/api_req_combined_battle/battle_water' ||
-        path == '/kcsapi/api_req_combined_battle/each_battle_water') {
-      return 2;
-    }
-    if (path == '/kcsapi/api_req_combined_battle/battle' ||
-        path == '/kcsapi/api_req_combined_battle/each_battle') {
-      return fleetType == 1 || fleetType == 3 ? fleetType : 1;
-    }
-    if (path.startsWith('/kcsapi/api_req_sortie/') ||
-        path.startsWith('/kcsapi/api_req_practice/')) {
-      return 0;
-    }
-    return fleetType;
   }
 
   void _prepareNpcFriend(Object? value) {
@@ -313,7 +278,7 @@ final class _PoiBattleSimulator {
       final targets = _list(defenders[row]);
       final hits = _list(damages[row]);
       final attackOrder = row < attackTypes.length
-          ? _multiTargetAttackOrder(_int(attackTypes[row]), isNight: true)
+          ? poiMultiTargetAttackOrder(_int(attackTypes[row]), isNight: true)
           : null;
       if (attackOrder == null) {
         if (targets.isEmpty) continue;
@@ -470,7 +435,7 @@ final class _PoiBattleSimulator {
           ? _int(flags[row]) != 0
           : (targets.isNotEmpty && _int(targets.first) < mainFleetRange);
       final attackOrder = row < attackTypes.length
-          ? _multiTargetAttackOrder(_int(attackTypes[row]), isNight: isNight)
+          ? poiMultiTargetAttackOrder(_int(attackTypes[row]), isNight: isNight)
           : null;
       var dealt = 0;
       if (attackOrder == null) {
@@ -530,27 +495,6 @@ final class _PoiBattleSimulator {
         }
       }
     }
-  }
-
-  static List<int>? _multiTargetAttackOrder(
-    int attackType, {
-    required bool isNight,
-  }) {
-    if (!isNight && attackType == 1) return const <int>[0, 0, 0];
-    return switch (attackType) {
-      100 => const <int>[0, 2, 4],
-      101 || 102 || 105 || 106 => const <int>[0, 0, 1],
-      103 => const <int>[0, 1, 2],
-      104 when isNight => const <int>[0, 1],
-      200 when isNight => const <int>[0, 0],
-      300 => const <int>[1, 1, 2, 2],
-      301 => const <int>[2, 2, 3, 3],
-      302 => const <int>[1, 1, 3, 3],
-      400 => const <int>[0, 1, 2],
-      401 => const <int>[0, 0, 1],
-      1000 => const <int>[0, 0, 0, 0, 0, 0],
-      _ => null,
-    };
   }
 
   void _addNightDamage(int absolutePosition, int amount) {

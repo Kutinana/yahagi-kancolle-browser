@@ -5,6 +5,8 @@ import 'package:yahagi_kancolle_browser/src/logbook/battle_detail_page.dart';
 
 void main() {
   const sizes = <Size>[
+    Size(360, 780),
+    Size(390, 844),
     Size(915, 412),
     Size(914, 836),
     Size(1280, 800),
@@ -30,6 +32,10 @@ void main() {
       expect(find.text('结算'), findsNothing);
       expect(find.text('原始数据'), findsNothing);
       expect(find.byKey(const Key('battle-stage-sidebar')), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const Key('battle-detail-tab-process')));
+      await tester.pumpAndSettle();
+      expect(find.text('主炮连击'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
@@ -70,14 +76,71 @@ void main() {
 
     expect(backed, isTrue);
   });
+
+  for (final size in [const Size(390, 844), const Size(1280, 800)]) {
+    testWidgets('NPC friendly fire and counterattack stay distinct at $size', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final detail = BattleDetailSnapshot(
+        completedAtMillis: 0,
+        mapLabel: '1-1',
+        nodeLabel: 'A',
+        rank: 'S',
+        enemyFleetName: '敌舰队',
+        fleets: _detail.fleets,
+        stages: [
+          const BattleDetailStage(
+            keyName: 'npc',
+            title: '友军舰队',
+            attacks: [
+              BattleDetailAttack(
+                attackerSide: BattleDetailSide.npc,
+                attackerName: '友军·夕立',
+                defenderSide: BattleDetailSide.enemy,
+                defenderName: '敌旗舰',
+                attackType: '友军连击',
+                defenderHpBefore: 100,
+                defenderHpAfter: 80,
+              ),
+              BattleDetailAttack(
+                attackerSide: BattleDetailSide.enemy,
+                attackerName: '敌旗舰',
+                defenderSide: BattleDetailSide.npc,
+                defenderName: '友军·夕立',
+                attackType: '敌方反击',
+                defenderHpBefore: 30,
+                defenderHpAfter: 20,
+              ),
+            ],
+          ),
+        ],
+      );
+      await tester.pumpWidget(_app(detail: detail));
+      await tester.tap(find.byKey(const Key('battle-detail-tab-process')));
+      await tester.pumpAndSettle();
+      expect(find.text('友军·夕立'), findsNWidgets(2));
+      await tester.tap(find.byKey(const Key('battle-detail-filter-friend')));
+      await tester.pumpAndSettle();
+      expect(find.text('友军连击'), findsOneWidget);
+      expect(find.text('敌方反击'), findsNothing);
+      await tester.tap(find.byKey(const Key('battle-detail-filter-enemy')));
+      await tester.pumpAndSettle();
+      expect(find.text('敌方反击'), findsOneWidget);
+      expect(find.text('友军连击'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
 
-Widget _app({VoidCallback? onBack}) => MaterialApp(
-  theme: ThemeData.dark(useMaterial3: true),
-  home: Scaffold(
-    body: BattleDetailPage(detail: _detail, onBack: onBack ?? () {}),
-  ),
-);
+Widget _app({VoidCallback? onBack, BattleDetailSnapshot detail = _detail}) =>
+    MaterialApp(
+      theme: ThemeData.dark(useMaterial3: true),
+      home: Scaffold(
+        body: BattleDetailPage(detail: detail, onBack: onBack ?? () {}),
+      ),
+    );
 
 const _detail = BattleDetailSnapshot(
   completedAtMillis: 1788533880000,

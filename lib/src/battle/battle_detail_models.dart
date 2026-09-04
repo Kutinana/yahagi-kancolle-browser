@@ -1,4 +1,5 @@
-enum BattleDetailSide { friend, enemy }
+/// NPC reinforcements share our attack direction, but never our ship identity.
+enum BattleDetailSide { friend, enemy, npc }
 
 enum BattleDetailFleetRole { main, escort }
 
@@ -65,6 +66,7 @@ final class BattleDetailShip {
     this.damageReceived = 0,
     this.equipment = const <BattleDetailEquipment>[],
     this.escaped = false,
+    this.hpUnknown = false,
   });
 
   final int masterId;
@@ -80,6 +82,7 @@ final class BattleDetailShip {
   final int damageReceived;
   final List<BattleDetailEquipment> equipment;
   final bool escaped;
+  final bool hpUnknown;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'masterId': masterId,
@@ -95,6 +98,7 @@ final class BattleDetailShip {
     'damageReceived': damageReceived,
     'equipment': equipment.map((item) => item.toJson()).toList(),
     'escaped': escaped,
+    'hpUnknown': hpUnknown,
   };
 
   factory BattleDetailShip.fromJson(Map<String, Object?> json) =>
@@ -124,6 +128,7 @@ final class BattleDetailShip {
           ).map((item) => BattleDetailEquipment.fromJson(_map(item))),
         ),
         escaped: json['escaped'] == true,
+        hpUnknown: json['hpUnknown'] == true,
       );
 }
 
@@ -208,6 +213,7 @@ final class BattleDetailAttack {
     this.defenderPosition,
     this.hits = const <BattleDetailHit>[],
     this.damageControlName,
+    this.attackTypeCode = 'Normal',
   });
 
   final BattleDetailSide attackerSide;
@@ -219,6 +225,9 @@ final class BattleDetailAttack {
   final int? defenderPosition;
   final String defenderName;
   final String attackType;
+
+  /// Stable POI type independent of the display language.
+  final String attackTypeCode;
   final int defenderHpBefore;
   final int defenderHpAfter;
   final List<BattleDetailHit> hits;
@@ -236,6 +245,7 @@ final class BattleDetailAttack {
     if (defenderPosition != null) 'defenderPosition': defenderPosition,
     'defenderName': defenderName,
     'attackType': attackType,
+    'attackTypeCode': attackTypeCode,
     'defenderHpBefore': defenderHpBefore,
     'defenderHpAfter': defenderHpAfter,
     'hits': hits.map((hit) => hit.toJson()).toList(),
@@ -277,6 +287,7 @@ final class BattleDetailAttack {
             : _int(json['defenderPosition']),
         defenderName: _string(json['defenderName'], '未知目标'),
         attackType: _string(json['attackType'], '攻击'),
+        attackTypeCode: _string(json['attackTypeCode'], 'Normal'),
         defenderHpBefore: _int(json['defenderHpBefore']),
         defenderHpAfter: _int(json['defenderHpAfter']),
         hits: List<BattleDetailHit>.unmodifiable(

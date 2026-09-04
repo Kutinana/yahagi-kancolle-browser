@@ -78,6 +78,7 @@ tool/akashi_bonus/cache/
 # Generated reports and local test datasets
 tool/*/reports/
 test/fixtures/*
+!test/fixtures/battle_detail_poi_3_0_5.json
 !test/fixtures/poi_ezexped/
 test/fixtures/poi_ezexped/*
 !test/fixtures/poi_ezexped/expedition_rules.json

@@ -1,0 +1,52 @@
+# 战斗详情与 POI 一致性验证
+
+## 基准
+
+战斗详情以 `poi-lib-battle 3.0.5` 为兼容基准，与 POI 战斗日志插件 6.0.7 的 lockfile 一致。npm 包 SHA-1 为 `bc75415894be7efd4ce66810bd7d8df986eeaccb`。
+
+上游：<https://github.com/poooi/lib-battle>。
+
+2026-09-05 修复了联合舰队阶段遗漏与顺序、支援的敌随伴索引、普通多段攻击的损管时机、NPC 友军归属、逐舰雷击与新版多发雷击、特殊攻击者与类型映射、航空／支援暴击标记。另保留敌舰 HP 未知状态，避免显示成击沉。
+
+详情回放与实时 POI 引擎共享 `poi_battle_rules.dart` 中的舰队类型、阶段顺序和特殊攻击者顺序。详情的舰队最终 HP、造成／承受伤害直接来自同一次回放，与攻击过程保持一致。
+
+## 兼容边界
+
+- 普通连击／Cut-in：逐段取整后求和，整次攻击扣血后判定损管；中间 HP 只用于展示，损管在最后一段结算。
+- 多舰／多目标特殊攻击：保留服务器攻击顺序，不按目标合并；按 POI 的攻击者偏移分配每一击。
+- NPC 友军有独立身份和 HP；页面仍在友方方向显示，名称带“友军”标识；对 NPC 的敌方反击不影响玩家舰队。
+- 回放遵循 POI 3.0.5 的 `useItem` 行为：每次致命攻击查找第一件损管装备，上游此函数不会从装备数组移除损管。该兼容行为只用于详情，不修改玩家装备，也不改变实时引擎现有的实际消耗规则。
+- 不导入旧 POI 日志，只捕获 Yahagi 新战斗。测试工具读取外部样本仅用于对照，不写应用数据库。
+- 已经保存的旧详情没有完整原始数据包，不能据此重新生成遗漏的攻击。修复后的回放用于之后新捕获的战斗；旧记录保持可读。
+
+## 固定回归
+
+```powershell
+flutter test test/battle_detail_poi_parity_test.dart test/battle_detail_page_test.dart
+```
+
+仓库保留 62 个合成样本，预期结果由未经修改的 POI npm 包直接生成，不依赖本机 POI 安装或网络。
+覆盖日／夜各攻击类型、特殊攻击参与舰与重复目标、联合舰队顺序、七舰、夜转昼、NPC 友军、开幕多发雷击、支援随伴、miss／暴击以及要员／女神。
+
+每条攻击比较：攻击者和受击者的身份／位置、顺序、类型、伤害数组、命中类别、攻击前后 HP、触发损管。
+同时比较舰队最终 HP、造成／承受伤害及持久化 JSON 往返。未知 HP 明确保留未知状态，不当成 0 HP 对照。
+
+## 直接执行上游对照
+
+准备 POI npm 3.0.5 包目录，以及上游仓库提交 `bdedd245800484688913d6e8fd200c227a20acbf` 的 `tests/fixtures/battle-detail` 目录。
+
+```powershell
+$env:YAHAGI_POI_DETAIL_LIB = 'C:/path/to/poi-lib-battle/package'
+$env:YAHAGI_POI_BATTLE_FIXTURES = 'C:/path/to/lib-battle/tests/fixtures/battle-detail'
+# 可选：另加一份本地捕获数据，不会被提交或导入数据库。
+$env:YAHAGI_POI_DETAIL_CAPTURE = 'C:/path/to/capture.json'
+flutter test test/battle_detail_poi_parity_test.dart
+```
+
+`tool/battle_detail_poi_oracle.cjs` 调用 `Simulator.auto` 生成真实预期值。输出只用于测试，不是应用运行时依赖。
+
+2026-09-05 验证：304 份上游原始样本、1 份用户样本、62 个针对性样本，共 367 个输入，攻击记录及上述字段均无差异。用户样本由原先 26 条恢复为与 POI 一致的 27 条攻击。相关整组回归 202 项通过，包含实时引擎 304 份／366 包语料，以及手机、折叠屏、平板横竖屏页面测试。
+
+为避开运行中 Flutter 对 SQLite DLL 的占用，本地验证使用隔离的测试输出目录，源码与测试仍链接到 master 工作区。没有构建 debug 安装包。
+
+这些结果表示所列样本及规则与固定版本相符，并非对未出现过的未来 API 格式作保证。升级 POI 或新增游戏攻击类型时，应重新运行上游对照并扩展固定样本。

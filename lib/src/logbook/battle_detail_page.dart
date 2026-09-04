@@ -365,7 +365,9 @@ class _ShipRow extends StatelessWidget {
     final hpRatio = ship.maxHp <= 0
         ? 0.0
         : (ship.finalHp / ship.maxHp).clamp(0.0, 1.0);
-    final hpColor = hpRatio <= .25
+    final hpColor = ship.hpUnknown
+        ? const Color(0xff718895)
+        : hpRatio <= .25
         ? const Color(0xffe35c5c)
         : hpRatio <= .5
         ? const Color(0xffe3a84f)
@@ -408,7 +410,7 @@ class _ShipRow extends StatelessWidget {
                 ),
               ),
               Text(
-                '${ship.finalHp} / ${ship.maxHp}',
+                ship.hpUnknown ? 'HP 未知' : '${ship.finalHp} / ${ship.maxHp}',
                 style: TextStyle(
                   color: hpColor,
                   fontSize: 12,
@@ -434,7 +436,9 @@ class _ShipRow extends StatelessWidget {
             children: <Widget>[
               _Metric(
                 label: 'HP',
-                value: '${ship.initialHp} → ${ship.finalHp}',
+                value: ship.hpUnknown
+                    ? '未知'
+                    : '${ship.initialHp} → ${ship.finalHp}',
               ),
               _Metric(label: '造成', value: '${ship.damageDealt}'),
               _Metric(label: '承受', value: '${ship.damageReceived}'),
@@ -572,8 +576,8 @@ class _BattleProcess extends StatelessWidget {
                                 return switch (filter) {
                                   _AttackFilter.all => true,
                                   _AttackFilter.friend =>
-                                    attack.attackerSide ==
-                                        BattleDetailSide.friend,
+                                    attack.attackerSide !=
+                                        BattleDetailSide.enemy,
                                   _AttackFilter.enemy =>
                                     attack.attackerSide ==
                                         BattleDetailSide.enemy,
@@ -753,7 +757,7 @@ class _WideAttackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final friendlyAttack = attack.attackerSide == BattleDetailSide.friend;
+    final friendlyAttack = attack.attackerSide != BattleDetailSide.enemy;
     final friendName = friendlyAttack
         ? attack.attackerName
         : attack.defenderName;
@@ -813,7 +817,7 @@ class _NarrowAttackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final friendly = attack.attackerSide == BattleDetailSide.friend;
+    final friendly = attack.attackerSide != BattleDetailSide.enemy;
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Column(
