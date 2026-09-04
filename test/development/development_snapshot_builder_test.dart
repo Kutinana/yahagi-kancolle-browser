@@ -99,6 +99,11 @@ void main() {
           'zh_Hant': {1: '綾波型'},
           'ja': {1: '綾波型'},
         },
+        localizedEquipmentNames: const {
+          'zh': {7: '测试主炮'},
+          'zh_Hant': {7: '測試主砲'},
+          'ja': {7: 'テスト主砲'},
+        },
         source: source,
         generatedAt: DateTime.utc(2026, 9, 1),
       );
@@ -131,6 +136,22 @@ void main() {
       containsPair('minimum_resources', [10, 20, 30, 40]),
     );
     expect(equipment.first, containsPair('icon_id', 5));
+    expect(
+      equipment.first,
+      containsPair('names', const {
+        'ja': 'テスト主砲',
+        'zh': '测试主炮',
+        'zh_Hant': '測試主砲',
+      }),
+    );
+    expect(
+      equipment.last,
+      containsPair('names', const {
+        'ja': '测试雷达',
+        'zh': '测试雷达',
+        'zh_Hant': '测试雷达',
+      }),
+    );
 
     final secretaries = output['secretaries']! as List<Object?>;
     expect(

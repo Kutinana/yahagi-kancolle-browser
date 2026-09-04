@@ -44,6 +44,7 @@ Map<String, Object?> buildDevelopmentSnapshot({
   required Map<String, Map<String, String>> localizedShipTypeNames,
   Map<String, Map<int, String>> localizedShipNames = const {},
   Map<String, Map<int, String>> localizedCtypeNames = const {},
+  Map<String, Map<int, String>> localizedEquipmentNames = const {},
   required DevelopmentSourceMetadata source,
   required DateTime generatedAt,
 }) {
@@ -203,6 +204,10 @@ Map<String, Object?> buildDevelopmentSnapshot({
         return <String, Object?>{
           'id': id,
           'name': item.name,
+          'names': _sortedStringMap({
+            for (final locale in const ['zh', 'zh_Hant', 'ja'])
+              locale: localizedEquipmentNames[locale]?[id] ?? item.name,
+          }),
           'type_id': item.typeId,
           'icon_id': item.iconId,
           'minimum_resources': item.broken.map((value) => value * 10).toList(),
