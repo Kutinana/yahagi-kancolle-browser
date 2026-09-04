@@ -58,6 +58,39 @@ void main() {
     expect(find.text('1,000'), findsWidgets);
   });
 
+  testWidgets('ten-thousand axis labels keep two decimal places', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await _seed(<Map<String, dynamic>>[
+      for (var i = 0; i < 9; i++)
+        _row(
+          now.subtract(Duration(hours: 8 - i)),
+          fuel: 68900 + i * 100,
+          ammo: 68900 + i * 100,
+          steel: 68900 + i * 100,
+          bauxite: 68900 + i * 100,
+        ),
+    ]);
+
+    await tester.pumpWidget(_wrap());
+    await tester.pumpAndSettle();
+
+    final labels = tester
+        .widgetList<Text>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Text &&
+                RegExp(r'^\d+\.\d{2}w$').hasMatch(widget.data ?? ''),
+          ),
+        )
+        .map((label) => label.data)
+        .whereType<String>()
+        .toSet();
+    expect(labels.length, greaterThan(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('single record renders without errors', (tester) async {
     await _seed(<Map<String, dynamic>>[_row(DateTime.now())]);
 

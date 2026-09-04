@@ -1097,6 +1097,24 @@ void main() {
         findsOneWidget,
       );
 
+      // Tap again to collapse the toolbar manually.
+      await tester.tap(brandButtonFinder);
+      await tester.pumpAndSettle();
+      expect(toolbarController.isVisible, isFalse);
+      expect(find.byKey(const Key('game-toolbar-visible')), findsNothing);
+      expect(
+        find.descendant(
+          of: brandButtonFinder,
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
+
+      // Expand again before verifying navigation still collapses it.
+      await tester.tap(brandButtonFinder);
+      await tester.pumpAndSettle();
+      expect(toolbarController.isVisible, isTrue);
+
       // Switch to fleet workspace (index 1)
       await tester.tap(find.byKey(const Key('workspace-nav-fleet')));
       await tester.pumpAndSettle();

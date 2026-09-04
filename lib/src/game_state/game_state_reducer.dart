@@ -1278,7 +1278,9 @@ class GameStateReducer {
     String origin,
   ) {
     final mapDifficulties = Map<int, int>.from(state.mapDifficulties);
-    final memberMapInfos = Map<int, MemberMapInfo>.from(state.memberMapInfos);
+    // mapinfo is an authoritative snapshot. Maps omitted from the response are
+    // currently unavailable and must not retain stale gauge progress.
+    final memberMapInfos = <int, MemberMapInfo>{};
 
     for (final value in _optionalList(data['api_map_info'])) {
       final item = _optionalMap(value);

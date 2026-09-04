@@ -1127,11 +1127,9 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         loadState: widget.browserController.loadState,
         displayAddress: widget.browserController.displayAddress,
         onBack: () async {
-          widget.toolbarController.resetAutoHide();
           await widget.browserController.goBack();
         },
         onReload: () async {
-          widget.toolbarController.resetAutoHide();
           await showGameRefreshDialog(
             context: context,
             onRefreshPage: widget.browserController.reload,
@@ -1139,28 +1137,23 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
           );
         },
         onHome: () async {
-          widget.toolbarController.resetAutoHide();
           await widget.browserController.goHome();
         },
         onEnterDmm: () async {
-          widget.toolbarController.resetAutoHide();
           await widget.browserController.enterDmmLoginTest();
         },
         isMuted: widget.audioController.isMuted,
         audioEnabled: widget.audioController.canToggle,
         onToggleMuted: () async {
-          widget.toolbarController.resetAutoHide();
           await widget.audioController.toggleMuted();
         },
         onCollapse: widget.toolbarController.collapse,
         onFitScreen: () {
-          widget.toolbarController.resetAutoHide();
           widget.browserController.fitGameScreen();
         },
         onScreenshot: widget.gameScreenshotController == null
             ? null
             : () async {
-                widget.toolbarController.resetAutoHide();
                 final l10n = AppLocalizations.of(context)!;
                 TopNotice.show(context, message: l10n.screenshotSaving);
                 await WidgetsBinding.instance.endOfFrame;
@@ -1431,18 +1424,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                 child: isToolbarVisible
                                     ? KeyedSubtree(
                                         key: const Key('game-toolbar-visible'),
-                                        child: Listener(
-                                          onPointerDown: (_) => widget
-                                              .toolbarController
-                                              .beginInteraction(),
-                                          onPointerUp: (_) => widget
-                                              .toolbarController
-                                              .endInteraction(),
-                                          onPointerCancel: (_) => widget
-                                              .toolbarController
-                                              .endInteraction(),
-                                          child: buildHeaderToolbar(),
-                                        ),
+                                        child: buildHeaderToolbar(),
                                       )
                                     : const SizedBox.shrink(
                                         key: Key('game-toolbar-hidden'),

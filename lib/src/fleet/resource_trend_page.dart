@@ -750,7 +750,7 @@ class _ResourceTrendPageState extends State<ResourceTrendPage> {
   }
 
   String _compactNumber(double value) {
-    if (value >= 10000) return '${(value / 10000).toStringAsFixed(0)}w';
+    if (value >= 10000) return '${(value / 10000).toStringAsFixed(2)}w';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(0)}k';
     return value.toInt().toString();
   }

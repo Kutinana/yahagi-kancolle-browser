@@ -1,24 +1,13 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
 enum GameSurfaceStage { localPrototype, login, game }
 
 final class GameToolbarController extends ChangeNotifier {
-  GameToolbarController({
-    this.autoHideDuration = const Duration(seconds: 5),
-    bool initiallyVisible = false,
-  }) : _isVisible = initiallyVisible {
-    if (_isVisible) {
-      _scheduleAutoHide();
-    }
-  }
-
-  final Duration autoHideDuration;
+  GameToolbarController({bool initiallyVisible = false})
+    : _isVisible = initiallyVisible;
 
   GameSurfaceStage _stage = GameSurfaceStage.localPrototype;
   bool _isVisible;
-  Timer? _autoHideTimer;
 
   GameSurfaceStage get stage => _stage;
   bool get isVisible => _isVisible;
@@ -39,37 +28,12 @@ final class GameToolbarController extends ChangeNotifier {
     }
   }
 
-  void resetAutoHide() {
-    if (_isVisible) {
-      _scheduleAutoHide();
-    }
-  }
-
   void reveal() {
     _setVisible(true);
-    _scheduleAutoHide();
   }
 
   void collapse() {
-    _autoHideTimer?.cancel();
-    _autoHideTimer = null;
     _setVisible(false);
-  }
-
-  void beginInteraction() {
-    _autoHideTimer?.cancel();
-    _autoHideTimer = null;
-  }
-
-  void endInteraction() {
-    if (_isVisible) {
-      _scheduleAutoHide();
-    }
-  }
-
-  void _scheduleAutoHide() {
-    _autoHideTimer?.cancel();
-    _autoHideTimer = Timer(autoHideDuration, collapse);
   }
 
   void _setVisible(bool visible) {
@@ -78,11 +42,5 @@ final class GameToolbarController extends ChangeNotifier {
     }
     _isVisible = visible;
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _autoHideTimer?.cancel();
-    super.dispose();
   }
 }
