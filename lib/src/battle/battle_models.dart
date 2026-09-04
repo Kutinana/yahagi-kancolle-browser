@@ -1,4 +1,5 @@
 import '../game_state/game_state.dart';
+import 'battle_detail_models.dart';
 
 enum BattleSide { friend, enemy }
 
@@ -475,10 +476,15 @@ class LiveBattle {
 }
 
 class BattleRecord {
-  const BattleRecord({required this.battle, required this.completedAt});
+  const BattleRecord({
+    required this.battle,
+    required this.completedAt,
+    this.detail,
+  });
 
   final LiveBattle battle;
   final DateTime completedAt;
+  final BattleDetailSnapshot? detail;
 
   BattleRank get rank => battle.rank;
   String get enemyFleetName => battle.enemyFleetName;
