@@ -2857,4 +2857,8 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get developmentPoolFuelSteel => '燃料・鋼材系';
+
+  @override
+  String get battlePredictionUnconfirmed =>
+      'データ未確認：HP・予測は参考値です。ゲーム画面で確認してください。';
 }

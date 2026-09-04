@@ -978,5 +978,6 @@
   "@developmentSelectedCount": {"placeholders": {"count": {"type": "int"}}},
   "developmentPoolBauxite": "ボーキサイト系",
   "developmentPoolAmmunition": "弾薬系",
-  "developmentPoolFuelSteel": "燃料・鋼材系"
+  "developmentPoolFuelSteel": "燃料・鋼材系",
+  "battlePredictionUnconfirmed": "データ未確認：HP・予測は参考値です。ゲーム画面で確認してください。"
 }

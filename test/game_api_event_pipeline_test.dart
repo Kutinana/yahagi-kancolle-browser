@@ -7,6 +7,20 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_api_decoder.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_api_event_pipeline.dart';
 
 void main() {
+  test('failed API responses never reach state consumers', () async {
+    final consumer = _RecordingConsumer();
+    final pipeline = GameApiEventPipeline(consumers: [consumer]);
+    pipeline.add(
+      _event(
+        '/kcsapi/api_port/port',
+        'svdata={"api_result":0,"api_data":{}}',
+        sequence: 1,
+      ),
+    );
+    pipeline.add(_event('/kcsapi/api_port/port', _body(0), sequence: 2));
+    await pipeline.idle;
+    expect(consumer.events.map((event) => event.sequence), [2]);
+  });
   test('a prepared envelope is reused even when the raw body is invalid', () {
     final event = _event('/kcsapi/api_get_member/material', 'invalid-json')
         .withDecodedEnvelope(<String, Object?>{

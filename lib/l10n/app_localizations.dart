@@ -5337,6 +5337,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'油钢系'**
   String get developmentPoolFuelSteel;
+
+  /// No description provided for @battlePredictionUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据未确认：血量与预测仅供参考，请以游戏画面为准。'**
+  String get battlePredictionUnconfirmed;
 }
 
 class _AppLocalizationsDelegate

@@ -18,7 +18,7 @@
 "lib/src/battle/battle_controller.dart|昼战"
 "lib/src/battle/battle_controller.dart|未知"
 "lib/src/battle/battle_controller.dart|演习"
-"lib/src/battle/battle_controller.dart|第 $baseId 基地航空队"
+"lib/src/battle/battle_controller.dart|第 ${hp.baseId} 基地航空队"
 "lib/src/battle/battle_controller.dart|航空战"
 "lib/src/battle/battle_controller.dart|航行中"
 "lib/src/battle/battle_controller.dart|舰娘 ${ownedShips[index].masterId}"

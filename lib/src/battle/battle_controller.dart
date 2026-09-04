@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
@@ -9,6 +8,7 @@ import '../game_state/combat_state.dart';
 import '../game_state/game_api_decoder.dart';
 import '../game_state/game_api_event_pipeline.dart';
 import '../game_state/game_state.dart';
+import '../game_state/land_base_raid.dart';
 import 'formation_memory.dart';
 import 'battle_models.dart';
 import 'battle_node_label_resolver.dart';
@@ -78,11 +78,28 @@ final class BattleController extends ChangeNotifier
   String? _lastError;
   bool _disposed = false;
 
-  LiveBattle? get current => _current;
+  LiveBattle? get current {
+    final battle = _current;
+    final combat = gameState().combatState;
+    if (battle == null ||
+        battle.context.practice ||
+        !combat.isActive ||
+        battle.context.mapAreaId != combat.mapArea ||
+        battle.context.mapInfoNo != combat.mapInfo ||
+        battle.context.deckId != combat.sortieFleetId) {
+      return battle;
+    }
+    return _withRetreatState(battle, combat.escapedShipIds);
+  }
+
   List<BattleRecord> get records => List.unmodifiable(_records);
   GameState get gameStateSnapshot => gameState();
   String? get lastError => _lastError;
   BattleSession? get session => _session;
+  bool get isPredictionConfirmed =>
+      _lastError == null &&
+      (_session?.isConfirmed ?? true) &&
+      !_hasUntrustedPoiLedger;
   List<BattleSession> get recentSessions => List.unmodifiable(_recentSessions);
   @override
   Future<void> get idle => _queue;
@@ -138,8 +155,8 @@ final class BattleController extends ChangeNotifier
         if (_disposed) {
           return;
         }
-        await _reduce(event);
         _lastError = null;
+        await _reduce(event);
         _captureNotifications.schedule(notifyListeners);
       } catch (error) {
         if (_battlePaths.contains(event.path) &&
@@ -160,18 +177,32 @@ final class BattleController extends ChangeNotifier
       GameCapturePathCatalog.battle.contains(path);
 
   Future<void> _reduce(CapturedApiEvent event) async {
+    final envelope =
+        event.decodedEnvelope ??
+        GameApiDecoder.decodeEnvelope(event.responseBody);
+    if (envelope['api_result'].toString() != '1') return;
+    final data = GameApiDecoder.decodeEventData(
+      event.withDecodedEnvelope(envelope),
+      allowMissingData: _retreatPaths.contains(event.path),
+    );
     if (event.path == '/kcsapi/api_port/port' ||
         event.path == '/kcsapi/api_start2/getData') {
+      _map(data); // Do not clear a valid session for a malformed snapshot.
       _current = null;
       _archiveSession();
       _session = null;
       _predictionEngine = null;
       _sortieDamageControls.endSortie();
+      _context = const BattleContext();
       return;
     }
-    final data = GameApiDecoder.decodeEventData(event);
+    if (_retreatPaths.contains(event.path)) {
+      _applyRetreat();
+      return;
+    }
     final map = _map(data);
-    if (_mapPaths.contains(event.path)) {
+    if (_mapPaths.contains(event.path) ||
+        event.path == '/kcsapi/api_req_map/air_raid') {
       if (event.path == '/kcsapi/api_req_map/start') {
         _sortieDamageControls.beginSortie();
       } else if (!_sortieDamageControls.isActive) {
@@ -254,9 +285,6 @@ final class BattleController extends ChangeNotifier
       _applyResult(map, event);
       return;
     }
-    if (_retreatPaths.contains(event.path)) {
-      _applyRetreat();
-    }
   }
 
   BattleContext _contextFromMap(
@@ -281,8 +309,8 @@ final class BattleController extends ChangeNotifier
       bossNode: _positive(data['api_bosscell_no'], _context.bossNode),
       deckId: deckId,
       combinedFleetType: _combinedFleetTypeForDeck(state, deckId),
-      eventId: _int(data['api_event_id']),
-      eventKind: _int(data['api_event_kind']),
+      eventId: _int(data['api_event_id'] ?? _context.eventId),
+      eventKind: _int(data['api_event_kind'] ?? _context.eventKind),
       nodeDisplayLabel: nodeLabelResolver.resolve(
         mapAreaId: mapAreaId,
         mapInfoNo: mapInfoNo,
@@ -295,78 +323,39 @@ final class BattleController extends ChangeNotifier
     Map<String, Object?> data,
     GameState state,
   ) {
-    final destruction = _optionalMap(data['api_destruction_battle']);
-    if (destruction == null) return null;
-    final maxHp = _list(destruction['api_f_maxhps']);
-    final nowHp = _list(destruction['api_f_nowhps']);
-    Object? rawAttack = destruction['api_air_base_attack'];
-    if (rawAttack is String) {
-      try {
-        rawAttack = jsonDecode(rawAttack);
-      } on FormatException {
-        return null;
+    final raids = parseLandBaseRaids(data);
+    if (raids.isEmpty) return null;
+    final areaId = _positive(data['api_maparea_id'], _context.mapAreaId);
+    // Each response carries absolute starting HP; the last raid wins, as in POI.
+    final latest = <int, LandBaseRaidHp>{};
+    for (final raid in raids) {
+      for (final base in raid.bases) {
+        latest[base.baseId] = base;
       }
     }
-    final attack = _optionalMap(rawAttack);
-    final stage1 = _optionalMap(attack?['api_stage1']);
-    final stage3 = _optionalMap(attack?['api_stage3']);
-    var damage = _list(stage3?['api_fdam']);
-    if (attack == null) return null;
-    if (damage.length > maxHp.length &&
-        damage.isNotEmpty &&
-        _int(damage.first) < 0) {
-      damage = damage.sublist(1);
-    }
-    final count = <int>[
-      maxHp.length,
-      nowHp.length,
-      damage.length,
-    ].reduce((left, right) => left > right ? left : right);
-    final bases = <LandBaseRaidSnapshot>[];
-    for (var index = 0; index < count; index++) {
-      if (index >= maxHp.length || index >= nowHp.length) continue;
-      final maximum = _int(maxHp[index]);
-      final initial = _int(nowHp[index]);
-      if (maximum <= 0 || initial < 0) continue;
-      final lost = index < damage.length
-          ? _int(damage[index]).clamp(0, 1 << 30).toInt()
-          : 0;
-      final baseId = index + 1;
-      final name = state.landBases
-          .where(
-            (base) =>
-                base.areaId == _context.mapAreaId && base.baseId == baseId,
-          )
-          .map((base) => base.name)
-          .firstOrNull;
-      bases.add(
-        LandBaseRaidSnapshot(
-          baseId: baseId,
-          name: name == null || name.isEmpty ? '第 $baseId 基地航空队' : name,
-          currentHp: (initial - lost).clamp(0, maximum).toInt(),
-          maxHp: maximum,
-          damage: lost,
-        ),
-      );
-    }
-    return bases.isEmpty
-        ? null
-        : LandBaseRaidResult(
-            areaId: _context.mapAreaId,
-            bases: List<LandBaseRaidSnapshot>.unmodifiable(bases),
-            airSuperiority: _landBaseDefenseAirSuperiority(
-              stage1?['api_disp_seiku'],
-            ),
-          );
-  }
-
-  String _landBaseDefenseAirSuperiority(Object? value) {
-    final code = switch (value) {
-      int result => result,
-      String result => int.tryParse(result),
-      _ => null,
-    };
-    return kAirSuperiorityLabels[code] ?? '未知';
+    return LandBaseRaidResult(
+      areaId: areaId,
+      bases: List.unmodifiable([
+        for (final hp in latest.values)
+          LandBaseRaidSnapshot(
+            baseId: hp.baseId,
+            name:
+                state.landBases
+                    .where(
+                      (base) =>
+                          base.areaId == areaId && base.baseId == hp.baseId,
+                    )
+                    .map((base) => base.name)
+                    .where((name) => name.isNotEmpty)
+                    .firstOrNull ??
+                '第 ${hp.baseId} 基地航空队',
+            currentHp: hp.currentHp,
+            maxHp: hp.maxHp,
+            damage: hp.damage,
+          ),
+      ]),
+      airSuperiority: kAirSuperiorityLabels[raids.last.airSuperiority] ?? '未知',
+    );
   }
 
   List<EnemyPreviewShip> _officialEnemyPreviewShips(
@@ -776,34 +765,9 @@ final class BattleController extends ChangeNotifier
     if (current == null) return;
     final state = gameState();
     final escaped = state.combatState.escapedShipIds;
-    if (escaped.isEmpty) return;
-
-    List<BattleShipSnapshot> markEscaped(List<BattleShipSnapshot> ships) {
-      var changed = false;
-      final result = <BattleShipSnapshot>[];
-      for (final ship in ships) {
-        if (!ship.isEscaped &&
-            ship.ownedShipId != null &&
-            escaped.contains(ship.ownedShipId!)) {
-          changed = true;
-          result.add(ship.copyWith(isEscaped: true));
-        } else {
-          result.add(ship);
-        }
-      }
-      return changed ? List.unmodifiable(result) : ships;
-    }
-
-    final friendMain = markEscaped(current.friendMain);
-    final friendEscort = markEscaped(current.friendEscort);
-    if (identical(friendMain, current.friendMain) &&
-        identical(friendEscort, current.friendEscort)) {
-      return;
-    }
-    _current = current.copyWith(
-      friendMain: friendMain,
-      friendEscort: friendEscort,
-    );
+    final updated = _withRetreatState(current, escaped);
+    if (identical(updated, current)) return;
+    _current = updated;
     if (_records.isNotEmpty) {
       final firstBattle = _records[0].battle;
       final match =
@@ -818,6 +782,30 @@ final class BattleController extends ChangeNotifier
         );
       }
     }
+  }
+
+  LiveBattle _withRetreatState(LiveBattle battle, Set<int> escaped) {
+    List<BattleShipSnapshot> fleet(List<BattleShipSnapshot> ships) {
+      var changed = false;
+      final result = <BattleShipSnapshot>[];
+      for (final ship in ships) {
+        final isEscaped = escaped.contains(ship.ownedShipId);
+        if (ship.ownedShipId != null && ship.isEscaped != isEscaped) {
+          changed = true;
+          result.add(ship.copyWith(isEscaped: isEscaped));
+        } else {
+          result.add(ship);
+        }
+      }
+      return changed ? List.unmodifiable(result) : ships;
+    }
+
+    final main = fleet(battle.friendMain);
+    final escort = fleet(battle.friendEscort);
+    return identical(main, battle.friendMain) &&
+            identical(escort, battle.friendEscort)
+        ? battle
+        : battle.copyWith(friendMain: main, friendEscort: escort);
   }
 
   void _ensureSession(CapturedApiEvent event) {

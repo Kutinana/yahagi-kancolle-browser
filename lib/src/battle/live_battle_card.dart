@@ -88,6 +88,20 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
                 : const Key('live-battle-expanded'),
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (!idle && !widget.controller.isPredictionConfirmed)
+                Padding(
+                  key: const Key('battle-unconfirmed-warning'),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    (AppLocalizations.of(context) ??
+                            lookupAppLocalizations(const Locale('zh')))
+                        .battlePredictionUnconfirmed,
+                    style: const TextStyle(
+                      color: Color(0xffffc95c),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
               if (idle)
                 const _IdleBattleContent()
               else if (_mode == BattlePanelMode.detailed)

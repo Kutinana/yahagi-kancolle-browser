@@ -2831,6 +2831,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get developmentPoolFuelSteel => '油钢系';
+
+  @override
+  String get battlePredictionUnconfirmed => '数据未确认：血量与预测仅供参考，请以游戏画面为准。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5661,4 +5664,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developmentPoolFuelSteel => '油鋼系';
+
+  @override
+  String get battlePredictionUnconfirmed => '資料未確認：血量與預測僅供參考，請以遊戲畫面為準。';
 }

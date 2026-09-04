@@ -53,6 +53,7 @@ final class GameApiEventPipeline {
     this.backgroundThresholdBytes = 64 * 1024,
     this.backgroundDecodeTimeout = const Duration(seconds: 5),
     this.onBackgroundDecodeFallback,
+    this.settleGameState,
   }) : assert(backgroundThresholdBytes > 0),
        assert(backgroundDecodeTimeout > Duration.zero),
        _consumers = List<GameApiEventConsumer>.unmodifiable(consumers),
@@ -66,6 +67,10 @@ final class GameApiEventPipeline {
   final int backgroundThresholdBytes;
   final Duration backgroundDecodeTimeout;
   final void Function(String path)? onBackgroundDecodeFallback;
+
+  /// Completes the core reducer -> prediction -> HP writeback transaction.
+  /// Deliberately excludes independent database/download/report queues.
+  final Future<void> Function()? settleGameState;
   GameApiPipelineObserver? observer;
   Future<void> _queue = Future<void>.value();
   int _pendingEventCount = 0;
@@ -201,8 +206,14 @@ final class GameApiEventPipeline {
       decodeWatch.stop();
 
       final dispatchWatch = Stopwatch()..start();
-      for (final consumer in consumers) {
-        consumer.accept(prepared);
+      if (prepared.hasDecodedEnvelope &&
+          prepared.decodedEnvelope!['api_result'].toString() != '1') {
+        success = false;
+      } else {
+        for (final consumer in consumers) {
+          consumer.accept(prepared);
+        }
+        await settleGameState?.call();
       }
       dispatchWatch.stop();
       return (

@@ -11,9 +11,7 @@ import 'game_state_reducer.dart';
 import 'game_state_store.dart';
 import '../logbook/logbook_database.dart';
 import '../logbook/logbook_event_recorder.dart';
-import '../fleet/anchorage_repair_timer.dart';
 import '../fleet/global_game_timer.dart';
-import '../fleet/nosaki_sparkle_timer.dart';
 import '../fleet/timer_mechanics_service.dart';
 
 final class GameStateController extends ChangeNotifier
@@ -134,6 +132,8 @@ final class GameStateController extends ChangeNotifier
 
   GameState _state = GameState.empty;
   Future<void> _queue = Future<void>.value();
+  Future<void> _logbookQueue = Future<void>.value();
+  String? _lastLogbookError;
   String? _lastError;
   String? _lastUpdatedPath;
   bool _disposed = false;
@@ -149,6 +149,10 @@ final class GameStateController extends ChangeNotifier
   DateTime? get nosakiSparkleStartedAt => _timerService.nozakiTimer.anchorAt;
   @override
   Future<void> get idle => _queue;
+
+  /// Persistence is ordered but must not delay live game state or safety checks.
+  Future<void> get logbookIdle => _logbookQueue;
+  String? get lastLogbookError => _lastLogbookError;
 
   @override
   bool supportsPath(String path) {
@@ -168,7 +172,14 @@ final class GameStateController extends ChangeNotifier
       try {
         final previous = _state;
         if (_logbookRecorder.supports(event.path)) {
-          await _logbookRecorder.record(event, previous);
+          _logbookQueue = _logbookQueue.then((_) async {
+            try {
+              await _logbookRecorder.record(event, previous);
+            } catch (error) {
+              _lastLogbookError = 'Logbook write failed (${error.runtimeType})';
+              debugPrint(_lastLogbookError);
+            }
+          });
         }
         final next = _reducer.reduce(previous, event);
         if (!identical(next, previous)) {
@@ -212,6 +223,8 @@ final class GameStateController extends ChangeNotifier
     _queue = _queue.then((_) {
       if (_disposed) return;
       final previous = _state;
+      // A delayed prediction is not authoritative after returning to port.
+      if (!previous.combatState.isActive) return;
       final next = _reducer.applyFriendlyBattleHp(
         previous,
         hpByShipId,

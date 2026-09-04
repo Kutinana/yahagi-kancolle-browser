@@ -371,6 +371,11 @@ Future<void> main() async {
     },
   );
   final gameApiEventPipeline = GameApiEventPipeline(
+    settleGameState: () async {
+      await gameStateController.idle;
+      await battleController.idle;
+      await gameStateController.idle;
+    },
     consumers: <GameApiEventConsumer>[
       gameStateController,
       kcwikiReportConsumer,
@@ -842,12 +847,16 @@ class YahagiApp extends StatelessWidget {
 
   Future<void> _waitForCaptureQueues() async {
     try {
-      await Future.wait<void>([
-        ?gameApiEventPipeline?.idle,
-        gameStateController.idle,
-        ?senkaController?.idle,
-        battleController.idle,
-      ]).timeout(const Duration(seconds: 5));
+      await (() async {
+        await Future.wait<void>([
+          ?gameApiEventPipeline?.idle,
+          gameStateController.idle,
+          ?senkaController?.idle,
+          battleController.idle,
+        ]);
+        // Snapshot this queue only after all captures have scheduled their logs.
+        await gameStateController.logbookIdle;
+      })().timeout(const Duration(seconds: 5));
     } on TimeoutException {
       debugPrint(
         'Timed out waiting for capture queues before WebView rebuild.',

@@ -978,5 +978,6 @@
   "@developmentSelectedCount": {"placeholders": {"count": {"type": "int"}}},
   "developmentPoolBauxite": "鋁土系",
   "developmentPoolAmmunition": "彈藥系",
-  "developmentPoolFuelSteel": "油鋼系"
+  "developmentPoolFuelSteel": "油鋼系",
+  "battlePredictionUnconfirmed": "資料未確認：血量與預測僅供參考，請以遊戲畫面為準。"
 }

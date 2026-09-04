@@ -45,6 +45,7 @@ abstract final class GameCapturePathCatalog {
     '/kcsapi/api_req_map/select_eventmap_rank',
     '/kcsapi/api_req_map/start',
     '/kcsapi/api_req_map/next',
+    '/kcsapi/api_req_map/air_raid',
     '/kcsapi/api_req_sortie/battle',
     '/kcsapi/api_req_sortie/battleresult',
     '/kcsapi/api_req_combined_battle/battleresult',
@@ -95,6 +96,7 @@ abstract final class GameCapturePathCatalog {
   };
 
   static const Set<String> battle = <String>{
+    '/kcsapi/api_req_map/air_raid',
     ...battleMap,
     ...battlePhases,
     ...battleResults,

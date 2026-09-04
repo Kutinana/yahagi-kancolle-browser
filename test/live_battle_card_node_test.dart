@@ -132,6 +132,26 @@ Future<void> _pumpCard(
 }
 
 void main() {
+  for (final compact in [false, true]) {
+    testWidgets('unconfirmed prediction is explicit (compact: $compact)', (
+      tester,
+    ) async {
+      final controller = _createController();
+      addTearDown(controller.dispose);
+      controller.accept(mapStartEvent);
+      await controller.idle;
+      controller.session!.markUnconfirmed(
+        stage: 'test',
+        message: 'missing battle packet',
+      );
+      await _pumpCard(tester, controller, compact: compact);
+      expect(
+        find.byKey(const Key('battle-unconfirmed-warning')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('未确认'), findsOneWidget);
+    });
+  }
   testWidgets('battle node and enemy name are vertically center aligned', (
     tester,
   ) async {

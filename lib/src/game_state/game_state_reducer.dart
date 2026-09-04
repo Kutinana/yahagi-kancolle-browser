@@ -5,6 +5,7 @@ import '../capture/game_capture_path_catalog.dart';
 import 'combat_state.dart';
 import 'game_api_decoder.dart';
 import 'game_state.dart';
+import 'land_base_raid.dart';
 import 'quest_text_normalizer.dart';
 
 export 'game_api_decoder.dart' show GameApiParseException;
@@ -23,6 +24,7 @@ class GameStateReducer {
       // The formation change response only contains api_result and
       // api_result_msg. Its state transition is driven by request parameters.
       allowMissingData:
+          GameCapturePathCatalog.battleRetreat.contains(event.path) ||
           event.path == '/kcsapi/api_req_hensei/change' ||
           event.path == '/kcsapi/api_req_hensei/combined' ||
           event.path == '/kcsapi/api_req_kaisou/slotset' ||
@@ -260,6 +262,16 @@ class GameStateReducer {
         state,
         _requiredMap(data, 'map data'),
         event,
+      ),
+      '/kcsapi/api_req_map/air_raid' => state.copyWith(
+        landBases: _applyLandBaseRaid(
+          state.landBases,
+          _requiredMap(data, 'air raid'),
+          _asInt(
+            _optionalMap(data)?['api_maparea_id'],
+            state.combatState.mapArea,
+          ),
+        ),
       ),
       '/kcsapi/api_req_map/next' => _mapStartOrNext(
         state,
@@ -2323,60 +2335,32 @@ class GameStateReducer {
     Map<String, Object?> data,
     int areaId,
   ) {
-    final destruction = _optionalMap(data['api_destruction_battle']);
-    if (destruction == null || areaId <= 0) return existing;
-    final maxHp = _optionalList(destruction['api_f_maxhps']);
-    final nowHp = _optionalList(destruction['api_f_nowhps']);
-    final rawAttack = _decodeNestedJson(destruction['api_air_base_attack']);
-    final attack = _optionalMap(rawAttack);
-    final stage3 = _optionalMap(attack?['api_stage3']);
-    var damage = _optionalList(stage3?['api_fdam']);
-    if (attack == null) return existing;
-    if (damage.length > maxHp.length &&
-        damage.isNotEmpty &&
-        _asInt(damage.first) < 0) {
-      damage = damage.sublist(1);
-    }
-    final count = <int>[
-      maxHp.length,
-      nowHp.length,
-      damage.length,
-    ].reduce((left, right) => left > right ? left : right);
-    if (count == 0) return existing;
-
+    final raids = parseLandBaseRaids(data);
+    if (raids.isEmpty || areaId <= 0) return existing;
     final result = <LandBaseState>[...existing];
-    for (var index = 0; index < count; index++) {
-      final baseId = index + 1;
-      final found = result.indexWhere(
-        (base) => base.areaId == areaId && base.baseId == baseId,
-      );
-      final previous = found >= 0
-          ? result[found]
-          : LandBaseState(
-              areaId: areaId,
-              baseId: baseId,
-              name: '第 $baseId 基地航空队',
-            );
-      final maximum = index < maxHp.length
-          ? _asInt(maxHp[index])
-          : previous.maxHp;
-      final initial = index < nowHp.length
-          ? _asInt(nowHp[index])
-          : previous.currentHp;
-      final lost = index < damage.length
-          ? _asInt(damage[index]).clamp(0, 1 << 30)
-          : 0;
-      if (maximum == null || initial == null) continue;
-      final current = (initial - lost).clamp(0, maximum);
-      final updated = previous.copyWith(
-        maxHp: maximum,
-        currentHp: current,
-        lastRaidDamage: lost,
-      );
-      if (found >= 0) {
-        result[found] = updated;
-      } else {
-        result.add(updated);
+    for (final raid in raids) {
+      for (final hp in raid.bases) {
+        final baseId = hp.baseId;
+        final found = result.indexWhere(
+          (base) => base.areaId == areaId && base.baseId == hp.baseId,
+        );
+        final previous = found >= 0
+            ? result[found]
+            : LandBaseState(
+                areaId: areaId,
+                baseId: hp.baseId,
+                name: '第 $baseId 基地航空队',
+              );
+        final updated = previous.copyWith(
+          maxHp: hp.maxHp,
+          currentHp: hp.currentHp,
+          lastRaidDamage: hp.damage,
+        );
+        if (found >= 0) {
+          result[found] = updated;
+        } else {
+          result.add(updated);
+        }
       }
     }
     result.sort((left, right) {
