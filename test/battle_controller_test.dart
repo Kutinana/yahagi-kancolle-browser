@@ -1065,6 +1065,84 @@ void main() {
     expect(controller.current!.rank, BattleRank.ss);
   });
 
+  test('night battle preserves daytime air superiority', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer.reduce(state, portEvent);
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    controller
+      ..accept(mapStartEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_req_sortie/battle', <String, Object?>{
+          'api_deck_id': 1,
+          'api_f_nowhps': <int>[-1, 30, 15],
+          'api_f_maxhps': <int>[-1, 30, 15],
+          'api_e_nowhps': <int>[-1, 20],
+          'api_e_maxhps': <int>[-1, 20],
+          'api_ship_ke': <int>[-1, 501],
+          'api_kouku': <String, Object?>{
+            'api_stage1': <String, Object?>{'api_disp_seiku': 2},
+          },
+        }, sequence: 78),
+      );
+    await controller.idle;
+    expect(controller.current!.airSuperiority, '优势');
+
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_req_battle_midnight/battle', <String, Object?>{
+        'api_hougeki': <String, Object?>{
+          'api_at_eflag': <int>[0],
+          'api_at_list': <int>[0],
+          'api_df_list': <Object?>[
+            <int>[0],
+          ],
+          'api_damage': <Object?>[
+            <num>[20],
+          ],
+        },
+      }, sequence: 79),
+    );
+    await controller.idle;
+
+    expect(controller.current!.phaseLabel, '夜战');
+    expect(controller.current!.airSuperiority, '优势');
+
+    controller.accept(
+      kcsapiEvent('/kcsapi/api_req_sortie/battleresult', <String, Object?>{
+        'api_win_rank': 'S',
+      }, sequence: 80),
+    );
+    await controller.idle;
+
+    expect(controller.records.single.battle.airSuperiority, '优势');
+  });
+
+  test('night-only battle keeps air superiority unknown', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer.reduce(state, portEvent);
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    controller
+      ..accept(mapStartEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_req_battle_midnight/battle', <String, Object?>{
+          'api_hougeki': <String, Object?>{
+            'api_at_eflag': <int>[],
+            'api_at_list': <int>[],
+            'api_df_list': <Object?>[],
+            'api_damage': <Object?>[],
+          },
+        }, sequence: 81),
+      );
+    await controller.idle;
+
+    expect(controller.current!.airSuperiority, '未知');
+  });
+
   test(
     'maps real battle arrays with their leading sentinel correctly',
     () async {

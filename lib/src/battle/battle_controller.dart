@@ -576,6 +576,9 @@ final class BattleController extends ChangeNotifier
         ? parsedEnemyName
         : previous?.enemyFleetName ?? '';
     final seiku = parseDispSeiku(data);
+    final airSuperiority = seiku >= 0 && seiku <= 4
+        ? kAirSuperiorityLabels[seiku]
+        : previousBattle?.airSuperiority;
     final rank = (_session?.isConfirmed ?? parsed.issues.isEmpty)
         ? parsed.rank
         : BattleRank.unknown;
@@ -593,7 +596,7 @@ final class BattleController extends ChangeNotifier
       enemyFormation: _atInt(formation, 1),
       engagement: _atInt(formation, 2),
       enemyFleetName: enemyFleetName,
-      airSuperiority: kAirSuperiorityLabels[seiku] ?? '未知',
+      airSuperiority: airSuperiority ?? '未知',
       mvpPositions: parsed.mvpPositions.isNotEmpty
           ? parsed.mvpPositions
           : _predictedMvpPositions(parsed.friendMain, parsed.friendEscort),
