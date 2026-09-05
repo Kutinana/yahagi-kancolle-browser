@@ -14,6 +14,99 @@ import 'package:yahagi_kancolle_browser/src/widgets/frozen_data_table.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  for (final inset in [0.0, 36.0]) {
+    for (final parentSafeArea in [false, true]) {
+      testWidgets(
+        'record and detail share safe bounds inset=$inset parent=$parentSafeArea',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = const Size(915, 412);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(tester.view.resetPhysicalSize);
+          final database = await LogbookDatabase.openForTesting();
+          addTearDown(database.close);
+          final controller = BattleController(gameState: () => GameState.empty);
+          addTearDown(controller.dispose);
+          await database.insertBattleRecord(
+            BattleRecord(
+              battle: const LiveBattle(
+                context: BattleContext(mapAreaId: 1, mapInfoNo: 1, node: 1),
+                rank: BattleRank.s,
+              ),
+              completedAt: DateTime.utc(2026, 9, 5, 2),
+              detail: const BattleDetailSnapshot(
+                completedAtMillis: 0,
+                mapLabel: '1-1',
+                nodeLabel: 'A点',
+                rank: 'S',
+                enemyFleetName: '测试敌舰队',
+              ),
+            ),
+            mapName: '安全区域海域',
+          );
+          final page = LogbookPage(
+            battleController: controller,
+            database: database,
+          );
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: MediaQuery(
+                  data: MediaQueryData(
+                    size: const Size(915, 412),
+                    padding: EdgeInsets.fromLTRB(inset, 0, inset / 2, inset),
+                    viewPadding: EdgeInsets.fromLTRB(
+                      inset,
+                      0,
+                      inset / 2,
+                      inset,
+                    ),
+                  ),
+                  child: parentSafeArea
+                      ? SafeArea(top: false, child: page)
+                      : page,
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final bounds = tester.getRect(find.byType(TabBarView));
+          expect(bounds.left, inset);
+          expect(bounds.right, 915 - inset / 2);
+          expect(bounds.bottom, 412 - inset);
+          final tableLeft = tester
+              .getRect(find.byKey(const Key('logbook-table-sortie')))
+              .left;
+          await tester.tap(find.text('安全区域海域 (1-1)'));
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(find.byKey(const Key('battle-detail-page'))),
+            bounds,
+          );
+          expect(
+            tester.getRect(find.byKey(const Key('battle-detail-back'))).left,
+            greaterThanOrEqualTo(bounds.left),
+          );
+          await tester.tap(find.byKey(const Key('battle-detail-tab-process')));
+          await tester.pumpAndSettle();
+          expect(
+            tester
+                .getRect(find.byKey(const Key('battle-detail-filter-all')))
+                .left,
+            tableLeft,
+          );
+          await tester.tap(find.byKey(const Key('battle-detail-back')));
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(find.byKey(const Key('logbook-table-sortie'))).left,
+            tableLeft,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   test('sortie status keeps official labels and marks legacy values', () {
     expect(sortieStatusLabel('普通战斗'), '普通战斗');
     expect(sortieStatusLabel(' 路线选择 '), '路线选择');

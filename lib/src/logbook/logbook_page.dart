@@ -103,37 +103,41 @@ class _LogbookPageState extends State<LogbookPage>
     final database = widget.database ?? LogbookDatabase.instance;
     return ColoredBox(
       color: const Color(0xff081521),
-      child: TabBarView(
-        controller: _tabController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          _LogbookTablePage(
-            category: _LogbookCategory.sortie,
-            database: database,
-            battleController: widget.battleController,
-          ),
-          _LogbookTablePage(
-            category: _LogbookCategory.expedition,
-            database: database,
-            battleController: widget.battleController,
-          ),
-          _LogbookTablePage(
-            category: _LogbookCategory.construction,
-            database: database,
-            battleController: widget.battleController,
-          ),
-          _LogbookTablePage(
-            category: _LogbookCategory.development,
-            database: database,
-            battleController: widget.battleController,
-          ),
-          _LogbookTablePage(
-            category: _LogbookCategory.retirement,
-            database: database,
-            battleController: widget.battleController,
-          ),
-          ResourceTrendPage(database: database),
-        ],
+      // Both record lists and details consume device insets exactly once.
+      child: SafeArea(
+        top: false,
+        child: TabBarView(
+          controller: _tabController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _LogbookTablePage(
+              category: _LogbookCategory.sortie,
+              database: database,
+              battleController: widget.battleController,
+            ),
+            _LogbookTablePage(
+              category: _LogbookCategory.expedition,
+              database: database,
+              battleController: widget.battleController,
+            ),
+            _LogbookTablePage(
+              category: _LogbookCategory.construction,
+              database: database,
+              battleController: widget.battleController,
+            ),
+            _LogbookTablePage(
+              category: _LogbookCategory.development,
+              database: database,
+              battleController: widget.battleController,
+            ),
+            _LogbookTablePage(
+              category: _LogbookCategory.retirement,
+              database: database,
+              battleController: widget.battleController,
+            ),
+            ResourceTrendPage(database: database),
+          ],
+        ),
       ),
     );
   }

@@ -35,7 +35,8 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.byKey(const Key('battle-detail-tab-process')));
       await tester.pumpAndSettle();
-      expect(find.text('主炮连击'), findsOneWidget);
+      expect(find.text('主炮连击'), findsNothing);
+      expect(find.text('目标HP 200 → 140（-60）'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
@@ -51,19 +52,21 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('第一炮击战'), findsOneWidget);
-      expect(find.text('主炮连击'), findsOneWidget);
-      expect(find.text('夜战攻击'), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_forward_rounded), findsWidgets);
-      expect(find.byIcon(Icons.arrow_back_rounded), findsWidgets);
-      expect(find.text('40'), findsOneWidget);
-      expect(find.text('20'), findsOneWidget);
+      expect(find.text('主炮连击'), findsNothing);
+      expect(find.text('夜战攻击'), findsNothing);
+      expect(find.text('大和改二重  攻击  战舰栖姬', findRichText: true), findsOneWidget);
+      expect(find.text('重巡ネ级  攻击  矢矧改二乙', findRichText: true), findsOneWidget);
+      expect(find.text('造成 60 伤害'), findsOneWidget);
+      expect(find.text('造成 15 伤害'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('battle-detail-filter-enemy')));
       await tester.pumpAndSettle();
 
-      expect(find.text('夜战攻击'), findsOneWidget);
+      expect(find.text('造成 15 伤害'), findsOneWidget);
+      expect(find.text('造成 60 伤害'), findsNothing);
       expect(find.text('主炮连击'), findsNothing);
-      expect(find.text('45 / 60'), findsOneWidget);
+      expect(find.text('目标HP 60 → 45（-15）'), findsOneWidget);
+      expect(find.text('我方小破'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -103,6 +106,13 @@ void main() {
                 attackType: '友军连击',
                 defenderHpBefore: 100,
                 defenderHpAfter: 80,
+                hits: [
+                  BattleDetailHit(
+                    damage: 20,
+                    kind: BattleDetailHitKind.hit,
+                    hpAfter: 80,
+                  ),
+                ],
               ),
               BattleDetailAttack(
                 attackerSide: BattleDetailSide.enemy,
@@ -112,6 +122,13 @@ void main() {
                 attackType: '敌方反击',
                 defenderHpBefore: 30,
                 defenderHpAfter: 20,
+                hits: [
+                  BattleDetailHit(
+                    damage: 10,
+                    kind: BattleDetailHitKind.hit,
+                    hpAfter: 20,
+                  ),
+                ],
               ),
             ],
           ),
@@ -120,15 +137,18 @@ void main() {
       await tester.pumpWidget(_app(detail: detail));
       await tester.tap(find.byKey(const Key('battle-detail-tab-process')));
       await tester.pumpAndSettle();
-      expect(find.text('友军·夕立'), findsNWidgets(2));
+      expect(
+        find.textContaining('友军·夕立', findRichText: true),
+        findsNWidgets(2),
+      );
       await tester.tap(find.byKey(const Key('battle-detail-filter-friend')));
       await tester.pumpAndSettle();
-      expect(find.text('友军连击'), findsOneWidget);
-      expect(find.text('敌方反击'), findsNothing);
+      expect(find.text('目标HP 100 → 80（-20）'), findsOneWidget);
+      expect(find.text('目标HP 30 → 20（-10）'), findsNothing);
       await tester.tap(find.byKey(const Key('battle-detail-filter-enemy')));
       await tester.pumpAndSettle();
-      expect(find.text('敌方反击'), findsOneWidget);
-      expect(find.text('友军连击'), findsNothing);
+      expect(find.text('目标HP 30 → 20（-10）'), findsOneWidget);
+      expect(find.text('目标HP 100 → 80（-20）'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
