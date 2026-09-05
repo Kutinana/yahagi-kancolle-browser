@@ -62,6 +62,11 @@ abstract class LayoutSettingsStore {
   Future<void> saveLocaleCode(String? localeCode);
 }
 
+abstract interface class InformationPanelSideSettingsStore {
+  Future<bool> loadInformationPanelOnLeft();
+  Future<void> saveInformationPanelOnLeft(bool onLeft);
+}
+
 abstract interface class WorkspaceMenuOrderSettingsStore {
   Future<List<String>> loadWorkspaceMenuOrder();
   Future<void> saveWorkspaceMenuOrder(List<String> order);
@@ -84,7 +89,22 @@ class SharedPreferencesLayoutSettingsStore
         LayoutSettingsStore,
         FleetMoraleMetricSettingsStore,
         HeaderResourceSettingsStore,
-        WorkspaceMenuOrderSettingsStore {
+        WorkspaceMenuOrderSettingsStore,
+        InformationPanelSideSettingsStore {
+  static const _keyInformationPanelOnLeft = 'layout_information_panel_on_left';
+
+  @override
+  Future<bool> loadInformationPanelOnLeft() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyInformationPanelOnLeft) ?? false;
+  }
+
+  @override
+  Future<void> saveInformationPanelOnLeft(bool onLeft) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyInformationPanelOnLeft, onLeft);
+  }
+
   static const _keyGameAreaRatio = 'layout_game_area_ratio';
   static const _keyInformationPanelWidth = 'layout_information_panel_width';
   static const _keyAutoZoom = 'layout_auto_zoom';

@@ -1580,10 +1580,20 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                             )
                                             .toDouble();
 
+                                  final infoOnLeft =
+                                      isLandscape &&
+                                      widget
+                                          .layoutSettingsController
+                                          .informationPanelOnLeft;
+                                  final infoPanelExtent =
+                                      availableWidth - gamePanelExtent;
+
                                   return Stack(
                                     children: [
                                       Positioned(
-                                        left: 0,
+                                        left: infoOnLeft
+                                            ? infoPanelExtent + dividerExtent
+                                            : 0,
                                         top: 0,
                                         width: isLandscape
                                             ? gamePanelExtent
@@ -1598,7 +1608,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                               BoxShadow(
                                                 color: Colors.black38,
                                                 offset: isLandscape
-                                                    ? const Offset(2, 0)
+                                                    ? Offset(
+                                                        infoOnLeft ? -2 : 2,
+                                                        0,
+                                                      )
                                                     : const Offset(0, 2),
                                                 blurRadius: 4,
                                               ),
@@ -1608,7 +1621,11 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                         ),
                                       ),
                                       Positioned(
-                                        left: isLandscape ? gamePanelExtent : 0,
+                                        left: isLandscape
+                                            ? (infoOnLeft
+                                                  ? infoPanelExtent
+                                                  : gamePanelExtent)
+                                            : 0,
                                         top: isLandscape ? 0 : gamePanelExtent,
                                         width: isLandscape
                                             ? dividerExtent
@@ -1630,16 +1647,30 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                       ),
                                       Positioned(
                                         left: isLandscape
-                                            ? gamePanelExtent + dividerExtent
+                                            ? (infoOnLeft
+                                                  ? 0
+                                                  : gamePanelExtent +
+                                                        dividerExtent)
                                             : 0,
                                         top: isLandscape
                                             ? 0
                                             : gamePanelExtent + dividerExtent,
-                                        right: 0,
+                                        right: infoOnLeft
+                                            ? gamePanelExtent + dividerExtent
+                                            : 0,
                                         bottom: 0,
                                         child: Padding(
+                                          key: const Key(
+                                            'workspace-information-panel',
+                                          ),
                                           padding: isLandscape
-                                              ? const EdgeInsets.only(left: 4)
+                                              ? (infoOnLeft
+                                                    ? const EdgeInsets.only(
+                                                        right: 4,
+                                                      )
+                                                    : const EdgeInsets.only(
+                                                        left: 4,
+                                                      ))
                                               : const EdgeInsets.only(top: 4),
                                           child: infoWidget,
                                         ),

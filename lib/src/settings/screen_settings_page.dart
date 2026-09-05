@@ -140,6 +140,22 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                         label: Text(l10n.restoreDefaultOrder),
                       ),
                     ),
+                    const Divider(color: Color(0xff294052), height: 1),
+                    buildSwitchTile(
+                      title: l10n.informationPanelOnLeft,
+                      titleKey: const Key('settings-information-panel-left'),
+                      subtitle: l10n.informationPanelOnLeftDesc,
+                      value: layoutSettingsController.informationPanelOnLeft,
+                      onChanged:
+                          layoutSettingsController.setInformationPanelOnLeft,
+                      trailingBeforeSwitch: OutlinedButton.icon(
+                        key: const Key('settings-reset-dashboard-card-order'),
+                        onPressed:
+                            layoutSettingsController.resetDashboardCardOrder,
+                        icon: const Icon(Icons.restore, size: 18),
+                        label: Text(l10n.restoreDefaultOrder),
+                      ),
+                    ),
                   ],
                 ),
               ),

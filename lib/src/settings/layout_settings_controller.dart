@@ -69,6 +69,11 @@ class LayoutSettingsController extends ChangeNotifier {
       fontLocaleCode,
       fleetMoraleMetricMode,
     );
+    if (store is InformationPanelSideSettingsStore) {
+      controller._informationPanelOnLeft =
+          await (store as InformationPanelSideSettingsStore)
+              .loadInformationPanelOnLeft();
+    }
     final headerStore = store is HeaderResourceSettingsStore
         ? store as HeaderResourceSettingsStore
         : null;
@@ -162,6 +167,7 @@ class LayoutSettingsController extends ChangeNotifier {
   bool _autoZoom;
   bool _enhancedDamagePulse;
   bool _workspaceMenuOnRight;
+  bool _informationPanelOnLeft = false;
   List<String> _workspaceMenuOrder;
   List<String> _dashboardCardOrder;
   List<String> _dashboardCardCollapsed;
@@ -181,6 +187,18 @@ class LayoutSettingsController extends ChangeNotifier {
   bool get autoZoom => _autoZoom;
   bool get enhancedDamagePulse => _enhancedDamagePulse;
   bool get workspaceMenuOnRight => _workspaceMenuOnRight;
+  bool get informationPanelOnLeft => _informationPanelOnLeft;
+
+  Future<void> setInformationPanelOnLeft(bool onLeft) async {
+    if (_informationPanelOnLeft == onLeft) return;
+    _informationPanelOnLeft = onLeft;
+    notifyListeners();
+    if (_store is InformationPanelSideSettingsStore) {
+      await (_store as InformationPanelSideSettingsStore)
+          .saveInformationPanelOnLeft(onLeft);
+    }
+  }
+
   List<String> get workspaceMenuOrder =>
       List<String>.unmodifiable(_workspaceMenuOrder);
   List<String> get dashboardCardOrder => _dashboardCardOrder;

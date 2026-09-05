@@ -69,6 +69,8 @@
   "autoZoom": "推奨表示比率を適用（ゲームとメニューの比率 65:35）",
   "enhancedDamagePulse": "損傷パルス表示を強化",
   "enhancedDamagePulseDesc": "小破・中破・大破に応じて色、速度、艦娘画像内の光を強調します。オフにすると通常表示になります。",
+  "informationPanelOnLeft": "機能エリアを左側に表示",
+  "informationPanelOnLeftDesc": "オフの場合は右側に表示します。縦画面では上下配置を維持します。",
   "workspaceMenuOnRight": "メニューバーを右側に表示",
   "workspaceMenuOnRightDesc": "オフの場合はメニューバーを左側に表示します。",
   "language": "言語 (Language)",

@@ -218,6 +218,12 @@ class AppLocalizationsJa extends AppLocalizations {
       '小破・中破・大破に応じて色、速度、艦娘画像内の光を強調します。オフにすると通常表示になります。';
 
   @override
+  String get informationPanelOnLeft => '機能エリアを左側に表示';
+
+  @override
+  String get informationPanelOnLeftDesc => 'オフの場合は右側に表示します。縦画面では上下配置を維持します。';
+
+  @override
   String get workspaceMenuOnRight => 'メニューバーを右側に表示';
 
   @override

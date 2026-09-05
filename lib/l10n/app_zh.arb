@@ -69,6 +69,8 @@
   "autoZoom": "应用推荐显示比例（游戏与菜单比例 65:35）",
   "enhancedDamagePulse": "加强受损呼吸提示",
   "enhancedDamagePulseDesc": "按小破、中破、大破增强颜色、速度和头像内部光效。关闭后使用普通效果。",
+  "informationPanelOnLeft": "功能区域置于左侧",
+  "informationPanelOnLeftDesc": "关闭时功能区域保持在右侧，竖屏时保持上下布局。",
   "workspaceMenuOnRight": "菜单栏置于右侧",
   "workspaceMenuOnRightDesc": "关闭时菜单栏保持在左侧。",
   "language": "语言 (Language)",

@@ -489,6 +489,18 @@ abstract class AppLocalizations {
   /// **'按小破、中破、大破增强颜色、速度和头像内部光效。关闭后使用普通效果。'**
   String get enhancedDamagePulseDesc;
 
+  /// No description provided for @informationPanelOnLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'功能区域置于左侧'**
+  String get informationPanelOnLeft;
+
+  /// No description provided for @informationPanelOnLeftDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭时功能区域保持在右侧，竖屏时保持上下布局。'**
+  String get informationPanelOnLeftDesc;
+
   /// No description provided for @workspaceMenuOnRight.
   ///
   /// In zh, this message translates to:

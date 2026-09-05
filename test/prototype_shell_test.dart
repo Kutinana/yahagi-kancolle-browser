@@ -785,6 +785,38 @@ void main() {
       );
     }
 
+    final informationPanel = find.byKey(
+      const Key('workspace-information-panel'),
+    );
+    for (final menuOnRight in <bool>[false, true]) {
+      await layoutSettingsController.setWorkspaceMenuOnRight(menuOnRight);
+      for (final onLeft in <bool>[true, false]) {
+        await layoutSettingsController.setInformationPanelOnLeft(onLeft);
+        await tester.pumpAndSettle();
+        final panelRect = tester.getRect(informationPanel);
+        final gameRect = tester.getRect(gameSurface);
+        if (onLeft) {
+          expect(panelRect.right, lessThanOrEqualTo(gameRect.left));
+        } else {
+          expect(panelRect.left, greaterThanOrEqualTo(gameRect.right));
+        }
+        expect(disposeCount, 0);
+        expect(deactivateCount, 0);
+        expect(tester.element(gameSurface), same(originalGameSurfaceElement));
+        expect(tester.takeException(), isNull);
+      }
+    }
+    await layoutSettingsController.setInformationPanelOnLeft(true);
+    tester.view.physicalSize = const Size(700, 900);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(informationPanel).top,
+      greaterThanOrEqualTo(tester.getRect(gameSurface).bottom),
+    );
+    tester.view.physicalSize = const Size(1400, 720);
+    await layoutSettingsController.setInformationPanelOnLeft(false);
+    await tester.pumpAndSettle();
+
     await layoutSettingsController.setWorkspaceMenuOnRight(true);
     await tester.pumpAndSettle();
 

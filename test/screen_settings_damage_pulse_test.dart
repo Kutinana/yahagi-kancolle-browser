@@ -10,6 +10,54 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart'
 import 'package:yahagi_kancolle_browser/src/settings/screen_settings_page.dart';
 
 void main() {
+  testWidgets('information panel switch and reset affect panel preferences', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    await controller.setDashboardCardOrder(
+      LayoutSettingsStore.defaultDashboardCardOrder.reversed.toList(),
+    );
+    await controller.toggleDashboardCardCollapsed('fleet');
+    final display = await DisplayModeController.load(MemoryDisplayModeStore());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ScreenSettingsPage(
+          layoutSettingsController: controller,
+          displayModeController: display,
+        ),
+      ),
+    );
+    final label = find.byKey(const Key('settings-information-panel-left'));
+    await tester.ensureVisible(label);
+    final row = find.ancestor(of: label, matching: find.byType(Row)).first;
+    await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
+    await tester.pump();
+    expect(controller.informationPanelOnLeft, isTrue);
+    expect(controller.workspaceMenuOnRight, isFalse);
+    await tester.tap(
+      find.byKey(const Key('settings-reset-dashboard-card-order')),
+    );
+    await tester.pump();
+    expect(
+      controller.dashboardCardOrder,
+      LayoutSettingsStore.defaultDashboardCardOrder,
+    );
+    expect(controller.dashboardCardCollapsed, contains('fleet'));
+    expect(controller.informationPanelOnLeft, isTrue);
+    final reloaded = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(
+      reloaded.dashboardCardOrder,
+      LayoutSettingsStore.defaultDashboardCardOrder,
+    );
+    expect(reloaded.informationPanelOnLeft, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('screen settings expose background audio playback switch', (
     tester,
   ) async {

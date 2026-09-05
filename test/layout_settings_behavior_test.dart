@@ -5,6 +5,21 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
 void main() {
+  test('information panel defaults right and persists both sides', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    var controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(controller.informationPanelOnLeft, isFalse);
+    for (final onLeft in <bool>[true, false]) {
+      await controller.setInformationPanelOnLeft(onLeft);
+      controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(controller.informationPanelOnLeft, onLeft);
+    }
+  });
+
   test(
     'fleet morale metric mode defaults and persists across reloads',
     () async {

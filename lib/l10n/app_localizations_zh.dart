@@ -216,6 +216,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get enhancedDamagePulseDesc => '按小破、中破、大破增强颜色、速度和头像内部光效。关闭后使用普通效果。';
 
   @override
+  String get informationPanelOnLeft => '功能区域置于左侧';
+
+  @override
+  String get informationPanelOnLeftDesc => '关闭时功能区域保持在右侧，竖屏时保持上下布局。';
+
+  @override
   String get workspaceMenuOnRight => '菜单栏置于右侧';
 
   @override
@@ -3116,6 +3122,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get enhancedDamagePulseDesc => '依小破、中破、大破增強顏色、速度與頭像內部光效。關閉後使用普通效果。';
+
+  @override
+  String get informationPanelOnLeft => '功能區域置於左側';
+
+  @override
+  String get informationPanelOnLeftDesc => '關閉時功能區域保持在右側，直向時保持上下配置。';
 
   @override
   String get workspaceMenuOnRight => '選單列置於右側';
