@@ -4,6 +4,26 @@ import 'package:yahagi_kancolle_browser/src/logbook/battle_detail_page.dart';
 import 'fixtures/battle_detail_ui_sample.dart';
 
 void main() {
+  testWidgets('header tabs match title typography with compact capsules', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BattleDetailPage(detail: sampleBattle(false), onBack: () {}),
+      ),
+    );
+    final title = tester.widget<Text>(find.text('战斗详情 · 1-1 C点'));
+    for (final tab in ['舰队', '战斗过程']) {
+      final text = tester.widget<Text>(find.text(tab));
+      expect(text.style!.fontSize, title.style!.fontSize);
+      expect(text.style!.fontWeight, title.style!.fontWeight);
+    }
+    expect(
+      tester.getSize(find.byKey(const Key('detail-tabs'))).height,
+      lessThanOrEqualTo(40),
+    );
+  });
+
   Widget app() => MaterialApp(
     home: BattleDetailPage(detail: sampleBattle(true), onBack: () {}),
   );

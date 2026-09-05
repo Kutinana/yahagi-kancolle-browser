@@ -11,6 +11,7 @@ const friend = Color(0xff91d8f3);
 const enemy = Color(0xffffaaa3);
 const gold = Color(0xffffd977);
 const healthy = Color(0xff4dbb8b);
+const _headerFontSize = 15.0;
 
 Text label(
   String value, {
@@ -78,7 +79,7 @@ class _BattleDetailPageState extends State<BattleDetailPage> {
         for (var i = 0; i < 2; i++)
           SizedBox(
             width: i == 0 ? 70 : 96,
-            height: 40,
+            height: 32,
             child: TextButton(
               key: Key(
                 i == 0
@@ -96,6 +97,7 @@ class _BattleDetailPageState extends State<BattleDetailPage> {
               onPressed: () => setState(() => tab = i),
               child: label(
                 i == 0 ? '舰队' : '战斗过程',
+                size: _headerFontSize,
                 color: tab == i ? gold : muted,
                 bold: true,
               ),
@@ -134,7 +136,7 @@ class _BattleDetailPageState extends State<BattleDetailPage> {
                     children: [
                       label(
                         '战斗详情 · ${detail.mapLabel} ${detail.nodeLabel}',
-                        size: 15,
+                        size: _headerFontSize,
                         bold: true,
                       ),
                       Row(
@@ -474,7 +476,9 @@ class _AttackReport extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
           child: LayoutBuilder(
             builder: (context, box) {
-              final wide = box.maxWidth >= 660;
+              // Keep the result beside the attack at every device width.
+              // Narrow viewports give the result more room for its badges.
+              final compact = box.maxWidth < 480;
               final summary = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -532,7 +536,6 @@ class _AttackReport extends StatelessWidget {
                       Tag(
                         missed ? '未命中' : '造成 ${a.totalDamage} 伤害',
                         color: missed ? muted : gold,
-                        size: 13,
                         pill: true,
                       ),
                       if (critical && !missed)
@@ -548,31 +551,23 @@ class _AttackReport extends StatelessWidget {
                 ],
               );
               return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 3,
-                    height: wide ? 54 : 96,
+                    height: 54,
                     color: accent.withValues(alpha: .65),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: wide
-                        ? Row(
-                            children: [
-                              Expanded(flex: 6, child: summary),
-                              const SizedBox(width: 20),
-                              Expanded(flex: 4, child: ending),
-                            ],
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              summary,
-                              const SizedBox(height: 10),
-                              ending,
-                            ],
-                          ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: compact ? 4 : 6, child: summary),
+                        SizedBox(width: compact ? 12 : 20),
+                        Expanded(flex: compact ? 6 : 4, child: ending),
+                      ],
+                    ),
                   ),
                 ],
               );
@@ -628,9 +623,26 @@ class _FleetCard extends StatelessWidget {
 class _ShipCard extends StatelessWidget {
   const _ShipCard({required this.ship});
   final BattleDetailShip ship;
+
+  String? get damageStatus {
+    if (ship.hpUnknown || ship.maxHp <= 0 || ship.finalHp < 0) return null;
+    final hp = ship.finalHp;
+    if (hp == 0) return '击沉';
+    if (hp * 4 <= ship.maxHp) return '大破';
+    if (hp * 2 <= ship.maxHp) return '中破';
+    if (hp * 4 <= ship.maxHp * 3) return '小破';
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = ship;
+    final status = damageStatus;
+    final statusColor = status == '小破'
+        ? gold
+        : status == '中破'
+        ? const Color(0xffffb45e)
+        : enemy;
     final ratio = s.maxHp <= 0 ? 0.0 : (s.finalHp / s.maxHp).clamp(0.0, 1.0);
     final hpColor = s.hpUnknown
         ? muted
@@ -652,10 +664,19 @@ class _ShipCard extends StatelessWidget {
               Tag((s.position + 1).toString(), color: friend),
               const SizedBox(width: 8),
               Expanded(
-                child: label(
-                  s.name + (s.level == null ? '' : '  Lv.${s.level}'),
-                  size: 13,
-                  bold: true,
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    label(
+                      s.name + (s.level == null ? '' : '  Lv.${s.level}'),
+                      size: 13,
+                      bold: true,
+                    ),
+                    if (status != null)
+                      Tag(status, color: statusColor, pill: true),
+                  ],
                 ),
               ),
               const SizedBox(width: 6),
