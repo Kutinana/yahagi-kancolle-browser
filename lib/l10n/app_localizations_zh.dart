@@ -2772,6 +2772,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get equipmentDevelopment => '装备开发';
 
   @override
+  String get development => '开发';
+
+  @override
   String get developmentCommandTitle => '开发指挥台';
 
   @override
@@ -5679,6 +5682,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get equipmentDevelopment => '裝備開發';
+
+  @override
+  String get development => '開發';
 
   @override
   String get developmentCommandTitle => '開發指揮台';

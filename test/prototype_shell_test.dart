@@ -455,9 +455,10 @@ void main() {
     await gameStateController.idle;
     await tester.pumpAndSettle();
     expect(find.textContaining('"hqlv":77'), findsOneWidget);
-    await tester.tap(
-      find.byKey(const Key('toolbox-mode-equipmentDevelopment')),
-    );
+    expect(find.byKey(const Key('toolbox-mode-tabs')), findsNothing);
+    await tester.tap(find.byKey(const Key('workspace-nav-construction')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('construction-mode-development')));
     await tester.pump();
     expect(find.byType(EquipmentDevelopmentPage), findsOneWidget);
     gameCaptureController.dispose();

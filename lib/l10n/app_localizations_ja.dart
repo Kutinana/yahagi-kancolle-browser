@@ -2797,6 +2797,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get equipmentDevelopment => '装備開発';
 
   @override
+  String get development => '開発';
+
+  @override
   String get developmentCommandTitle => '開発指揮卓';
 
   @override

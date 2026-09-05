@@ -1,16 +1,12 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
-import 'package:yahagi_kancolle_browser/src/development/development_workbench_state_store.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/external_fleet_tool_launcher.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/fleet_export_page.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
-import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
-import 'package:yahagi_kancolle_browser/src/development/development_repository.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
@@ -329,31 +325,6 @@ void main() {
     },
   );
 
-  testWidgets('equipment development mode opens the native dashboard', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _testApp(
-        ToolboxPage(
-          state: const GameState(),
-          mode: ToolboxMode.equipmentDevelopment,
-          developmentRepository: DevelopmentRepository(
-            loadString: (_) async => File(
-              'assets/data/development/development_snapshot.json',
-            ).readAsStringSync(),
-          ),
-          developmentStateStore: _EmptyDevelopmentStateStore(),
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(find.byType(FleetExportPage), findsNothing);
-    expect(find.byType(EquipmentDevelopmentPage), findsOneWidget);
-    expect(find.text('开发工作台'), findsOneWidget);
-  });
-
   testWidgets('uses two columns in landscape and one column when narrow', (
     tester,
   ) async {
@@ -377,15 +348,6 @@ void main() {
     expect(find.byKey(const Key('fleet-export-one-column')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-}
-
-final class _EmptyDevelopmentStateStore
-    implements DevelopmentWorkbenchStateStore {
-  @override
-  Future<DevelopmentWorkbenchState?> load() async => null;
-
-  @override
-  Future<void> save(DevelopmentWorkbenchState state) async {}
 }
 
 Widget _testApp(Widget child) => MaterialApp(

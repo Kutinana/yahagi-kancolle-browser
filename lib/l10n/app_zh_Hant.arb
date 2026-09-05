@@ -959,6 +959,7 @@
   "@shipEquipmentCompatibilityOwnedCount": {"placeholders": {"count": {"type": "int"}}},
   "shipEquipmentCompatibilityEmpty": "找不到可裝備的裝備",
   "equipmentDevelopment": "裝備開發",
+  "development": "開發",
   "developmentCommandTitle": "開發指揮台",
   "developmentWorkbenchTitle": "開發工作台",
   "developmentCalculator": "開發計算器",

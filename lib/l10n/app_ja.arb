@@ -959,6 +959,7 @@
   "@shipEquipmentCompatibilityOwnedCount": {"placeholders": {"count": {"type": "int"}}},
   "shipEquipmentCompatibilityEmpty": "装備可能な装備が見つかりません",
   "equipmentDevelopment": "装備開発",
+  "development": "開発",
   "developmentCommandTitle": "開発指揮卓",
   "developmentWorkbenchTitle": "開発ワークベンチ",
   "developmentCalculator": "開発計算機",

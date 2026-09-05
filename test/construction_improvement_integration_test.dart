@@ -36,14 +36,29 @@ void main() {
         findsOneWidget,
       );
       expect(
+        find.byKey(const Key('construction-mode-development')),
+        findsOneWidget,
+      );
+      expect(
         find.byKey(const Key('construction-mode-improvement')),
         findsOneWidget,
       );
+      final construction = tester.getRect(
+        find.byKey(const Key('construction-mode-construction')),
+      );
+      final development = tester.getRect(
+        find.byKey(const Key('construction-mode-development')),
+      );
+      final improvement = tester.getRect(
+        find.byKey(const Key('construction-mode-improvement')),
+      );
+      expect(construction.left, lessThan(development.left));
+      expect(development.left, lessThan(improvement.left));
       expect(mode, ConstructionCenterMode.construction);
 
-      await tester.tap(find.byKey(const Key('construction-mode-improvement')));
+      await tester.tap(find.byKey(const Key('construction-mode-development')));
       await tester.pump();
-      expect(mode, ConstructionCenterMode.improvement);
+      expect(mode, ConstructionCenterMode.development);
     },
   );
 }

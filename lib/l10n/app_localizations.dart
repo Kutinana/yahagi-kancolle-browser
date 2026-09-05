@@ -5212,6 +5212,12 @@ abstract class AppLocalizations {
   /// **'装备开发'**
   String get equipmentDevelopment;
 
+  /// No description provided for @development.
+  ///
+  /// In zh, this message translates to:
+  /// **'开发'**
+  String get development;
+
   /// No description provided for @developmentCommandTitle.
   ///
   /// In zh, this message translates to:

@@ -7,7 +7,6 @@ import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart
 import 'package:yahagi_kancolle_browser/src/quest/quest_center_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_state.dart';
-import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
 
 Widget _localizedApp({required Widget home, Locale? locale}) => MaterialApp(
   locale: locale,
@@ -203,6 +202,9 @@ void main() {
           .data,
       '建造',
     );
+    expect(find.text('建造'), findsWidgets);
+    expect(find.text('开发'), findsOneWidget);
+    expect(find.text('改修'), findsOneWidget);
   });
 
   testWidgets('senka workspace shows the formal page title and tabs', (
@@ -428,8 +430,9 @@ void main() {
     expect(selectedTab, 1);
   });
 
-  testWidgets('toolbox puts its mode switch in the top right', (tester) async {
-    ToolboxMode? selectedMode;
+  testWidgets('toolbox header no longer exposes development mode', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _localizedApp(
         home: Scaffold(
@@ -437,8 +440,6 @@ void main() {
             workspaceIndex: 10,
             state: const GameState(),
             selectedFleetId: 1,
-            toolboxMode: ToolboxMode.fleetExport,
-            onToolboxModeChanged: (value) => selectedMode = value,
           ),
         ),
       ),
@@ -446,18 +447,8 @@ void main() {
 
     expect(find.byKey(const Key('workspace-title-tools')), findsOneWidget);
     expect(find.text('工具箱'), findsOneWidget);
-    expect(find.byKey(const Key('toolbox-mode-tabs')), findsOneWidget);
-    expect(find.text('舰队导出'), findsOneWidget);
-    expect(find.text('装备开发'), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const Key('toolbox-mode-tabs'))).height,
-      38,
-    );
-
-    await tester.tap(
-      find.byKey(const Key('toolbox-mode-equipmentDevelopment')),
-    );
-    expect(selectedMode, ToolboxMode.equipmentDevelopment);
+    expect(find.byKey(const Key('toolbox-mode-tabs')), findsNothing);
+    expect(find.text('装备开发'), findsNothing);
   });
 
   testWidgets('Japanese toolbox header fits a narrow workspace', (
@@ -481,7 +472,7 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('toolbox-mode-tabs')), findsOneWidget);
+    expect(find.byKey(const Key('workspace-title-tools')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

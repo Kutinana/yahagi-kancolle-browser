@@ -979,7 +979,6 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   ConstructionCenterMode _constructionCenterMode =
       ConstructionCenterMode.construction;
   SenkaCenterMode _senkaCenterMode = SenkaCenterMode.info;
-  ToolboxMode _toolboxMode = ToolboxMode.fleetExport;
   final DevelopmentRepository _developmentRepository = DevelopmentRepository();
   BackgroundGameRetentionCoordinator? _backgroundGameRetentionCoordinator;
 
@@ -1396,10 +1395,6 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     onSenkaModeChanged: (mode) {
                                       setState(() => _senkaCenterMode = mode);
                                     },
-                                    toolboxMode: _toolboxMode,
-                                    onToolboxModeChanged: (mode) {
-                                      setState(() => _toolboxMode = mode);
-                                    },
                                   ),
                                 ),
                               ),
@@ -1739,6 +1734,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             page: FleetInformationPage.construction,
                             showContextHeader: false,
                             constructionMode: _constructionCenterMode,
+                            developmentRepository: _developmentRepository,
                             improvementController:
                                 widget.improvementPlannerController,
                           ),
@@ -1851,8 +1847,6 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             animation: widget.gameStateController,
                             builder: (context, _) => ToolboxPage(
                               state: widget.gameStateController.state,
-                              mode: _toolboxMode,
-                              developmentRepository: _developmentRepository,
                             ),
                           ),
                       ],

@@ -19,6 +19,9 @@ import 'ship_status_style.dart';
 import 'ship_status_visuals.dart';
 import 'status_density.dart';
 import '../expedition/expedition_check_page.dart';
+import '../development/development_repository.dart';
+import '../development/development_workbench_state_store.dart';
+import '../development/equipment_development_page.dart';
 import '../improvement/improvement_planner_controller.dart';
 import '../improvement/improvement_planner_view.dart';
 import '../performance/second_tick_scope.dart';
@@ -54,6 +57,8 @@ class FleetInformationCenter extends StatefulWidget {
     this.moraleSparkleEnabled = true,
     this.clock,
     this.constructionMode = ConstructionCenterMode.construction,
+    this.developmentRepository,
+    this.developmentStateStore,
     this.improvementController,
     this.moraleRecoveryTimerController,
     this.moraleMetricMode = FleetMoraleMetricMode.minimumCondition,
@@ -74,6 +79,8 @@ class FleetInformationCenter extends StatefulWidget {
   final bool moraleSparkleEnabled;
   final DateTime Function()? clock;
   final ConstructionCenterMode constructionMode;
+  final DevelopmentRepository? developmentRepository;
+  final DevelopmentWorkbenchStateStore? developmentStateStore;
   final ImprovementPlannerController? improvementController;
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final FleetMoraleMetricMode moraleMetricMode;
@@ -163,14 +170,23 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
                         showModeTabs: widget.showRepairModeTabs,
                       ),
                       FleetInformationPage.construction =>
-                        widget.constructionMode ==
-                                    ConstructionCenterMode.improvement &&
-                                widget.improvementController != null
-                            ? ImprovementPlannerView(
-                                controller: widget.improvementController!,
-                                state: state,
-                              )
-                            : ConstructionDockStatusView(state: state),
+                        switch (widget.constructionMode) {
+                          ConstructionCenterMode.construction =>
+                            ConstructionDockStatusView(state: state),
+                          ConstructionCenterMode.development =>
+                            EquipmentDevelopmentPage(
+                              state: state,
+                              repository: widget.developmentRepository,
+                              stateStore: widget.developmentStateStore,
+                            ),
+                          ConstructionCenterMode.improvement =>
+                            widget.improvementController != null
+                                ? ImprovementPlannerView(
+                                    controller: widget.improvementController!,
+                                    state: state,
+                                  )
+                                : ConstructionDockStatusView(state: state),
+                        },
                     },
                   ),
               ],

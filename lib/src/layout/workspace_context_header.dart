@@ -15,8 +15,6 @@ import '../quest/quest_center_page.dart';
 import '../settings/layout_settings_controller.dart';
 import '../senka/senka_page.dart' show SenkaCenterMode, senkaCenterModeLabel;
 import '../senka/senka_state.dart';
-import '../toolbox/toolbox_mode_tabs.dart';
-import '../toolbox/toolbox_page.dart';
 
 class WorkspaceContextHeader extends StatelessWidget {
   const WorkspaceContextHeader({
@@ -52,8 +50,6 @@ class WorkspaceContextHeader extends StatelessWidget {
     this.onConstructionModeChanged,
     this.senkaMode = SenkaCenterMode.info,
     this.onSenkaModeChanged,
-    this.toolboxMode = ToolboxMode.fleetExport,
-    this.onToolboxModeChanged,
     this.layoutSettingsController,
   });
 
@@ -88,8 +84,6 @@ class WorkspaceContextHeader extends StatelessWidget {
   final ValueChanged<ConstructionCenterMode>? onConstructionModeChanged;
   final SenkaCenterMode senkaMode;
   final ValueChanged<SenkaCenterMode>? onSenkaModeChanged;
-  final ToolboxMode toolboxMode;
-  final ValueChanged<ToolboxMode>? onToolboxModeChanged;
   final LayoutSettingsController? layoutSettingsController;
 
   @override
@@ -323,35 +317,14 @@ class WorkspaceContextHeader extends StatelessWidget {
       );
     }
     if (workspaceIndex == 10) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final showTitle = constraints.maxWidth >= 360;
-          return Row(
-            children: [
-              if (showTitle) ...[
-                Text(
-                  l10n.toolbox,
-                  key: const Key('workspace-title-tools'),
-                  style: const TextStyle(
-                    color: Color(0xffe0b25c),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: ToolboxModeTabs(
-                    mode: toolboxMode,
-                    onChanged: onToolboxModeChanged ?? (_) {},
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+      return Text(
+        l10n.toolbox,
+        key: const Key('workspace-title-tools'),
+        style: const TextStyle(
+          color: Color(0xffe0b25c),
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+        ),
       );
     }
 
@@ -434,9 +407,12 @@ class ConstructionModeTabs extends StatelessWidget {
                   onTap: () => onChanged(value),
                   child: Center(
                     child: Text(
-                      value == ConstructionCenterMode.construction
-                          ? l10n.construction
-                          : l10n.improvement,
+                      switch (value) {
+                        ConstructionCenterMode.construction =>
+                          l10n.construction,
+                        ConstructionCenterMode.development => l10n.development,
+                        ConstructionCenterMode.improvement => l10n.improvement,
+                      },
                       style: TextStyle(
                         color: mode == value
                             ? const Color(0xffffdc88)

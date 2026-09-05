@@ -9,7 +9,7 @@ import 'improvement_favorites_store.dart';
 import 'improvement_projection.dart';
 import 'improvement_dataset_update_service.dart';
 
-enum ConstructionCenterMode { construction, improvement }
+enum ConstructionCenterMode { construction, development, improvement }
 
 class ImprovementPlannerController extends ChangeNotifier {
   ImprovementPlannerController({
