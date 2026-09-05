@@ -1,11 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/fleet_information_center.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/improvement/improvement_planner_controller.dart';
 import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart';
 
 void main() {
+  testWidgets('development is available without port data', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: FleetInformationCenter(
+            controller: controller,
+            page: FleetInformationPage.construction,
+            constructionMode: ConstructionCenterMode.development,
+            showContextHeader: false,
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(EquipmentDevelopmentPage), findsOneWidget);
+    expect(find.text('等待母港数据'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets(
     'construction header defaults to construction and switches mode',
     (tester) async {

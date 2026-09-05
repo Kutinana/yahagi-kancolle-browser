@@ -127,7 +127,10 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
                     expeditionMode: widget.expeditionMode,
                     onExpeditionModeChanged: widget.onExpeditionModeChanged,
                   ),
-                if (!state.hasPortData)
+                if (!state.hasPortData &&
+                    !(widget.page == FleetInformationPage.construction &&
+                        widget.constructionMode ==
+                            ConstructionCenterMode.development))
                   const Expanded(child: _WaitingState())
                 else
                   Expanded(
