@@ -28,6 +28,7 @@ class DisplayModeSection extends StatelessWidget {
             DropdownButton<DisplayMode>(
               value: controller.displayMode,
               underline: const SizedBox(),
+              alignment: AlignmentDirectional.centerEnd,
               items: [
                 DropdownMenuItem(
                   value: DisplayMode.auto,

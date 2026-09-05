@@ -40,6 +40,36 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('moraleSparkleSwitch')), findsOneWidget);
+
+    final scopeDropdownWidget = tester
+        .widget<DropdownButton<BattleEffectDisplayScope>>(
+          find.byKey(const Key('battleEffectScopeDropdown')),
+        );
+    final pulseDropdownWidget = tester.widget<DropdownButton<DamagePulseFilter>>(
+      find.byKey(const Key('damagePulseFilterDropdown')),
+    );
+    final vibrationDropdownWidget = tester
+        .widget<DropdownButton<DamageVibrationFilter>>(
+          find.byKey(const Key('damageVibrationFilterDropdown')),
+        );
+
+    expect(scopeDropdownWidget.alignment, AlignmentDirectional.centerEnd);
+    expect(pulseDropdownWidget.alignment, AlignmentDirectional.centerEnd);
+    expect(vibrationDropdownWidget.alignment, AlignmentDirectional.centerEnd);
+
+    final scopeText = tester.getRect(
+      find.descendant(
+        of: find.byKey(const Key('battleEffectScopeDropdown')),
+        matching: find.text('全部'),
+      ),
+    );
+    final scopeIcon = tester.getRect(
+      find.descendant(
+        of: find.byKey(const Key('battleEffectScopeDropdown')),
+        matching: find.byIcon(Icons.arrow_drop_down),
+      ),
+    );
+    expect(scopeText.right, closeTo(scopeIcon.left, 0.5));
   });
 
   testWidgets('master switch disables children without changing their values', (

@@ -53,6 +53,7 @@ class BattleSettingsPage extends StatelessWidget with SettingsUIHelpers {
                       DropdownButton<BattleWarningMode>(
                         value: safetySettingsController.battleWarningMode,
                         underline: const SizedBox(),
+                        alignment: AlignmentDirectional.centerEnd,
                         items: [
                           DropdownMenuItem(
                             value: BattleWarningMode.off,
@@ -103,6 +104,7 @@ class BattleSettingsPage extends StatelessWidget with SettingsUIHelpers {
                           key: const Key('battleEffectScopeDropdown'),
                           value: settings.displayScope,
                           underline: const SizedBox(),
+                          alignment: AlignmentDirectional.centerEnd,
                           items: BattleEffectDisplayScope.values
                               .map(
                                 (value) => DropdownMenuItem(
@@ -130,6 +132,7 @@ class BattleSettingsPage extends StatelessWidget with SettingsUIHelpers {
                           key: const Key('damagePulseFilterDropdown'),
                           value: settings.damagePulseFilter,
                           underline: const SizedBox(),
+                          alignment: AlignmentDirectional.centerEnd,
                           items: DamagePulseFilter.values
                               .map(
                                 (value) => DropdownMenuItem(
@@ -157,6 +160,7 @@ class BattleSettingsPage extends StatelessWidget with SettingsUIHelpers {
                           key: const Key('damageVibrationFilterDropdown'),
                           value: settings.damageVibrationFilter,
                           underline: const SizedBox(),
+                          alignment: AlignmentDirectional.centerEnd,
                           items: DamageVibrationFilter.values
                               .map(
                                 (value) => DropdownMenuItem(

@@ -79,6 +79,7 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                           DropdownButton<String>(
                             value: layoutSettingsController.localeCode ?? 'zh',
                             underline: const SizedBox(),
+                            alignment: AlignmentDirectional.centerEnd,
                             items: [
                               DropdownMenuItem(
                                 value: 'zh',

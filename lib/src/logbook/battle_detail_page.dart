@@ -67,19 +67,19 @@ class _BattleDetailPageState extends State<BattleDetailPage> {
 
   Widget _tabs() => Container(
     key: const Key('detail-tabs'),
-    padding: const EdgeInsets.all(3),
+    padding: const EdgeInsets.all(2),
     decoration: BoxDecoration(
       color: ink,
       border: Border.all(color: border),
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 0; i < 2; i++)
           SizedBox(
-            width: i == 0 ? 70 : 96,
-            height: 32,
+            width: i == 0 ? 54 : 74,
+            height: 24,
             child: TextButton(
               key: Key(
                 i == 0
@@ -97,7 +97,7 @@ class _BattleDetailPageState extends State<BattleDetailPage> {
               onPressed: () => setState(() => tab = i),
               child: label(
                 i == 0 ? '舰队' : '战斗过程',
-                size: _headerFontSize,
+                size: 12,
                 color: tab == i ? gold : muted,
                 bold: true,
               ),
@@ -112,7 +112,8 @@ class _BattleDetailPageState extends State<BattleDetailPage> {
       final inline = box.maxWidth >= 640;
       final detail = widget.detail;
       return Container(
-        padding: const EdgeInsets.fromLTRB(4, 5, 12, 5),
+        key: const Key('battle-detail-header'),
+        padding: const EdgeInsets.fromLTRB(4, 3, 12, 3),
         decoration: const BoxDecoration(
           color: panel,
           border: Border(bottom: BorderSide(color: border)),
@@ -122,16 +123,30 @@ class _BattleDetailPageState extends State<BattleDetailPage> {
           children: [
             Row(
               children: [
-                IconButton(
-                  key: const Key('battle-detail-back'),
-                  tooltip: '返回出击记录',
-                  onPressed: widget.onBack,
-                  icon: const Icon(Icons.arrow_back_rounded, color: friend),
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: IconButton(
+                    key: const Key('battle-detail-back'),
+                    tooltip: '返回出击记录',
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: widget.onBack,
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: friend,
+                      size: 20,
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: Wrap(
                     spacing: 6,
-                    runSpacing: 5,
+                    runSpacing: 3,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       label(
@@ -249,39 +264,55 @@ class _BattleDetailPageState extends State<BattleDetailPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
           child: Wrap(
             spacing: 8,
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              for (var i = 0; i < 3; i++)
-                ChoiceChip(
-                  key: Key(
-                    [
-                      'battle-detail-filter-all',
-                      'battle-detail-filter-friend',
-                      'battle-detail-filter-enemy',
-                    ][i],
-                  ),
-                  showCheckmark: false,
-                  label: Text(['全部', '我方攻击', '敌方攻击'][i]),
-                  selected: filter == i,
-                  onSelected: (_) => setState(() => filter = i),
-                  labelStyle: TextStyle(
-                    color: filter == i ? friend : muted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  backgroundColor: panel,
-                  selectedColor: const Color(0xff194356),
-                  side: BorderSide(
-                    color: filter == i ? friend.withValues(alpha: .5) : border,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              Container(
+                key: const Key('battle-detail-filter-container'),
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: ink,
+                  border: Border.all(color: border),
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < 3; i++)
+                      SizedBox(
+                        width: i == 0 ? 54 : 74,
+                        height: 24,
+                        child: TextButton(
+                          key: Key(
+                            [
+                              'battle-detail-filter-all',
+                              'battle-detail-filter-friend',
+                              'battle-detail-filter-enemy',
+                            ][i],
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: filter == i ? gold : muted,
+                            backgroundColor: filter == i
+                                ? const Color(0xff806024)
+                                : Colors.transparent,
+                            padding: EdgeInsets.zero,
+                            shape: const StadiumBorder(),
+                          ),
+                          onPressed: () => setState(() => filter = i),
+                          child: label(
+                            ['全部', '我方攻击', '敌方攻击'][i],
+                            size: 12,
+                            color: filter == i ? gold : muted,
+                            bold: true,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
               label('按发生顺序', color: muted, size: 11),
             ],
           ),
@@ -407,7 +438,7 @@ class Tag extends StatelessWidget {
   final bool pill;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
     decoration: BoxDecoration(
       color: color.withValues(alpha: .10),
       border: Border.all(color: color.withValues(alpha: .28)),

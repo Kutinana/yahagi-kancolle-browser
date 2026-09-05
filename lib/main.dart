@@ -978,6 +978,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   ExpeditionSummaryMode _expeditionCenterMode = ExpeditionSummaryMode.summary;
   ConstructionCenterMode _constructionCenterMode =
       ConstructionCenterMode.construction;
+  DevelopmentWorkbenchMode _developmentWorkbenchMode =
+      DevelopmentWorkbenchMode.calculator;
   SenkaCenterMode _senkaCenterMode = SenkaCenterMode.info;
   final DevelopmentRepository _developmentRepository = DevelopmentRepository();
   BackgroundGameRetentionCoordinator? _backgroundGameRetentionCoordinator;
@@ -1387,8 +1389,21 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     },
                                     constructionMode: _constructionCenterMode,
                                     onConstructionModeChanged: (mode) {
+                                      setState(() {
+                                        _constructionCenterMode = mode;
+                                        if (mode ==
+                                            ConstructionCenterMode
+                                                .development) {
+                                          _developmentWorkbenchMode =
+                                              DevelopmentWorkbenchMode
+                                                  .calculator;
+                                        }
+                                      });
+                                    },
+                                    developmentMode: _developmentWorkbenchMode,
+                                    onDevelopmentModeChanged: (mode) {
                                       setState(
-                                        () => _constructionCenterMode = mode,
+                                        () => _developmentWorkbenchMode = mode,
                                       );
                                     },
                                     senkaMode: _senkaCenterMode,
@@ -1735,6 +1750,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             showContextHeader: false,
                             constructionMode: _constructionCenterMode,
                             developmentRepository: _developmentRepository,
+                            developmentMode: _developmentWorkbenchMode,
+                            onDevelopmentModeChanged: (mode) {
+                              setState(() => _developmentWorkbenchMode = mode);
+                            },
                             improvementController:
                                 widget.improvementPlannerController,
                           ),

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/combat_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
+import 'package:yahagi_kancolle_browser/src/improvement/improvement_planner_controller.dart'
+    show ConstructionCenterMode;
 import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart';
 import 'package:yahagi_kancolle_browser/src/quest/quest_center_page.dart';
 import 'package:yahagi_kancolle_browser/src/senka/senka_page.dart';
@@ -206,6 +208,79 @@ void main() {
     expect(find.text('开发'), findsOneWidget);
     expect(find.text('改修'), findsOneWidget);
   });
+
+  testWidgets(
+    'construction workspace only shows development calculator and formula tabs when in development mode',
+    (tester) async {
+      var constructionMode = ConstructionCenterMode.construction;
+      var developmentMode = DevelopmentWorkbenchMode.calculator;
+
+      await tester.pumpWidget(
+        _localizedApp(
+          home: StatefulBuilder(
+            builder: (context, setState) => Scaffold(
+              body: WorkspaceContextHeader(
+                workspaceIndex: 4,
+                state: state,
+                selectedFleetId: 1,
+                constructionMode: constructionMode,
+                onConstructionModeChanged: (mode) {
+                  setState(() => constructionMode = mode);
+                },
+                developmentMode: developmentMode,
+                onDevelopmentModeChanged: (mode) {
+                  setState(() => developmentMode = mode);
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // In construction mode, development sub-tabs should not appear
+      expect(
+        find.byKey(const Key('development-workbench-mode-tabs')),
+        findsNothing,
+      );
+
+      // Tap development mode
+      await tester.tap(find.byKey(const Key('construction-mode-development')));
+      await tester.pump();
+
+      expect(constructionMode, ConstructionCenterMode.development);
+      expect(
+        find.byKey(const Key('development-workbench-mode-tabs')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('development-mode-calculator')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('development-mode-formula')),
+        findsOneWidget,
+      );
+
+      // Ensure no icons are inside the development sub-tabs
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('development-workbench-mode-tabs')),
+          matching: find.byType(Icon),
+        ),
+        findsNothing,
+      );
+
+      // Switch to formula
+      await tester.tap(find.byKey(const Key('development-mode-formula')));
+      await tester.pump();
+      expect(developmentMode, DevelopmentWorkbenchMode.formula);
+
+      // Tapping development tab resets/defaults to calculator
+      await tester.tap(find.byKey(const Key('construction-mode-development')));
+      await tester.pump();
+      expect(developmentMode, DevelopmentWorkbenchMode.calculator);
+    },
+  );
 
   testWidgets('senka workspace shows the formal page title and tabs', (
     tester,

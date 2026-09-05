@@ -10,6 +10,9 @@ import 'package:yahagi_kancolle_browser/src/development/development_repository.d
 import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/equipment_type_icon.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
+import 'package:yahagi_kancolle_browser/src/improvement/improvement_planner_controller.dart'
+    show ConstructionCenterMode;
+import 'package:yahagi_kancolle_browser/src/layout/workspace_context_header.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
@@ -26,7 +29,20 @@ void main() {
       );
       expect(find.byKey(const Key('development-mode-formula')), findsOneWidget);
       expect(find.byKey(const Key('development-inline-search')), findsNothing);
-      expect(find.text('开发工作台'), findsOneWidget);
+      expect(find.text('开发工作台'), findsNothing);
+      expect(find.byIcon(Icons.precision_manufacturing), findsNothing);
+      final commandCard = tester.widget<Container>(
+        find.byKey(const Key('development-command-card')),
+      );
+      final cardDecoration = commandCard.decoration as BoxDecoration;
+      expect(cardDecoration.color, const Color(0xff142735));
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('development-workbench-mode-tabs')),
+          matching: find.byType(Icon),
+        ),
+        findsNothing,
+      );
       expect(find.text('出货概率'), findsOneWidget);
       expect(find.text('舰上攻击机'), findsOneWidget);
       expect(find.text('#8'), findsNothing);
@@ -500,18 +516,65 @@ Widget _app({
     ],
     supportedLocales: AppLocalizations.supportedLocales,
     home: TopNoticeHost(
-      child: Scaffold(
-        body: EquipmentDevelopmentPage(
-          state: state,
-          stateStore: stateStore ?? _MemoryDevelopmentWorkbenchStateStore(),
-          repository: DevelopmentRepository(
-            loadString: (_) async => jsonEncode(_snapshot),
-          ),
+      child: _TestAppHost(
+        state: state,
+        stateStore: stateStore ?? _MemoryDevelopmentWorkbenchStateStore(),
+        repository: DevelopmentRepository(
+          loadString: (_) async => jsonEncode(_snapshot),
         ),
       ),
     ),
   ),
 );
+
+class _TestAppHost extends StatefulWidget {
+  const _TestAppHost({
+    required this.state,
+    required this.stateStore,
+    required this.repository,
+  });
+
+  final GameState state;
+  final DevelopmentWorkbenchStateStore stateStore;
+  final DevelopmentRepository repository;
+
+  @override
+  State<_TestAppHost> createState() => _TestAppHostState();
+}
+
+class _TestAppHostState extends State<_TestAppHost> {
+  late DevelopmentWorkbenchMode _mode =
+      widget.stateStore is _MemoryDevelopmentWorkbenchStateStore
+          ? (widget.stateStore as _MemoryDevelopmentWorkbenchStateStore)
+                  .state
+                  ?.mode ??
+              DevelopmentWorkbenchMode.calculator
+          : DevelopmentWorkbenchMode.calculator;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(40),
+        child: WorkspaceContextHeader(
+          workspaceIndex: 4,
+          state: widget.state,
+          selectedFleetId: 1,
+          constructionMode: ConstructionCenterMode.development,
+          developmentMode: _mode,
+          onDevelopmentModeChanged: (mode) => setState(() => _mode = mode),
+        ),
+      ),
+      body: EquipmentDevelopmentPage(
+        state: widget.state,
+        mode: _mode,
+        onModeChanged: (mode) => setState(() => _mode = mode),
+        stateStore: widget.stateStore,
+        repository: widget.repository,
+      ),
+    );
+  }
+}
 
 final class _MemoryDevelopmentWorkbenchStateStore
     implements DevelopmentWorkbenchStateStore {

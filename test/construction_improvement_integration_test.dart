@@ -82,10 +82,26 @@ void main() {
       expect(construction.left, lessThan(development.left));
       expect(development.left, lessThan(improvement.left));
       expect(mode, ConstructionCenterMode.construction);
+      expect(
+        find.byKey(const Key('development-workbench-mode-tabs')),
+        findsNothing,
+      );
 
       await tester.tap(find.byKey(const Key('construction-mode-development')));
       await tester.pump();
       expect(mode, ConstructionCenterMode.development);
+      expect(
+        find.byKey(const Key('development-workbench-mode-tabs')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('development-mode-calculator')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('development-mode-formula')),
+        findsOneWidget,
+      );
     },
   );
 }

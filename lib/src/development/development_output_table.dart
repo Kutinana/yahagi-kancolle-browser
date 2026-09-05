@@ -65,8 +65,8 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
     return Container(
       key: const Key('development-output-table'),
       decoration: BoxDecoration(
-        color: const Color(0xff0a222d),
-        border: Border.all(color: const Color(0xff31596a)),
+        color: const Color(0xff0b202d),
+        border: Border.all(color: const Color(0xff294052)),
         borderRadius: BorderRadius.circular(12),
       ),
       clipBehavior: Clip.antiAlias,
@@ -80,7 +80,7 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
           ),
-          const Divider(height: 1, color: Color(0xff31596a)),
+          const Divider(height: 1, color: Color(0xff294052)),
           LayoutBuilder(
             builder: (context, constraints) => SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -88,7 +88,7 @@ class _DevelopmentOutputTableState extends State<DevelopmentOutputTable> {
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
                 child: DataTable(
                   headingRowColor: const WidgetStatePropertyAll(
-                    Color(0xff0d2935),
+                    Color(0xff0e212d),
                   ),
                   headingRowHeight: 34,
                   dataRowMinHeight: 44,

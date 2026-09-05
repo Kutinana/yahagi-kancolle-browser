@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../development/development_workbench_state_store.dart'
+    show DevelopmentWorkbenchMode;
+export '../development/development_workbench_state_store.dart'
+    show DevelopmentWorkbenchMode;
 import '../fleet/fleet_information_center.dart';
 import '../fleet/anchorage_repair_view.dart';
 import '../fleet/expedition_summary_card.dart'
@@ -48,6 +52,8 @@ class WorkspaceContextHeader extends StatelessWidget {
     this.onExpeditionModeChanged,
     this.constructionMode = ConstructionCenterMode.construction,
     this.onConstructionModeChanged,
+    this.developmentMode = DevelopmentWorkbenchMode.calculator,
+    this.onDevelopmentModeChanged,
     this.senkaMode = SenkaCenterMode.info,
     this.onSenkaModeChanged,
     this.layoutSettingsController,
@@ -82,6 +88,8 @@ class WorkspaceContextHeader extends StatelessWidget {
   final ValueChanged<ExpeditionSummaryMode>? onExpeditionModeChanged;
   final ConstructionCenterMode constructionMode;
   final ValueChanged<ConstructionCenterMode>? onConstructionModeChanged;
+  final DevelopmentWorkbenchMode developmentMode;
+  final ValueChanged<DevelopmentWorkbenchMode>? onDevelopmentModeChanged;
   final SenkaCenterMode senkaMode;
   final ValueChanged<SenkaCenterMode>? onSenkaModeChanged;
   final LayoutSettingsController? layoutSettingsController;
@@ -149,10 +157,38 @@ class WorkspaceContextHeader extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const Spacer(),
-          ConstructionModeTabs(
-            mode: constructionMode,
-            onChanged: onConstructionModeChanged ?? (_) {},
+          const SizedBox(width: 8),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (constructionMode ==
+                        ConstructionCenterMode.development) ...[
+                      DevelopmentWorkbenchModeTabs(
+                        mode: developmentMode,
+                        onChanged: onDevelopmentModeChanged ?? (_) {},
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    ConstructionModeTabs(
+                      mode: constructionMode,
+                      onChanged: (newMode) {
+                        if (newMode == ConstructionCenterMode.development) {
+                          onDevelopmentModeChanged?.call(
+                            DevelopmentWorkbenchMode.calculator,
+                          );
+                        }
+                        onConstructionModeChanged?.call(newMode);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       );
@@ -368,6 +404,75 @@ class WorkspaceContextHeader extends StatelessWidget {
 
   static String _ownedInventoryTitle(AppLocalizations l10n) =>
       l10n.ownedInventory;
+}
+
+class DevelopmentWorkbenchModeTabs extends StatelessWidget {
+  const DevelopmentWorkbenchModeTabs({
+    super.key,
+    required this.mode,
+    required this.onChanged,
+  });
+
+  final DevelopmentWorkbenchMode mode;
+  final ValueChanged<DevelopmentWorkbenchMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      key: const Key('development-workbench-mode-tabs'),
+      width: 190,
+      height: 38,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xff0b202d),
+        border: Border.all(color: const Color(0xff315064)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          for (final value in DevelopmentWorkbenchMode.values)
+            Expanded(
+              child: Material(
+                color: mode == value
+                    ? const Color(0xff8a6628)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  key: Key(
+                    switch (value) {
+                      DevelopmentWorkbenchMode.calculator =>
+                        'development-mode-calculator',
+                      DevelopmentWorkbenchMode.formula =>
+                        'development-mode-formula',
+                    },
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => onChanged(value),
+                  child: Center(
+                    child: Text(
+                      switch (value) {
+                        DevelopmentWorkbenchMode.calculator =>
+                          l10n.developmentCalculator,
+                        DevelopmentWorkbenchMode.formula =>
+                          l10n.developmentFormula,
+                      },
+                      style: TextStyle(
+                        color: mode == value
+                            ? const Color(0xffffdc88)
+                            : const Color(0xff9fb3bf),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class ConstructionModeTabs extends StatelessWidget {

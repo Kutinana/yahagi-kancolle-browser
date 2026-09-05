@@ -91,7 +91,9 @@ void main() {
           await tester.pumpAndSettle();
           expect(
             tester
-                .getRect(find.byKey(const Key('battle-detail-filter-all')))
+                .getRect(
+                  find.byKey(const Key('battle-detail-filter-container')),
+                )
                 .left,
             tableLeft,
           );

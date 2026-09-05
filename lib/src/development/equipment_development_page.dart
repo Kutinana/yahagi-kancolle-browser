@@ -21,11 +21,17 @@ class EquipmentDevelopmentPage extends StatefulWidget {
     required this.state,
     this.repository,
     this.stateStore,
+    this.controller,
+    this.mode,
+    this.onModeChanged,
   });
 
   final GameState state;
   final DevelopmentRepository? repository;
   final DevelopmentWorkbenchStateStore? stateStore;
+  final EquipmentDevelopmentController? controller;
+  final DevelopmentWorkbenchMode? mode;
+  final ValueChanged<DevelopmentWorkbenchMode>? onModeChanged;
 
   @override
   State<EquipmentDevelopmentPage> createState() =>
@@ -34,17 +40,27 @@ class EquipmentDevelopmentPage extends StatefulWidget {
 
 class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
   late final EquipmentDevelopmentController controller;
+  late final bool _ownedController;
 
   @override
   void initState() {
     super.initState();
-    controller = EquipmentDevelopmentController(
-      repository: widget.repository ?? DevelopmentRepository(),
-      stateStore:
-          widget.stateStore ??
-          SharedPreferencesDevelopmentWorkbenchStateStore(),
-    )..addListener(_refresh);
-    controller.initialize(widget.state);
+    _ownedController = widget.controller == null;
+    controller =
+        widget.controller ??
+        EquipmentDevelopmentController(
+          repository: widget.repository ?? DevelopmentRepository(),
+          stateStore:
+              widget.stateStore ??
+              SharedPreferencesDevelopmentWorkbenchStateStore(),
+        );
+    if (widget.mode != null) {
+      controller.setMode(widget.mode!);
+    }
+    controller.addListener(_refresh);
+    if (_ownedController) {
+      controller.initialize(widget.state);
+    }
   }
 
   @override
@@ -53,17 +69,24 @@ class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
     if (!identical(oldWidget.state, widget.state)) {
       controller.updateGameState(widget.state);
     }
+    if (widget.mode != null && widget.mode != controller.mode) {
+      controller.setMode(widget.mode!);
+    }
   }
 
   @override
   void dispose() {
-    controller
-      ..removeListener(_refresh)
-      ..dispose();
+    controller.removeListener(_refresh);
+    if (_ownedController) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   void _refresh() {
+    if (widget.mode != null && controller.mode != widget.mode) {
+      controller.setMode(widget.mode!);
+    }
     if (mounted) setState(() {});
   }
 
@@ -92,18 +115,17 @@ class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
       );
     }
     final locale = Localizations.localeOf(context);
+    final activeMode = widget.mode ?? controller.mode;
     return ColoredBox(
-      color: const Color(0xff071820),
+      color: const Color(0xff081521),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
         child: Container(
           key: const Key('development-command-card'),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xff173747), Color(0xff0d2734)],
-            ),
-            border: Border.all(color: const Color(0xff49697a)),
+            color: const Color(0xff142735),
+            border: Border.all(color: const Color(0xff294052)),
             borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
@@ -113,68 +135,9 @@ class _EquipmentDevelopmentPageState extends State<EquipmentDevelopmentPage> {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final title = Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.precision_manufacturing,
-                        color: Color(0xffffc85a),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.developmentWorkbenchTitle,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  );
-                  final selector = SegmentedButton<DevelopmentWorkbenchMode>(
-                    showSelectedIcon: false,
-                    segments: [
-                      ButtonSegment(
-                        value: DevelopmentWorkbenchMode.calculator,
-                        icon: const Icon(Icons.calculate_outlined, size: 17),
-                        label: Text(
-                          l10n.developmentCalculator,
-                          key: const Key('development-mode-calculator'),
-                        ),
-                      ),
-                      ButtonSegment(
-                        value: DevelopmentWorkbenchMode.formula,
-                        icon: const Icon(Icons.table_chart_outlined, size: 17),
-                        label: Text(
-                          l10n.developmentFormula,
-                          key: const Key('development-mode-formula'),
-                        ),
-                      ),
-                    ],
-                    selected: {controller.mode},
-                    onSelectionChanged: (selection) =>
-                        controller.setMode(selection.single),
-                  );
-                  if (constraints.maxWidth >= 620) {
-                    return Row(children: [title, const Spacer(), selector]);
-                  }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [title, const SizedBox(height: 10), selector],
-                  );
-                },
-              ),
-              const SizedBox(height: 14),
-              if (controller.mode == DevelopmentWorkbenchMode.calculator)
-                _CalculatorBody(controller: controller, locale: locale)
-              else
-                _FormulaBody(controller: controller, locale: locale),
-            ],
-          ),
+          child: activeMode == DevelopmentWorkbenchMode.calculator
+              ? _CalculatorBody(controller: controller, locale: locale)
+              : _FormulaBody(controller: controller, locale: locale),
         ),
       ),
     );
@@ -228,7 +191,7 @@ class _CalculatorBody extends StatelessWidget {
               side: BorderSide(
                 color: controller.followsCurrentFlagship
                     ? const Color(0xffd5a44b)
-                    : const Color(0xff49697a),
+                    : const Color(0xff315064),
               ),
             ),
           ],
@@ -432,7 +395,7 @@ class _ResourceInputState extends State<_ResourceInput> {
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: const Color(0xff0a202b),
+            fillColor: const Color(0xff0b202d),
             prefixIconConstraints: const BoxConstraints(minWidth: 40),
             prefixIcon: Padding(
               padding: const EdgeInsets.all(8),

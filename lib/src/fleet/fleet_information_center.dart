@@ -59,6 +59,8 @@ class FleetInformationCenter extends StatefulWidget {
     this.constructionMode = ConstructionCenterMode.construction,
     this.developmentRepository,
     this.developmentStateStore,
+    this.developmentMode,
+    this.onDevelopmentModeChanged,
     this.improvementController,
     this.moraleRecoveryTimerController,
     this.moraleMetricMode = FleetMoraleMetricMode.minimumCondition,
@@ -81,6 +83,8 @@ class FleetInformationCenter extends StatefulWidget {
   final ConstructionCenterMode constructionMode;
   final DevelopmentRepository? developmentRepository;
   final DevelopmentWorkbenchStateStore? developmentStateStore;
+  final DevelopmentWorkbenchMode? developmentMode;
+  final ValueChanged<DevelopmentWorkbenchMode>? onDevelopmentModeChanged;
   final ImprovementPlannerController? improvementController;
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final FleetMoraleMetricMode moraleMetricMode;
@@ -181,6 +185,8 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
                               state: state,
                               repository: widget.developmentRepository,
                               stateStore: widget.developmentStateStore,
+                              mode: widget.developmentMode,
+                              onModeChanged: widget.onDevelopmentModeChanged,
                             ),
                           ConstructionCenterMode.improvement =>
                             widget.improvementController != null
