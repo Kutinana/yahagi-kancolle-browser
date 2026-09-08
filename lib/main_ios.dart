@@ -60,12 +60,18 @@ Future<void> main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   // ── Shared initialization (mirrors upstream main.dart) ──
+  final systemLocaleCode = _localeStorageCode(
+    WidgetsBinding.instance.platformDispatcher.locale,
+  );
   final layoutSettingsController = await LayoutSettingsController.load(
     SharedPreferencesLayoutSettingsStore(),
-    systemLocaleCode: _localeStorageCode(
-      WidgetsBinding.instance.platformDispatcher.locale,
-    ),
+    systemLocaleCode: systemLocaleCode,
   );
+  // iOS-specific: Ensure initial locale is explicitly established and persisted
+  // so that UI localization and settings selection stay in sync from first launch.
+  if (layoutSettingsController.localeCode == null) {
+    await layoutSettingsController.setLocaleCode(systemLocaleCode);
+  }
   final networkSettingsController = NetworkSettingsController(
     store: SharedPreferencesNetworkSettingsStore(),
   );
@@ -200,8 +206,14 @@ Future<void> main() async {
 
 String _localeStorageCode(Locale locale) {
   if (locale.languageCode == 'ja') return 'ja';
-  if (locale.languageCode == 'zh' && locale.scriptCode == 'Hant') {
-    return 'zh_Hant';
+  if (locale.languageCode == 'zh') {
+    if (locale.scriptCode == 'Hant' ||
+        locale.countryCode == 'TW' ||
+        locale.countryCode == 'HK' ||
+        locale.countryCode == 'MO') {
+      return 'zh_Hant';
+    }
+    return 'zh';
   }
   return 'zh';
 }

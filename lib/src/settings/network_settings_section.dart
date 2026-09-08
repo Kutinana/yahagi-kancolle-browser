@@ -291,10 +291,118 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
               l10n.externalNetwork,
               result.details['google'],
             ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _copyDiagnosticReport(context, result, l10n),
+                icon: const Icon(Icons.copy, size: 14, color: Color(0xff38bdf8)),
+                label: Text(
+                  _copyReportButtonText(l10n),
+                  style: const TextStyle(fontSize: 12, color: Color(0xff38bdf8)),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  backgroundColor: const Color(0xff0f172a),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    side: const BorderSide(color: Color(0xff334155)),
+                  ),
+                ),
+              ),
+            ),
           ],
         ],
       ),
     );
+  }
+
+  void _copyDiagnosticReport(
+    BuildContext context,
+    ProxyResult result,
+    AppLocalizations l10n,
+  ) {
+    final details = result.details;
+    final meta = details['diagnostics'] as Map?;
+    final proxy = details['proxy'] as Map?;
+    final gameTarget = details['gameTarget'] as Map?;
+    final google = details['google'] as Map?;
+
+    final buf = StringBuffer();
+    buf.writeln('### Yahagi 网络诊断报告');
+    if (meta != null) {
+      buf.writeln('- 测试时间: ${meta['timestamp'] ?? '未知'}');
+      buf.writeln('- 设备环境: ${meta['device'] ?? ''} (${meta['os'] ?? 'iOS'})');
+      buf.writeln(
+        '- 代理模式: ${meta['mode'] ?? _selectedMode.name} [${meta['endpoint'] ?? ''}]',
+      );
+    } else {
+      buf.writeln('- 代理模式: ${_selectedMode.name}');
+      if (_selectedMode != NetworkMode.system) {
+        buf.writeln(
+          '- 代理地址: ${_hostController.text.trim()}:${_portController.text.trim()}',
+        );
+      }
+    }
+    buf.writeln(
+      '- 诊断结论: ${result.message} [Code: ${result.code}, 耗时: ${result.elapsedMs}ms]',
+    );
+
+    if (proxy != null) {
+      final pStatus = proxy['status'] ?? 'unknown';
+      final pErr = proxy['error'] != null ? ' (${proxy['error']})' : '';
+      buf.writeln(
+        '- 代理服务器TCP连通: $pStatus [耗时: ${proxy['elapsedMs'] ?? 0}ms]$pErr',
+      );
+    }
+    if (gameTarget != null) {
+      final gStatus = gameTarget['status'] ?? 'unknown';
+      final gCode =
+          gameTarget['statusCode'] != null
+              ? 'HTTP ${gameTarget['statusCode']} '
+              : '';
+      final gErr =
+          gameTarget['error'] != null ? ' (${gameTarget['error']})' : '';
+      buf.writeln(
+        '- 游戏服务 (DMM Accounts): $gStatus [耗时: ${gameTarget['elapsedMs'] ?? 0}ms] $gCode$gErr',
+      );
+    }
+    if (google != null) {
+      final oStatus = google['status'] ?? 'unknown';
+      final oCode =
+          google['statusCode'] != null ? 'HTTP ${google['statusCode']} ' : '';
+      final oErr = google['error'] != null ? ' (${google['error']})' : '';
+      buf.writeln(
+        '- 外网探针 (Google): $oStatus [耗时: ${google['elapsedMs'] ?? 0}ms] $oCode$oErr',
+      );
+    }
+
+    Clipboard.setData(ClipboardData(text: buf.toString().trim()));
+    TopNotice.show(
+      context,
+      message: _copiedSuccessToastText(l10n),
+      tone: TopNoticeTone.success,
+    );
+  }
+
+  String _copyReportButtonText(AppLocalizations l10n) {
+    final locale = l10n.localeName;
+    if (locale.startsWith('ja')) {
+      return '診断レポートをコピー';
+    } else if (locale.startsWith('zh_Hant')) {
+      return '複製診斷報告';
+    }
+    return '复制诊断报告';
+  }
+
+  String _copiedSuccessToastText(AppLocalizations l10n) {
+    final locale = l10n.localeName;
+    if (locale.startsWith('ja')) {
+      return '診断レポートをクリップボードにコピーしました';
+    } else if (locale.startsWith('zh_Hant')) {
+      return '診斷報告已複製到剪貼簿';
+    }
+    return '诊断报告已复制到剪贴板';
   }
 
   Widget _buildDetailRow(AppLocalizations l10n, String label, dynamic detail) {
@@ -302,6 +410,8 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
 
     final status = detail['status'] as String? ?? 'unknown';
     final elapsedMs = detail['elapsedMs'] as int? ?? 0;
+    final error = detail['error']?.toString();
+    final statusCode = detail['statusCode'];
 
     Color color = Colors.white70;
     IconData icon = Icons.help_outline;
@@ -323,27 +433,55 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-            ),
+          Row(
+            children: [
+              SizedBox(
+                width: 100,
+                child: Text(
+                  label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ),
+              Icon(icon, color: color, size: 14),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  statusText,
+                  style: TextStyle(color: color, fontSize: 13),
+                ),
+              ),
+              if (status == 'success' || status == 'failed')
+                Text(
+                  '${elapsedMs}ms',
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+            ],
           ),
-          Icon(icon, color: color, size: 14),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              statusText,
-              style: TextStyle(color: color, fontSize: 13),
-            ),
-          ),
-          if (status == 'success' || status == 'failed')
-            Text(
-              '${elapsedMs}ms',
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+          if (error != null && error.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 104, top: 2),
+              child: Text(
+                error,
+                style: TextStyle(
+                  color:
+                      status == 'failed'
+                          ? Colors.red.shade300
+                          : const Color(0xff94a3b8),
+                  fontSize: 11,
+                  height: 1.2,
+                ),
+              ),
+            )
+          else if (statusCode != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 104, top: 2),
+              child: Text(
+                'HTTP $statusCode',
+                style: const TextStyle(color: Color(0xff94a3b8), fontSize: 11),
+              ),
             ),
         ],
       ),
