@@ -12,6 +12,8 @@
 /// capture script, compatibility, browser port) but owns its own State.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
@@ -22,6 +24,8 @@ import 'audio/game_audio_controller.dart';
 import 'audio/game_audio_port.dart';
 import 'bridge/native_game_capture_script.dart';
 import 'browser/game_browser_controller.dart';
+import 'browser/game_frame_rate_port.dart';
+import 'browser/game_frame_rate_runtime_controller.dart';
 import 'browser/game_frame_reload_port.dart';
 
 import 'browser/game_page_alignment_script.dart';
@@ -41,6 +45,7 @@ import 'settings/network_settings_store.dart';
 import 'settings/network_settings_validator.dart';
 
 import 'settings/safety_settings_controller.dart';
+import 'settings/game_frame_rate_settings.dart';
 
 class IOSGameWebView extends StatefulWidget {
   const IOSGameWebView({
@@ -53,6 +58,7 @@ class IOSGameWebView extends StatefulWidget {
     required this.audioController,
     required this.toolbarController,
     required this.gameCaptureController,
+    this.frameRateSettingsController,
   });
 
   final NetworkSettingsController networkSettingsController;
@@ -63,15 +69,18 @@ class IOSGameWebView extends StatefulWidget {
   final GameAudioController audioController;
   final GameToolbarController toolbarController;
   final GameCaptureController gameCaptureController;
+  final GameFrameRateSettingsController? frameRateSettingsController;
 
   @override
   State<IOSGameWebView> createState() => _IOSGameWebViewState();
 }
 
-class _IOSGameWebViewState extends State<IOSGameWebView> {
+class _IOSGameWebViewState extends State<IOSGameWebView>
+    with WidgetsBindingObserver {
   late final WebViewController _webViewController;
   late final Future<void> _compatibilityReady;
   late final GameCapturePort _gameCapturePort;
+  GameFrameRateRuntimeController? _frameRateRuntimeController;
 
   late CaptureMode _activeCaptureMode;
   static const _scaleChannel = MethodChannel(
@@ -98,11 +107,13 @@ class _IOSGameWebViewState extends State<IOSGameWebView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.networkSettingsController.addListener(_onNetworkSettingsChanged);
     _activeCaptureMode = widget.captureModeController.mode;
     _gameCapturePort = MethodChannelGameCapturePort();
     widget.captureModeController.addListener(_onCaptureModeChanged);
     widget.audioController.addListener(_onAudioControllerChanged);
+    unawaited(_configureFrameRate());
 
     _webViewController = WebViewController();
     _compatibilityReady = _configureCompatibility();
@@ -132,6 +143,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView> {
         NavigationDelegate(
           onNavigationRequest: _onNavigationRequest,
           onPageStarted: (url) async {
+            _frameRateRuntimeController?.onPageStarted();
             await _prepareCapture();
             await _injectAudioContextTracker();
             widget.controller.onPageStarted(url);
@@ -146,6 +158,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView> {
             }
           },
           onPageFinished: (url) async {
+            await _frameRateRuntimeController?.onPageReady();
             widget.controller.onPageFinished(url);
             widget.browserController.onPageFinished(url);
 
@@ -508,7 +521,47 @@ class _IOSGameWebViewState extends State<IOSGameWebView> {
   }
 
   @override
+  void didUpdateWidget(covariant IOSGameWebView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.frameRateSettingsController !=
+        widget.frameRateSettingsController) {
+      _frameRateRuntimeController?.dispose();
+      _frameRateRuntimeController = null;
+      unawaited(_configureFrameRate());
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _frameRateRuntimeController?.onLifecycleChanged(state);
+  }
+
+  Future<void> _configureFrameRate() async {
+    final controller = widget.frameRateSettingsController;
+    if (controller == null) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    try {
+      await controller.attachPort(createPlatformGameFrameRatePort());
+      if (!mounted || controller.supported != true) return;
+      final runtimeController = GameFrameRateRuntimeController(
+        settings: controller,
+        port: createGameFrameRateRuntimePort(_webViewController),
+      );
+      _frameRateRuntimeController = runtimeController;
+      final lifecycleState = WidgetsBinding.instance.lifecycleState;
+      if (lifecycleState != null) {
+        runtimeController.onLifecycleChanged(lifecycleState);
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Frame-rate runtime unavailable: $error\n$stackTrace');
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _frameRateRuntimeController?.dispose();
     widget.audioController.removeListener(_onAudioControllerChanged);
     widget.captureModeController.removeListener(_onCaptureModeChanged);
     widget.networkSettingsController.removeListener(_onNetworkSettingsChanged);

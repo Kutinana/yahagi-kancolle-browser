@@ -12,11 +12,13 @@ import WebKit
   private static let gadgetBypassChannel = "app.yahagi.kancollebrowser/gadget_bypass"
   private static let screenAwakeChannel = "app.yahagi.kancollebrowser/screen_awake"
   private static let gameScreenshotChannel = "app.yahagi.kancollebrowser/game_screenshot"
+  private static let gameFrameRateChannel = "app.yahagi.kancollebrowser/game_frame_rate"
 
   private var gameCaptureBridge: IOSGameCaptureBridge?
   private var proxyManager: IOSWebViewProxyManager?
   private var audioPort: IOSGameAudioPort?
   private var gadgetBypassManager: IOSGadgetBypassManager?
+  private var frameRateBridge: IOSGameFrameRateBridge?
   private var isChannelsConfigured = false
 
   override func application(
@@ -196,6 +198,15 @@ import WebKit
       } else {
         result(FlutterMethodNotImplemented)
       }
+    }
+
+    // 8. Game Frame Rate MethodChannel
+    let frameRateChannel = FlutterMethodChannel(
+      name: Self.gameFrameRateChannel, binaryMessenger: controller.binaryMessenger)
+    let frameRateBridge = IOSGameFrameRateBridge(viewController: controller, channel: frameRateChannel)
+    self.frameRateBridge = frameRateBridge
+    frameRateChannel.setMethodCallHandler { [weak frameRateBridge] call, result in
+      frameRateBridge?.handle(call, result: result)
     }
   }
 }

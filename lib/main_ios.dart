@@ -52,6 +52,7 @@ import 'src/settings/safety_settings_controller.dart';
 import 'src/settings/safety_settings_store.dart';
 import 'src/settings/release_check_service.dart';
 import 'src/settings/screen_awake_controller.dart';
+import 'src/settings/game_frame_rate_settings.dart';
 import 'src/senka/senka_controller.dart';
 import 'src/senka/senka_store.dart';
 
@@ -85,6 +86,10 @@ Future<void> main() async {
   final displayModeController = await DisplayModeController.load(
     SharedPreferencesDisplayModeStore(),
   );
+  final gameFrameRateSettingsController =
+      await GameFrameRateSettingsController.load(
+        SharedPreferencesGameFrameRateSettingsStore(),
+      );
   applyOrientationPolicy(
     currentWindowSize(),
     displayModeController.displayMode,
@@ -179,6 +184,7 @@ Future<void> main() async {
       networkSettingsController: networkSettingsController,
       gadgetBypassController: gadgetBypassController,
       safetySettingsController: safetySettingsController,
+      gameFrameRateSettingsController: gameFrameRateSettingsController,
 
       displayModeController: displayModeController,
       controller: controller,
@@ -228,6 +234,7 @@ class _IOSYahagiApp extends StatelessWidget {
     required this.networkSettingsController,
     required this.gadgetBypassController,
     required this.safetySettingsController,
+    this.gameFrameRateSettingsController,
 
     required this.displayModeController,
     required this.controller,
@@ -252,6 +259,7 @@ class _IOSYahagiApp extends StatelessWidget {
   final NetworkSettingsController networkSettingsController;
   final GadgetBypassController gadgetBypassController;
   final SafetySettingsController safetySettingsController;
+  final GameFrameRateSettingsController? gameFrameRateSettingsController;
 
   final DisplayModeController displayModeController;
   final PrototypeStatusController controller;
@@ -279,6 +287,7 @@ class _IOSYahagiApp extends StatelessWidget {
       networkSettingsController: networkSettingsController,
       gadgetBypassController: gadgetBypassController,
       safetySettingsController: safetySettingsController,
+      gameFrameRateSettingsController: gameFrameRateSettingsController,
 
       displayModeController: displayModeController,
       controller: controller,
@@ -307,6 +316,7 @@ class _IOSYahagiApp extends StatelessWidget {
         audioController: audioController,
         toolbarController: toolbarController,
         gameCaptureController: gameCaptureController,
+        frameRateSettingsController: gameFrameRateSettingsController,
       ),
     );
   }
