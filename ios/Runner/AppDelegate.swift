@@ -13,12 +13,16 @@ import WebKit
   private static let screenAwakeChannel = "app.yahagi.kancollebrowser/screen_awake"
   private static let gameScreenshotChannel = "app.yahagi.kancollebrowser/game_screenshot"
   private static let gameFrameRateChannel = "app.yahagi.kancollebrowser/game_frame_rate"
+  private static let battleDamageAlertChannel = "app.yahagi.kancollebrowser/battle_damage_alert"
+  private static let gameFrameReloadChannel = "app.yahagi.kancollebrowser/game_frame_reload"
 
   private var gameCaptureBridge: IOSGameCaptureBridge?
   private var proxyManager: IOSWebViewProxyManager?
   private var audioPort: IOSGameAudioPort?
   private var gadgetBypassManager: IOSGadgetBypassManager?
   private var frameRateBridge: IOSGameFrameRateBridge?
+  private var battleAlertBridge: IOSBattleDamageAlertBridge?
+  private var frameReloadBridge: IOSGameFrameReloadBridge?
   private var isChannelsConfigured = false
 
   override func application(
@@ -207,6 +211,24 @@ import WebKit
     self.frameRateBridge = frameRateBridge
     frameRateChannel.setMethodCallHandler { [weak frameRateBridge] call, result in
       frameRateBridge?.handle(call, result: result)
+    }
+
+    // 9. Battle Damage Alert MethodChannel
+    let battleAlertChannel = FlutterMethodChannel(
+      name: Self.battleDamageAlertChannel, binaryMessenger: controller.binaryMessenger)
+    let battleAlertBridge = IOSBattleDamageAlertBridge(channel: battleAlertChannel)
+    self.battleAlertBridge = battleAlertBridge
+    battleAlertChannel.setMethodCallHandler { [weak battleAlertBridge] call, result in
+      battleAlertBridge?.handle(call, result: result)
+    }
+
+    // 10. Game Frame Reload MethodChannel
+    let frameReloadChannel = FlutterMethodChannel(
+      name: Self.gameFrameReloadChannel, binaryMessenger: controller.binaryMessenger)
+    let frameReloadBridge = IOSGameFrameReloadBridge(viewController: controller, channel: frameReloadChannel)
+    self.frameReloadBridge = frameReloadBridge
+    frameReloadChannel.setMethodCallHandler { [weak frameReloadBridge] call, result in
+      frameReloadBridge?.handle(call, result: result)
     }
   }
 }

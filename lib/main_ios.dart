@@ -18,43 +18,59 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'l10n/app_localizations.dart';
 import 'main.dart';
+import 'src/audio/game_audio_controller.dart';
+import 'src/audio/game_audio_store.dart';
 import 'src/battle/battle_controller.dart';
+import 'src/battle/battle_damage_alert.dart';
 import 'src/battle/fcd_map_controller.dart';
 import 'src/battle/fcd_map_store.dart';
 import 'src/battle/fcd_map_update_service.dart';
-import 'src/audio/game_audio_controller.dart';
-import 'src/audio/game_audio_store.dart';
-import 'src/browser/game_browser_controller.dart';
 import 'src/browser/gadget_bypass_controller.dart';
 import 'src/browser/gadget_bypass_store.dart';
+import 'src/browser/game_browser_controller.dart';
+import 'src/browser/game_screenshot_controller.dart';
 import 'src/browser/game_toolbar_controller.dart';
 import 'src/browser/game_toolbar_display_controller.dart';
-import 'src/browser/game_screenshot_controller.dart';
 import 'src/capture/capture_mode_controller.dart';
 import 'src/capture/capture_mode_store.dart';
 import 'src/capture/game_capture_controller.dart';
 import 'src/capture/raw_data_server_controller.dart';
+import 'src/battle/formation_memory.dart';
 import 'src/game_state/game_state_controller.dart';
 import 'src/game_state/game_state_store.dart';
+import 'src/improvement/improvement_dataset_store.dart';
+import 'src/improvement/improvement_dataset_update_service.dart';
+import 'src/improvement/improvement_favorites_store.dart';
+import 'src/improvement/improvement_planner_controller.dart';
 import 'src/ios_game_webview.dart';
+import 'src/new_ship/new_ship_reminder_controller.dart';
+import 'src/new_ship/new_ship_reminder_store.dart';
 import 'src/prototype_status_controller.dart';
+import 'src/quest/quest_catalog_controller.dart';
+import 'src/quest/quest_catalog_store.dart';
+import 'src/quest/quest_catalog_update_service.dart';
 import 'src/quest/shared_preferences_quest_store.dart';
+import 'src/senka/senka_controller.dart';
+import 'src/senka/senka_store.dart';
+import 'src/settings/battle_prediction_settings.dart';
+import 'src/settings/display_mode_controller.dart';
+import 'src/settings/display_mode_store.dart';
+import 'src/settings/game_connector.dart';
+import 'src/settings/game_connector_controller.dart';
+import 'src/settings/game_frame_rate_settings.dart';
 import 'src/settings/layout_settings_controller.dart';
 import 'src/settings/layout_settings_store.dart';
 import 'src/settings/network_settings_controller.dart';
 import 'src/settings/network_settings_store.dart';
-import 'src/settings/display_mode_controller.dart';
-import 'src/settings/display_mode_store.dart';
 import 'src/settings/orientation_policy.dart';
+import 'src/settings/release_check_service.dart';
 import 'src/settings/safety_settings_controller.dart';
 import 'src/settings/safety_settings_store.dart';
-import 'src/settings/release_check_service.dart';
 import 'src/settings/screen_awake_controller.dart';
-import 'src/settings/game_frame_rate_settings.dart';
-import 'src/senka/senka_controller.dart';
-import 'src/senka/senka_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,6 +99,13 @@ Future<void> main() async {
   final safetySettingsController = await SafetySettingsController.load(
     SharedPreferencesSafetySettingsStore(),
   );
+  final battlePredictionSettingsController =
+      await BattlePredictionSettingsController.load(
+        SharedPreferencesBattlePredictionSettingsStore(),
+      );
+  final formationMemoryController = await FormationMemoryController.load(
+    SharedPreferencesFormationMemoryStore(),
+  );
   final displayModeController = await DisplayModeController.load(
     SharedPreferencesDisplayModeStore(),
   );
@@ -90,6 +113,9 @@ Future<void> main() async {
       await GameFrameRateSettingsController.load(
         SharedPreferencesGameFrameRateSettingsStore(),
       );
+  final gameConnectorController = await GameConnectorController.load(
+    SharedPreferencesGameConnectorStore(),
+  );
   applyOrientationPolicy(
     currentWindowSize(),
     displayModeController.displayMode,
@@ -100,7 +126,9 @@ Future<void> main() async {
   final controller = PrototypeStatusController(
     captureEnabled: () => captureModeController.captureEnabled,
   );
-  final browserController = GameBrowserController();
+  final browserController = GameBrowserController(
+    homeUri: gameConnectorController.connector.entryUri,
+  );
   final audioController = await GameAudioController.load(
     SharedPreferencesGameAudioStore(),
   );
@@ -126,6 +154,26 @@ Future<void> main() async {
   );
   await senkaController.initialize();
   final currentVersion = (await PackageInfo.fromPlatform()).version;
+
+  ImprovementDatasetStorage improvementStorage;
+  try {
+    improvementStorage = await ApplicationImprovementDatasetStorage.create();
+  } catch (error) {
+    debugPrint('改修资料目录不可用，改用内置数据: $error');
+    improvementStorage = const BundledOnlyImprovementDatasetStorage();
+  }
+  final improvementStore = ImprovementDatasetStore(improvementStorage);
+  final improvementDataset = await improvementStore.loadBestAvailable();
+  final improvementPlannerController = ImprovementPlannerController(
+    dataset: improvementDataset,
+    favoritesStore: SharedPreferencesImprovementFavoritesStore(),
+    updater: ImprovementDatasetUpdateService(
+      client: http.Client(),
+      store: improvementStore,
+    ),
+  );
+  await improvementPlannerController.loadFavorites();
+
   FcdMapStorage fcdMapStorage;
   try {
     fcdMapStorage = await ApplicationFcdMapStorage.create();
@@ -141,8 +189,8 @@ Future<void> main() async {
   final loadedFcdMapState = await fcdMapStore.loadState();
   final fcdMapState =
       loadedFcdMapState?.version == loadedFcdMap.dataset.version.toString()
-      ? loadedFcdMapState
-      : null;
+          ? loadedFcdMapState
+          : null;
   final fcdMapController = FcdMapController(
     dataset: loadedFcdMap.dataset,
     updater: FcdMapUpdateService(
@@ -153,17 +201,67 @@ Future<void> main() async {
     lastCheckedAt: fcdMapState?.lastCheckedAt,
     sourceHost: fcdMapState?.source ?? '',
   );
+
+  QuestCatalogStorage questCatalogStorage;
+  try {
+    questCatalogStorage = await ApplicationQuestCatalogStorage.create();
+  } catch (error) {
+    debugPrint('任务资料目录不可用，改用内置数据: $error');
+    questCatalogStorage = const BundledOnlyQuestCatalogStorage();
+  }
+  final questCatalogStore = QuestCatalogStore(questCatalogStorage);
+  final loadedQuestCatalog = await questCatalogStore.loadBestAvailable();
+  final loadedQuestCatalogState = await questCatalogStore.loadState();
+  final questCatalogState =
+      loadedQuestCatalogState?.version.commitSha ==
+              loadedQuestCatalog.dataset.version.commitSha
+          ? loadedQuestCatalogState
+          : null;
+  final questCatalogController = QuestCatalogController(
+    dataset: loadedQuestCatalog.dataset,
+    updater: QuestCatalogUpdateService(
+      client: http.Client(),
+      store: questCatalogStore,
+      appVersion: currentVersion,
+    ),
+    lastCheckedAt: questCatalogState?.lastCheckedAt,
+    sourceHost: questCatalogState?.source ?? '',
+  );
+
   final battleController = BattleController(
     gameState: () => gameStateController.state,
+    waitForGameState: () => gameStateController.idle,
+    onFriendlyHpUpdated: gameStateController.applyFriendlyBattleHp,
+    damageAlertPort: const MethodChannelBattleDamageAlertPort(),
+    battleStatusEffectSettings: () =>
+        safetySettingsController.battleStatusEffects,
+    nodeLabelResolver: fcdMapController,
+    formationMemory: formationMemoryController,
   );
   fcdMapController.addListener(battleController.refreshNodeLabel);
 
-  // ── iOS-specific: inject raw data capture into the event pipeline ──
+  final newShipReminderController = NewShipReminderController(
+    stateProvider: () => gameStateController.state,
+    store: NewShipReminderStore(await SharedPreferences.getInstance()),
+    onPublish: (alert) {
+      final state = gameStateController.state;
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+      final names = alert.masterIds
+          .map(
+            (id) => state.masterShips[id]?.name ?? l10n.newShipFallbackName(id),
+          )
+          .join('、');
+      debugPrint('新舰娘掉落提醒: $names');
+    },
+  );
+
+  // ── iOS-specific: inject raw data capture and new ship reminder into the event pipeline ──
   final gameCaptureController = GameCaptureController(
     onAcceptedEvent: (event) {
       gameStateController.accept(event);
       senkaController.accept(event);
       battleController.accept(event);
+      newShipReminderController.accept(event);
       // Save api_start2 master data when developer mode is enabled
       if (event.path.contains('/api_start2/getData') &&
           rawDataServerController.developerMode) {
@@ -184,8 +282,12 @@ Future<void> main() async {
       networkSettingsController: networkSettingsController,
       gadgetBypassController: gadgetBypassController,
       safetySettingsController: safetySettingsController,
+      battlePredictionSettingsController: battlePredictionSettingsController,
       gameFrameRateSettingsController: gameFrameRateSettingsController,
-
+      gameConnectorController: gameConnectorController,
+      questCatalogController: questCatalogController,
+      improvementPlannerController: improvementPlannerController,
+      newShipReminderController: newShipReminderController,
       displayModeController: displayModeController,
       controller: controller,
       browserController: browserController,
@@ -207,6 +309,8 @@ Future<void> main() async {
   );
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(fcdMapController.checkForUpdates());
+    unawaited(questCatalogController.checkForUpdates());
+    unawaited(improvementPlannerController.checkForUpdates());
   });
 }
 
@@ -234,8 +338,12 @@ class _IOSYahagiApp extends StatelessWidget {
     required this.networkSettingsController,
     required this.gadgetBypassController,
     required this.safetySettingsController,
+    this.battlePredictionSettingsController,
     this.gameFrameRateSettingsController,
-
+    this.gameConnectorController,
+    this.questCatalogController,
+    this.improvementPlannerController,
+    this.newShipReminderController,
     required this.displayModeController,
     required this.controller,
     required this.browserController,
@@ -259,7 +367,12 @@ class _IOSYahagiApp extends StatelessWidget {
   final NetworkSettingsController networkSettingsController;
   final GadgetBypassController gadgetBypassController;
   final SafetySettingsController safetySettingsController;
+  final BattlePredictionSettingsController? battlePredictionSettingsController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
+  final GameConnectorController? gameConnectorController;
+  final QuestCatalogController? questCatalogController;
+  final ImprovementPlannerController? improvementPlannerController;
+  final NewShipReminderController? newShipReminderController;
 
   final DisplayModeController displayModeController;
   final PrototypeStatusController controller;
@@ -287,8 +400,12 @@ class _IOSYahagiApp extends StatelessWidget {
       networkSettingsController: networkSettingsController,
       gadgetBypassController: gadgetBypassController,
       safetySettingsController: safetySettingsController,
+      battlePredictionSettingsController: battlePredictionSettingsController,
       gameFrameRateSettingsController: gameFrameRateSettingsController,
-
+      gameConnectorController: gameConnectorController,
+      questCatalogController: questCatalogController,
+      improvementPlannerController: improvementPlannerController,
+      newShipReminderController: newShipReminderController,
       displayModeController: displayModeController,
       controller: controller,
       browserController: browserController,

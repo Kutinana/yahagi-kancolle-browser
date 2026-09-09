@@ -121,7 +121,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
       WebViewGameBrowserPort(
         _webViewController,
         _prototypePage,
-        gameFrameReloadPort: const _UnsupportedIOSGameFrameReloadPort(),
+        gameFrameReloadPort: MethodChannelGameFrameReloadPort(),
         compatibilityReady: _compatibilityReady,
         prepareForRealNavigation: _prepareCapture,
         synchronizeGamePresentation: _synchronizeGamePresentation,
@@ -628,14 +628,3 @@ const String _iosDesktopUserAgent =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
     'AppleWebKit/605.1.15 (KHTML, like Gecko) '
     'Chrome/128.0.0.0 Safari/605.1.15';
-
-final class _UnsupportedIOSGameFrameReloadPort implements GameFrameReloadPort {
-  const _UnsupportedIOSGameFrameReloadPort();
-
-  @override
-  Future<void> configure() async {}
-
-  @override
-  Future<GameFrameReloadResult> reload() async =>
-      GameFrameReloadResult.unsupported;
-}
