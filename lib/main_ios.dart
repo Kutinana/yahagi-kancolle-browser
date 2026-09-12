@@ -71,6 +71,8 @@ import 'src/settings/release_check_service.dart';
 import 'src/settings/safety_settings_controller.dart';
 import 'src/settings/safety_settings_store.dart';
 import 'src/settings/screen_awake_controller.dart';
+import 'src/settings/raw_data_section.dart';
+import 'src/widgets/top_notice.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -331,8 +333,8 @@ String _localeStorageCode(Locale locale) {
 /// iOS-specific app wrapper.
 ///
 /// Wraps [YahagiApp] and overrides the game surface with [IOSGameWebView].
-/// The upstream [main.dart] and [YahagiApp] remain completely unmodified.
-class _IOSYahagiApp extends StatelessWidget {
+/// Injects 7-tap settings easter egg and mounts [RawDataSection] into data settings.
+class _IOSYahagiApp extends StatefulWidget {
   const _IOSYahagiApp({
     required this.layoutSettingsController,
     required this.networkSettingsController,
@@ -393,47 +395,149 @@ class _IOSYahagiApp extends StatelessWidget {
   final RawDataServerController? rawDataServerController;
 
   @override
+  State<_IOSYahagiApp> createState() => _IOSYahagiAppState();
+}
+
+class _IOSYahagiAppState extends State<_IOSYahagiApp> {
+  int _settingsTapCount = 0;
+  Timer? _settingsTapResetTimer;
+  late bool _developerMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _developerMode = widget.rawDataServerController?.developerMode ?? false;
+    widget.rawDataServerController?.addListener(_onRawDataControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _IOSYahagiApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.rawDataServerController != widget.rawDataServerController) {
+      oldWidget.rawDataServerController?.removeListener(_onRawDataControllerChanged);
+      widget.rawDataServerController?.addListener(_onRawDataControllerChanged);
+      _developerMode = widget.rawDataServerController?.developerMode ?? false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _settingsTapResetTimer?.cancel();
+    widget.rawDataServerController?.removeListener(_onRawDataControllerChanged);
+    super.dispose();
+  }
+
+  void _onRawDataControllerChanged() {
+    final next = widget.rawDataServerController?.developerMode ?? false;
+    if (_developerMode != next) {
+      setState(() => _developerMode = next);
+    }
+  }
+
+  void _onSettingsNavTap(BuildContext context) {
+    _settingsTapResetTimer?.cancel();
+    _settingsTapCount++;
+    _settingsTapResetTimer = Timer(const Duration(milliseconds: 1500), () {
+      _settingsTapCount = 0;
+    });
+
+    if (_settingsTapCount >= 7) {
+      _settingsTapCount = 0;
+      _settingsTapResetTimer?.cancel();
+      if (!_developerMode) {
+        widget.rawDataServerController?.setDeveloperMode(true);
+        HapticFeedback.mediumImpact();
+        if (context.mounted) {
+          TopNotice.show(
+            context,
+            message: '已开启开发者模式',
+            tone: TopNoticeTone.success,
+          );
+        }
+      } else {
+        HapticFeedback.lightImpact();
+        if (context.mounted) {
+          TopNotice.show(
+            context,
+            message: '当前已处于开发者模式',
+          );
+        }
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Delegate to upstream YahagiApp with iOS-specific gameSurface
+    final rawController = widget.rawDataServerController;
     return YahagiApp(
-      layoutSettingsController: layoutSettingsController,
-      networkSettingsController: networkSettingsController,
-      gadgetBypassController: gadgetBypassController,
-      safetySettingsController: safetySettingsController,
-      battlePredictionSettingsController: battlePredictionSettingsController,
-      gameFrameRateSettingsController: gameFrameRateSettingsController,
-      gameConnectorController: gameConnectorController,
-      questCatalogController: questCatalogController,
-      improvementPlannerController: improvementPlannerController,
-      newShipReminderController: newShipReminderController,
-      displayModeController: displayModeController,
-      controller: controller,
-      browserController: browserController,
-      captureModeController: captureModeController,
-      audioController: audioController,
-      toolbarController: toolbarController,
-      toolbarDisplayController: toolbarDisplayController,
-      gameScreenshotController: gameScreenshotController,
-      gameCaptureController: gameCaptureController,
-      gameStateController: gameStateController,
-      senkaController: senkaController,
-      battleController: battleController,
-      fcdMapController: fcdMapController,
-      currentVersion: currentVersion,
-      releaseChecker: releaseChecker,
-      screenAwakeController: screenAwakeController,
+      layoutSettingsController: widget.layoutSettingsController,
+      networkSettingsController: widget.networkSettingsController,
+      gadgetBypassController: widget.gadgetBypassController,
+      safetySettingsController: widget.safetySettingsController,
+      battlePredictionSettingsController: widget.battlePredictionSettingsController,
+      gameFrameRateSettingsController: widget.gameFrameRateSettingsController,
+      gameConnectorController: widget.gameConnectorController,
+      questCatalogController: widget.questCatalogController,
+      improvementPlannerController: widget.improvementPlannerController,
+      newShipReminderController: widget.newShipReminderController,
+      displayModeController: widget.displayModeController,
+      controller: widget.controller,
+      browserController: widget.browserController,
+      captureModeController: widget.captureModeController,
+      audioController: widget.audioController,
+      toolbarController: widget.toolbarController,
+      toolbarDisplayController: widget.toolbarDisplayController,
+      gameScreenshotController: widget.gameScreenshotController,
+      gameCaptureController: widget.gameCaptureController,
+      gameStateController: widget.gameStateController,
+      senkaController: widget.senkaController,
+      battleController: widget.battleController,
+      fcdMapController: widget.fcdMapController,
+      currentVersion: widget.currentVersion,
+      releaseChecker: widget.releaseChecker,
+      screenAwakeController: widget.screenAwakeController,
+      showDeveloperDiagnostics: _developerMode,
+      onSettingsNavTap: _onSettingsNavTap,
+      additionalDataSections: <Widget>[
+        if (_developerMode && rawController != null) ...<Widget>[
+          const SizedBox(height: 24),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              '开发者选项 (Developer Options)',
+              style: TextStyle(
+                color: Color(0xffd4a85f),
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Material(
+            color: const Color(0xff142735),
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: ListTileTheme(
+              data: const ListTileThemeData(
+                contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                minLeadingWidth: 0,
+              ),
+              child: RawDataSection(controller: rawController),
+            ),
+          ),
+        ],
+      ],
       // iOS-specific: use IOSGameWebView instead of upstream GameWebView
       gameSurface: IOSGameWebView(
         key: const GlobalObjectKey('yahagi_game_webview'),
-        networkSettingsController: networkSettingsController,
-        safetySettingsController: safetySettingsController,
-        controller: controller,
-        browserController: browserController,
-        captureModeController: captureModeController,
-        audioController: audioController,
-        toolbarController: toolbarController,
-        gameCaptureController: gameCaptureController,
-        frameRateSettingsController: gameFrameRateSettingsController,
+        networkSettingsController: widget.networkSettingsController,
+        safetySettingsController: widget.safetySettingsController,
+        controller: widget.controller,
+        browserController: widget.browserController,
+        captureModeController: widget.captureModeController,
+        audioController: widget.audioController,
+        toolbarController: widget.toolbarController,
+        gameCaptureController: widget.gameCaptureController,
+        frameRateSettingsController: widget.gameFrameRateSettingsController,
       ),
     );
   }

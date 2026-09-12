@@ -46,6 +46,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.fcdMapController,
     this.questCatalogController,
     this.improvementPlannerController,
+    this.additionalSections,
   });
 
   final CaptureModeController captureModeController;
@@ -62,6 +63,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final FcdMapController? fcdMapController;
   final QuestCatalogController? questCatalogController;
   final ImprovementPlannerController? improvementPlannerController;
+  final List<Widget>? additionalSections;
 
   @override
   Widget build(BuildContext context) {
@@ -258,6 +260,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 ],
               ),
             ),
+            ...?additionalSections,
             const SizedBox(height: 40),
           ],
         ),

@@ -69,6 +69,7 @@ class SettingsPage extends StatelessWidget {
     this.gameConnectorController,
     this.isBattleActive = false,
     this.diagnosticController,
+    this.additionalDataSections,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -103,6 +104,7 @@ class SettingsPage extends StatelessWidget {
   final GameConnectorController? gameConnectorController;
   final bool isBattleActive;
   final DiagnosticController? diagnosticController;
+  final List<Widget>? additionalDataSections;
 
   @override
   Widget build(BuildContext context) {
@@ -151,6 +153,7 @@ class SettingsPage extends StatelessWidget {
           fcdMapController: fcdMapController,
           questCatalogController: questCatalogController,
           improvementPlannerController: improvementPlannerController,
+          additionalSections: additionalDataSections,
         ),
         AboutSupportSettingsPage(
           currentVersion: currentVersion,

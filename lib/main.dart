@@ -628,6 +628,8 @@ class YahagiApp extends StatelessWidget {
     this.diagnosticController,
     this.gameRouteObserver,
     this.nativeWebViewGenerationSink,
+    this.additionalDataSections,
+    this.onSettingsNavTap,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -669,6 +671,8 @@ class YahagiApp extends StatelessWidget {
   final DiagnosticController? diagnosticController;
   final RouteObserver<ModalRoute<dynamic>>? gameRouteObserver;
   final void Function(int)? nativeWebViewGenerationSink;
+  final List<Widget>? additionalDataSections;
+  final void Function(BuildContext context)? onSettingsNavTap;
 
   @override
   Widget build(BuildContext context) {
@@ -760,6 +764,8 @@ class YahagiApp extends StatelessWidget {
                   gameScreenshotController: gameScreenshotController,
                   showDeveloperDiagnostics: showDeveloperDiagnostics,
                   diagnosticController: diagnosticController,
+                  additionalDataSections: additionalDataSections,
+                  onSettingsNavTap: onSettingsNavTap,
                   gameSurface: _buildGameSurface(),
                 ),
               ),
@@ -913,6 +919,8 @@ class YahagiShell extends StatefulWidget {
     this.improvementPlannerController,
     this.showDeveloperDiagnostics = false,
     this.diagnosticController,
+    this.additionalDataSections,
+    this.onSettingsNavTap,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -952,6 +960,8 @@ class YahagiShell extends StatefulWidget {
   final GameScreenshotController? gameScreenshotController;
   final bool showDeveloperDiagnostics;
   final DiagnosticController? diagnosticController;
+  final List<Widget>? additionalDataSections;
+  final void Function(BuildContext context)? onSettingsNavTap;
 
   @override
   State<YahagiShell> createState() => _YahagiShellState();
@@ -1112,6 +1122,9 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   }
 
   void _selectWorkspace(int index) {
+    if (index == 8) {
+      widget.onSettingsNavTap?.call(context);
+    }
     if (index != 0) {
       widget.toolbarController.collapse();
     }
@@ -1849,6 +1862,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                             showDeveloperDiagnostics:
                                 widget.showDeveloperDiagnostics,
                             diagnosticController: widget.diagnosticController,
+                            additionalDataSections:
+                                widget.additionalDataSections,
                             selectedIndex: _settingsTabIndex,
                           ),
                         if (_workspaceIndex == 9 &&
