@@ -90,19 +90,34 @@ final class DiagnosticPrivacyPolicy {
   List<String> safeStack(StackTrace? stack, {int maxFrames = 24}) {
     if (stack == null) return const <String>[];
     final result = <String>[];
-    final symbolPattern = RegExp(r'^#\d+\s+([^\s(]+)');
+    final framePattern = RegExp(
+      r'^#\d+\s+([^\s(]+)[^(]*\('
+      r'(package:(?:flutter|yahagi_kancolle_browser)/[A-Za-z0-9_./-]+\.dart|dart:[A-Za-z0-9_./-]+)'
+      r':(\d+):(\d+)\)$',
+    );
     for (final rawLine in stack.toString().split(RegExp(r'\r?\n'))) {
       if (result.length >= maxFrames) break;
       final line = rawLine.trim();
-      final isProject = line.contains('package:yahagi_kancolle_browser/');
-      final isDart = line.contains('(dart:') || line.contains(' dart:');
-      if (!isProject && !isDart) continue;
-      final symbol = symbolPattern.firstMatch(line)?.group(1);
-      if (symbol == null || symbol.isEmpty) continue;
+      final frame = framePattern.firstMatch(line);
+      if (frame == null) continue;
+      final origin = frame.group(2)!;
+      if (origin.split('/').contains('..')) continue;
+      final symbol = frame.group(1)!;
       final safeSymbol = symbol.length <= 120
           ? symbol
           : symbol.substring(0, 120);
-      result.add(safeSymbol);
+      // Framework frames are essential for diagnosing layout/build failures.
+      // Only public Flutter package locations are retained; local paths and
+      // application source locations remain excluded.
+      final safeFrame = origin.startsWith('package:flutter/')
+          ? '$safeSymbol (${origin.substring('package:'.length)}:${frame.group(3)}:${frame.group(4)})'
+          : safeSymbol;
+      try {
+        _validateValue(safeFrame);
+      } on DiagnosticPrivacyViolation {
+        continue;
+      }
+      result.add(safeFrame);
     }
     return List<String>.unmodifiable(result);
   }

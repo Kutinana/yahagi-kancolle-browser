@@ -66,5 +66,35 @@ void main() {
       expect(safe, isNot(contains('C:\\Users')));
       expect(safe, isNot(contains('src/login.dart')));
     });
+
+    test('preserves Flutter frame locations for grey screen diagnosis', () {
+      final safe = policy.safeStack(
+        StackTrace.fromString('''
+#0      RenderBox.size (package:flutter/src/rendering/box.dart:2251:12)
+#1      _OverlayPortalState.build (package:flutter/src/widgets/overlay.dart:2100:8)
+#2      PlatformDispatcher._drawFrame (dart:ui/platform_dispatcher.dart:444:5)
+'''),
+      );
+      expect(safe, [
+        'RenderBox.size (flutter/src/rendering/box.dart:2251:12)',
+        '_OverlayPortalState.build (flutter/src/widgets/overlay.dart:2100:8)',
+        'PlatformDispatcher._drawFrame',
+      ]);
+      expect(() => policy.validateField('stack', safe), returnsNormally);
+    });
+
+    test('stack filtering rejects disguised origins and unsafe symbols', () {
+      final safe = policy.safeStack(
+        StackTrace.fromString('''
+#0      Widget.build (file:///C:/Users/Player/private.dart:1:2) package:flutter/src/widgets/framework.dart
+#1      Widget.build (package:flutter/../../private.dart:1:2)
+#2      api_token=secret (package:flutter/src/widgets/framework.dart:1:2)
+#3      Widget.build (package:untrusted/src/private.dart:1:2)
+#4      Widget.build (package:flutter/src/widgets/framework.dart:1:2)
+'''),
+      );
+      expect(safe, ['Widget.build (flutter/src/widgets/framework.dart:1:2)']);
+      expect(() => policy.validateField('stack', safe), returnsNormally);
+    });
   });
 }
