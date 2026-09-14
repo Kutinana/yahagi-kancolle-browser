@@ -1032,7 +1032,7 @@
   "mouseWheelCompatibilityDescription": "使用外接滑鼠時，若遊戲內滾輪無反應，可嘗試開啟。立即生效，保留滑鼠點擊和手指觸控。",
   "mouseWheelCompatibilitySaveFailed": "設定儲存失敗，請重試。",
   "hdMode": "HD 模式",
-  "hdModeDescription": "開啟後，大螢幕橫向使用緊湊側欄與單行下欄；直向和小視窗沿用一般配置。關閉後恢復原配置設定。",
+  "hdModeDescription": "開啟後，大螢幕橫向使用側欄與單行下欄；直向使用兩欄功能區，可長按自訂 1×1、1×2、2×1 或 2×2。橫直向配置分別儲存，小視窗沿用一般配置。",
   "hdBottomLayout": "HD 下欄配置",
   "hdSplit": "兩個 1×1",
   "hdWide": "一個 1×2",

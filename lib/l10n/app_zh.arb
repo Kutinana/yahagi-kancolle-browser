@@ -1036,7 +1036,7 @@
   "mouseWheelCompatibilityDescription": "使用外接鼠标时，若游戏内滚轮无响应，可尝试开启。立即生效，保留鼠标点击和手指触控。",
   "mouseWheelCompatibilitySaveFailed": "设置保存失败，请重试。",
   "hdMode": "HD 模式",
-  "hdModeDescription": "开启后，大屏横屏使用紧凑侧栏与单行下栏；竖屏和小窗口沿用普通布局。关闭后恢复原布局设置。",
+  "hdModeDescription": "开启后，大屏横屏使用侧栏与单行下栏；竖屏使用两列功能区，可长按自定义 1×1、1×2、2×1 或 2×2。横竖屏布局独立保存，小窗口沿用普通布局。",
   "hdBottomLayout": "HD 下栏布局",
   "hdSplit": "两个 1×1",
   "hdWide": "一个 1×2",

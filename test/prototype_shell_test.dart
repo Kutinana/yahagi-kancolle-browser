@@ -261,7 +261,14 @@ void main() {
         tester.view.physicalSize = size;
         await tester.pumpAndSettle();
         expect(bottom, findsNothing);
-        expect(find.byKey(const Key('yahagi-hd-label')), findsNothing);
+        expect(
+          find.byKey(const Key('yahagi-hd-label')),
+          size.shortestSide >= 600 ? findsOneWidget : findsNothing,
+        );
+        expect(
+          find.byKey(const Key('hd-portrait-grid')),
+          size.shortestSide >= 600 ? findsOneWidget : findsNothing,
+        );
         expect(tester.element(game), same(originalElement));
         expect(tester.takeException(), isNull);
       }

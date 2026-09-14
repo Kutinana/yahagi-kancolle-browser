@@ -82,6 +82,7 @@ import 'src/game_state/game_state_store.dart';
 import 'src/layout/adaptive_layout.dart';
 import 'src/layout/hd_workspace_geometry.dart';
 import 'src/layout/hd_bottom_strip.dart';
+import 'src/layout/hd_portrait_grid.dart';
 import 'src/layout/hd_home_editor.dart';
 import 'src/layout/workspace_navigation_side.dart';
 import 'src/layout/workspace_context_header.dart';
@@ -1361,6 +1362,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     );
 
     final windowSize = MediaQuery.sizeOf(context);
+    final hdPortrait =
+        widget.layoutSettingsController.hdSettings.enabled &&
+        windowSize.shortestSide >= 600 &&
+        windowSize.height >= windowSize.width;
     final hdWindow =
         usesHdLandscape(
           windowSize,
@@ -1460,7 +1465,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                               fontWeight: FontWeight.w700,
                                             ),
                                           ),
-                                          if (hdWindow) ...[
+                                          if (hdWindow || hdPortrait) ...[
                                             const SizedBox(width: 5),
                                             const Text(
                                               'HD',
@@ -1876,7 +1881,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                               setState(
                                                 () => _hdEditing = editing,
                                               ),
-                                          hd: hdGeometry != null,
+                                          hd: hdGeometry != null || hdPortrait,
+                                          hdPortrait: hdPortrait,
                                           singleModule: module,
                                           excludedModules:
                                               hdGeometry != null &&
@@ -2645,6 +2651,7 @@ class _InformationPanel extends StatefulWidget {
     required this.onOpenQuest,
     required this.onOpenExpeditionCheck,
     this.hd = false,
+    this.hdPortrait = false,
     this.hdEditing = false,
     this.onHdEditingChanged,
     this.singleModule,
@@ -2652,6 +2659,7 @@ class _InformationPanel extends StatefulWidget {
   });
 
   final bool hd;
+  final bool hdPortrait;
   final bool hdEditing;
   final ValueChanged<bool>? onHdEditingChanged;
   final String? singleModule;
@@ -2890,13 +2898,23 @@ class _InformationPanelState extends State<_InformationPanel> {
             };
 
             Widget finalChild = Padding(
-              padding: widget.singleModule == null
+              padding: widget.singleModule == null && !widget.hdPortrait
                   ? const EdgeInsets.only(bottom: 6)
                   : EdgeInsets.zero,
               child: child,
             );
 
             return KeyedSubtree(key: ValueKey(id), child: finalChild);
+          }
+
+          if (widget.hdPortrait) {
+            return HdPortraitGrid(
+              controller: widget.layoutSettingsController,
+              editing: editing,
+              onEditingChanged: (value) =>
+                  widget.onHdEditingChanged?.call(value),
+              cardBuilder: buildCard,
+            );
           }
 
           if (widget.singleModule == null && editing) {

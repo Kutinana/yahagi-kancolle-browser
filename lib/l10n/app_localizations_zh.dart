@@ -3003,7 +3003,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get hdModeDescription =>
-      '开启后，大屏横屏使用紧凑侧栏与单行下栏；竖屏和小窗口沿用普通布局。关闭后恢复原布局设置。';
+      '开启后，大屏横屏使用侧栏与单行下栏；竖屏使用两列功能区，可长按自定义 1×1、1×2、2×1 或 2×2。横竖屏布局独立保存，小窗口沿用普通布局。';
 
   @override
   String get hdBottomLayout => 'HD 下栏布局';
@@ -6039,7 +6039,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get hdModeDescription =>
-      '開啟後，大螢幕橫向使用緊湊側欄與單行下欄；直向和小視窗沿用一般配置。關閉後恢復原配置設定。';
+      '開啟後，大螢幕橫向使用側欄與單行下欄；直向使用兩欄功能區，可長按自訂 1×1、1×2、2×1 或 2×2。橫直向配置分別儲存，小視窗沿用一般配置。';
 
   @override
   String get hdBottomLayout => 'HD 下欄配置';

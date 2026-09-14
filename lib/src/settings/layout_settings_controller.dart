@@ -422,9 +422,73 @@ class LayoutSettingsController extends ChangeNotifier {
     await _setHdSettings(_hdSettings.copyWith(hiddenModules: hidden.toList()));
   }
 
+  Future<void> setHdPortraitSpan(String id, int span) => _setHdSettings(
+    _hdSettings.copyWith(
+      portraitModules: [
+        for (final item in _hdSettings.portrait)
+          item.id == id
+              ? HdBottomModule(id, span.clamp(1, 2), rows: item.rows)
+              : item,
+      ],
+    ),
+  );
+
+  Future<void> placeHdPortraitModules(List<HdBottomModule> modules) =>
+      _setHdSettings(_hdSettings.copyWith(portraitModules: modules));
+
+  Future<void> setHdPortraitSize(String id, int rows, int columns) =>
+      _setHdSettings(
+        _hdSettings.copyWith(
+          portraitModules: [
+            for (final item in _hdSettings.portrait)
+              item.id == id
+                  ? HdBottomModule(
+                      id,
+                      columns.clamp(1, 2),
+                      rows: rows.clamp(1, 2),
+                    )
+                  : item,
+          ],
+        ),
+      );
+
+  Future<void> moveHdPortraitModule(
+    String id,
+    String? target,
+    bool after,
+  ) async {
+    final items = [
+      for (final e in _hdSettings.portrait)
+        HdBottomModule(e.id, e.span, rows: e.rows),
+    ];
+    if (id == target || !items.any((e) => e.id == id)) return;
+    final item = items.firstWhere((e) => e.id == id);
+    items.removeWhere((e) => e.id == id);
+    final index = items.indexWhere((e) => e.id == target);
+    items.insert(index < 0 ? items.length : index + (after ? 1 : 0), item);
+    await _setHdSettings(_hdSettings.copyWith(portraitModules: items));
+  }
+
+  Future<void> toggleHdPortraitHidden(String id) {
+    final hidden = {..._hdSettings.portraitHidden};
+    if (!hidden.remove(id)) hidden.add(id);
+    return _setHdSettings(
+      _hdSettings.copyWith(portraitHiddenModules: hidden.toList()),
+    );
+  }
+
+  Future<void> resetHdPortraitLayout() => _setHdSettings(
+    _hdSettings.copyWith(
+      portraitModules: const [],
+      portraitHiddenModules: const [],
+    ),
+  );
+
   Future<void> resetHdLayout() => _setHdSettings(
     HdLayoutSettings(
       enabled: _hdSettings.enabled,
+      portraitModules: _hdSettings.portrait,
+      portraitHiddenModules: _hdSettings.portraitHidden.toList(),
       bottomModules: const [],
       sidebarOrder: LayoutSettingsStore.defaultDashboardCardOrder,
     ),

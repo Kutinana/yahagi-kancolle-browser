@@ -3033,7 +3033,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get hdModeDescription =>
-      '有効にすると、大画面の横向きでコンパクトなサイドバーと1段の下部パネルを使用します。縦向きと小さいウィンドウは通常のレイアウトを維持します。無効にすると元の設定に戻ります。';
+      '大画面では横向きでサイドバーと1段の下部パネル、縦向きで2列のパネルを使用します。長押しで1×1・1×2・2×1・2×2を選択でき、縦横の配置は個別に保存します。小さいウィンドウは通常の配置を使用します。';
 
   @override
   String get hdBottomLayout => 'HD 下部レイアウト';

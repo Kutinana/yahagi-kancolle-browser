@@ -5659,7 +5659,7 @@ abstract class AppLocalizations {
   /// No description provided for @hdModeDescription.
   ///
   /// In zh, this message translates to:
-  /// **'开启后，大屏横屏使用紧凑侧栏与单行下栏；竖屏和小窗口沿用普通布局。关闭后恢复原布局设置。'**
+  /// **'开启后，大屏横屏使用侧栏与单行下栏；竖屏使用两列功能区，可长按自定义 1×1、1×2、2×1 或 2×2。横竖屏布局独立保存，小窗口沿用普通布局。'**
   String get hdModeDescription;
 
   /// No description provided for @hdBottomLayout.
