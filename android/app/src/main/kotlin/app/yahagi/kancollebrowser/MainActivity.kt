@@ -196,6 +196,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
     private var gameMouseWheelChannel: GameMouseWheelChannel? = null
     private var gameFullscreenChannel: GameFullscreenChannel? = null
     private var gameFrameReloadManager: GameFrameReloadManager? = null
+    private var gameFrameReloadChannel: MethodChannel? = null
     private var gameResourceCacheEngine: GameResourceCacheEngine? = null
     private var gameResourceCacheManager: GameResourceCacheManager? = null
     @Volatile
@@ -646,14 +647,20 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
             GAME_FRAME_RATE_CHANNEL,
         ).setMethodCallHandler(frameRateManager)
 
-        val frameReloadManager = GameFrameReloadManager(
-            AndroidGameFrameReloadBridge(this),
-        )
-        gameFrameReloadManager = frameReloadManager
-        MethodChannel(
+        gameFrameReloadManager?.dispose()
+        gameFrameReloadChannel?.setMethodCallHandler(null)
+        val frameReloadChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             GAME_FRAME_RELOAD_CHANNEL,
-        ).setMethodCallHandler(frameReloadManager)
+        )
+        val frameReloadManager = GameFrameReloadManager(
+            AndroidGameFrameReloadBridge(this) { result ->
+                frameReloadChannel.invokeMethod("shortcutResult", result)
+            },
+        )
+        gameFrameReloadManager = frameReloadManager
+        gameFrameReloadChannel = frameReloadChannel
+        frameReloadChannel.setMethodCallHandler(frameReloadManager)
     }
 
     override fun onDestroy() {
@@ -686,6 +693,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
         gameFrameRateManager = null
         gameFrameReloadManager?.dispose()
         gameFrameReloadManager = null
+        gameFrameReloadChannel?.setMethodCallHandler(null)
+        gameFrameReloadChannel = null
         diagnosticPlatformHandler?.dispose()
         diagnosticPlatformHandler = null
         fixedCanvasLayoutListener?.let { listener ->
@@ -715,6 +724,10 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
         gameFullscreenChannel = null
         gameMouseWheelChannel?.dispose()
         gameMouseWheelChannel = null
+        gameFrameReloadManager?.dispose()
+        gameFrameReloadManager = null
+        gameFrameReloadChannel?.setMethodCallHandler(null)
+        gameFrameReloadChannel = null
         disposeCompositionImageHandler()
         val nativeChannel = nativeGameWebViewChannel
         val nativeAttachment = nativeGameWebViewAttachment

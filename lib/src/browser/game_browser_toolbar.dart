@@ -20,6 +20,7 @@ class GameBrowserToolbar extends StatelessWidget {
     required this.onToggleMuted,
     required this.onCollapse,
     required this.onFitScreen,
+    this.onEnterFullscreen,
     this.onScreenshot,
     this.persistent = false,
     this.enableBackdropBlur = true,
@@ -38,6 +39,7 @@ class GameBrowserToolbar extends StatelessWidget {
   final Future<void> Function() onToggleMuted;
   final VoidCallback onCollapse;
   final VoidCallback onFitScreen;
+  final VoidCallback? onEnterFullscreen;
   final VoidCallback? onScreenshot;
   final bool persistent;
   final bool enableBackdropBlur;
@@ -111,6 +113,20 @@ class GameBrowserToolbar extends StatelessWidget {
               icon: Icon(Icons.crop_free, size: persistent ? 18 : 16),
             ),
           ),
+          if (!persistent)
+            SizedBox.square(
+              dimension: persistentActionSize,
+              child: IconButton(
+                key: const Key('game-enter-fullscreen'),
+                padding: EdgeInsets.zero,
+                tooltip: l10n.enterGameFullscreen,
+                onPressed: interactionEnabled ? onEnterFullscreen : null,
+                icon: Icon(
+                  Icons.open_in_full_rounded,
+                  size: persistent ? 18 : 16,
+                ),
+              ),
+            ),
           if (loadState == GamePageLoadState.loading)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 6),

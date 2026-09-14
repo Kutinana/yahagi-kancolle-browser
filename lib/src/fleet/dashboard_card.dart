@@ -84,25 +84,27 @@ class DashboardCard extends StatelessWidget {
                   const SizedBox(width: 3),
                 ],
                 if (headerAction != null) headerAction!,
-                IconButton(
-                  key: collapseButtonKey,
-                  tooltip: collapsed
+                Semantics(
+                  label: collapsed
                       ? fleetText(context, '展开$title')
                       : fleetText(context, '折叠$title'),
-                  visualDensity: VisualDensity.compact,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 30,
-                  ),
-                  padding: EdgeInsets.zero,
-                  alignment: Alignment.centerRight,
-                  onPressed: onToggleCollapse,
-                  icon: Icon(
-                    collapsed
-                        ? Icons.keyboard_arrow_down_rounded
-                        : Icons.keyboard_arrow_up_rounded,
-                    size: 20,
-                    color: const Color(0xff8fa8b6),
+                  child: IconButton(
+                    key: collapseButtonKey,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 30,
+                    ),
+                    padding: EdgeInsets.zero,
+                    alignment: Alignment.centerRight,
+                    onPressed: onToggleCollapse,
+                    icon: Icon(
+                      collapsed
+                          ? Icons.keyboard_arrow_down_rounded
+                          : Icons.keyboard_arrow_up_rounded,
+                      size: 20,
+                      color: const Color(0xff8fa8b6),
+                    ),
                   ),
                 ),
               ],

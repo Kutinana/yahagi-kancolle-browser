@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../widgets/top_notice.dart';
 import 'game_browser_controller.dart';
+import 'game_frame_refresh_shortcut_action.dart';
 
 Future<void> showGameRefreshDialog({
   required BuildContext context,
@@ -34,28 +34,9 @@ Future<void> showGameRefreshDialog({
           key: const Key('reload-game-frame'),
           onPressed: () async {
             Navigator.of(dialogContext).pop();
-            GameFrameReloadResult result;
-            try {
-              result = await onReloadGame();
-            } catch (_) {
-              result = GameFrameReloadResult.blocked;
-            }
-            if (result == GameFrameReloadResult.reloaded || !context.mounted) {
-              return;
-            }
-            final message = switch (result) {
-              GameFrameReloadResult.gameFrameNotFound => l10n.gameFrameNotFound,
-              GameFrameReloadResult.htmlWrapNotFound =>
-                l10n.gameHtmlWrapNotFound,
-              GameFrameReloadResult.blocked => l10n.gameFrameReloadBlocked,
-              GameFrameReloadResult.unsupported =>
-                l10n.gameFrameReloadUnsupported,
-              GameFrameReloadResult.reloaded => '',
-            };
-            TopNotice.show(
-              context,
-              message: message,
-              tone: TopNoticeTone.error,
+            await runGameFrameRefreshShortcut(
+              context: context,
+              reload: onReloadGame,
             );
           },
           child: Text(l10n.reloadGame),

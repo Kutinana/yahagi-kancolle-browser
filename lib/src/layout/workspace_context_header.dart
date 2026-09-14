@@ -33,6 +33,7 @@ class WorkspaceContextHeader extends StatelessWidget {
     this.onAnchorageTimerTap,
     this.nosakiSparkleStartedAt,
     this.onNosakiTimerTap,
+    this.onFrameRefreshTap,
     required this.selectedFleetId,
     this.onFleetSelected,
     this.inventoryShowShips = true,
@@ -71,6 +72,7 @@ class WorkspaceContextHeader extends StatelessWidget {
   final VoidCallback? onAnchorageTimerTap;
   final DateTime? nosakiSparkleStartedAt;
   final VoidCallback? onNosakiTimerTap;
+  final VoidCallback? onFrameRefreshTap;
   final int selectedFleetId;
   final ValueChanged<int>? onFleetSelected;
   final bool inventoryShowShips;
@@ -116,6 +118,7 @@ class WorkspaceContextHeader extends StatelessWidget {
         onAnchorageTimerTap: onAnchorageTimerTap,
         nosakiSparkleStartedAt: nosakiSparkleStartedAt,
         onNosakiTimerTap: onNosakiTimerTap,
+        onFrameRefreshTap: onFrameRefreshTap,
         settingsController: layoutSettingsController,
       );
     }
@@ -339,23 +342,32 @@ class WorkspaceContextHeader extends StatelessWidget {
       );
     }
     if (workspaceIndex == 9) {
-      return Row(
-        children: [
-          Text(
-            l10n.senka,
-            key: const Key('workspace-title-senka'),
-            style: const TextStyle(
-              color: Color(0xffe0b25c),
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const Spacer(),
-          SenkaModeTabs(
-            mode: senkaMode,
-            onChanged: onSenkaModeChanged ?? (_) {},
-          ),
-        ],
+      final title = Text(
+        l10n.senka,
+        key: const Key('workspace-title-senka'),
+        style: const TextStyle(
+          color: Color(0xffe0b25c),
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+        ),
+      );
+      final tabs = SenkaModeTabs(
+        mode: senkaMode,
+        onChanged: onSenkaModeChanged ?? (_) {},
+      );
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 430) {
+            return Row(
+              children: [
+                title,
+                const SizedBox(width: 8),
+                Expanded(child: tabs),
+              ],
+            );
+          }
+          return Row(children: [title, const Spacer(), tabs]);
+        },
       );
     }
     if (workspaceIndex == 10) {

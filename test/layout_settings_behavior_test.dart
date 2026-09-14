@@ -253,7 +253,11 @@ void main() {
         SharedPreferencesLayoutSettingsStore(),
       );
 
-      expect(controller.headerResourceOrder, hasLength(28));
+      expect(controller.headerResourceOrder, contains(headerFrameRefreshId));
+      expect(
+        controller.visibleHeaderResourceIds,
+        isNot(contains(headerFrameRefreshId)),
+      );
       expect(controller.headerResourceOrder.first, headerSenkaId);
       expect(controller.visibleHeaderResourceIds, <String>[
         headerSenkaId,
@@ -289,10 +293,10 @@ void main() {
         headerSenkaId,
         'anchorage-timer',
         'nosaki-timer',
+        headerFrameRefreshId,
         headerShipCapacityId,
         headerEquipmentCapacityId,
         'material-2',
-        'material-1',
       ]);
       expect(controller.visibleHeaderResourceIds, <String>[
         headerSenkaId,
@@ -332,9 +336,13 @@ void main() {
       expect(
         controller.headerResourceOrder.sublist(
           nosakiIndex + 1,
-          nosakiIndex + 3,
+          nosakiIndex + 4,
         ),
-        <String>[headerShipCapacityId, headerEquipmentCapacityId],
+        <String>[
+          headerFrameRefreshId,
+          headerShipCapacityId,
+          headerEquipmentCapacityId,
+        ],
       );
       expect(
         controller.headerResourceOrder.where(legacyOrder.contains),

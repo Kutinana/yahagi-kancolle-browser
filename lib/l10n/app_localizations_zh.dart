@@ -2231,6 +2231,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reloadGame => '重新载入游戏';
 
   @override
+  String get frameRefreshShortcutLabel => '框架刷新';
+
+  @override
+  String get frameRefreshShortcutConfirmTitle => '确定刷新游戏框架？';
+
+  @override
+  String get frameRefreshShortcutConfirmDescription =>
+      '重新载入游戏框架通常更快，但可能导致猫袭或网络异常。请自行承担风险。';
+
+  @override
+  String get frameRefreshShortcutSkipConfirmation => '下次不再提醒';
+
+  @override
+  String get frameRefreshShortcutConfirmAction => '确认刷新';
+
+  @override
+  String get mouseRightClickFrameRefresh => '鼠标右键刷新框架';
+
+  @override
+  String get mouseRightClickFrameRefreshDescription =>
+      '开启后，在游戏画面内按鼠标右键可直接刷新游戏框架。触屏长按不会触发。';
+
+  @override
   String get gameFrameNotFound => '尚未找到游戏框架，请进入游戏后重试。';
 
   @override
@@ -5202,6 +5225,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get reloadGame => '重新載入遊戲';
+
+  @override
+  String get frameRefreshShortcutLabel => '框架重新整理';
+
+  @override
+  String get frameRefreshShortcutConfirmTitle => '確定要重新整理遊戲框架嗎？';
+
+  @override
+  String get frameRefreshShortcutConfirmDescription =>
+      '重新載入遊戲框架通常更快，但可能導致貓襲或網路異常。請自行承擔風險。';
+
+  @override
+  String get frameRefreshShortcutSkipConfirmation => '下次不再提醒';
+
+  @override
+  String get frameRefreshShortcutConfirmAction => '確認重新整理';
+
+  @override
+  String get mouseRightClickFrameRefresh => '滑鼠右鍵重新整理框架';
+
+  @override
+  String get mouseRightClickFrameRefreshDescription =>
+      '開啟後，在遊戲畫面內按滑鼠右鍵可直接重新整理遊戲框架。觸控長按不會觸發。';
 
   @override
   String get gameFrameNotFound => '尚未找到遊戲框架，請進入遊戲後重試。';

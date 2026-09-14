@@ -2252,6 +2252,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reloadGame => 'ゲームを再読み込み';
 
   @override
+  String get frameRefreshShortcutLabel => 'ゲームフレームを更新';
+
+  @override
+  String get frameRefreshShortcutConfirmTitle => 'ゲームフレームを更新しますか？';
+
+  @override
+  String get frameRefreshShortcutConfirmDescription =>
+      'ゲームフレームだけを再読み込みするため通常は高速ですが、猫や通信エラーが発生する可能性があります。自己責任で使用してください。';
+
+  @override
+  String get frameRefreshShortcutSkipConfirmation => '次回から表示しない';
+
+  @override
+  String get frameRefreshShortcutConfirmAction => '更新する';
+
+  @override
+  String get mouseRightClickFrameRefresh => '右クリックでゲームフレームを更新';
+
+  @override
+  String get mouseRightClickFrameRefreshDescription =>
+      '有効にすると、ゲーム画面内で右クリックしたときにゲームフレームを直接更新します。タッチの長押しでは実行されません。';
+
+  @override
   String get gameFrameNotFound => 'ゲームフレームが見つかりません。ゲームに入ってから再試行してください。';
 
   @override

@@ -47,6 +47,18 @@ import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
 import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
+Future<void> _tapWorkspaceNavigationItem(
+  WidgetTester tester,
+  String destinationId,
+) async {
+  final item = find.byKey(Key('workspace-nav-$destinationId'));
+  final navigation = find.byKey(const Key('workspace-navigation-list'));
+  await tester.dragUntilVisible(item, navigation, const Offset(0, -50));
+  await tester.drag(navigation, const Offset(0, -50));
+  await tester.pump();
+  await tester.tap(item);
+}
+
 void main() {
   testWidgets('fullscreen restores the same game and panel; back exits first', (
     tester,
@@ -114,6 +126,10 @@ void main() {
     await tester.pump();
     final offset = scrollable.position.pixels;
 
+    await tester.tap(find.byKey(const Key('yahagi-brand-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('game-toolbar-visible')), findsOneWidget);
+
     for (final useBack in [false, true]) {
       await tester.tap(find.byKey(const Key('game-enter-fullscreen')));
       await tester.pumpAndSettle();
@@ -142,7 +158,9 @@ void main() {
     for (final size in [const Size(412, 915), const Size(915, 412)]) {
       tester.view.physicalSize = size;
       await tester.pumpAndSettle();
-      final exit = tester.getRect(find.byKey(const Key('game-exit-fullscreen')));
+      final exit = tester.getRect(
+        find.byKey(const Key('game-exit-fullscreen')),
+      );
       expect(exit.left, greaterThanOrEqualTo(0));
       expect(exit.top, greaterThanOrEqualTo(0));
       expect(exit.right, lessThanOrEqualTo(size.width));
@@ -474,7 +492,7 @@ void main() {
     tester.view.physicalSize = const Size(1200, 700);
     tester.binding.handleMetricsChanged();
     await tester.pump(const Duration(seconds: 1));
-    await tester.tap(find.byKey(const Key('workspace-nav-settings')));
+    await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
 
     final settingsLabelX = tester
@@ -645,7 +663,7 @@ void main() {
         gameSurface: const ColoredBox(color: Colors.black),
       ),
     );
-    await tester.tap(find.byKey(const Key('workspace-nav-settings')));
+    await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('settings-tab-4')));
@@ -717,7 +735,7 @@ void main() {
     );
 
     expect(find.byKey(const Key('unsupported-game-surface')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('workspace-nav-settings')));
+    await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
     expect(
       find.text('当前 WebView 不支持跨框架捕获', skipOffstage: false),
@@ -785,7 +803,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('workspace-nav-settings')));
+    await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
     expect(find.text('母港接口验证通过', skipOffstage: false), findsOneWidget);
     gameCaptureController.dispose();
@@ -940,9 +958,21 @@ void main() {
     await layoutSettingsController.setInformationPanelOnLeft(true);
     tester.view.physicalSize = const Size(700, 900);
     await tester.pumpAndSettle();
+    final verticalPanelRect = tester.getRect(informationPanel);
+    final verticalGameRect = tester.getRect(gameSurface);
+    final verticalNavigationRect = tester.getRect(
+      find.byType(WorkspaceNavigation),
+    );
+    expect(verticalGameRect.width, closeTo(700, 0.01));
     expect(
-      tester.getRect(informationPanel).top,
-      greaterThanOrEqualTo(tester.getRect(gameSurface).bottom),
+      verticalPanelRect.top,
+      greaterThanOrEqualTo(verticalGameRect.bottom),
+    );
+    expect(verticalNavigationRect.top, verticalPanelRect.top);
+    expect(verticalNavigationRect.bottom, verticalPanelRect.bottom);
+    expect(
+      verticalNavigationRect.left,
+      greaterThanOrEqualTo(verticalPanelRect.right),
     );
     tester.view.physicalSize = const Size(1400, 720);
     await layoutSettingsController.setInformationPanelOnLeft(false);
@@ -1334,12 +1364,11 @@ class _RepairNavigationReducer extends GameStateReducer {
 
 class _ToolboxStateReducer extends GameStateReducer {
   @override
-  GameState reduce(GameState state, CapturedApiEvent event) =>
-      const GameState(
-        admiralLevel: 77,
-        hasPortData: true,
-        hasEquipmentInventory: true,
-      );
+  GameState reduce(GameState state, CapturedApiEvent event) => const GameState(
+    admiralLevel: 77,
+    hasPortData: true,
+    hasEquipmentInventory: true,
+  );
 }
 
 class _LifecycleProbe extends StatefulWidget {

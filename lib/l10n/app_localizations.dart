@@ -4281,6 +4281,48 @@ abstract class AppLocalizations {
   /// **'重新载入游戏'**
   String get reloadGame;
 
+  /// No description provided for @frameRefreshShortcutLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'框架刷新'**
+  String get frameRefreshShortcutLabel;
+
+  /// No description provided for @frameRefreshShortcutConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定刷新游戏框架？'**
+  String get frameRefreshShortcutConfirmTitle;
+
+  /// No description provided for @frameRefreshShortcutConfirmDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新载入游戏框架通常更快，但可能导致猫袭或网络异常。请自行承担风险。'**
+  String get frameRefreshShortcutConfirmDescription;
+
+  /// No description provided for @frameRefreshShortcutSkipConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'下次不再提醒'**
+  String get frameRefreshShortcutSkipConfirmation;
+
+  /// No description provided for @frameRefreshShortcutConfirmAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认刷新'**
+  String get frameRefreshShortcutConfirmAction;
+
+  /// No description provided for @mouseRightClickFrameRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'鼠标右键刷新框架'**
+  String get mouseRightClickFrameRefresh;
+
+  /// No description provided for @mouseRightClickFrameRefreshDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启后，在游戏画面内按鼠标右键可直接刷新游戏框架。触屏长按不会触发。'**
+  String get mouseRightClickFrameRefreshDescription;
+
   /// No description provided for @gameFrameNotFound.
   ///
   /// In zh, this message translates to:

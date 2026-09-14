@@ -68,11 +68,92 @@ void main() {
     );
     _expectHpInsideSlot(measurements);
   });
+
+  testWidgets('portrait repair card stays within a narrowed workspace', (
+    tester,
+  ) async {
+    const workspaceWidth = 330.0;
+    await _pumpRepairDock(
+      tester,
+      size: const Size(390, 844),
+      contentWidth: workspaceWidth,
+      textScaler: const TextScaler.linear(1.3),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(
+      tester.getRect(find.byKey(const Key('repair-dock-row-1'))).right,
+      lessThanOrEqualTo(workspaceWidth),
+    );
+  });
+
+  testWidgets('portrait construction card stays within a narrowed workspace', (
+    tester,
+  ) async {
+    const size = Size(390, 844);
+    const workspaceWidth = 330.0;
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = size;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final completionTime = DateTime.now().add(const Duration(hours: 2));
+    final state = GameState(
+      masterShips: const <int, MasterShip>{
+        101: MasterShip(
+          id: 101,
+          name: '超长测试建造舰娘名称',
+          shipTypeId: 2,
+          buildTimeMinutes: 120,
+        ),
+      },
+      constructionDocks: <ConstructionDock>[
+        ConstructionDock(
+          id: 1,
+          state: 2,
+          createdShipMasterId: 101,
+          completionTime: completionTime,
+          fuel: 30,
+          ammunition: 30,
+          steel: 30,
+          bauxite: 30,
+          developmentMaterial: 1,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'RepairDockTestFont'),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: size,
+            textScaler: TextScaler.linear(1.3),
+          ),
+          child: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: workspaceWidth,
+                child: ConstructionDockStatusView(state: state),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(
+      tester.getRect(find.byKey(const Key('construction-dock-row-1'))).right,
+      lessThanOrEqualTo(workspaceWidth),
+    );
+  });
 }
 
 Future<void> _pumpRepairDock(
   WidgetTester tester, {
   Size size = const Size(1024, 487),
+  double? contentWidth,
   TextScaler textScaler = TextScaler.noScaling,
 }) async {
   tester.view.devicePixelRatio = 1;
@@ -111,7 +192,15 @@ Future<void> _pumpRepairDock(
       theme: ThemeData(fontFamily: 'RepairDockTestFont'),
       home: MediaQuery(
         data: MediaQueryData(size: size, textScaler: textScaler),
-        child: Scaffold(body: RepairDockStatusView(state: state)),
+        child: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: contentWidth,
+              child: RepairDockStatusView(state: state),
+            ),
+          ),
+        ),
       ),
     ),
   );
