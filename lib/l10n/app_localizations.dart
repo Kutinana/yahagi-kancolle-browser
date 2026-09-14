@@ -5649,6 +5649,84 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'设置保存失败，请重试。'**
   String get mouseWheelCompatibilitySaveFailed;
+
+  /// No description provided for @hdMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'HD 模式'**
+  String get hdMode;
+
+  /// No description provided for @hdModeDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启后，大屏横屏使用紧凑侧栏与单行下栏；竖屏和小窗口沿用普通布局。关闭后恢复原布局设置。'**
+  String get hdModeDescription;
+
+  /// No description provided for @hdBottomLayout.
+  ///
+  /// In zh, this message translates to:
+  /// **'HD 下栏布局'**
+  String get hdBottomLayout;
+
+  /// No description provided for @hdSplit.
+  ///
+  /// In zh, this message translates to:
+  /// **'两个 1×1'**
+  String get hdSplit;
+
+  /// No description provided for @hdWide.
+  ///
+  /// In zh, this message translates to:
+  /// **'一个 1×2'**
+  String get hdWide;
+
+  /// No description provided for @hdLeftModule.
+  ///
+  /// In zh, this message translates to:
+  /// **'左侧模块'**
+  String get hdLeftModule;
+
+  /// No description provided for @hdRightModule.
+  ///
+  /// In zh, this message translates to:
+  /// **'右侧模块'**
+  String get hdRightModule;
+
+  /// No description provided for @hdWideModule.
+  ///
+  /// In zh, this message translates to:
+  /// **'整宽模块'**
+  String get hdWideModule;
+
+  /// No description provided for @hdCustomize.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义布局'**
+  String get hdCustomize;
+
+  /// No description provided for @hdEditHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按拖动手柄排序或移入下栏；拖到已有模块上交换位置。勾选显示，取消勾选隐藏。'**
+  String get hdEditHint;
+
+  /// No description provided for @hdHalfWidth.
+  ///
+  /// In zh, this message translates to:
+  /// **'半宽 1×1'**
+  String get hdHalfWidth;
+
+  /// No description provided for @hdFullWidth.
+  ///
+  /// In zh, this message translates to:
+  /// **'整宽 1×2'**
+  String get hdFullWidth;
+
+  /// No description provided for @hdDropArea.
+  ///
+  /// In zh, this message translates to:
+  /// **'可放置功能区'**
+  String get hdDropArea;
 }
 
 class _AppLocalizationsDelegate

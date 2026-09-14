@@ -326,6 +326,7 @@ class _CompactBattlePanel extends StatelessWidget {
       if (battle.airSuperiority != null)
         AirSuperiorityPill(label: battle.airSuperiority!),
       for (final chip in metaChips) MetaChip(label: chip.$1, color: chip.$2),
+      for (final entry in dropEntries) DropPill(text: entry),
     ];
 
     return Column(
@@ -354,16 +355,6 @@ class _CompactBattlePanel extends StatelessWidget {
                   if (statusPills.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 5),
                     Wrap(spacing: 4, runSpacing: 4, children: statusPills),
-                  ],
-                  if (dropEntries.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: <Widget>[
-                        for (final entry in dropEntries) DropPill(text: entry),
-                      ],
-                    ),
                   ],
                   if (battle.rewardItems.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 4),

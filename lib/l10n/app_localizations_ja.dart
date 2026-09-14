@@ -3027,4 +3027,45 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mouseWheelCompatibilitySaveFailed => '設定を保存できませんでした。もう一度お試しください。';
+
+  @override
+  String get hdMode => 'HD モード';
+
+  @override
+  String get hdModeDescription =>
+      '有効にすると、大画面の横向きでコンパクトなサイドバーと1段の下部パネルを使用します。縦向きと小さいウィンドウは通常のレイアウトを維持します。無効にすると元の設定に戻ります。';
+
+  @override
+  String get hdBottomLayout => 'HD 下部レイアウト';
+
+  @override
+  String get hdSplit => '1×1 を2つ';
+
+  @override
+  String get hdWide => '1×2 を1つ';
+
+  @override
+  String get hdLeftModule => '左パネル';
+
+  @override
+  String get hdRightModule => '右パネル';
+
+  @override
+  String get hdWideModule => '全幅パネル';
+
+  @override
+  String get hdCustomize => 'レイアウト編集';
+
+  @override
+  String get hdEditHint =>
+      'ハンドルを長押しして並べ替えや下部への移動ができます。配置済みのパネルにドロップすると交換します。チェックで表示を切り替えます。';
+
+  @override
+  String get hdHalfWidth => '半幅 1×1';
+
+  @override
+  String get hdFullWidth => '全幅 1×2';
+
+  @override
+  String get hdDropArea => '機能パネルを配置できます';
 }

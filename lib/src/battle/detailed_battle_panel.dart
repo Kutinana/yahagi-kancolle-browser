@@ -69,9 +69,6 @@ class DetailedBattlePanel extends StatelessWidget {
             const SizedBox(height: 7),
             LandBaseRaidPanel(result: battle.landBaseRaid!),
           ],
-          if (battle.displayStage == BattleDisplayStage.result &&
-              !isPhoneDensity(context))
-            _DropResult(battle: battle, gameState: gameState),
           const SizedBox(height: 9),
           if (navigation)
             NavigationFriendlyFleets(
@@ -250,13 +247,6 @@ class _BattleOverview extends StatelessWidget {
           engagementChipColor(battle.engagement),
         ),
     ];
-    final statusPills = <Widget>[
-      NodeTypePill(label: battle.context.nodeTypeLabel),
-      if (battle.airSuperiority != null)
-        AirSuperiorityPill(label: battle.airSuperiority!),
-      for (final detail in details)
-        MetaChip(label: detail.$1, color: detail.$2),
-    ];
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
@@ -268,6 +258,14 @@ class _BattleOverview extends StatelessWidget {
         ? null
         : l10n.dropLabel(dropShipNames.join('、'));
     final dropEntries = <String>[?dropShipName];
+    final statusPills = <Widget>[
+      NodeTypePill(label: battle.context.nodeTypeLabel),
+      if (battle.airSuperiority != null)
+        AirSuperiorityPill(label: battle.airSuperiority!),
+      for (final detail in details)
+        MetaChip(label: detail.$1, color: detail.$2),
+      for (final entry in dropEntries) DropPill(text: entry),
+    ];
     return Row(
       children: [
         if (battle.rank != BattleRank.unknown) ...<Widget>[
@@ -295,17 +293,7 @@ class _BattleOverview extends StatelessWidget {
                 const SizedBox(height: 5),
                 Wrap(spacing: 4, runSpacing: 4, children: statusPills),
               ],
-              if (phone && dropEntries.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: <Widget>[
-                    for (final entry in dropEntries) DropPill(text: entry),
-                  ],
-                ),
-              ],
-              if (phone && battle.rewardItems.isNotEmpty) ...<Widget>[
+              if (battle.rewardItems.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 4),
                 RewardItemsPill(items: battle.rewardItems),
               ],
@@ -313,44 +301,6 @@ class _BattleOverview extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DropResult extends StatelessWidget {
-  const _DropResult({required this.battle, required this.gameState});
-
-  final LiveBattle battle;
-  final GameState gameState;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n =
-        AppLocalizations.of(context) ??
-        lookupAppLocalizations(const Locale('zh'));
-    final entries = <String>[
-      if (battle.effectiveDropShipMasterIds.isNotEmpty)
-        l10n.dropLabel(
-          battle.effectiveDropShipMasterIds
-              .map((id) => gameState.masterShips[id]?.name ?? 'ID: $id')
-              .join('、'),
-        ),
-    ];
-    if (entries.isEmpty && battle.rewardItems.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Padding(
-      key: const Key('battle-drop-result'),
-      padding: const EdgeInsets.only(top: 6),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 4,
-        children: <Widget>[
-          for (final entry in entries) DropPill(text: entry),
-          if (battle.rewardItems.isNotEmpty)
-            RewardItemsPill(items: battle.rewardItems),
-        ],
-      ),
     );
   }
 }

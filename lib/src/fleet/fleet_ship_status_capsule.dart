@@ -785,61 +785,70 @@ class CompactStatusMeter extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
-      child: Row(
-        mainAxisAlignment: alignRight
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        children: [
-          SizedBox(width: 12, child: Center(child: icon)),
-          const SizedBox(width: 4),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              minWidth: alignRight && !showTrack ? 0 : 40,
-              maxWidth: 40,
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: alignRight
-                  ? Alignment.centerRight
-                  : Alignment.centerLeft,
-              child: Text(
-                value,
-                key: valueKey,
-                style: TextStyle(
-                  color: valueColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 9,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final valueWidth =
+              ((constraints.maxWidth - 18) * (showTrack ? .65 : 1)).clamp(
+                0.0,
+                40.0,
+              );
+          return Row(
+            mainAxisAlignment: alignRight
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
+            children: [
+              SizedBox(width: 12, child: Center(child: icon)),
+              const SizedBox(width: 4),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: alignRight && !showTrack ? 0 : valueWidth,
+                  maxWidth: valueWidth,
                 ),
-              ),
-            ),
-          ),
-          if (showTrack) const SizedBox(width: 2),
-          if (showTrack)
-            Expanded(
-              child: FractionallySizedBox(
-                heightFactor: 0.45,
-                child: Container(
-                  key: trackKey,
-                  decoration: BoxDecoration(
-                    color: const Color(0xff294052),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: ratio,
-                    heightFactor: 1.0,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: barColor,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: alignRight
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    key: valueKey,
+                    style: TextStyle(
+                      color: valueColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 9,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+              if (showTrack) const SizedBox(width: 2),
+              if (showTrack)
+                Expanded(
+                  child: FractionallySizedBox(
+                    heightFactor: 0.45,
+                    child: Container(
+                      key: trackKey,
+                      decoration: BoxDecoration(
+                        color: const Color(0xff294052),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: ratio,
+                        heightFactor: 1.0,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

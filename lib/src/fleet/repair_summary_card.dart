@@ -8,6 +8,7 @@ import '../performance/second_tick_scope.dart';
 import 'anchorage_repair_calculator.dart';
 import 'anchorage_repair_view.dart';
 import 'dashboard_card.dart';
+import '../layout/hd_dashboard_content.dart';
 import '../settings/module_display_settings.dart';
 import 'nosaki_sparkle_calculator.dart';
 import 'operation_progress.dart';
@@ -189,6 +190,8 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
         .firstOrNull;
     final effectiveFleet = selectedFleet ?? visibleFleets.firstOrNull;
     final fleetId = effectiveFleet?.id ?? _selectedFleetId ?? 1;
+    final shipCount = state.shipsForFleet(fleetId).length;
+    final slotCount = shipCount < 6 ? 6 : shipCount;
     final startedAt = widget.controller.anchorageRepairStartedAt;
     final elapsed = startedAt == null || _now.isBefore(startedAt)
         ? Duration.zero
@@ -199,31 +202,30 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
       elapsed: elapsed,
     );
 
-    return Column(
-      children: [
-        _AnchorageFleetSelector(
-          fleets: visibleFleets,
-          selectedFleetId: fleetId,
-          onSelected: (id) => setState(() => _selectedFleetId = id),
-        ),
-        const SizedBox(height: 8),
-        ModuleSlotGrid(
-          emptyLabel: '暂无舰娘',
-          children: [
-            for (var position = 0; position < 6; position++)
-              if (widget.visible.contains('empty') ||
-                  state.shipsForFleet(fleetId).length > position)
-                _buildAnchorageSlot(
-                  position,
-                  fleetId,
-                  state,
-                  projection,
-                  strings,
-                ),
-          ],
-        ),
-        const SizedBox(height: 2),
-      ],
+    return _RepairFleetBody(
+      selector: _AnchorageFleetSelector(
+        fleets: visibleFleets,
+        selectedFleetId: fleetId,
+        onSelected: (id) => setState(() => _selectedFleetId = id),
+      ),
+      slots: ModuleSlotGrid(
+        columns: HdModuleColumns.of(context) > 1
+            ? HdModuleColumns.of(context)
+            : 2,
+        emptyLabel: '暂无舰娘',
+        children: [
+          for (var position = 0; position < slotCount; position++)
+            if (widget.visible.contains('empty') ||
+                state.shipsForFleet(fleetId).length > position)
+              _buildAnchorageSlot(
+                position,
+                fleetId,
+                state,
+                projection,
+                strings,
+              ),
+        ],
+      ),
     );
   }
 
@@ -295,6 +297,8 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
         .firstOrNull;
     final effectiveFleet = selectedFleet ?? visibleFleets.firstOrNull;
     final fleetId = effectiveFleet?.id ?? _selectedFleetId ?? 1;
+    final shipCount = state.shipsForFleet(fleetId).length;
+    final slotCount = shipCount < 6 ? 6 : shipCount;
     final startedAt = widget.controller.nosakiSparkleStartedAt;
     final elapsed = startedAt == null || _now.isBefore(startedAt)
         ? Duration.zero
@@ -305,25 +309,24 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
       elapsed: elapsed,
     );
 
-    return Column(
-      children: [
-        _AnchorageFleetSelector(
-          fleets: visibleFleets,
-          selectedFleetId: fleetId,
-          onSelected: (id) => setState(() => _selectedFleetId = id),
-        ),
-        const SizedBox(height: 8),
-        ModuleSlotGrid(
-          emptyLabel: '暂无舰娘',
-          children: [
-            for (var position = 0; position < 6; position++)
-              if (widget.visible.contains('empty') ||
-                  state.shipsForFleet(fleetId).length > position)
-                _buildNosakiSlot(position, fleetId, state, projection, strings),
-          ],
-        ),
-        const SizedBox(height: 2),
-      ],
+    return _RepairFleetBody(
+      selector: _AnchorageFleetSelector(
+        fleets: visibleFleets,
+        selectedFleetId: fleetId,
+        onSelected: (id) => setState(() => _selectedFleetId = id),
+      ),
+      slots: ModuleSlotGrid(
+        columns: HdModuleColumns.of(context) > 1
+            ? HdModuleColumns.of(context)
+            : 2,
+        emptyLabel: '暂无舰娘',
+        children: [
+          for (var position = 0; position < slotCount; position++)
+            if (widget.visible.contains('empty') ||
+                state.shipsForFleet(fleetId).length > position)
+              _buildNosakiSlot(position, fleetId, state, projection, strings),
+        ],
+      ),
     );
   }
 
@@ -540,6 +543,30 @@ class _ModeButton extends StatelessWidget {
   }
 }
 
+class _RepairFleetBody extends StatelessWidget {
+  const _RepairFleetBody({required this.selector, required this.slots});
+  final Widget selector;
+  final Widget slots;
+  @override
+  Widget build(BuildContext context) => HdModuleColumns.of(context) > 1
+      ? Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 70, child: selector),
+            const SizedBox(width: 6),
+            Expanded(child: slots),
+          ],
+        )
+      : Column(
+          children: [
+            selector,
+            const SizedBox(height: 8),
+            slots,
+            const SizedBox(height: 2),
+          ],
+        );
+}
+
 class _AnchorageFleetSelector extends StatelessWidget {
   const _AnchorageFleetSelector({
     required this.fleets,
@@ -553,16 +580,19 @@ class _AnchorageFleetSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final vertical = HdModuleColumns.of(context) > 1;
     return Container(
       key: const Key('repair-summary-fleet-selector'),
-      height: 28,
+      height: vertical ? fleets.length * 26.0 + 4 : 28,
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: const Color(0xff102331),
         border: Border.all(color: const Color(0xff294052)),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Flex(
+        direction: vertical ? Axis.vertical : Axis.horizontal,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final fleet in fleets) ...[
             Expanded(
@@ -594,7 +624,8 @@ class _AnchorageFleetSelector extends StatelessWidget {
                 ),
               ),
             ),
-            if (fleet != fleets.last) const SizedBox(width: 2),
+            if (fleet != fleets.last)
+              SizedBox(width: vertical ? 0 : 2, height: vertical ? 2 : 0),
           ],
         ],
       ),

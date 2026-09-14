@@ -4,6 +4,7 @@ import '../theme/app_fonts.dart';
 import 'header_resource_settings.dart';
 import 'module_display_settings.dart';
 import 'fleet_display_options.dart';
+import 'hd_layout_settings.dart';
 
 enum FleetMoraleMetricMode { minimumCondition, recoveryCountdown }
 
@@ -103,7 +104,22 @@ class SharedPreferencesLayoutSettingsStore
         FleetMoraleMetricSettingsStore,
         HeaderResourceSettingsStore,
         WorkspaceMenuOrderSettingsStore,
+        HdLayoutSettingsStore,
         InformationPanelSideSettingsStore {
+  @override
+  Future<HdLayoutSettings> loadHdLayoutSettings() async =>
+      HdLayoutSettings.decode(
+        (await SharedPreferences.getInstance()).getString('hd_layout_v1'),
+      );
+
+  @override
+  Future<void> saveHdLayoutSettings(HdLayoutSettings settings) async {
+    await (await SharedPreferences.getInstance()).setString(
+      'hd_layout_v1',
+      settings.encode(),
+    );
+  }
+
   @override
   Future<List<String>?> loadModuleDisplayFields(String module) async {
     final prefs = await SharedPreferences.getInstance();

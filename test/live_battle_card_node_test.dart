@@ -133,6 +133,59 @@ Future<void> _pumpCard(
 
 void main() {
   for (final compact in [false, true]) {
+    for (final screenWidth in [390.0, 1000.0]) {
+      testWidgets(
+        'drop follows engagement in shared badge flow ($compact, $screenWidth)',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = Size(screenWidth, 1000);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(tester.view.resetPhysicalSize);
+          final controller = _createController();
+          addTearDown(controller.dispose);
+          controller
+            ..accept(mapStartEvent)
+            ..accept(dayBattleEvent)
+            ..accept(battleResultEvent);
+          await controller.idle;
+          await _pumpCard(tester, controller, compact: compact);
+          final engagement = find.text('同航战');
+          final drop = find.text('掉落：吹雪');
+          final flow = find
+              .ancestor(of: engagement, matching: find.byType(Wrap))
+              .first;
+          expect(find.descendant(of: flow, matching: drop), findsOneWidget);
+          if (screenWidth == 1000) {
+            expect(
+              tester
+                  .getTopLeft(
+                    find.byWidget(tester.widget<Wrap>(flow).children.last),
+                  )
+                  .dy,
+              tester
+                  .getTopLeft(
+                    find.byWidget(
+                      tester.widget<Wrap>(flow).children[tester
+                              .widget<Wrap>(flow)
+                              .children
+                              .length -
+                          2],
+                    ),
+                  )
+                  .dy,
+            );
+            expect(
+              tester.getTopLeft(drop).dx,
+              greaterThan(tester.getTopRight(engagement).dx),
+            );
+          }
+          expect(find.text('家具コイン ×1'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+  for (final compact in [false, true]) {
     testWidgets('unconfirmed prediction is explicit (compact: $compact)', (
       tester,
     ) async {

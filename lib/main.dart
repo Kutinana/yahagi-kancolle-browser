@@ -80,6 +80,9 @@ import 'src/account/account_session.dart';
 import 'src/game_state/game_api_event_pipeline.dart';
 import 'src/game_state/game_state_store.dart';
 import 'src/layout/adaptive_layout.dart';
+import 'src/layout/hd_workspace_geometry.dart';
+import 'src/layout/hd_bottom_strip.dart';
+import 'src/layout/hd_home_editor.dart';
 import 'src/layout/workspace_navigation_side.dart';
 import 'src/layout/workspace_context_header.dart';
 import 'src/layout/window_metrics_change.dart';
@@ -1031,6 +1034,7 @@ class YahagiShell extends StatefulWidget {
 }
 
 class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
+  bool _hdEditing = false;
   static const _gameFrameReloadChannel = MethodChannel(
     gameFrameReloadMethodChannelName,
   );
@@ -1179,6 +1183,14 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   }
 
   void _onLayoutSettingsChanged() {
+    if (!mounted) return;
+    // The route may keep the shell's parent unchanged. Rebuild the workspace
+    // explicitly so manual panel ratios apply without navigating or resizing.
+    setState(() {
+      if (!widget.layoutSettingsController.hdSettings.enabled) {
+        _hdEditing = false;
+      }
+    });
     widget.browserController.fitGameScreen().catchError((Object _) {});
   }
 
@@ -1348,7 +1360,21 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
       ),
     );
 
+    final windowSize = MediaQuery.sizeOf(context);
+    final hdWindow =
+        usesHdLandscape(
+          windowSize,
+          enabled: widget.layoutSettingsController.hdSettings.enabled,
+        ) &&
+        HdWorkspaceGeometry.forSize(
+              Size(
+                windowSize.width - _workspaceNavigationExtent,
+                windowSize.height - 44,
+              ),
+            ) !=
+            null;
     final panelAlignedNavigation =
+        !hdWindow &&
         _workspaceIndex == 0 &&
         usesVerticalWorkspace(MediaQuery.sizeOf(context));
 
@@ -1434,6 +1460,17 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                               fontWeight: FontWeight.w700,
                                             ),
                                           ),
+                                          if (hdWindow) ...[
+                                            const SizedBox(width: 5),
+                                            const Text(
+                                              'HD',
+                                              key: Key('yahagi-hd-label'),
+                                              style: TextStyle(
+                                                color: Color(0xffffd54f),
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ],
                                           if (isGameWorkspace) ...[
                                             const SizedBox(width: 4),
                                             Icon(
@@ -1774,13 +1811,6 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                               _normalWorkspaceSize ??
                                                   actualConstraints.biggest,
                                             );
-                                        final isLandscape =
-                                            !usesVerticalWorkspace(
-                                              Size(
-                                                constraints.maxWidth,
-                                                constraints.maxHeight,
-                                              ),
-                                            );
                                         final gameAreaRatio =
                                             widget
                                                 .layoutSettingsController
@@ -1790,6 +1820,20 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                   .layoutSettingsController
                                                   .gameAreaRatio
                                                   .clamp(0.5, 0.75);
+                                        final hdGeometry = hdWindow
+                                            ? HdWorkspaceGeometry.forSize(
+                                                constraints.biggest,
+                                                gameAreaRatio: gameAreaRatio,
+                                              )
+                                            : null;
+                                        final isLandscape =
+                                            hdGeometry != null ||
+                                            !usesVerticalWorkspace(
+                                              Size(
+                                                constraints.maxWidth,
+                                                constraints.maxHeight,
+                                              ),
+                                            );
                                         final gameFlex = (gameAreaRatio * 1000)
                                             .round();
                                         final portraitGamePanelExtra =
@@ -1824,7 +1868,25 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                           gameSurface: gameSurfaceWrapper,
                                         );
 
-                                        final infoWidget = _InformationPanel(
+                                        Widget buildInfo({
+                                          String? module,
+                                        }) => _InformationPanel(
+                                          hdEditing: _hdEditing,
+                                          onHdEditingChanged: (editing) =>
+                                              setState(
+                                                () => _hdEditing = editing,
+                                              ),
+                                          hd: hdGeometry != null,
+                                          singleModule: module,
+                                          excludedModules:
+                                              hdGeometry != null &&
+                                                  module == null
+                                              ? widget
+                                                    .layoutSettingsController
+                                                    .hdSettings
+                                                    .activeModules
+                                                    .toSet()
+                                              : const {},
                                           layoutSettingsController:
                                               widget.layoutSettingsController,
                                           safetySettingsController:
@@ -1881,22 +1943,27 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                           },
                                         );
 
+                                        final infoWidget = buildInfo();
                                         const dividerExtent = 1.0;
                                         final availableWidth =
                                             constraints.maxWidth -
                                             dividerExtent;
-                                        final gamePanelExtent = isLandscape
-                                            ? availableWidth * gameFlex / 1000
-                                            : (constraints.maxWidth *
-                                                          720 /
-                                                          1200 +
-                                                      portraitGamePanelExtra)
-                                                  .clamp(
-                                                    0.0,
-                                                    constraints.maxHeight -
-                                                        dividerExtent,
-                                                  )
-                                                  .toDouble();
+                                        final gamePanelExtent =
+                                            hdGeometry?.gameWidth ??
+                                            (isLandscape
+                                                ? availableWidth *
+                                                      gameFlex /
+                                                      1000
+                                                : (constraints.maxWidth *
+                                                              720 /
+                                                              1200 +
+                                                          portraitGamePanelExtra)
+                                                      .clamp(
+                                                        0.0,
+                                                        constraints.maxHeight -
+                                                            dividerExtent,
+                                                      )
+                                                      .toDouble());
 
                                         final infoOnLeft =
                                             isLandscape &&
@@ -1923,7 +1990,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                               height: _gameFullscreen
                                                   ? actualConstraints.maxHeight
                                                   : (isLandscape
-                                                        ? constraints.maxHeight
+                                                        ? (hdGeometry
+                                                                  ?.gameHeight ??
+                                                              constraints
+                                                                  .maxHeight)
                                                         : gamePanelExtent),
                                               child: DecoratedBox(
                                                 decoration: BoxDecoration(
@@ -2032,10 +2102,41 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                 ),
                                               ),
                                             ),
+                                            if (hdGeometry != null)
+                                              Positioned(
+                                                key: const Key(
+                                                  'hd-bottom-region',
+                                                ),
+                                                left: infoOnLeft
+                                                    ? infoPanelExtent +
+                                                          dividerExtent
+                                                    : 0,
+                                                top: hdGeometry.gameHeight,
+                                                width: hdGeometry.gameWidth,
+                                                height: hdGeometry.bottomHeight,
+                                                child: Offstage(
+                                                  offstage: _gameFullscreen,
+                                                  child: HdBottomStrip(
+                                                    editing: _hdEditing,
+                                                    onStartEditing: () =>
+                                                        setState(
+                                                          () =>
+                                                              _hdEditing = true,
+                                                        ),
+                                                    controller: widget
+                                                        .layoutSettingsController,
+                                                    moduleBuilder: (module) =>
+                                                        buildInfo(
+                                                          module: module,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
                                             if (panelAlignedNavigation &&
                                                 !_gameFullscreen)
                                               Positioned(
-                                                left: widget
+                                                left:
+                                                    widget
                                                         .layoutSettingsController
                                                         .workspaceMenuOnRight
                                                     ? constraints.maxWidth -
@@ -2310,10 +2411,7 @@ class WorkspaceNavigation extends StatelessWidget {
           border: workspaceNavigationBorder(menuOnRight: onRight),
         ),
         child: AnimatedBuilder(
-          animation: Listenable.merge([
-            controller,
-            if (gameStateController != null) gameStateController!,
-          ]),
+          animation: Listenable.merge([controller, ?gameStateController]),
           builder: (context, _) {
             final destinations = _workspaceDestinations(l10n);
             final ordered = controller.workspaceMenuOrder
@@ -2546,8 +2644,18 @@ class _InformationPanel extends StatefulWidget {
     required this.onOpenExpedition,
     required this.onOpenQuest,
     required this.onOpenExpeditionCheck,
+    this.hd = false,
+    this.hdEditing = false,
+    this.onHdEditingChanged,
+    this.singleModule,
+    this.excludedModules = const {},
   });
 
+  final bool hd;
+  final bool hdEditing;
+  final ValueChanged<bool>? onHdEditingChanged;
+  final String? singleModule;
+  final Set<String> excludedModules;
   final LayoutSettingsController layoutSettingsController;
   final SafetySettingsController safetySettingsController;
   final PrototypeStatusController controller;
@@ -2571,14 +2679,27 @@ class _InformationPanel extends StatefulWidget {
 
 class _InformationPanelState extends State<_InformationPanel> {
   bool _isEditing = false;
+  final Set<String> _hdCollapsed = {};
+
+  @override
+  void didUpdateWidget(covariant _InformationPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.hd != widget.hd) _isEditing = false;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      key: const Key('information-panel'),
-      decoration: const BoxDecoration(
-        color: Color(0xff0d1a26),
-        border: Border(left: BorderSide(color: Color(0xff294052))),
+      key: widget.singleModule == null
+          ? const Key('information-panel')
+          : ValueKey('hd-module-content-${widget.singleModule}'),
+      decoration: BoxDecoration(
+        color: widget.singleModule == null
+            ? const Color(0xff0d1a26)
+            : Colors.transparent,
+        border: widget.singleModule == null
+            ? const Border(left: BorderSide(color: Color(0xff294052)))
+            : null,
       ),
       child: AnimatedBuilder(
         animation: Listenable.merge([
@@ -2596,10 +2717,17 @@ class _InformationPanelState extends State<_InformationPanel> {
               widget.gameCaptureController.state ==
                   GameCaptureState.unsupported;
 
+          final editing = widget.hd ? widget.hdEditing : _isEditing;
           final collapsedIds =
               widget.layoutSettingsController.dashboardCardCollapsed;
-          final hiddenIds = widget.layoutSettingsController.dashboardCardHidden;
-          final cardOrder = widget.layoutSettingsController.dashboardCardOrder;
+          final hiddenIds = widget.hd
+              ? widget.layoutSettingsController.hdSettings.hidden
+              : widget.layoutSettingsController.dashboardCardHidden.toSet();
+          final cardOrder = widget.singleModule != null
+              ? [widget.singleModule!]
+              : widget.hd
+              ? widget.layoutSettingsController.hdSettings.orderedModules
+              : widget.layoutSettingsController.dashboardCardOrder;
           final validCards = cardOrder
               .where(
                 (id) =>
@@ -2607,19 +2735,31 @@ class _InformationPanelState extends State<_InformationPanel> {
               )
               .toList();
           final visibleOrder = validCards
-              .where((id) => !hiddenIds.contains(id))
+              .where(
+                (id) =>
+                    !widget.excludedModules.contains(id) &&
+                    (widget.singleModule != null || !hiddenIds.contains(id)),
+              )
               .toList();
-          final cardIndexes = <String, int>{
-            for (var index = 0; index < validCards.length; index++)
-              validCards[index]: index,
-          };
           Widget buildCard(String id) {
-            final isCollapsed = _isEditing || collapsedIds.contains(id);
-            void toggle() => widget.layoutSettingsController
-                .toggleDashboardCardCollapsed(id);
+            final isCollapsed = widget.hd
+                ? editing || _hdCollapsed.contains(id)
+                : editing || collapsedIds.contains(id);
+            void toggle() {
+              if (widget.hd) {
+                setState(() {
+                  if (!_hdCollapsed.remove(id)) _hdCollapsed.add(id);
+                });
+              } else {
+                widget.layoutSettingsController.toggleDashboardCardCollapsed(
+                  id,
+                );
+              }
+            }
+
             final child = switch (id) {
               'fleet' => FleetSummaryCard(
-                onOpenDisplaySettings: _isEditing
+                onOpenDisplaySettings: editing
                     ? () => showFleetDisplaySettings(
                         context,
                         widget.layoutSettingsController,
@@ -2640,14 +2780,14 @@ class _InformationPanelState extends State<_InformationPanel> {
                     .battleStatusEffects
                     .sparkleEnabledFor(BattleEffectSurface.fleet),
                 collapsed: isCollapsed,
-                onToggleCollapse: _isEditing ? () {} : toggle,
+                onToggleCollapse: editing ? () {} : toggle,
                 onOpenFleet: widget.onOpenFleet,
               ),
               'land_base' => LandBaseSummaryCard(
                 visible: widget.layoutSettingsController.moduleDisplayFields(
                   'land_base',
                 ),
-                onOpenDisplaySettings: _isEditing
+                onOpenDisplaySettings: editing
                     ? () => showModuleDisplaySettings(
                         context,
                         widget.layoutSettingsController,
@@ -2660,13 +2800,13 @@ class _InformationPanelState extends State<_InformationPanel> {
                     .battleStatusEffects
                     .pulseFilterFor(BattleEffectSurface.fleet),
                 collapsed: isCollapsed,
-                onToggleCollapse: _isEditing ? () {} : toggle,
+                onToggleCollapse: editing ? () {} : toggle,
               ),
               'expedition' => ExpeditionSummaryCard(
                 visible: widget.layoutSettingsController.moduleDisplayFields(
                   'expedition',
                 ),
-                onOpenDisplaySettings: _isEditing
+                onOpenDisplaySettings: editing
                     ? () => showModuleDisplaySettings(
                         context,
                         widget.layoutSettingsController,
@@ -2675,7 +2815,7 @@ class _InformationPanelState extends State<_InformationPanel> {
                     : null,
                 controller: widget.gameStateController,
                 collapsed: isCollapsed,
-                onToggleCollapse: _isEditing ? () {} : toggle,
+                onToggleCollapse: editing ? () {} : toggle,
                 onOpenExpedition: widget.onOpenExpedition,
                 onOpenExpeditionCheck: widget.onOpenExpeditionCheck,
               ),
@@ -2684,7 +2824,7 @@ class _InformationPanelState extends State<_InformationPanel> {
                 visible: widget.layoutSettingsController.moduleDisplayFields(
                   'repair',
                 ),
-                onOpenDisplaySettings: _isEditing
+                onOpenDisplaySettings: editing
                     ? () => showModuleDisplaySettings(
                         context,
                         widget.layoutSettingsController,
@@ -2693,14 +2833,14 @@ class _InformationPanelState extends State<_InformationPanel> {
                     : null,
                 controller: widget.gameStateController,
                 collapsed: isCollapsed,
-                onToggleCollapse: _isEditing ? () {} : toggle,
+                onToggleCollapse: editing ? () {} : toggle,
                 onOpenRepair: widget.onOpenRepair,
               ),
               'construction' => ConstructionSummaryCard(
                 visible: widget.layoutSettingsController.moduleDisplayFields(
                   'construction',
                 ),
-                onOpenDisplaySettings: _isEditing
+                onOpenDisplaySettings: editing
                     ? () => showModuleDisplaySettings(
                         context,
                         widget.layoutSettingsController,
@@ -2709,13 +2849,13 @@ class _InformationPanelState extends State<_InformationPanel> {
                     : null,
                 controller: widget.gameStateController,
                 collapsed: isCollapsed,
-                onToggleCollapse: _isEditing ? () {} : toggle,
+                onToggleCollapse: editing ? () {} : toggle,
                 onOpenConstruction: widget.onOpenConstruction,
               ),
               'quests' => PinnedQuestsSummary(
                 controller: widget.gameStateController,
                 collapsed: isCollapsed,
-                onToggleCollapse: _isEditing ? () {} : toggle,
+                onToggleCollapse: editing ? () {} : toggle,
                 onOpenQuest: widget.onOpenQuest,
               ),
               'battle' => LiveBattleCard(
@@ -2736,150 +2876,122 @@ class _InformationPanelState extends State<_InformationPanel> {
                     .battleStatusEffects
                     .pulseFilterFor(BattleEffectSurface.prediction),
                 collapsed: isCollapsed,
-                onToggleCollapse: _isEditing ? () {} : toggle,
+                onToggleCollapse: editing ? () {} : toggle,
               ),
               'pre_sortie' => PreSortieCheckSummary(
                 key: const PageStorageKey('dashboard-pre-sortie'),
                 controller: widget.gameStateController,
                 settingsController: widget.layoutSettingsController,
                 collapsed: isCollapsed,
-                onToggleCollapse: _isEditing ? () {} : toggle,
+                onToggleCollapse: editing ? () {} : toggle,
                 onOpenFleet: widget.onOpenFleet,
               ),
               _ => const SizedBox.shrink(),
             };
 
             Widget finalChild = Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: widget.singleModule == null
+                  ? const EdgeInsets.only(bottom: 6)
+                  : EdgeInsets.zero,
               child: child,
             );
-
-            if (_isEditing) {
-              final isHidden = hiddenIds.contains(id);
-              finalChild = Opacity(
-                opacity: isHidden ? 0.5 : 1,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: !isHidden,
-                        activeColor: const Color(0xffd4a85f),
-                        checkColor: Colors.black,
-                        side: const BorderSide(
-                          color: Color(0xff8fa8b6),
-                          width: 2,
-                        ),
-                        onChanged: (_) => widget.layoutSettingsController
-                            .toggleDashboardCardHidden(id),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: ReorderableDelayedDragStartListener(
-                          index: cardIndexes[id] ?? 0,
-                          child: Container(
-                            key: Key('dashboard-drag-region-$id'),
-                            color: Colors.transparent,
-                            child: IgnorePointer(
-                              ignoring: !{
-                                'fleet',
-                                'land_base',
-                                'repair',
-                                'construction',
-                                'expedition',
-                              }.contains(id),
-                              child: child,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
 
             return KeyedSubtree(key: ValueKey(id), child: finalChild);
           }
 
-          return GestureDetector(
-            onLongPress: _isEditing
-                ? null
-                : () => setState(() => _isEditing = true),
-            child: _isEditing
-                ? Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            key: const Key('dashboard-edit-reset'),
-                            tooltip: AppLocalizations.of(
-                              context,
-                            )!.restoreDefaultOrder,
-                            onPressed: () {
-                              widget.layoutSettingsController
-                                  .resetDashboardCardOrder();
-                            },
-                            icon: const Icon(
-                              Icons.settings_backup_restore_rounded,
-                            ),
-                            color: const Color(0xff8197a5),
-                          ),
-                          IconButton(
-                            key: const Key('dashboard-edit-done'),
-                            tooltip: AppLocalizations.of(context)?.editDone,
-                            onPressed: () => setState(() => _isEditing = false),
-                            icon: const Icon(Icons.check_rounded),
-                            color: const Color(0xffd4a85f),
-                          ),
-                        ],
-                      ),
-                      Expanded(
-                        child: ReorderableListView(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          buildDefaultDragHandles: false,
-                          onReorderItem: (oldIndex, newIndex) {
-                            final order = reorderDashboardCards(
-                              validCards,
-                              oldIndex,
-                              newIndex,
-                            );
-                            widget.layoutSettingsController
-                                .setDashboardCardOrder(order);
-                          },
-                          children: [
-                            for (final id in validCards) buildCard(id),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                    children: [
-                      for (final id in visibleOrder) buildCard(id),
-                      if (hasError)
-                        Padding(
-                          key: const ValueKey('error_card'),
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: _InfoCard(
-                            title: AppLocalizations.of(
-                              context,
-                            )!.gameStatusError,
-                            subtitle: runtimeMessageText(
-                              context,
-                              widget.gameCaptureController.errorMessage ??
-                                  widget.browserController.errorMessage ??
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.gameStatusErrorDesc,
-                            ),
-                            warning: true,
-                          ),
-                        ),
-                    ],
+          if (widget.singleModule == null && editing) {
+            final controller = widget.layoutSettingsController;
+            final modules = validCards
+                .where((id) => !widget.excludedModules.contains(id))
+                .toList();
+            return DashboardEditor(
+              modules: modules,
+              hidden: hiddenIds,
+              cardBuilder: buildCard,
+              onToggle: (id) => widget.hd
+                  ? controller.toggleHdModuleHidden(id)
+                  : controller.toggleDashboardCardHidden(id),
+              onReset: () => widget.hd
+                  ? controller.resetHdLayout()
+                  : controller.resetDashboardCardOrder(),
+              onDone: () => widget.hd
+                  ? widget.onHdEditingChanged?.call(false)
+                  : setState(() => _isEditing = false),
+              onMove: (id, target, after) {
+                if (widget.hd) {
+                  controller.moveHdModuleToSidebar(
+                    id,
+                    target: target,
+                    after: after,
+                  );
+                } else {
+                  final order = [...validCards]..remove(id);
+                  final index = target == null ? -1 : order.indexOf(target);
+                  order.insert(
+                    index < 0 ? order.length : index + (after ? 1 : 0),
+                    id,
+                  );
+                  controller.setDashboardCardOrder(order);
+                }
+              },
+            );
+          }
+
+          if (widget.singleModule != null) {
+            return GestureDetector(
+              onLongPress: editing
+                  ? null
+                  : () => widget.onHdEditingChanged?.call(true),
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  key: ValueKey('hd-scroll-${widget.singleModule}'),
+                  primary: false,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: buildCard(widget.singleModule!),
                   ),
+                ),
+              ),
+            );
+          }
+
+          return GestureDetector(
+            onLongPress: editing
+                ? null
+                : widget.hd
+                ? () => widget.onHdEditingChanged?.call(true)
+                : () => setState(() => _isEditing = true),
+            child: ListView(
+              primary: widget.hd ? false : null,
+              key: widget.singleModule == null
+                  ? null
+                  : ValueKey('hd-scroll-${widget.singleModule}'),
+              padding: widget.singleModule != null
+                  ? EdgeInsets.zero
+                  : widget.hd
+                  ? const EdgeInsets.all(8)
+                  : const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              children: [
+                for (final id in visibleOrder) buildCard(id),
+                if (hasError && widget.singleModule == null)
+                  Padding(
+                    key: const ValueKey('error_card'),
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: _InfoCard(
+                      title: AppLocalizations.of(context)!.gameStatusError,
+                      subtitle: runtimeMessageText(
+                        context,
+                        widget.gameCaptureController.errorMessage ??
+                            widget.browserController.errorMessage ??
+                            AppLocalizations.of(context)!.gameStatusErrorDesc,
+                      ),
+                      warning: true,
+                    ),
+                  ),
+              ],
+            ),
           );
         },
       ),

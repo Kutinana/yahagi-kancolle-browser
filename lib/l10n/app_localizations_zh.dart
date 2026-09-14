@@ -2997,6 +2997,46 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mouseWheelCompatibilitySaveFailed => '设置保存失败，请重试。';
+
+  @override
+  String get hdMode => 'HD 模式';
+
+  @override
+  String get hdModeDescription =>
+      '开启后，大屏横屏使用紧凑侧栏与单行下栏；竖屏和小窗口沿用普通布局。关闭后恢复原布局设置。';
+
+  @override
+  String get hdBottomLayout => 'HD 下栏布局';
+
+  @override
+  String get hdSplit => '两个 1×1';
+
+  @override
+  String get hdWide => '一个 1×2';
+
+  @override
+  String get hdLeftModule => '左侧模块';
+
+  @override
+  String get hdRightModule => '右侧模块';
+
+  @override
+  String get hdWideModule => '整宽模块';
+
+  @override
+  String get hdCustomize => '自定义布局';
+
+  @override
+  String get hdEditHint => '长按拖动手柄排序或移入下栏；拖到已有模块上交换位置。勾选显示，取消勾选隐藏。';
+
+  @override
+  String get hdHalfWidth => '半宽 1×1';
+
+  @override
+  String get hdFullWidth => '整宽 1×2';
+
+  @override
+  String get hdDropArea => '可放置功能区';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5993,4 +6033,44 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get mouseWheelCompatibilitySaveFailed => '設定儲存失敗，請重試。';
+
+  @override
+  String get hdMode => 'HD 模式';
+
+  @override
+  String get hdModeDescription =>
+      '開啟後，大螢幕橫向使用緊湊側欄與單行下欄；直向和小視窗沿用一般配置。關閉後恢復原配置設定。';
+
+  @override
+  String get hdBottomLayout => 'HD 下欄配置';
+
+  @override
+  String get hdSplit => '兩個 1×1';
+
+  @override
+  String get hdWide => '一個 1×2';
+
+  @override
+  String get hdLeftModule => '左側模組';
+
+  @override
+  String get hdRightModule => '右側模組';
+
+  @override
+  String get hdWideModule => '整寬模組';
+
+  @override
+  String get hdCustomize => '自訂配置';
+
+  @override
+  String get hdEditHint => '長按拖曳把手排序或移入下欄；拖到既有模組上交換位置。勾選顯示，取消勾選隱藏。';
+
+  @override
+  String get hdHalfWidth => '半寬 1×1';
+
+  @override
+  String get hdFullWidth => '全寬 1×2';
+
+  @override
+  String get hdDropArea => '可放置功能區';
 }

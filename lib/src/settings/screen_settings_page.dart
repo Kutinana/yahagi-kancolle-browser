@@ -16,6 +16,7 @@ import 'game_mouse_wheel_settings.dart';
 import 'game_mouse_wheel_settings_section.dart';
 import 'game_frame_refresh_shortcut_settings.dart';
 import 'settings_ui_helpers.dart';
+import 'hd_layout_settings_section.dart';
 
 class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
   const ScreenSettingsPage({
@@ -166,6 +167,13 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            buildSectionTitle(l10n.hdMode),
+            buildCard(
+              child: HdLayoutSettingsSection(
+                controller: layoutSettingsController,
               ),
             ),
             if (gameMouseWheelSettingsController case final wheel?) ...<Widget>[

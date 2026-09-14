@@ -47,67 +47,81 @@ class DashboardCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                IconTheme(
-                  data: const IconThemeData(size: 16, color: Color(0xffd4a85f)),
-                  child: icon,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
+            LayoutBuilder(
+              builder: (context, constraints) => FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: constraints.maxWidth < 220
+                      ? 220
+                      : constraints.maxWidth,
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            title,
-                            style: const TextStyle(
-                              color: Color(0xffd4a85f),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
+                      IconTheme(
+                        data: const IconThemeData(
+                          size: 16,
+                          color: Color(0xffd4a85f),
+                        ),
+                        child: icon,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  title,
+                                  style: const TextStyle(
+                                    color: Color(0xffd4a85f),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
                             ),
+                            if (!collapsed && titleBadge != null) ...[
+                              const SizedBox(width: 8),
+                              titleBadge!,
+                            ],
+                          ],
+                        ),
+                      ),
+                      if (!collapsed && trailing != null) ...[
+                        trailing!,
+                        const SizedBox(width: 3),
+                      ],
+                      ?headerAction,
+                      Semantics(
+                        label: collapsed
+                            ? fleetText(context, '展开$title')
+                            : fleetText(context, '折叠$title'),
+                        child: IconButton(
+                          key: collapseButtonKey,
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 30,
+                          ),
+                          padding: EdgeInsets.zero,
+                          alignment: Alignment.centerRight,
+                          onPressed: onToggleCollapse,
+                          icon: Icon(
+                            collapsed
+                                ? Icons.keyboard_arrow_down_rounded
+                                : Icons.keyboard_arrow_up_rounded,
+                            size: 20,
+                            color: const Color(0xff8fa8b6),
                           ),
                         ),
                       ),
-                      if (!collapsed && titleBadge != null) ...[
-                        const SizedBox(width: 8),
-                        titleBadge!,
-                      ],
                     ],
                   ),
                 ),
-                if (!collapsed && trailing != null) ...[
-                  trailing!,
-                  const SizedBox(width: 3),
-                ],
-                if (headerAction != null) headerAction!,
-                Semantics(
-                  label: collapsed
-                      ? fleetText(context, '展开$title')
-                      : fleetText(context, '折叠$title'),
-                  child: IconButton(
-                    key: collapseButtonKey,
-                    visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 30,
-                    ),
-                    padding: EdgeInsets.zero,
-                    alignment: Alignment.centerRight,
-                    onPressed: onToggleCollapse,
-                    icon: Icon(
-                      collapsed
-                          ? Icons.keyboard_arrow_down_rounded
-                          : Icons.keyboard_arrow_up_rounded,
-                      size: 20,
-                      color: const Color(0xff8fa8b6),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             if (!collapsed) ...[const SizedBox(height: 0), child],
           ],

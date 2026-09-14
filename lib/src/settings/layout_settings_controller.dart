@@ -5,6 +5,7 @@ import 'header_resource_settings.dart';
 import 'fleet_display_options.dart';
 import 'module_display_settings.dart';
 import 'layout_settings_store.dart';
+import 'hd_layout_settings.dart';
 
 class LayoutSettingsController extends ChangeNotifier {
   LayoutSettingsController._(
@@ -71,6 +72,10 @@ class LayoutSettingsController extends ChangeNotifier {
       fontLocaleCode,
       fleetMoraleMetricMode,
     );
+    if (store is HdLayoutSettingsStore) {
+      controller._hdSettings = await (store as HdLayoutSettingsStore)
+          .loadHdLayoutSettings();
+    }
     if (store is InformationPanelSideSettingsStore) {
       controller._informationPanelOnLeft =
           await (store as InformationPanelSideSettingsStore)
@@ -263,6 +268,167 @@ class LayoutSettingsController extends ChangeNotifier {
   }
 
   final LayoutSettingsStore _store;
+
+  HdLayoutSettings _hdSettings = const HdLayoutSettings();
+  HdLayoutSettings get hdSettings => _hdSettings;
+
+  Future<void> _setHdSettings(HdLayoutSettings settings) async {
+    if (settings.encode() == _hdSettings.encode()) return;
+    _hdSettings = settings;
+    notifyListeners();
+    if (_store is HdLayoutSettingsStore) {
+      await (_store as HdLayoutSettingsStore).saveHdLayoutSettings(settings);
+    }
+  }
+
+  Future<void> setHdEnabled(bool enabled) =>
+      _setHdSettings(_hdSettings.copyWith(enabled: enabled));
+
+  // Kept for earlier callers; the home editor uses insertion and span APIs.
+  Future<void> setHdSplit(bool split) => _setHdSettings(
+    _hdSettings.copyWith(
+      split: split,
+      bottomModules: split
+          ? [
+              HdBottomModule(_hdSettings.leftModule, 1),
+              HdBottomModule(_hdSettings.rightModule, 1),
+            ]
+          : [HdBottomModule(_hdSettings.wideModule, 3)],
+    ),
+  );
+
+  Future<void> setHdModule(String slot, String module) async {
+    if (!HdLayoutSettings.moduleIds.contains(module)) return;
+    var next = switch (slot) {
+      'left' => _hdSettings.copyWith(leftModule: module),
+      'right' => _hdSettings.copyWith(rightModule: module),
+      'wide' => _hdSettings.copyWith(wideModule: module),
+      _ => _hdSettings,
+    };
+    final bottom = _hdSettings.bottom.toList();
+    final index = slot == 'wide'
+        ? (bottom.length == 1 ? 0 : -1)
+        : slot == 'left'
+        ? 0
+        : slot == 'right'
+        ? 1
+        : -1;
+    if (index >= 0 && index < bottom.length) {
+      final span = bottom[index].span;
+      bottom.removeAt(index);
+      bottom.removeWhere((item) => item.id == module);
+      bottom.insert(
+        index.clamp(0, bottom.length),
+        HdBottomModule(module, span),
+      );
+      next = next.copyWith(bottomModules: bottom);
+    }
+    await _setHdSettings(next);
+  }
+
+  bool canMoveHdModuleToBottom(String module) =>
+      HdLayoutSettings.moduleIds.contains(module) &&
+      (_hdSettings.activeModules.contains(module) ||
+          _hdSettings.usedColumns < 3);
+
+  Future<bool> moveHdModuleToBottom(
+    String module, {
+    String? before,
+    bool after = false,
+  }) async {
+    if (!canMoveHdModuleToBottom(module)) return false;
+    if (before == module) return true;
+    final bottom = _hdSettings.bottom.toList();
+    final oldIndex = bottom.indexWhere((item) => item.id == module);
+    final entry = oldIndex < 0
+        ? HdBottomModule(module, 1)
+        : bottom.removeAt(oldIndex);
+    final target = bottom.indexWhere((item) => item.id == before);
+    bottom.insert(target < 0 ? bottom.length : target + (after ? 1 : 0), entry);
+    await _setHdSettings(
+      _hdSettings.copyWith(
+        bottomModules: bottom,
+        hiddenModules: _hdSettings.hidden.difference({module}).toList(),
+      ),
+    );
+    return true;
+  }
+
+  Future<void> moveHdModuleToSidebar(
+    String module, {
+    String? target,
+    bool after = false,
+  }) async {
+    if (!HdLayoutSettings.moduleIds.contains(module) || module == target) {
+      return;
+    }
+    final order = _hdSettings.orderedModules.toList()..remove(module);
+    final index = order.indexOf(target ?? '');
+    order.insert(index < 0 ? order.length : index + (after ? 1 : 0), module);
+    await _setHdSettings(
+      _hdSettings.copyWith(
+        sidebarOrder: order,
+        bottomModules: _hdSettings.bottom
+            .where((item) => item.id != module)
+            .toList(),
+        hiddenModules: _hdSettings.hidden.difference({module}).toList(),
+      ),
+    );
+  }
+
+  bool canSetHdModuleSpan(String module, int span) {
+    if (span < 1 || span > 3) return false;
+    final entries = _hdSettings.bottom.where((item) => item.id == module);
+    return entries.isNotEmpty &&
+        _hdSettings.usedColumns - entries.first.span + span <= 3;
+  }
+
+  Future<bool> setHdModuleSpan(String module, int span) async {
+    if (!canSetHdModuleSpan(module, span)) return false;
+    await _setHdSettings(
+      _hdSettings.copyWith(
+        bottomModules: [
+          for (final item in _hdSettings.bottom)
+            item.id == module ? HdBottomModule(module, span) : item,
+        ],
+      ),
+    );
+    return true;
+  }
+
+  Future<void> moveHdModuleToSlot(String module, String slot) async {
+    final ids = _hdSettings.activeModules;
+    final index = slot == 'right' ? 1 : 0;
+    await moveHdModuleToBottom(
+      module,
+      before: index < ids.length ? ids[index] : null,
+    );
+  }
+
+  Future<void> moveHdModuleBefore(
+    String module,
+    String target, {
+    bool after = false,
+  }) => moveHdModuleToSidebar(module, target: target, after: after);
+
+  Future<void> resizeHdModule(String module, {required bool fullWidth}) async {
+    await setHdModuleSpan(module, fullWidth ? 3 : 1);
+  }
+
+  Future<void> toggleHdModuleHidden(String module) async {
+    if (!HdLayoutSettings.moduleIds.contains(module)) return;
+    final hidden = _hdSettings.hidden.toSet();
+    if (!hidden.remove(module)) hidden.add(module);
+    await _setHdSettings(_hdSettings.copyWith(hiddenModules: hidden.toList()));
+  }
+
+  Future<void> resetHdLayout() => _setHdSettings(
+    HdLayoutSettings(
+      enabled: _hdSettings.enabled,
+      bottomModules: const [],
+      sidebarOrder: LayoutSettingsStore.defaultDashboardCardOrder,
+    ),
+  );
 
   double _gameAreaRatio;
   double _informationPanelWidth;

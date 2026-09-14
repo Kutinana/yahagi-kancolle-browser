@@ -1030,5 +1030,18 @@
   "battlePredictionUnconfirmed": "資料未確認：血量與預測僅供參考，請以遊戲畫面為準。",
   "mouseWheelCompatibility": "外接滑鼠滾輪相容",
   "mouseWheelCompatibilityDescription": "使用外接滑鼠時，若遊戲內滾輪無反應，可嘗試開啟。立即生效，保留滑鼠點擊和手指觸控。",
-  "mouseWheelCompatibilitySaveFailed": "設定儲存失敗，請重試。"
+  "mouseWheelCompatibilitySaveFailed": "設定儲存失敗，請重試。",
+  "hdMode": "HD 模式",
+  "hdModeDescription": "開啟後，大螢幕橫向使用緊湊側欄與單行下欄；直向和小視窗沿用一般配置。關閉後恢復原配置設定。",
+  "hdBottomLayout": "HD 下欄配置",
+  "hdSplit": "兩個 1×1",
+  "hdWide": "一個 1×2",
+  "hdLeftModule": "左側模組",
+  "hdRightModule": "右側模組",
+  "hdWideModule": "整寬模組",
+  "hdCustomize": "自訂配置",
+  "hdEditHint": "長按拖曳把手排序或移入下欄；拖到既有模組上交換位置。勾選顯示，取消勾選隱藏。",
+  "hdHalfWidth": "半寬 1×1",
+  "hdFullWidth": "全寬 1×2",
+  "hdDropArea": "可放置功能區"
 }

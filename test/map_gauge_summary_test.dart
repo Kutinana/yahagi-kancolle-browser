@@ -1,3 +1,4 @@
+import 'package:yahagi_kancolle_browser/src/layout/hd_dashboard_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,93 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart'
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  testWidgets(
+    'HD maps follow columns and keep cleared toggle left of mode buttons',
+    (tester) async {
+      final state = GameState(
+        hasPortData: true,
+        memberMapInfos: {
+          for (var i = 1; i <= 7; i++)
+            i * 100 + 5: MemberMapInfo(
+              id: i * 10 + 5,
+              mapAreaId: i,
+              mapNo: 5,
+              name: '海域$i',
+              requiredDefeatCount: 4,
+              defeatCount: i == 7 ? 4 : 1,
+              cleared: i == 7,
+            ),
+        },
+      );
+      final controller = GameStateController(
+        gameStateStore: _StaticStore(state),
+      );
+      await controller.initialize();
+      addTearDown(controller.dispose);
+      for (final columns in [2, 3, 2]) {
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 665,
+                height: 500,
+                child: SingleChildScrollView(
+                  child: HdModuleColumns(
+                    columns: columns,
+                    child: PreSortieCheckSummary(
+                      controller: controller,
+                      collapsed: false,
+                      onToggleCollapse: () {},
+                      onOpenFleet: (_) {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('sortie-check-mode-maps')));
+        await tester.pumpAndSettle();
+        final toggle = find.byKey(const Key('map-gauge-toggle-show-cleared'));
+        final toggleRect = tester.getRect(toggle);
+        final modeRect = tester.getRect(
+          find.byKey(const Key('sortie-check-mode-selector')),
+        );
+        expect(toggleRect.right, lessThan(modeRect.left));
+        expect(toggleRect.center.dy, closeTo(modeRect.center.dy, .1));
+        if (find.byKey(const Key('map-gauge-row-7-5')).evaluate().isNotEmpty) {
+          await tester.tap(toggle);
+          await tester.pumpAndSettle();
+        }
+        final rects = [
+          for (var i = 1; i <= 6; i++)
+            tester.getRect(find.byKey(Key('map-gauge-row-$i-5'))),
+        ];
+        for (var i = 0; i < 6; i++) {
+          expect(rects[i].top, closeTo(rects[i ~/ columns * columns].top, .1));
+          expect(rects[i].width, closeTo(rects.first.width, .1));
+          if (i % columns > 0) {
+            expect(rects[i].left, greaterThan(rects[i - 1].right));
+          }
+          if (i >= columns) {
+            expect(rects[i].top, greaterThan(rects[i - columns].top));
+          }
+        }
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(find.byKey(const Key('map-gauge-row-7-5'))).width,
+          closeTo(rects.first.width, .1),
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   group('Map Gauge GameState & Reducer', () {
     test('parses member map info with EO defeat counts and event map HP', () {
       final reducer = GameStateReducer();

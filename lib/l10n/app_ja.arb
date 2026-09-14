@@ -1030,5 +1030,18 @@
   "battlePredictionUnconfirmed": "データ未確認：HP・予測は参考値です。ゲーム画面で確認してください。",
   "mouseWheelCompatibility": "外付けマウスのホイール互換",
   "mouseWheelCompatibilityDescription": "ゲーム内でマウスホイールが反応しない場合にお試しください。すぐに反映され、クリックとタッチ操作も引き続き使えます。",
-  "mouseWheelCompatibilitySaveFailed": "設定を保存できませんでした。もう一度お試しください。"
+  "mouseWheelCompatibilitySaveFailed": "設定を保存できませんでした。もう一度お試しください。",
+  "hdMode": "HD モード",
+  "hdModeDescription": "有効にすると、大画面の横向きでコンパクトなサイドバーと1段の下部パネルを使用します。縦向きと小さいウィンドウは通常のレイアウトを維持します。無効にすると元の設定に戻ります。",
+  "hdBottomLayout": "HD 下部レイアウト",
+  "hdSplit": "1×1 を2つ",
+  "hdWide": "1×2 を1つ",
+  "hdLeftModule": "左パネル",
+  "hdRightModule": "右パネル",
+  "hdWideModule": "全幅パネル",
+  "hdCustomize": "レイアウト編集",
+  "hdEditHint": "ハンドルを長押しして並べ替えや下部への移動ができます。配置済みのパネルにドロップすると交換します。チェックで表示を切り替えます。",
+  "hdHalfWidth": "半幅 1×1",
+  "hdFullWidth": "全幅 1×2",
+  "hdDropArea": "機能パネルを配置できます"
 }

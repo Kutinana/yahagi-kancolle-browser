@@ -1,3 +1,7 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yahagi_kancolle_browser/src/layout/hd_bottom_strip.dart';
+import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_ship_status_capsule.dart';
@@ -9,6 +13,67 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dar
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  testWidgets('HD land bases follow bottom span and reflow live', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final controller = await _controllerWithLandBases(selectedAreaBaseCount: 3);
+    final layout = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    addTearDown(controller.dispose);
+    addTearDown(layout.dispose);
+    await layout.setHdSplit(false);
+    await layout.setHdModule('wide', 'land_base');
+    for (final width in [665.0, 780.0]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: width,
+              height: 300,
+              child: HdBottomStrip(
+                controller: layout,
+                moduleBuilder: (_) => SingleChildScrollView(
+                  child: LandBaseSummaryCard(
+                    controller: controller,
+                    collapsed: false,
+                    onToggleCollapse: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('land-base-area-selector-62')));
+      await tester.pumpAndSettle();
+      for (final columns in [1, 2, 3, 2]) {
+        await layout.setHdModuleSpan('land_base', columns);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('land-base-area-selector-62')));
+        await tester.pumpAndSettle();
+        final rows = find.byType(LandBaseAirGroupRow);
+        expect(rows, findsNWidgets(3));
+        final rects = [for (var i = 0; i < 3; i++) tester.getRect(rows.at(i))];
+        for (var i = 0; i < 3; i++) {
+          expect(
+            rects[i].top,
+            closeTo(rects[(i ~/ columns) * columns].top, .1),
+          );
+          if (i % columns > 0) {
+            expect(rects[i].left, greaterThan(rects[i - 1].right));
+          }
+          if (i >= columns) {
+            expect(rects[i].top, greaterThan(rects[i - columns].top));
+          }
+        }
+        expect(tester.takeException(), isNull);
+      }
+    }
+  });
+
   testWidgets(
     'land base options retain HP and fatigue and reclaim image width',
     (tester) async {
@@ -425,13 +490,13 @@ void main() {
     await tester.pumpWidget(_card(controller));
     await tester.pump();
 
-    expect(find.text('[6] 中部海域'), findsOneWidget);
+    expect(find.text('[6] 中部海域'), findsNothing);
     expect(find.text('其他海域基地'), findsOneWidget);
     expect(find.text('第一基地航空队'), findsNothing);
 
     await tester.tap(find.byKey(const Key('land-base-area-selector-62')));
     await tester.pump();
-    expect(find.text('[62] 反击！第三十一战队的战斗'), findsOneWidget);
+    expect(find.text('[62] 反击！第三十一战队的战斗'), findsNothing);
     expect(find.text('第一基地航空队'), findsOneWidget);
     expect(find.text('其他海域基地'), findsNothing);
 
