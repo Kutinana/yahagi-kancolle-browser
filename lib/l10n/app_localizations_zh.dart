@@ -3003,7 +3003,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get hdModeDescription =>
-      '开启后，大屏横屏使用侧栏与单行下栏；竖屏使用两列功能区，可长按自定义 1×1、1×2、2×1 或 2×2。横竖屏布局独立保存，小窗口沿用普通布局。';
+      '开启后，使用专为大屏设备优化的 UI 配置（推荐 8 寸以上设备）。非大屏设备强行开启可能导致界面显示异常、布局溢出或应用崩溃等问题。';
 
   @override
   String get hdBottomLayout => 'HD 下栏布局';
@@ -3037,6 +3037,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get hdDropArea => '可放置功能区';
+
+  @override
+  String get workspaceMenuPosition => '菜单栏位置';
+
+  @override
+  String get workspaceMenuPositionDesc => '上方位于游戏画面下方。';
+
+  @override
+  String get menuPositionTop => '上';
+
+  @override
+  String get menuPositionBottom => '下';
+
+  @override
+  String get menuPositionLeft => '左';
+
+  @override
+  String get menuPositionRight => '右';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6039,7 +6057,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get hdModeDescription =>
-      '開啟後，大螢幕橫向使用側欄與單行下欄；直向使用兩欄功能區，可長按自訂 1×1、1×2、2×1 或 2×2。橫直向配置分別儲存，小視窗沿用一般配置。';
+      '開啟後，使用專為大螢幕裝置最佳化的 UI 配置（建議 8 吋以上裝置）。非大螢幕裝置強行開啟可能導致介面顯示異常、版面溢出或應用程式當機等問題。';
 
   @override
   String get hdBottomLayout => 'HD 下欄配置';
@@ -6073,4 +6091,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get hdDropArea => '可放置功能區';
+
+  @override
+  String get workspaceMenuPosition => '選單列位置';
+
+  @override
+  String get workspaceMenuPositionDesc => '上方位於遊戲畫面下方。';
+
+  @override
+  String get menuPositionTop => '上';
+
+  @override
+  String get menuPositionBottom => '下';
+
+  @override
+  String get menuPositionLeft => '左';
+
+  @override
+  String get menuPositionRight => '右';
 }

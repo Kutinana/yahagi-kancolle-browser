@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../performance/second_tick_scope.dart';
 
+const operationSummaryTimeStyle = TextStyle(
+  fontSize: 10,
+  fontWeight: FontWeight.w700,
+);
+
 double operationProgress({
   required DateTime now,
   required DateTime start,

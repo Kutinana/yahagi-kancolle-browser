@@ -670,6 +670,44 @@ void main() {
     expect(find.text('2 艘'), findsNothing);
   });
 
+  testWidgets(
+    'portrait roster doubles height and enlarged area selects ships',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(start2Event)
+        ..accept(portEvent)
+        ..accept(slotItemEvent);
+      await controller.idle;
+
+      for (final size in [const Size(412, 915), const Size(800, 1280)]) {
+        tester.view.physicalSize = size;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: FleetInformationCenter(controller: controller),
+            ),
+          ),
+        );
+        await tester.pump();
+        final capsule = find.byKey(const Key('fleet-roster-ship-9002'));
+        final rect = tester.getRect(capsule);
+        expect(rect.width / rect.height, closeTo(1.5, 0.01));
+        await tester.tapAt(Offset(rect.center.dx, rect.bottom - 3));
+        await tester.pump();
+        expect(
+          find.byKey(const Key('fleet-focus-portrait-9002')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   testWidgets('uses 30 dp fleet selectors on phone layouts', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(412, 915);

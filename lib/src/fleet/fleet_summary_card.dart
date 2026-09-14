@@ -291,6 +291,11 @@ class _FleetSummaryMetrics extends StatelessWidget {
       recoveredLabel: requiredL10n.moraleRecovered,
       noValueLabel: noValue,
     );
+    final twoColumns = HdModuleColumns.of(context) == 2;
+    final metricFields = {
+      ...visible,
+      if (twoColumns) ...{'firepower', 'anti-sub'},
+    };
     final values =
         <(String, String, String)>[
               (
@@ -350,8 +355,8 @@ class _FleetSummaryMetrics extends StatelessWidget {
                 recoveryValue,
               ),
             ]
-            .where((value) => visible.contains(value.$1))
-            .take(maximumSummaryFields)
+            .where((value) => metricFields.contains(value.$1))
+            .take(twoColumns ? 7 : maximumSummaryFields)
             .toList();
     if (values.isEmpty) return const SizedBox.shrink();
     Widget metricAt(int index) => _FleetSummaryMetric(

@@ -1032,7 +1032,7 @@
   "mouseWheelCompatibilityDescription": "ゲーム内でマウスホイールが反応しない場合にお試しください。すぐに反映され、クリックとタッチ操作も引き続き使えます。",
   "mouseWheelCompatibilitySaveFailed": "設定を保存できませんでした。もう一度お試しください。",
   "hdMode": "HD モード",
-  "hdModeDescription": "大画面では横向きでサイドバーと1段の下部パネル、縦向きで2列のパネルを使用します。長押しで1×1・1×2・2×1・2×2を選択でき、縦横の配置は個別に保存します。小さいウィンドウは通常の配置を使用します。",
+  "hdModeDescription": "大画面端末向けに最適化した UI を使用します（8インチ以上を推奨）。小画面端末で無理に有効にすると、表示の乱れ、レイアウトのはみ出し、アプリのクラッシュなどが発生する可能性があります。",
   "hdBottomLayout": "HD 下部レイアウト",
   "hdSplit": "1×1 を2つ",
   "hdWide": "1×2 を1つ",
@@ -1043,5 +1043,11 @@
   "hdEditHint": "ハンドルを長押しして並べ替えや下部への移動ができます。配置済みのパネルにドロップすると交換します。チェックで表示を切り替えます。",
   "hdHalfWidth": "半幅 1×1",
   "hdFullWidth": "全幅 1×2",
-  "hdDropArea": "機能パネルを配置できます"
+  "hdDropArea": "機能パネルを配置できます",
+  "workspaceMenuPosition": "メニューの位置",
+  "workspaceMenuPositionDesc": "上はゲーム画面のすぐ下に表示します。",
+  "menuPositionTop": "上",
+  "menuPositionBottom": "下",
+  "menuPositionLeft": "左",
+  "menuPositionRight": "右"
 }

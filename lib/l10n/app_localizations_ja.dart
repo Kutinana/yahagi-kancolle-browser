@@ -3033,7 +3033,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get hdModeDescription =>
-      '大画面では横向きでサイドバーと1段の下部パネル、縦向きで2列のパネルを使用します。長押しで1×1・1×2・2×1・2×2を選択でき、縦横の配置は個別に保存します。小さいウィンドウは通常の配置を使用します。';
+      '大画面端末向けに最適化した UI を使用します（8インチ以上を推奨）。小画面端末で無理に有効にすると、表示の乱れ、レイアウトのはみ出し、アプリのクラッシュなどが発生する可能性があります。';
 
   @override
   String get hdBottomLayout => 'HD 下部レイアウト';
@@ -3068,4 +3068,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get hdDropArea => '機能パネルを配置できます';
+
+  @override
+  String get workspaceMenuPosition => 'メニューの位置';
+
+  @override
+  String get workspaceMenuPositionDesc => '上はゲーム画面のすぐ下に表示します。';
+
+  @override
+  String get menuPositionTop => '上';
+
+  @override
+  String get menuPositionBottom => '下';
+
+  @override
+  String get menuPositionLeft => '左';
+
+  @override
+  String get menuPositionRight => '右';
 }

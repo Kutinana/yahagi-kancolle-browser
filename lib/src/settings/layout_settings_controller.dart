@@ -72,6 +72,14 @@ class LayoutSettingsController extends ChangeNotifier {
       fontLocaleCode,
       fleetMoraleMetricMode,
     );
+    if (store is WorkspaceMenuPositionStore) {
+      final position = await (store as WorkspaceMenuPositionStore)
+          .loadWorkspaceMenuPosition();
+      if (['top', 'bottom', 'left', 'right'].contains(position)) {
+        controller._workspaceMenuPosition = position;
+        controller._workspaceMenuOnRight = position == 'right';
+      }
+    }
     if (store is HdLayoutSettingsStore) {
       controller._hdSettings = await (store as HdLayoutSettingsStore)
           .loadHdLayoutSettings();
@@ -479,7 +487,10 @@ class LayoutSettingsController extends ChangeNotifier {
 
   Future<void> resetHdPortraitLayout() => _setHdSettings(
     _hdSettings.copyWith(
-      portraitModules: const [],
+      portraitModules: [
+        for (final id in LayoutSettingsStore.defaultDashboardCardOrder)
+          HdBottomModule(id, 2),
+      ],
       portraitHiddenModules: const [],
     ),
   );
@@ -518,7 +529,28 @@ class LayoutSettingsController extends ChangeNotifier {
   double get informationPanelWidth => _informationPanelWidth;
   bool get autoZoom => _autoZoom;
   bool get enhancedDamagePulse => _enhancedDamagePulse;
+  String? _workspaceMenuPosition;
+  String get workspaceMenuPosition =>
+      _workspaceMenuPosition ?? (_workspaceMenuOnRight ? 'right' : 'left');
+  bool get workspaceMenuHorizontal =>
+      workspaceMenuPosition == 'top' || workspaceMenuPosition == 'bottom';
   bool get workspaceMenuOnRight => _workspaceMenuOnRight;
+  Future<void> setWorkspaceMenuPosition(String position) async {
+    if (!['top', 'bottom', 'left', 'right'].contains(position) ||
+        position == workspaceMenuPosition) {
+      return;
+    }
+    _workspaceMenuPosition = position;
+    _workspaceMenuOnRight = position == 'right';
+    notifyListeners();
+    await _store.saveWorkspaceMenuOnRight(_workspaceMenuOnRight);
+    if (_store is WorkspaceMenuPositionStore) {
+      await (_store as WorkspaceMenuPositionStore).saveWorkspaceMenuPosition(
+        position,
+      );
+    }
+  }
+
   bool get informationPanelOnLeft => _informationPanelOnLeft;
 
   Future<void> setInformationPanelOnLeft(bool onLeft) async {
@@ -597,12 +629,8 @@ class LayoutSettingsController extends ChangeNotifier {
     }
   }
 
-  Future<void> setWorkspaceMenuOnRight(bool onRight) async {
-    if (_workspaceMenuOnRight == onRight) return;
-    _workspaceMenuOnRight = onRight;
-    notifyListeners();
-    await _store.saveWorkspaceMenuOnRight(onRight);
-  }
+  Future<void> setWorkspaceMenuOnRight(bool onRight) =>
+      setWorkspaceMenuPosition(onRight ? 'right' : 'left');
 
   Future<void> setWorkspaceMenuOrder(List<String> order) async {
     final normalized = normalizeWorkspaceMenuOrder(order);

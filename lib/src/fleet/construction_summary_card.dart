@@ -197,7 +197,7 @@ class ConstructionSummaryCard extends StatelessWidget {
                                 completedText: fleetText(context, '已完成'),
                                 completedColor: const Color(0xff4caf50),
                                 countingColor: const Color(0xffd4a85f),
-                                style: const TextStyle(fontSize: 11),
+                                style: operationSummaryTimeStyle,
                               ),
                             ),
                           )

@@ -96,6 +96,11 @@ abstract interface class FleetMoraleMetricSettingsStore {
   Future<void> saveFleetMoraleMetricMode(FleetMoraleMetricMode mode);
 }
 
+abstract interface class WorkspaceMenuPositionStore {
+  Future<String?> loadWorkspaceMenuPosition();
+  Future<void> saveWorkspaceMenuPosition(String position);
+}
+
 class SharedPreferencesLayoutSettingsStore
     implements
         LayoutSettingsStore,
@@ -105,7 +110,21 @@ class SharedPreferencesLayoutSettingsStore
         HeaderResourceSettingsStore,
         WorkspaceMenuOrderSettingsStore,
         HdLayoutSettingsStore,
-        InformationPanelSideSettingsStore {
+        InformationPanelSideSettingsStore,
+        WorkspaceMenuPositionStore {
+  @override
+  Future<String?> loadWorkspaceMenuPosition() async =>
+      (await SharedPreferences.getInstance()).getString(
+        'layout_workspace_menu_position',
+      );
+  @override
+  Future<void> saveWorkspaceMenuPosition(String position) async {
+    await (await SharedPreferences.getInstance()).setString(
+      'layout_workspace_menu_position',
+      position,
+    );
+  }
+
   @override
   Future<HdLayoutSettings> loadHdLayoutSettings() async =>
       HdLayoutSettings.decode(

@@ -1032,7 +1032,7 @@
   "mouseWheelCompatibilityDescription": "使用外接滑鼠時，若遊戲內滾輪無反應，可嘗試開啟。立即生效，保留滑鼠點擊和手指觸控。",
   "mouseWheelCompatibilitySaveFailed": "設定儲存失敗，請重試。",
   "hdMode": "HD 模式",
-  "hdModeDescription": "開啟後，大螢幕橫向使用側欄與單行下欄；直向使用兩欄功能區，可長按自訂 1×1、1×2、2×1 或 2×2。橫直向配置分別儲存，小視窗沿用一般配置。",
+  "hdModeDescription": "開啟後，使用專為大螢幕裝置最佳化的 UI 配置（建議 8 吋以上裝置）。非大螢幕裝置強行開啟可能導致介面顯示異常、版面溢出或應用程式當機等問題。",
   "hdBottomLayout": "HD 下欄配置",
   "hdSplit": "兩個 1×1",
   "hdWide": "一個 1×2",
@@ -1043,5 +1043,11 @@
   "hdEditHint": "長按拖曳把手排序或移入下欄；拖到既有模組上交換位置。勾選顯示，取消勾選隱藏。",
   "hdHalfWidth": "半寬 1×1",
   "hdFullWidth": "全寬 1×2",
-  "hdDropArea": "可放置功能區"
+  "hdDropArea": "可放置功能區",
+  "workspaceMenuPosition": "選單列位置",
+  "workspaceMenuPositionDesc": "上方位於遊戲畫面下方。",
+  "menuPositionTop": "上",
+  "menuPositionBottom": "下",
+  "menuPositionLeft": "左",
+  "menuPositionRight": "右"
 }

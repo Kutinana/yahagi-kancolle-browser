@@ -80,11 +80,6 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
           onToggleCollapse: widget.onToggleCollapse,
           titleBadge: idle ? const _IdleBadge() : _StatusBadge(battle: battle),
           trailing: _ModeSwitch(mode: _mode, onChanged: _setMode),
-          borderColor: widget.collapsed || idle
-              ? null
-              : battle.status == LiveBattleStatus.forecast
-              ? const Color(0xff8b6a2b)
-              : const Color(0xff2f7469),
           child: Column(
             key: widget.collapsed
                 ? const Key('live-battle-collapsed')

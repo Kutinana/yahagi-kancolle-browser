@@ -1362,6 +1362,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     );
 
     final windowSize = MediaQuery.sizeOf(context);
+    final menuHorizontal =
+        widget.layoutSettingsController.workspaceMenuHorizontal;
+    final menuTop =
+        widget.layoutSettingsController.workspaceMenuPosition == 'top';
     final hdPortrait =
         widget.layoutSettingsController.hdSettings.enabled &&
         windowSize.shortestSide >= 600 &&
@@ -1373,15 +1377,18 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         ) &&
         HdWorkspaceGeometry.forSize(
               Size(
-                windowSize.width - _workspaceNavigationExtent,
+                windowSize.width -
+                    (menuHorizontal ? 0 : _workspaceNavigationExtent),
                 windowSize.height - 44,
               ),
             ) !=
             null;
     final panelAlignedNavigation =
-        !hdWindow &&
         _workspaceIndex == 0 &&
-        usesVerticalWorkspace(MediaQuery.sizeOf(context));
+        (menuTop ||
+            (!menuHorizontal &&
+                !hdWindow &&
+                usesVerticalWorkspace(windowSize)));
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -1782,7 +1789,13 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                     ),
                   ),
                   Expanded(
-                    child: Row(
+                    child: Flex(
+                      direction: menuHorizontal
+                          ? Axis.vertical
+                          : Axis.horizontal,
+                      verticalDirection: menuHorizontal && !menuTop
+                          ? VerticalDirection.up
+                          : VerticalDirection.down,
                       textDirection: workspaceNavigationTextDirection(
                         menuOnRight: widget
                             .layoutSettingsController
@@ -1979,6 +1992,16 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                         final infoPanelExtent =
                                             availableWidth - gamePanelExtent;
 
+                                        final topMenuExtent = menuTop
+                                            ? _workspaceNavigationExtent
+                                            : 0.0;
+                                        final topMenuY =
+                                            hdGeometry?.gameHeight ??
+                                            (isLandscape
+                                                ? constraints.maxHeight -
+                                                      topMenuExtent
+                                                : gamePanelExtent +
+                                                      dividerExtent);
                                         return Stack(
                                           children: [
                                             Positioned(
@@ -1999,7 +2022,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                         ? (hdGeometry
                                                                   ?.gameHeight ??
                                                               constraints
-                                                                  .maxHeight)
+                                                                      .maxHeight -
+                                                                  topMenuExtent)
                                                         : gamePanelExtent),
                                               child: DecoratedBox(
                                                 decoration: BoxDecoration(
@@ -2067,6 +2091,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                         : gamePanelExtent +
                                                               dividerExtent)
                                                   : (panelAlignedNavigation &&
+                                                            !menuHorizontal &&
                                                             !widget
                                                                 .layoutSettingsController
                                                                 .workspaceMenuOnRight
@@ -2075,18 +2100,21 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                               top: isLandscape
                                                   ? 0
                                                   : gamePanelExtent +
-                                                        dividerExtent,
+                                                        dividerExtent +
+                                                        topMenuExtent,
                                               width: isLandscape
                                                   ? infoPanelExtent
                                                   : constraints.maxWidth -
-                                                        (panelAlignedNavigation
+                                                        (panelAlignedNavigation &&
+                                                                !menuHorizontal
                                                             ? _workspaceNavigationExtent
                                                             : 0),
                                               height: isLandscape
                                                   ? constraints.maxHeight
                                                   : constraints.maxHeight -
                                                         gamePanelExtent -
-                                                        dividerExtent,
+                                                        dividerExtent -
+                                                        topMenuExtent,
                                               child: Offstage(
                                                 offstage: _gameFullscreen,
                                                 child: Padding(
@@ -2117,9 +2145,13 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                     ? infoPanelExtent +
                                                           dividerExtent
                                                     : 0,
-                                                top: hdGeometry.gameHeight,
+                                                top:
+                                                    hdGeometry.gameHeight +
+                                                    topMenuExtent,
                                                 width: hdGeometry.gameWidth,
-                                                height: hdGeometry.bottomHeight,
+                                                height:
+                                                    hdGeometry.bottomHeight -
+                                                    topMenuExtent,
                                                 child: Offstage(
                                                   offstage: _gameFullscreen,
                                                   child: HdBottomStrip(
@@ -2141,22 +2173,33 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                             if (panelAlignedNavigation &&
                                                 !_gameFullscreen)
                                               Positioned(
-                                                left:
-                                                    widget
-                                                        .layoutSettingsController
-                                                        .workspaceMenuOnRight
-                                                    ? constraints.maxWidth -
-                                                          _workspaceNavigationExtent
-                                                    : 0,
-                                                top:
-                                                    gamePanelExtent +
-                                                    dividerExtent,
-                                                width:
-                                                    _workspaceNavigationExtent,
-                                                height:
-                                                    constraints.maxHeight -
-                                                    gamePanelExtent -
-                                                    dividerExtent,
+                                                left: menuHorizontal
+                                                    ? (isLandscape && infoOnLeft
+                                                          ? infoPanelExtent +
+                                                                dividerExtent
+                                                          : 0)
+                                                    : (widget
+                                                              .layoutSettingsController
+                                                              .workspaceMenuOnRight
+                                                          ? constraints
+                                                                    .maxWidth -
+                                                                _workspaceNavigationExtent
+                                                          : 0),
+                                                top: menuHorizontal
+                                                    ? topMenuY
+                                                    : gamePanelExtent +
+                                                          dividerExtent,
+                                                width: menuHorizontal
+                                                    ? (isLandscape
+                                                          ? gamePanelExtent
+                                                          : constraints
+                                                                .maxWidth)
+                                                    : _workspaceNavigationExtent,
+                                                height: menuHorizontal
+                                                    ? _workspaceNavigationExtent
+                                                    : constraints.maxHeight -
+                                                          gamePanelExtent -
+                                                          dividerExtent,
                                                 child:
                                                     buildWorkspaceNavigation(),
                                               ),
@@ -2382,7 +2425,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   }
 }
 
-const double _workspaceNavigationExtent = 58;
+const double _workspaceNavigationExtent = 48;
 
 class WorkspaceNavigation extends StatelessWidget {
   const WorkspaceNavigation({
@@ -2411,10 +2454,20 @@ class WorkspaceNavigation extends StatelessWidget {
       now: clock,
       enabled: gameStateController != null,
       builder: (context, now, _) => Container(
-        width: _workspaceNavigationExtent,
+        width: controller.workspaceMenuHorizontal
+            ? null
+            : _workspaceNavigationExtent,
+        height: controller.workspaceMenuHorizontal
+            ? _workspaceNavigationExtent
+            : null,
         decoration: BoxDecoration(
           color: const Color(0xff0a1823),
-          border: workspaceNavigationBorder(menuOnRight: onRight),
+          border: controller.workspaceMenuHorizontal
+              ? const Border(
+                  top: BorderSide(color: Color(0xff294052)),
+                  bottom: BorderSide(color: Color(0xff294052)),
+                )
+              : workspaceNavigationBorder(menuOnRight: onRight),
         ),
         child: AnimatedBuilder(
           animation: Listenable.merge([controller, ?gameStateController]),
@@ -2424,70 +2477,88 @@ class WorkspaceNavigation extends StatelessWidget {
                 .map((id) => destinations[id])
                 .whereType<_WorkspaceDestination>()
                 .toList(growable: false);
-            return ReorderableListView.builder(
-              key: const Key('workspace-navigation-list'),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              buildDefaultDragHandles: false,
-              itemCount: ordered.length,
-              onReorderItem: controller.reorderWorkspaceMenu,
-              itemBuilder: (context, index) {
-                final destination = ordered[index];
-                return SizedBox(
-                  key: ValueKey('workspace-nav-item-${destination.id}'),
-                  height: 50,
-                  child: Center(
-                    child: ReorderableDelayedDragStartListener(
-                      index: index,
-                      child: _NavigationButton(
-                        key: Key('workspace-nav-${destination.id}'),
-                        icon: destination.icon,
-                        label: destination.label,
-                        completedCount: switch (destination.id) {
-                          'quests' => completedQuestCount,
-                          'expedition' =>
-                            gameStateController?.state.fleets
-                                    .where(
-                                      (fleet) =>
-                                          fleet.mission.isActive &&
-                                          now.isBefore(
-                                            fleet.mission.completionTime!,
-                                          ),
-                                    )
-                                    .length ??
-                                0,
-                          'construction' =>
-                            gameStateController?.state.constructionDocks
-                                    .where((dock) => dock.isCompletedAt(now))
-                                    .length ??
-                                0,
-                          'repair' =>
-                            gameStateController?.state.repairDocks
-                                    .where(
-                                      (dock) =>
-                                          dock.isRepairing &&
-                                          (dock.completionTime == null ||
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final centeredPadding =
+                    (constraints.maxWidth - ordered.length * 50) / 2;
+                return ReorderableListView.builder(
+                  key: const Key('workspace-navigation-list'),
+                  scrollDirection: controller.workspaceMenuHorizontal
+                      ? Axis.horizontal
+                      : Axis.vertical,
+                  padding: controller.workspaceMenuHorizontal
+                      ? EdgeInsets.symmetric(
+                          horizontal: centeredPadding > 10
+                              ? centeredPadding
+                              : 10,
+                        )
+                      : const EdgeInsets.symmetric(vertical: 10),
+                  buildDefaultDragHandles: false,
+                  itemCount: ordered.length,
+                  onReorderItem: controller.reorderWorkspaceMenu,
+                  itemBuilder: (context, index) {
+                    final destination = ordered[index];
+                    return SizedBox(
+                      key: ValueKey('workspace-nav-item-${destination.id}'),
+                      width: controller.workspaceMenuHorizontal ? 50 : null,
+                      height: controller.workspaceMenuHorizontal ? null : 50,
+                      child: Center(
+                        child: ReorderableDelayedDragStartListener(
+                          index: index,
+                          child: _NavigationButton(
+                            key: Key('workspace-nav-${destination.id}'),
+                            icon: destination.icon,
+                            label: destination.label,
+                            completedCount: switch (destination.id) {
+                              'quests' => completedQuestCount,
+                              'expedition' =>
+                                gameStateController?.state.fleets
+                                        .where(
+                                          (fleet) =>
+                                              fleet.mission.isActive &&
                                               now.isBefore(
-                                                dock.completionTime!,
-                                              )),
-                                    )
-                                    .length ??
-                                0,
-                          _ => 0,
-                        },
-                        countKey: Key(switch (destination.id) {
-                          'repair' => 'repair-active-count',
-                          'expedition' => 'expedition-active-count',
-                          'quests' => 'quest-completion-count',
-                          _ => '${destination.id}-completion-count',
-                        }),
-                        countLabel: destination.id == 'quests'
-                            ? null
-                            : destination.label,
-                        selected: selectedIndex == destination.pageIndex,
-                        onTap: () => onSelected(destination.pageIndex),
+                                                fleet.mission.completionTime!,
+                                              ),
+                                        )
+                                        .length ??
+                                    0,
+                              'construction' =>
+                                gameStateController?.state.constructionDocks
+                                        .where(
+                                          (dock) => dock.isCompletedAt(now),
+                                        )
+                                        .length ??
+                                    0,
+                              'repair' =>
+                                gameStateController?.state.repairDocks
+                                        .where(
+                                          (dock) =>
+                                              dock.isRepairing &&
+                                              (dock.completionTime == null ||
+                                                  now.isBefore(
+                                                    dock.completionTime!,
+                                                  )),
+                                        )
+                                        .length ??
+                                    0,
+                              _ => 0,
+                            },
+                            countKey: Key(switch (destination.id) {
+                              'repair' => 'repair-active-count',
+                              'expedition' => 'expedition-active-count',
+                              'quests' => 'quest-completion-count',
+                              _ => '${destination.id}-completion-count',
+                            }),
+                            countLabel: destination.id == 'quests'
+                                ? null
+                                : destination.label,
+                            selected: selectedIndex == destination.pageIndex,
+                            onTap: () => onSelected(destination.pageIndex),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             );

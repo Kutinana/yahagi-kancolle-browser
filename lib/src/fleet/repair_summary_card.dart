@@ -14,11 +14,6 @@ import 'nosaki_sparkle_calculator.dart';
 import 'operation_progress.dart';
 import 'ship_portrait.dart';
 
-const _repairSummaryTimeStyle = TextStyle(
-  fontSize: 10,
-  fontWeight: FontWeight.w700,
-);
-
 class RepairSummaryCard extends StatefulWidget {
   const RepairSummaryCard({
     super.key,
@@ -164,7 +159,7 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
                 completedText: strings.completed,
                 completedColor: const Color(0xff4caf50),
                 countingColor: const Color(0xffd4a85f),
-                style: _repairSummaryTimeStyle,
+                style: operationSummaryTimeStyle,
                 maxLines: 1,
               ),
             )
@@ -281,7 +276,7 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
         child: Text(
           visual.label,
           maxLines: 1,
-          style: _repairSummaryTimeStyle.copyWith(color: visual.color),
+          style: operationSummaryTimeStyle.copyWith(color: visual.color),
         ),
       ),
       onTap: () => widget.onOpenRepair(
@@ -382,7 +377,7 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
         child: Text(
           visual.label,
           maxLines: 1,
-          style: _repairSummaryTimeStyle.copyWith(color: visual.color),
+          style: operationSummaryTimeStyle.copyWith(color: visual.color),
         ),
       ),
       onTap: () => widget.onOpenRepair(
@@ -663,6 +658,8 @@ class _RepairCapsule extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Keep the name and countdown readable before allocating a portrait.
+        final canShowPortrait = showPortrait && constraints.maxWidth >= 90;
         final available = constraints.maxWidth - 18;
         final portraitWidth = available >= 138
             ? 96.0
@@ -682,7 +679,7 @@ class _RepairCapsule extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  if (showPortrait) ...[
+                  if (canShowPortrait) ...[
                     if (master != null) ...[
                       ShipPortrait(
                         ship: master!,

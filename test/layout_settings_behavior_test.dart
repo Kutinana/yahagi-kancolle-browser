@@ -5,6 +5,32 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
 void main() {
+  test(
+    'menu position migrates legacy side and persists all four positions',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'layout_workspace_menu_on_right': true,
+      });
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      addTearDown(controller.dispose);
+      expect(controller.workspaceMenuPosition, 'right');
+      for (final position in ['top', 'bottom', 'left', 'right']) {
+        await controller.setWorkspaceMenuPosition(position);
+        final restored = await LayoutSettingsController.load(
+          SharedPreferencesLayoutSettingsStore(),
+        );
+        expect(restored.workspaceMenuPosition, position);
+        expect(
+          restored.workspaceMenuHorizontal,
+          position == 'top' || position == 'bottom',
+        );
+        restored.dispose();
+      }
+    },
+  );
+
   test('information panel defaults right and persists both sides', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     var controller = await LayoutSettingsController.load(

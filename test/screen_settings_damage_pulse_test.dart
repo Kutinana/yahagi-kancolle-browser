@@ -114,15 +114,28 @@ void main() {
       ),
     );
 
-    final label = find.byKey(const Key('settings-workspace-menu-right'));
+    final label = find.byKey(const Key('settings-workspace-menu-position'));
     expect(label, findsOneWidget);
     expect(layoutController.workspaceMenuOnRight, isFalse);
 
-    final row = find.ancestor(of: label, matching: find.byType(Row)).first;
-    await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
-    await tester.pump();
-
-    expect(layoutController.workspaceMenuOnRight, isTrue);
+    final dropdown = find.descendant(
+      of: label,
+      matching: find.byType(DropdownButton<String>),
+    );
+    for (final entry in {
+      '上': 'top',
+      '下': 'bottom',
+      '左': 'left',
+      '右': 'right',
+    }.entries) {
+      await tester.ensureVisible(dropdown);
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(entry.key).last);
+      await tester.pumpAndSettle();
+      expect(layoutController.workspaceMenuPosition, entry.value);
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('damage pulse switch is consolidated into battle settings', (
@@ -177,16 +190,31 @@ void main() {
         const Key('settings-reset-workspace-menu-order'),
       );
       expect(reset, findsOneWidget);
-      final menuLabel = find.byKey(const Key('settings-workspace-menu-right'));
-      final menuRow = find
-          .ancestor(of: menuLabel, matching: find.byType(Row))
-          .first;
+      final menuLabel = find.byKey(
+        const Key('settings-workspace-menu-position'),
+      );
+      final menuRow = menuLabel;
       final menuSwitch = find.descendant(
         of: menuRow,
-        matching: find.byType(Switch),
+        matching: find.byType(DropdownButton<String>),
       );
       expect(find.descendant(of: menuRow, matching: reset), findsOneWidget);
       expect(menuSwitch, findsOneWidget);
+      final belowReset = find.byKey(
+        const Key('settings-reset-dashboard-card-order'),
+      );
+      expect(
+        tester.getRect(reset).left,
+        closeTo(tester.getRect(belowReset).left, .1),
+      );
+      expect(
+        tester.getRect(reset).right,
+        closeTo(tester.getRect(belowReset).right, .1),
+      );
+      final dropdown = tester.widget<DropdownButton<String>>(menuSwitch);
+      expect(dropdown.underline, isA<SizedBox>());
+      expect(dropdown.padding, const EdgeInsets.only(left: 14));
+
       expect(
         tester.getCenter(reset).dy,
         closeTo(tester.getCenter(menuSwitch).dy, 0.1),

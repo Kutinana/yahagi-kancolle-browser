@@ -676,7 +676,9 @@ class _FleetRosterShipCapsule extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: AspectRatio(
-          aspectRatio: 3,
+          aspectRatio: MediaQuery.orientationOf(context) == Orientation.portrait
+              ? 1.5
+              : 3,
           child: Container(
             key: Key('fleet-roster-ship-${ship.id}'),
             decoration: BoxDecoration(

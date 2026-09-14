@@ -136,6 +136,7 @@ void main() {
       final originalElement = tester.element(game);
       final bottom = find.byKey(const Key('hd-bottom-region'));
       for (final size in [
+        const Size(800, 600),
         const Size(1280, 800),
         const Size(1024, 768),
         const Size(1440, 900),
@@ -254,6 +255,7 @@ void main() {
         lessThanOrEqualTo(tester.getRect(game).left),
       );
       for (final size in [
+        const Size(600, 800),
         const Size(800, 1280),
         const Size(915, 412),
         const Size(412, 915),
@@ -1203,6 +1205,67 @@ void main() {
       greaterThan(tester.getCenter(gameSurface).dx),
     );
     expect(disposeCount, 0);
+
+    for (final hd in [false, true]) {
+      await layoutSettingsController.setHdEnabled(hd);
+      for (final size in [const Size(800, 1280), const Size(1280, 800)]) {
+        tester.view.physicalSize = size;
+        for (final position in ['top', 'bottom', 'left', 'right']) {
+          await layoutSettingsController.setWorkspaceMenuPosition(position);
+          await tester.pumpAndSettle();
+          final nav = tester.getRect(find.byType(WorkspaceNavigation));
+          final surface = tester.getRect(gameSurface);
+          if (position == 'top' || position == 'bottom') {
+            expect(nav.height, 48);
+            final count = layoutSettingsController.workspaceMenuOrder.length;
+            if (nav.width >= count * 50 + 20) {
+              final first = tester.getRect(
+                find.byKey(
+                  ValueKey(
+                    'workspace-nav-item-${layoutSettingsController.workspaceMenuOrder.first}',
+                  ),
+                ),
+              );
+              final last = tester.getRect(
+                find.byKey(
+                  ValueKey(
+                    'workspace-nav-item-${layoutSettingsController.workspaceMenuOrder.last}',
+                  ),
+                ),
+              );
+              expect(
+                first.left - nav.left,
+                closeTo(nav.right - last.right, .01),
+              );
+            }
+
+            expect(nav.top, greaterThanOrEqualTo(surface.bottom - .01));
+            expect(
+              tester
+                  .widget<ReorderableListView>(
+                    find.byKey(const Key('workspace-navigation-list')),
+                  )
+                  .scrollDirection,
+              Axis.horizontal,
+            );
+            if (position == 'top' && size.height > size.width) {
+              expect(
+                nav.bottom,
+                lessThanOrEqualTo(tester.getRect(informationPanel).top),
+              );
+            }
+          }
+          expect(tester.element(gameSurface), same(originalGameSurfaceElement));
+          expect(disposeCount, 0);
+          expect(deactivateCount, 0);
+          expect(tester.takeException(), isNull);
+        }
+      }
+    }
+    await layoutSettingsController.setHdEnabled(false);
+    await layoutSettingsController.setWorkspaceMenuOnRight(true);
+    tester.view.physicalSize = const Size(1400, 720);
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('header-senka-summary')));
     await tester.pumpAndSettle();

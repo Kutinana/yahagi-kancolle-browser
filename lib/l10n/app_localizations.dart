@@ -5659,7 +5659,7 @@ abstract class AppLocalizations {
   /// No description provided for @hdModeDescription.
   ///
   /// In zh, this message translates to:
-  /// **'开启后，大屏横屏使用侧栏与单行下栏；竖屏使用两列功能区，可长按自定义 1×1、1×2、2×1 或 2×2。横竖屏布局独立保存，小窗口沿用普通布局。'**
+  /// **'开启后，使用专为大屏设备优化的 UI 配置（推荐 8 寸以上设备）。非大屏设备强行开启可能导致界面显示异常、布局溢出或应用崩溃等问题。'**
   String get hdModeDescription;
 
   /// No description provided for @hdBottomLayout.
@@ -5727,6 +5727,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'可放置功能区'**
   String get hdDropArea;
+
+  /// No description provided for @workspaceMenuPosition.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜单栏位置'**
+  String get workspaceMenuPosition;
+
+  /// No description provided for @workspaceMenuPositionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'上方位于游戏画面下方。'**
+  String get workspaceMenuPositionDesc;
+
+  /// No description provided for @menuPositionTop.
+  ///
+  /// In zh, this message translates to:
+  /// **'上'**
+  String get menuPositionTop;
+
+  /// No description provided for @menuPositionBottom.
+  ///
+  /// In zh, this message translates to:
+  /// **'下'**
+  String get menuPositionBottom;
+
+  /// No description provided for @menuPositionLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'左'**
+  String get menuPositionLeft;
+
+  /// No description provided for @menuPositionRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'右'**
+  String get menuPositionRight;
 }
 
 class _AppLocalizationsDelegate
