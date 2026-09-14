@@ -55,7 +55,7 @@
 
 - [ ] **步骤 3：实现最少响应式修改**
 
-使用 `LayoutBuilder` 检测窄宽；窄宽时仅以 `SizedBox(width: constraints.maxWidth)` 承载 `SenkaModeTabs`，宽屏沿用标题、间隔和固定宽标签胶囊。
+使用 `LayoutBuilder` 检测窄宽；窄宽时保留标题，并以 `Expanded` 让 `SenkaModeTabs` 占用剩余宽度，宽屏沿用标题、间隔和固定宽标签胶囊。
 
 - [ ] **步骤 4：运行头部测试验证通过**
 
