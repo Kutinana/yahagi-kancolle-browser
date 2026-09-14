@@ -319,11 +319,11 @@ void main() {
       ],
       ships: <int, OwnedShip>{
         1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 10, maxHp: 45), // Akashi heavy damage
-        2: OwnedShip(id: 2, masterId: 602, level: 80, currentHp: 30, maxHp: 48, currentFuel: 100, currentAmmo: 100), // Nozaki damaged
+        2: OwnedShip(id: 2, masterId: 1002, level: 80, currentHp: 30, maxHp: 48, currentFuel: 100, currentAmmo: 100), // Nozaki damaged
       },
       masterShips: <int, MasterShip>{
         187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
-        602: MasterShip(id: 602, name: '野埼改', shipTypeId: 19, maxFuel: 100, maxAmmo: 100),
+        1002: MasterShip(id: 1002, name: '野埼改', shipTypeId: 22, maxFuel: 100, maxAmmo: 100),
       },
     );
 
@@ -351,11 +351,11 @@ void main() {
       ],
       ships: <int, OwnedShip>{
         1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 45, maxHp: 45),
-        2: OwnedShip(id: 2, masterId: 602, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
+        2: OwnedShip(id: 2, masterId: 1002, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
       },
       masterShips: <int, MasterShip>{
         187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
-        602: MasterShip(id: 602, name: '野埼改', shipTypeId: 19, maxFuel: 100, maxAmmo: 100),
+        1002: MasterShip(id: 1002, name: '野埼改', shipTypeId: 22, maxFuel: 100, maxAmmo: 100),
       },
     );
 

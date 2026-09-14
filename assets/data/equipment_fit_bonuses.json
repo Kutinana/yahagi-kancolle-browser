@@ -7749,14 +7749,14 @@
         "overflow": "cap"
       },
       "notes": [
-        "override:override-290-fix",
-        "verificationSource: wikiwiki.jp/kancolle 41cm三連装砲改二 (2025-04更新)"
+        "override:override-149-001",
+        "verificationSource: wikiwiki.jp/kancolle 四式水中聴音機"
       ],
       "source": {
-        "url": "https://akashi-list.me/detail/w290.html",
-        "pageName": "41cm三連装砲改二",
-        "fetchedAt": "2026-08-06T06:47:40.235211+00:00",
-        "httpLastModified": null,
+        "url": "https://akashi-list.me/detail/w149.html",
+        "pageName": "四式水中聴音機",
+        "fetchedAt": "2026-08-06T06:47:37.513699+00:00",
+        "httpLastModified": "Mon, 27 Jul 2026 12:08:00 GMT",
         "contentSha256": "sha256:50d2d2e635ae038023c84f7f69db7e6144e78f242c0cd897c8ba0de596dd7086",
         "fragmentHash": "override",
         "sourceGroupLabel": "香取・鹿島",

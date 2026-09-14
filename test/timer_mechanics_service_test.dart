@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
-import 'package:yahagi_kancolle_browser/src/fleet/global_game_timer.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/nosaki_sparkle_calculator.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/timer_mechanics_service.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
@@ -48,7 +47,7 @@ void main() {
       service.nozakiTimer.reset(startTime);
 
       final portTime = startTime.add(const Duration(minutes: 8));
-      final state = buildNosakiTestState(flagshipMasterId: 602);
+      final state = buildNosakiTestState(flagshipMasterId: 1002);
 
       service.observe(
         previousState: state,
@@ -86,9 +85,9 @@ void main() {
       service.nozakiTimer.reset(startTime);
 
       final portTime = startTime.add(const Duration(minutes: 16));
-      // Base Nozaki (596) requires companion Cond >= 49. Companions with Cond = 40 will fail.
+      // Base Nozaki (996) requires companion Cond >= 49. Companions with Cond = 40 will fail.
       final fatigueBlockedState = buildNosakiTestState(
-        flagshipMasterId: 596,
+        flagshipMasterId: 996,
         companionConds: const [40, 40, 40, 40, 40],
       );
 
@@ -111,7 +110,7 @@ void main() {
 
       final portTime = startTime.add(const Duration(minutes: 16));
       final successState = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         companionConds: const [0, 10, 20, 30, 40],
       );
 
@@ -133,7 +132,7 @@ void main() {
 
       final portTime = startTime.add(const Duration(minutes: 16));
       final unsuppliedState = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         nosakiFuel: 70, // Not full
       );
 
@@ -154,7 +153,7 @@ void main() {
 
       final portTime = startTime.add(const Duration(minutes: 16));
       final damagedState = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         nosakiHp: 20, // Damaged (max 42)
       );
 
@@ -175,7 +174,7 @@ void main() {
 
       // At 15 min: all ships already cond 54 (blocked by fatigue)
       final fullCondState = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         companionConds: const [54, 54, 54, 54, 54],
       );
       final portAt15 = startTime.add(const Duration(minutes: 15));
@@ -188,7 +187,7 @@ void main() {
 
       // At 30 min: ships now have cond 40
       final readyState = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         companionConds: const [40, 40, 40, 40, 40],
       );
       final projection = NosakiSparkleCalculator.project(
@@ -209,7 +208,7 @@ void main() {
       final changeTime = DateTime.utc(2026, 8, 20, 10, 5);
       service.nozakiTimer.reset(startTime);
 
-      final stateBefore = buildNosakiTestState(flagshipMasterId: 602);
+      final stateBefore = buildNosakiTestState(flagshipMasterId: 1002);
       final stateAfter = stateBefore.copyWith(
         fleets: const <Fleet>[
           Fleet(
@@ -245,7 +244,7 @@ void main() {
       final changeTime = DateTime.utc(2026, 8, 20, 10, 5);
       service.nozakiTimer.reset(startTime);
 
-      final stateBefore = buildNosakiTestState(flagshipMasterId: 602);
+      final stateBefore = buildNosakiTestState(flagshipMasterId: 1002);
       final stateAfter = stateBefore.copyWith(
         fleets: const <Fleet>[
           Fleet(
@@ -284,7 +283,7 @@ void main() {
 
       final stateBefore = buildNosakiTestState(
         flagshipMasterId: 501,
-        thirdMasterId: 602,
+        thirdMasterId: 1002,
       );
       final stateAfter = stateBefore.copyWith(
         fleets: const <Fleet>[
@@ -322,7 +321,7 @@ void main() {
       service.nozakiTimer.reset(startTime);
 
       final baseState = buildNosakiTestState(flagshipMasterId: 501);
-      final presetState = buildNosakiTestState(flagshipMasterId: 602);
+      final presetState = buildNosakiTestState(flagshipMasterId: 1002);
 
       service.observe(
         previousState: baseState,
@@ -341,7 +340,7 @@ void main() {
       final batchTime = DateTime.utc(2026, 8, 20, 10, 6);
       service.nozakiTimer.reset(startTime);
 
-      final state = buildNosakiTestState(flagshipMasterId: 602);
+      final state = buildNosakiTestState(flagshipMasterId: 1002);
 
       service.observe(
         previousState: state,
@@ -365,7 +364,7 @@ void main() {
       final service = TimerMechanicsService();
       final startTime = DateTime.utc(2026, 8, 20, 10, 0);
 
-      final baseState = buildNosakiTestState(flagshipMasterId: 602);
+      final baseState = buildNosakiTestState(flagshipMasterId: 1002);
       final twoFleetsState = baseState.copyWith(
         fleets: <Fleet>[
           baseState.fleets.first,
@@ -378,7 +377,7 @@ void main() {
         ],
         ships: <int, OwnedShip>{
           ...baseState.ships,
-          101: const OwnedShip(id: 101, masterId: 602, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
+          101: const OwnedShip(id: 101, masterId: 1002, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
           102: const OwnedShip(id: 102, masterId: 1, level: 50, currentHp: 30, maxHp: 30, currentFuel: 100, currentAmmo: 100, condition: 40),
         },
       );
@@ -783,7 +782,7 @@ void main() {
         ],
         ships: const <int, OwnedShip>{
           1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 45, maxHp: 45, condition: 49, slotIds: <int>[1001, 1002]),
-          2: OwnedShip(id: 2, masterId: 602, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
+          2: OwnedShip(id: 2, masterId: 1002, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
           3: OwnedShip(id: 3, masterId: 1, level: 50, currentHp: 20, maxHp: 30, condition: 40),
         },
         slotItems: const <int, OwnedSlotItem>{
@@ -792,7 +791,7 @@ void main() {
         },
         masterShips: const <int, MasterShip>{
           187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
-          602: MasterShip(id: 602, name: '野埼改', shipTypeId: 19, maxFuel: 100, maxAmmo: 100),
+          1002: MasterShip(id: 1002, name: '野埼改', shipTypeId: 22, maxFuel: 100, maxAmmo: 100),
           1: MasterShip(id: 1, name: '吹雪', shipTypeId: 2),
         },
       );
@@ -824,7 +823,7 @@ void main() {
         ],
         ships: const <int, OwnedShip>{
           1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 45, maxHp: 45, condition: 49, slotIds: <int>[1001, 1002]),
-          2: OwnedShip(id: 2, masterId: 602, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
+          2: OwnedShip(id: 2, masterId: 1002, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
           3: OwnedShip(id: 3, masterId: 1, level: 50, currentHp: 20, maxHp: 30, condition: 40),
         },
         slotItems: const <int, OwnedSlotItem>{
@@ -833,7 +832,7 @@ void main() {
         },
         masterShips: const <int, MasterShip>{
           187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
-          602: MasterShip(id: 602, name: '野埼改', shipTypeId: 19, maxFuel: 100, maxAmmo: 100),
+          1002: MasterShip(id: 1002, name: '野埼改', shipTypeId: 22, maxFuel: 100, maxAmmo: 100),
           1: MasterShip(id: 1, name: '吹雪', shipTypeId: 2),
         },
       );
@@ -865,13 +864,13 @@ void main() {
         ],
         ships: const <int, OwnedShip>{
           1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 45, maxHp: 45),
-          2: OwnedShip(id: 2, masterId: 602, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100),
+          2: OwnedShip(id: 2, masterId: 1002, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100),
           3: OwnedShip(id: 3, masterId: 1, level: 50),
           4: OwnedShip(id: 4, masterId: 2, level: 50),
         },
         masterShips: const <int, MasterShip>{
           187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
-          602: MasterShip(id: 602, name: '野埼改', shipTypeId: 19),
+          1002: MasterShip(id: 1002, name: '野埼改', shipTypeId: 22),
           1: MasterShip(id: 1, name: '吹雪', shipTypeId: 2),
           2: MasterShip(id: 2, name: '白雪', shipTypeId: 2),
         },

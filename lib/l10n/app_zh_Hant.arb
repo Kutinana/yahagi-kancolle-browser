@@ -1,4 +1,9 @@
 {
+  "enterGameFullscreen": "遊戲全螢幕",
+  "exitGameFullscreen": "退出全螢幕",
+  "exitFullscreenShort": "退出",
+  "gameFullscreenHint": "點擊浮鈕或按返回鍵退出全螢幕；可拖動浮鈕調整位置",
+  "gameFullscreenUnavailable": "無法顯示退出按鈕，已恢復一般佈局",
   "questCompletionNotice": "有任務已完成",
   "questCompletionCount": "{count} 個任務已完成，待領取",
   "resourceTrend90d": "90天",
@@ -1015,5 +1020,8 @@
   "developmentPoolBauxite": "鋁土系",
   "developmentPoolAmmunition": "彈藥系",
   "developmentPoolFuelSteel": "油鋼系",
-  "battlePredictionUnconfirmed": "資料未確認：血量與預測僅供參考，請以遊戲畫面為準。"
+  "battlePredictionUnconfirmed": "資料未確認：血量與預測僅供參考，請以遊戲畫面為準。",
+  "mouseWheelCompatibility": "外接滑鼠滾輪相容",
+  "mouseWheelCompatibilityDescription": "使用外接滑鼠時，若遊戲內滾輪無反應，可嘗試開啟。立即生效，保留滑鼠點擊和手指觸控。",
+  "mouseWheelCompatibilitySaveFailed": "設定儲存失敗，請重試。"
 }

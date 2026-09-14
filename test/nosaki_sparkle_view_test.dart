@@ -24,7 +24,7 @@ void main() {
     });
 
     final controller = await _controller(
-      buildNosakiTestState(flagshipMasterId: 602),
+      buildNosakiTestState(flagshipMasterId: 1002),
     );
     addTearDown(controller.dispose);
 
@@ -64,7 +64,7 @@ void main() {
 
     final controller = await _controller(
       buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         nosakiFuel: 70, // Not supplied
       ),
     );

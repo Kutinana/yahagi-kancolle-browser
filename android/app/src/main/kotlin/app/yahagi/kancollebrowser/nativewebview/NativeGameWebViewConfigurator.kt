@@ -12,6 +12,7 @@ import android.webkit.WebViewClient
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import app.yahagi.kancollebrowser.browser.GameTouchFeedbackScript
+import app.yahagi.kancollebrowser.browser.GameMouseWheelBridge
 
 internal enum class NativeGameWebViewConfigurationAction {
     JAVA_SCRIPT_ENABLED,
@@ -57,6 +58,7 @@ internal object NativeGameWebViewConfigurator {
             userAgentString = NativeGameWebViewUserAgent.toDesktop(userAgentString)
             onApplied(NativeGameWebViewConfigurationAction.USER_AGENT_SET)
         }
+        GameMouseWheelBridge.attach(webView)
         webView.setBackgroundColor(Color.BLACK)
         onApplied(NativeGameWebViewConfigurationAction.BACKGROUND_BLACK)
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)

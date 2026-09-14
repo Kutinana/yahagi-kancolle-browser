@@ -46,6 +46,8 @@ import app.yahagi.kancollebrowser.browser.GadgetBypassManager
 import app.yahagi.kancollebrowser.browser.GadgetBypassWebViewClient
 import app.yahagi.kancollebrowser.browser.FixedCanvasScalePolicy
 import app.yahagi.kancollebrowser.browser.GameFrameRateManager
+import app.yahagi.kancollebrowser.browser.GameMouseWheelChannel
+import app.yahagi.kancollebrowser.browser.GameFullscreenChannel
 import app.yahagi.kancollebrowser.browser.GameFrameRateBridge
 import app.yahagi.kancollebrowser.browser.AndroidGameFrameRateSystemConstraints
 import app.yahagi.kancollebrowser.browser.AndroidGameFrameReloadBridge
@@ -191,6 +193,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
     private var webViewProxyManager: WebViewProxyManager? = null
     private var gadgetBypassManager: GadgetBypassManager? = null
     private var gameFrameRateManager: GameFrameRateManager? = null
+    private var gameMouseWheelChannel: GameMouseWheelChannel? = null
+    private var gameFullscreenChannel: GameFullscreenChannel? = null
     private var gameFrameReloadManager: GameFrameReloadManager? = null
     private var gameResourceCacheEngine: GameResourceCacheEngine? = null
     private var gameResourceCacheManager: GameResourceCacheManager? = null
@@ -284,6 +288,11 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        gameMouseWheelChannel?.dispose()
+        gameMouseWheelChannel = GameMouseWheelChannel(flutterEngine)
+        gameFullscreenChannel?.dispose()
+        gameFullscreenChannel = GameFullscreenChannel(this, flutterEngine)
 
         compositionImageHandler?.dispose()
         val imageHandler = CompositionImageHandler(
@@ -648,6 +657,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
     }
 
     override fun onDestroy() {
+        gameFullscreenChannel?.dispose()
+        gameFullscreenChannel = null
         disposeCompositionImageHandler()
         val nativeChannel = nativeGameWebViewChannel
         val nativeAttachment = nativeGameWebViewAttachment
@@ -700,6 +711,10 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        gameFullscreenChannel?.dispose()
+        gameFullscreenChannel = null
+        gameMouseWheelChannel?.dispose()
+        gameMouseWheelChannel = null
         disposeCompositionImageHandler()
         val nativeChannel = nativeGameWebViewChannel
         val nativeAttachment = nativeGameWebViewAttachment

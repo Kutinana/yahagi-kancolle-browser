@@ -68,8 +68,10 @@ class NosakiSparkleProjection {
 }
 
 abstract final class NosakiSparkleCalculator {
-  static const int nosakiBaseMasterId = 596;
-  static const int nosakiKaiMasterId = 602;
+  // api_mst_ship.api_id, not api_sortno (encyclopedia numbers 596 / 602).
+  // Internal IDs 596 / 602 belong to Fletcher / South Dakota respectively.
+  static const int nosakiBaseMasterId = 996;
+  static const int nosakiKaiMasterId = 1002;
   static const Duration minimumCycleTime = Duration(minutes: 15);
   static const int targetCond = 54;
   static const int minimumNosakiCond = 30;
@@ -409,13 +411,16 @@ abstract final class NosakiSparkleCalculator {
     for (final fleet in state.fleets) {
       if (fleet.shipIds.isEmpty) continue;
       final flagship = state.ships[fleet.shipIds.first];
-      final flagshipMaster =
-          flagship == null ? null : state.masterForShip(flagship);
+      final flagshipMaster = flagship == null
+          ? null
+          : state.masterForShip(flagship);
       if (isNosaki(flagshipMaster)) return true;
 
       if (fleet.shipIds.length > 1) {
         final second = state.ships[fleet.shipIds[1]];
-        final secondMaster = second == null ? null : state.masterForShip(second);
+        final secondMaster = second == null
+            ? null
+            : state.masterForShip(second);
         if (isNosaki(secondMaster)) return true;
       }
     }

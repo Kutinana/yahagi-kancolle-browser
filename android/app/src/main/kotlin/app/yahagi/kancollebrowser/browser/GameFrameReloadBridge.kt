@@ -166,6 +166,7 @@ internal class AndroidGameFrameReloadBridge(
         }
 
         val webView = webViews.single()
+        GameMouseWheelBridge.attach(webView)
         val documentScripts = platformGameDocumentStartScripts(
             originPolicy.allowedOriginRules,
         )

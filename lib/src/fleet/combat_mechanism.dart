@@ -437,7 +437,9 @@ bool _canNightCarrierAttack(MasterShip master, List<ShipEquipment> equipment) {
     return false;
   }
 
-  const nativeNightCarriers = <int>{393, 515, 545, 565, 599, 610, 883, 900};
+  // api_id: Ark Royal / Kai, Saratoga Mk.II, Akagi / Kaga / Ryuuhou night forms.
+  // 565 (Fukae) and 900 (Yamashio Maru) are not aircraft carriers.
+  const nativeNightCarriers = <int>{393, 515, 545, 599, 610, 883};
   final isNativeNightCarrier = nativeNightCarriers.contains(master.id);
 
   final hasNightPersonnel = equipment.any(
@@ -448,53 +450,18 @@ bool _canNightCarrierAttack(MasterShip master, List<ShipEquipment> equipment) {
     return false;
   }
 
-  const nightFighterIds = <int>{254, 255, 389, 390, 413, 448, 449, 479, 506};
-  const nightAttackerIds = <int>{
-    256,
-    257,
-    320,
-    344,
-    345,
-    373,
-    374,
-    399,
-    447,
-    478,
-  };
-  const swordfishIds = <int>{242, 243, 244, 369, 370, 464};
-
-  bool isNightFighter(MasterSlotItem? item) {
-    if (item == null) return false;
-    if (nightFighterIds.contains(item.id)) return true;
-    if (_icon(item) == 45) return true;
-    return false;
-  }
-
-  bool isNightAttacker(MasterSlotItem? item) {
-    if (item == null) return false;
-    if (nightAttackerIds.contains(item.id)) return true;
-    if (_icon(item) == 46) return true;
-    return false;
-  }
-
-  bool isSwordfish(MasterSlotItem? item) {
-    if (item == null) return false;
-    return swordfishIds.contains(item.id);
-  }
-
-  final hasNightFighter = equipment.any((item) => isNightFighter(item.master));
-  final hasNightAttacker = equipment.any(
-    (item) => isNightAttacker(item.master),
-  );
-  final hasSwordfish = equipment.any((item) => isSwordfish(item.master));
-
-  if (const <int>{393, 515}.contains(master.id) && hasSwordfish) {
-    return true;
-  }
-
-  return hasNightFighter ||
-      hasNightAttacker ||
-      (hasNightPersonnel && hasSwordfish);
+  // api_type[2] is the equipment category; api_type[3] is its icon.
+  // Night fighter / torpedo bomber / dive bomber icons are 45 / 46 / 58.
+  // Ordinary-icon exceptions: Iwai fighter-bomber, photoelectric Suisei,
+  // and the three carrier-based Swordfish (not their seaplane variants).
+  const specialNightAircraftIds = <int>{154, 242, 243, 244, 320};
+  return equipment.any((item) {
+    final aircraft = item.master;
+    if (aircraft == null) return false;
+    if (!const <int>{6, 7, 8}.contains(_type(aircraft))) return false;
+    return const <int>{45, 46, 58}.contains(_icon(aircraft)) ||
+        specialNightAircraftIds.contains(aircraft.id);
+  });
 }
 
 bool _nelsonPositionsAreValid(List<MasterShip?> masters) {
@@ -605,8 +572,9 @@ double _calculateAarocketBarrageRate(
     final isAaDirector = type == 36 || icon == 30;
     final isAaGun = type == 21 || icon == 15;
     final isRadar = type == 12 || type == 13 || icon == 11;
-    final isHighAngleWithDirector =
-        m.id == 275 || m.id == 295 || m.id == 296 || m.id == 468;
+    // High-angle guns with AA >= 8 use the director improvement coefficient.
+    // Do not enumerate IDs: 468, previously listed here, is a large main gun.
+    final isHighAngleWithDirector = isHighAngle && m.antiAir >= 8;
 
     var equipmentBonus = 0.0;
     if (isHighAngle || isAaDirector) {

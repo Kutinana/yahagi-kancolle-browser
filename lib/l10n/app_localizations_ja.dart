@@ -9,6 +9,21 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get enterGameFullscreen => 'ゲームを全画面表示';
+
+  @override
+  String get exitGameFullscreen => '全画面表示を終了';
+
+  @override
+  String get exitFullscreenShort => '解除';
+
+  @override
+  String get gameFullscreenHint => 'フローティングボタンまたは戻るキーで解除できます。ボタンはドラッグで移動できます';
+
+  @override
+  String get gameFullscreenUnavailable => '解除ボタンを表示できないため、通常表示に戻しました';
+
+  @override
   String get questCompletionNotice => '達成した任務があります';
 
   @override
@@ -2979,4 +2994,14 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get battlePredictionUnconfirmed =>
       'データ未確認：HP・予測は参考値です。ゲーム画面で確認してください。';
+
+  @override
+  String get mouseWheelCompatibility => '外付けマウスのホイール互換';
+
+  @override
+  String get mouseWheelCompatibilityDescription =>
+      'ゲーム内でマウスホイールが反応しない場合にお試しください。すぐに反映され、クリックとタッチ操作も引き続き使えます。';
+
+  @override
+  String get mouseWheelCompatibilitySaveFailed => '設定を保存できませんでした。もう一度お試しください。';
 }

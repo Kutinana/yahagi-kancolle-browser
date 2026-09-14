@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yahagi_kancolle_browser/main.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
 import 'package:yahagi_kancolle_browser/src/audio/game_audio_controller.dart';
@@ -47,6 +48,116 @@ import 'package:yahagi_kancolle_browser/src/development/equipment_development_pa
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
+  testWidgets('fullscreen restores the same game and panel; back exits first', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final toolbar = GameToolbarController();
+    final capture = GameCaptureController();
+    final state = GameStateController();
+    final battle = BattleController(gameState: () => state.state);
+    addTearDown(toolbar.dispose);
+    addTearDown(capture.dispose);
+    addTearDown(state.dispose);
+    addTearDown(battle.dispose);
+    var deactivations = 0;
+    var disposals = 0;
+    await tester.pumpWidget(
+      YahagiApp(
+        layoutSettingsController: await LayoutSettingsController.load(
+          _MemoryLayoutSettingsStore(),
+        ),
+        networkSettingsController: NetworkSettingsController(
+          store: _MemoryNetworkSettingsStore(),
+        ),
+        gadgetBypassController: GadgetBypassController(
+          store: _MemoryGadgetBypassStore(),
+          port: _FakeGadgetBypassPort(),
+        ),
+        safetySettingsController: await SafetySettingsController.load(
+          MemorySafetySettingsStore(),
+        ),
+        displayModeController: await DisplayModeController.load(
+          MemoryDisplayModeStore(),
+        ),
+        controller: PrototypeStatusController(),
+        browserController: GameBrowserController(port: _NoopBrowserPort()),
+        captureModeController: await CaptureModeController.load(
+          _MemoryModeStore(),
+        ),
+        gameCaptureController: capture,
+        gameStateController: state,
+        battleController: battle,
+        audioController: await GameAudioController.load(_MemoryAudioStore()),
+        toolbarController: toolbar,
+        gameSurface: _LifecycleProbe(
+          key: const Key('fullscreen-probe'),
+          onDispose: () => disposals++,
+          onDeactivate: () => deactivations++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final game = find.byKey(const Key('fullscreen-probe'));
+    final gameElement = tester.element(game);
+    final originalRect = tester.getRect(game);
+    final panel = find.byKey(const Key('information-panel'));
+    final panelElement = tester.element(panel);
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(of: panel, matching: find.byType(Scrollable)).first,
+    );
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent / 2);
+    await tester.pump();
+    final offset = scrollable.position.pixels;
+
+    for (final useBack in [false, true]) {
+      await tester.tap(find.byKey(const Key('game-enter-fullscreen')));
+      await tester.pumpAndSettle();
+      expect(panel, findsNothing);
+      expect(find.byType(WorkspaceNavigation), findsNothing);
+      expect(tester.element(game), same(gameElement));
+      expect(tester.getSize(game).width, greaterThan(originalRect.width));
+      expect(tester.getSize(game).aspectRatio, closeTo(1200 / 720, 0.001));
+      if (useBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.byKey(const Key('game-exit-fullscreen')));
+      }
+      await tester.pumpAndSettle();
+      expect(tester.element(panel), same(panelElement));
+      expect(tester.getRect(game), originalRect);
+      expect(scrollable.position.pixels, offset);
+      expect(find.byType(WorkspaceNavigation), findsOneWidget);
+      expect(deactivations, 0);
+      expect(disposals, 0);
+    }
+
+    // Rotate while fullscreen and verify the same surface survives both sizes.
+    await tester.tap(find.byKey(const Key('game-enter-fullscreen')));
+    await tester.pumpAndSettle();
+    for (final size in [const Size(412, 915), const Size(915, 412)]) {
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      final exit = tester.getRect(find.byKey(const Key('game-exit-fullscreen')));
+      expect(exit.left, greaterThanOrEqualTo(0));
+      expect(exit.top, greaterThanOrEqualTo(0));
+      expect(exit.right, lessThanOrEqualTo(size.width));
+      expect(exit.bottom, lessThanOrEqualTo(size.height));
+      expect(tester.element(game), same(gameElement));
+      expect(tester.getSize(game).aspectRatio, closeTo(1200 / 720, 0.001));
+      expect(panel, findsNothing);
+    }
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(tester.element(panel), same(panelElement));
+    expect(deactivations, 0);
+    expect(disposals, 0);
+  });
+
   test('startup restores formation memory and wires its display setting', () {
     final source = File('lib/main.dart').readAsStringSync();
 

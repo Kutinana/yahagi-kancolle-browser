@@ -18,6 +18,7 @@ import 'safety_settings_controller.dart';
 import 'network_settings_controller.dart';
 import 'release_check_service.dart';
 import 'screen_awake_controller.dart';
+import 'game_mouse_wheel_settings.dart';
 import '../battle/fcd_map_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../improvement/improvement_planner_controller.dart';
@@ -56,6 +57,7 @@ class SettingsPage extends StatelessWidget {
     required this.currentVersion,
     this.releaseChecker,
     this.screenAwakeController,
+    this.gameMouseWheelSettingsController,
     this.toolbarDisplayController,
     this.fcdMapController,
     this.questCatalogController,
@@ -91,6 +93,7 @@ class SettingsPage extends StatelessWidget {
   final String currentVersion;
   final ReleaseChecker? releaseChecker;
   final ScreenAwakeController? screenAwakeController;
+  final GameMouseWheelSettingsController? gameMouseWheelSettingsController;
   final GameToolbarDisplayController? toolbarDisplayController;
   final FcdMapController? fcdMapController;
   final QuestCatalogController? questCatalogController;
@@ -117,6 +120,7 @@ class SettingsPage extends StatelessWidget {
           toolbarDisplayController: toolbarDisplayController,
           gameFrameRateSettingsController: gameFrameRateSettingsController,
           screenAwakeController: screenAwakeController,
+          gameMouseWheelSettingsController: gameMouseWheelSettingsController,
           gameRenderingModeController: gameRenderingModeController,
           isBattleActive: isBattleActive,
         ),

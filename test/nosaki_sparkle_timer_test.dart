@@ -13,7 +13,7 @@ void main() {
 
       tracker.observe(
         previousState: buildNosakiTestState(flagshipMasterId: 501),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_get_member/ship_deck', at),
       );
 
@@ -26,13 +26,13 @@ void main() {
 
       tracker.observe(
         previousState: buildNosakiTestState(flagshipMasterId: 501),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_get_member/ship_deck', at),
       );
       expect(tracker.startedAt, at);
 
       tracker.observe(
-        previousState: buildNosakiTestState(flagshipMasterId: 602),
+        previousState: buildNosakiTestState(flagshipMasterId: 1002),
         nextState: buildNosakiTestState(flagshipMasterId: 501), // No Nosaki
         event: _event(
           '/kcsapi/api_get_member/ship_deck',
@@ -50,13 +50,13 @@ void main() {
 
       tracker.observe(
         previousState: buildNosakiTestState(flagshipMasterId: 501),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
       );
 
       tracker.observe(
-        previousState: buildNosakiTestState(flagshipMasterId: 602),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        previousState: buildNosakiTestState(flagshipMasterId: 1002),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event(
           '/kcsapi/api_req_hensei/change',
           changedAt,
@@ -72,14 +72,14 @@ void main() {
       final startedAt = DateTime.utc(2026, 8, 19, 10);
       tracker.observe(
         previousState: buildNosakiTestState(flagshipMasterId: 501),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
       );
 
       final presetAt = startedAt.add(const Duration(minutes: 5));
       tracker.observe(
-        previousState: buildNosakiTestState(flagshipMasterId: 602),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        previousState: buildNosakiTestState(flagshipMasterId: 1002),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event(
           '/kcsapi/api_req_hensei/preset_select',
           presetAt,
@@ -95,14 +95,14 @@ void main() {
       final startedAt = DateTime.utc(2026, 8, 19, 10);
       tracker.observe(
         previousState: buildNosakiTestState(flagshipMasterId: 501),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
       );
 
       final unequipAt = startedAt.add(const Duration(minutes: 5));
       tracker.observe(
-        previousState: buildNosakiTestState(flagshipMasterId: 602),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        previousState: buildNosakiTestState(flagshipMasterId: 1002),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event(
           '/kcsapi/api_req_hensei/change',
           unequipAt,
@@ -130,7 +130,7 @@ void main() {
           ships: const {
             1: OwnedShip(
               id: 1,
-              masterId: 602,
+              masterId: 1002,
               level: 80,
               currentHp: 42,
               maxHp: 42,
@@ -150,7 +150,7 @@ void main() {
             ),
             3: OwnedShip(
               id: 3,
-              masterId: 596,
+              masterId: 996,
               level: 80,
               currentHp: 42,
               maxHp: 42,
@@ -184,15 +184,15 @@ void main() {
               maxFuel: 100,
               maxAmmo: 100,
             ),
-            596: MasterShip(
-              id: 596,
+            996: MasterShip(
+              id: 996,
               name: '野埼',
               shipTypeId: 1,
               maxFuel: 100,
               maxAmmo: 100,
             ),
-            602: MasterShip(
-              id: 602,
+            1002: MasterShip(
+              id: 1002,
               name: '野埼改',
               shipTypeId: 1,
               maxFuel: 100,
@@ -233,14 +233,14 @@ void main() {
       final startedAt = DateTime.utc(2026, 8, 19, 10);
       tracker.observe(
         previousState: buildNosakiTestState(flagshipMasterId: 501),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
       );
 
       final portAt = startedAt.add(const Duration(minutes: 16));
       tracker.observe(
-        previousState: buildNosakiTestState(flagshipMasterId: 602),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        previousState: buildNosakiTestState(flagshipMasterId: 1002),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_port/port', portAt),
       );
 
@@ -252,14 +252,14 @@ void main() {
       final startedAt = DateTime.utc(2026, 8, 19, 10);
       tracker.observe(
         previousState: buildNosakiTestState(flagshipMasterId: 501),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
       );
 
       final portAt = startedAt.add(const Duration(minutes: 10));
       tracker.observe(
-        previousState: buildNosakiTestState(flagshipMasterId: 602),
-        nextState: buildNosakiTestState(flagshipMasterId: 602),
+        previousState: buildNosakiTestState(flagshipMasterId: 1002),
+        nextState: buildNosakiTestState(flagshipMasterId: 1002),
         event: _event('/kcsapi/api_port/port', portAt),
       );
 

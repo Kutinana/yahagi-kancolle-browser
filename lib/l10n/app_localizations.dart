@@ -99,6 +99,36 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @enterGameFullscreen.
+  ///
+  /// In zh, this message translates to:
+  /// **'游戏全屏'**
+  String get enterGameFullscreen;
+
+  /// No description provided for @exitGameFullscreen.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出全屏'**
+  String get exitGameFullscreen;
+
+  /// No description provided for @exitFullscreenShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出'**
+  String get exitFullscreenShort;
+
+  /// No description provided for @gameFullscreenHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击浮钮或按返回键退出全屏；可拖动浮钮调整位置'**
+  String get gameFullscreenHint;
+
+  /// No description provided for @gameFullscreenUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法显示退出按钮，已恢复普通布局'**
+  String get gameFullscreenUnavailable;
+
   /// No description provided for @questCompletionNotice.
   ///
   /// In zh, this message translates to:
@@ -4088,7 +4118,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheFullDesc.
   ///
   /// In zh, this message translates to:
-  /// **'预下载固定基础资源清单（约 5.49 GB）；新内容会在游玩时自动缓存。'**
+  /// **'预下载基础资源（约 5.49 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。'**
   String get gameResourceCacheFullDesc;
 
   /// No description provided for @gameResourceCacheStart.
@@ -5559,6 +5589,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'数据未确认：血量与预测仅供参考，请以游戏画面为准。'**
   String get battlePredictionUnconfirmed;
+
+  /// No description provided for @mouseWheelCompatibility.
+  ///
+  /// In zh, this message translates to:
+  /// **'外接鼠标滚轮兼容'**
+  String get mouseWheelCompatibility;
+
+  /// No description provided for @mouseWheelCompatibilityDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用外接鼠标时，若游戏内滚轮无响应，可尝试开启。立即生效，保留鼠标点击和手指触控。'**
+  String get mouseWheelCompatibilityDescription;
+
+  /// No description provided for @mouseWheelCompatibilitySaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置保存失败，请重试。'**
+  String get mouseWheelCompatibilitySaveFailed;
 }
 
 class _AppLocalizationsDelegate

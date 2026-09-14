@@ -8,7 +8,7 @@ void main() {
       'recognizes Nosaki Kai flagship and projects +3 cond for all companion ships',
       () {
         final state = buildNosakiTestState(
-          flagshipMasterId: 602, // 野埼改
+          flagshipMasterId: 1002, // 野埼改
           companionConds: [48, 51, 45, 54, 28],
         );
 
@@ -70,7 +70,7 @@ void main() {
       'recognizes unremodeled Nosaki (base) and restricts to cond >= 49 with +2',
       () {
         final state = buildNosakiTestState(
-          flagshipMasterId: 596, // 野埼
+          flagshipMasterId: 996, // 野埼
           companionConds: [49, 51, 46, 53, 30],
         );
 
@@ -108,7 +108,7 @@ void main() {
       () {
         final state = buildNosakiTestState(
           flagshipMasterId: 182, // 明石
-          secondMasterId: 602, // 野埼改
+          secondMasterId: 1002, // 野埼改
           companionConds: [49, 49, 49, 49],
         );
 
@@ -136,7 +136,7 @@ void main() {
       final state = buildNosakiTestState(
         flagshipMasterId: 501,
         secondMasterId: 502,
-        thirdMasterId: 602, // Nosaki at position 3
+        thirdMasterId: 1002, // Nosaki at position 3
       );
 
       final projection = NosakiSparkleCalculator.project(
@@ -152,7 +152,7 @@ void main() {
 
     test('fails eligibility if Nosaki is not fully supplied', () {
       final state = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         nosakiFuel: 80, // Not 100
         nosakiAmmo: 100,
       );
@@ -169,7 +169,7 @@ void main() {
 
     test('fails eligibility if Nosaki has any damage (must be undamaged)', () {
       final state = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         nosakiHp: 41, // 41 / 42 (even 1 HP lost)
         nosakiMaxHp: 42,
       );
@@ -185,7 +185,7 @@ void main() {
     });
 
     test('fails eligibility if Nosaki condition is below 30', () {
-      final state = buildNosakiTestState(flagshipMasterId: 602, nosakiCond: 25);
+      final state = buildNosakiTestState(flagshipMasterId: 1002, nosakiCond: 25);
 
       final projection = NosakiSparkleCalculator.project(
         state: state,
@@ -199,7 +199,7 @@ void main() {
 
     test('fails eligibility if fleet is on expedition', () {
       final state = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         onExpedition: true,
       );
 
@@ -215,7 +215,7 @@ void main() {
 
     test('marks docked companion ship as docked with 0 fuel cost', () {
       final state = buildNosakiTestState(
-        flagshipMasterId: 602,
+        flagshipMasterId: 1002,
         companionConds: [48, 48],
         dockedShipIds: [2],
       );
@@ -234,7 +234,7 @@ void main() {
     });
 
     test('hasReadyFleet returns true if any fleet has a ready Nosaki', () {
-      final state = buildNosakiTestState(flagshipMasterId: 602);
+      final state = buildNosakiTestState(flagshipMasterId: 1002);
       expect(NosakiSparkleCalculator.hasReadyFleet(state), isTrue);
 
       final noNosakiState = buildNosakiTestState(flagshipMasterId: 501);
@@ -244,7 +244,7 @@ void main() {
 }
 
 GameState buildNosakiTestState({
-  int flagshipMasterId = 602,
+  int flagshipMasterId = 1002,
   int secondMasterId = 502,
   int thirdMasterId = 503,
   int nosakiFuel = 100,
@@ -261,19 +261,19 @@ GameState buildNosakiTestState({
       id: 1,
       masterId: flagshipMasterId,
       level: 80,
-      currentHp: flagshipMasterId == 602 || flagshipMasterId == 596
+      currentHp: flagshipMasterId == 1002 || flagshipMasterId == 996
           ? nosakiHp
           : 50,
-      maxHp: flagshipMasterId == 602 || flagshipMasterId == 596
+      maxHp: flagshipMasterId == 1002 || flagshipMasterId == 996
           ? nosakiMaxHp
           : 50,
-      currentFuel: flagshipMasterId == 602 || flagshipMasterId == 596
+      currentFuel: flagshipMasterId == 1002 || flagshipMasterId == 996
           ? nosakiFuel
           : 100,
-      currentAmmo: flagshipMasterId == 602 || flagshipMasterId == 596
+      currentAmmo: flagshipMasterId == 1002 || flagshipMasterId == 996
           ? nosakiAmmo
           : 100,
-      condition: flagshipMasterId == 602 || flagshipMasterId == 596
+      condition: flagshipMasterId == 1002 || flagshipMasterId == 996
           ? nosakiCond
           : 49,
     ),
@@ -281,15 +281,15 @@ GameState buildNosakiTestState({
       id: 2,
       masterId: secondMasterId,
       level: 70,
-      currentHp: secondMasterId == 602 || secondMasterId == 596 ? nosakiHp : 40,
-      maxHp: secondMasterId == 602 || secondMasterId == 596 ? nosakiMaxHp : 40,
-      currentFuel: secondMasterId == 602 || secondMasterId == 596
+      currentHp: secondMasterId == 1002 || secondMasterId == 996 ? nosakiHp : 40,
+      maxHp: secondMasterId == 1002 || secondMasterId == 996 ? nosakiMaxHp : 40,
+      currentFuel: secondMasterId == 1002 || secondMasterId == 996
           ? nosakiFuel
           : 100,
-      currentAmmo: secondMasterId == 602 || secondMasterId == 596
+      currentAmmo: secondMasterId == 1002 || secondMasterId == 996
           ? nosakiAmmo
           : 100,
-      condition: secondMasterId == 602 || secondMasterId == 596
+      condition: secondMasterId == 1002 || secondMasterId == 996
           ? nosakiCond
           : (companionConds.isNotEmpty ? companionConds[0] : 49),
     ),
@@ -335,15 +335,15 @@ GameState buildNosakiTestState({
     hasMasterData: true,
     hasPortData: true,
     masterShips: <int, MasterShip>{
-      596: const MasterShip(
-        id: 596,
+      996: const MasterShip(
+        id: 996,
         name: '野埼',
         shipTypeId: 22,
         maxFuel: 100,
         maxAmmo: 100,
       ),
-      602: const MasterShip(
-        id: 602,
+      1002: const MasterShip(
+        id: 1002,
         name: '野埼改',
         shipTypeId: 22,
         maxFuel: 100,

@@ -12,6 +12,8 @@ import 'game_rendering_mode_controller.dart';
 import 'game_rendering_mode_section.dart';
 import 'layout_settings_controller.dart';
 import 'screen_awake_controller.dart';
+import 'game_mouse_wheel_settings.dart';
+import 'game_mouse_wheel_settings_section.dart';
 import 'settings_ui_helpers.dart';
 
 class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
@@ -24,6 +26,7 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.toolbarDisplayController,
     this.gameFrameRateSettingsController,
     this.screenAwakeController,
+    this.gameMouseWheelSettingsController,
     this.gameRenderingModeController,
     this.isBattleActive = false,
   });
@@ -35,6 +38,7 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final GameToolbarDisplayController? toolbarDisplayController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final ScreenAwakeController? screenAwakeController;
+  final GameMouseWheelSettingsController? gameMouseWheelSettingsController;
   final GameRenderingModeController? gameRenderingModeController;
   final bool isBattleActive;
 
@@ -161,6 +165,13 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 ),
               ),
             ),
+            if (gameMouseWheelSettingsController case final wheel?) ...<Widget>[
+              const SizedBox(height: 24),
+              buildSectionTitle(l10n.mouseWheelCompatibility),
+              buildCard(
+                child: GameMouseWheelSettingsSection(controller: wheel),
+              ),
+            ],
             if (gameFrameRateSettingsController != null) ...<Widget>[
               const SizedBox(height: 24),
               buildSectionTitle(l10n.frameRateSettingsSection),

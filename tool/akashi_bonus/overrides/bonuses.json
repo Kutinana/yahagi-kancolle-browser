@@ -1817,12 +1817,12 @@
           "overflow": "cap"
         },
         "notes": [
-          "override:override-290-fix",
-          "verificationSource: wikiwiki.jp/kancolle 41cm三連装砲改二 (2025-04更新)"
+          "override:override-149-001",
+          "verificationSource: wikiwiki.jp/kancolle 四式水中聴音機"
         ],
         "source": {
-          "url": "https://akashi-list.me/detail/w290.html",
-          "pageName": "41cm三連装砲改二",
+          "url": "https://akashi-list.me/detail/w149.html",
+          "pageName": "四式水中聴音機",
           "fetchedAt": "",
           "httpLastModified": null,
           "contentSha256": "",

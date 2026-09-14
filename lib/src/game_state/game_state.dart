@@ -78,6 +78,7 @@ class MasterShip {
     this.portraitVersion,
   });
 
+  /// api_mst_ship.api_id: internal ship master ID, not the encyclopedia number.
   final int id;
   final String name;
 
@@ -85,6 +86,8 @@ class MasterShip {
   final String reading;
   final int shipTypeId;
   final int afterShipId;
+
+  /// api_sortno: encyclopedia number; never use this as a ship master ID.
   final int sortNo;
   final int classTypeId;
   final int speed;
@@ -147,8 +150,11 @@ class MasterSlotItem {
     this.resourceVersion = '',
   });
 
+  /// Equipment master ID (api_mst_slotitem.api_id), not an owned instance ID.
   final int id;
   final String name;
+
+  /// Encyclopedia/display number (api_sortno), not a lookup key.
   final int sortNo;
   final int firepower;
   final int torpedo;
@@ -160,6 +166,8 @@ class MasterSlotItem {
   final int evasion;
   final int armor;
   final int range;
+
+  /// Raw api_type: index 2 is equipment category, index 3 is the icon ID.
   final List<int> type;
   final int interception;
   final int antiBomber;

@@ -9,6 +9,21 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get enterGameFullscreen => '游戏全屏';
+
+  @override
+  String get exitGameFullscreen => '退出全屏';
+
+  @override
+  String get exitFullscreenShort => '退出';
+
+  @override
+  String get gameFullscreenHint => '点击浮钮或按返回键退出全屏；可拖动浮钮调整位置';
+
+  @override
+  String get gameFullscreenUnavailable => '无法显示退出按钮，已恢复普通布局';
+
+  @override
   String get questCompletionNotice => '有任务已完成';
 
   @override
@@ -2123,7 +2138,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameResourceCacheFullDesc =>
-      '预下载固定基础资源清单（约 5.49 GB）；新内容会在游玩时自动缓存。';
+      '预下载基础资源（约 5.49 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。';
 
   @override
   String get gameResourceCacheStart => '开始下载';
@@ -2949,11 +2964,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get battlePredictionUnconfirmed => '数据未确认：血量与预测仅供参考，请以游戏画面为准。';
+
+  @override
+  String get mouseWheelCompatibility => '外接鼠标滚轮兼容';
+
+  @override
+  String get mouseWheelCompatibilityDescription =>
+      '使用外接鼠标时，若游戏内滚轮无响应，可尝试开启。立即生效，保留鼠标点击和手指触控。';
+
+  @override
+  String get mouseWheelCompatibilitySaveFailed => '设置保存失败，请重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get enterGameFullscreen => '遊戲全螢幕';
+
+  @override
+  String get exitGameFullscreen => '退出全螢幕';
+
+  @override
+  String get exitFullscreenShort => '退出';
+
+  @override
+  String get gameFullscreenHint => '點擊浮鈕或按返回鍵退出全螢幕；可拖動浮鈕調整位置';
+
+  @override
+  String get gameFullscreenUnavailable => '無法顯示退出按鈕，已恢復一般佈局';
 
   @override
   String get questCompletionNotice => '有任務已完成';
@@ -5897,4 +5937,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get battlePredictionUnconfirmed => '資料未確認：血量與預測僅供參考，請以遊戲畫面為準。';
+
+  @override
+  String get mouseWheelCompatibility => '外接滑鼠滾輪相容';
+
+  @override
+  String get mouseWheelCompatibilityDescription =>
+      '使用外接滑鼠時，若遊戲內滾輪無反應，可嘗試開啟。立即生效，保留滑鼠點擊和手指觸控。';
+
+  @override
+  String get mouseWheelCompatibilitySaveFailed => '設定儲存失敗，請重試。';
 }

@@ -89,10 +89,10 @@ void main() {
         hasMasterData: true,
         hasPortData: true,
         masterShips: const <int, MasterShip>{
-          602: MasterShip(
-            id: 602,
+          1002: MasterShip(
+            id: 1002,
             name: '野埼改',
-            shipTypeId: 1,
+            shipTypeId: 22,
             maxFuel: 100,
             maxAmmo: 100,
           ),
@@ -107,7 +107,7 @@ void main() {
         ships: const <int, OwnedShip>{
           1: OwnedShip(
             id: 1,
-            masterId: 602,
+            masterId: 1002,
             level: 80,
             currentHp: 42,
             maxHp: 42,

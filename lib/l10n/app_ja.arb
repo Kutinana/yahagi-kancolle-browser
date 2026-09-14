@@ -1,4 +1,9 @@
 {
+  "enterGameFullscreen": "ゲームを全画面表示",
+  "exitGameFullscreen": "全画面表示を終了",
+  "exitFullscreenShort": "解除",
+  "gameFullscreenHint": "フローティングボタンまたは戻るキーで解除できます。ボタンはドラッグで移動できます",
+  "gameFullscreenUnavailable": "解除ボタンを表示できないため、通常表示に戻しました",
   "questCompletionNotice": "達成した任務があります",
   "questCompletionCount": "達成済み・報酬未受領の任務が{count}件",
   "resourceTrend90d": "90日",
@@ -1015,5 +1020,8 @@
   "developmentPoolBauxite": "ボーキサイト系",
   "developmentPoolAmmunition": "弾薬系",
   "developmentPoolFuelSteel": "燃料・鋼材系",
-  "battlePredictionUnconfirmed": "データ未確認：HP・予測は参考値です。ゲーム画面で確認してください。"
+  "battlePredictionUnconfirmed": "データ未確認：HP・予測は参考値です。ゲーム画面で確認してください。",
+  "mouseWheelCompatibility": "外付けマウスのホイール互換",
+  "mouseWheelCompatibilityDescription": "ゲーム内でマウスホイールが反応しない場合にお試しください。すぐに反映され、クリックとタッチ操作も引き続き使えます。",
+  "mouseWheelCompatibilitySaveFailed": "設定を保存できませんでした。もう一度お試しください。"
 }

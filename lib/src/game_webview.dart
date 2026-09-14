@@ -35,6 +35,8 @@ import 'settings/network_settings_store.dart';
 import 'settings/network_settings_validator.dart';
 import 'settings/game_frame_rate_settings.dart';
 import 'settings/game_rendering_mode.dart';
+import 'settings/game_mouse_wheel_settings.dart';
+import 'browser/game_mouse_wheel_region.dart';
 
 import 'settings/safety_settings_controller.dart';
 
@@ -700,6 +702,7 @@ class GameWebView extends StatefulWidget {
     required this.toolbarController,
     required this.gameCaptureController,
     this.frameRateSettingsController,
+    this.mouseWheelSettingsController,
     this.renderingMode = GameRenderingMode.compatibility,
     this.startupTimeout,
   });
@@ -713,6 +716,7 @@ class GameWebView extends StatefulWidget {
   final GameToolbarController toolbarController;
   final GameCaptureController gameCaptureController;
   final GameFrameRateSettingsController? frameRateSettingsController;
+  final GameMouseWheelSettingsController? mouseWheelSettingsController;
   final GameRenderingMode renderingMode;
   final Duration? startupTimeout;
 
@@ -1272,10 +1276,48 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
                 widget.renderingMode.usesHybridComposition,
           );
     }
-    return WebViewWidget.fromPlatformCreationParams(
+    final view = WebViewWidget.fromPlatformCreationParams(
       key: const Key('game-webview'),
       params: params,
     );
+    final wheel = widget.mouseWheelSettingsController;
+    final platform = _webViewController.platform;
+    if (wheel == null || platform is! AndroidWebViewController) return view;
+    return AnimatedBuilder(
+      animation: wheel,
+      child: view,
+      builder: (context, child) => GameMouseWheelRegion(
+        enabled: wheel.enabled,
+        onScroll: (input) {
+          unawaited(_forwardMouseWheel(platform.webViewIdentifier, input));
+        },
+        child: child!,
+      ),
+    );
+  }
+
+  Future<void> _forwardMouseWheel(
+    int webViewId,
+    GameMouseWheelInput input,
+  ) async {
+    if (_disposed || widget.mouseWheelSettingsController?.enabled != true) {
+      return;
+    }
+    try {
+      await const MethodChannel(
+        'app.yahagi.kancollebrowser/game_mouse_wheel',
+      ).invokeMethod<bool>('scroll', <String, Object>{
+        'webViewId': webViewId,
+        'x': input.xRatio,
+        'y': input.yRatio,
+        'deltaX': input.deltaX,
+        'deltaY': input.deltaY,
+      });
+    } on PlatformException catch (error) {
+      debugPrint('Mouse wheel compatibility unavailable: ${error.code}');
+    } on MissingPluginException {
+      // An older host can still provide its normal input behavior.
+    }
   }
 
   Widget _buildStartupOverlay() {
