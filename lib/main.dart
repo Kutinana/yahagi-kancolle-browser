@@ -1368,21 +1368,11 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         widget.layoutSettingsController.workspaceMenuPosition == 'top';
     final hdPortrait =
         widget.layoutSettingsController.hdSettings.enabled &&
-        windowSize.shortestSide >= 600 &&
         windowSize.height >= windowSize.width;
-    final hdWindow =
-        usesHdLandscape(
-          windowSize,
-          enabled: widget.layoutSettingsController.hdSettings.enabled,
-        ) &&
-        HdWorkspaceGeometry.forSize(
-              Size(
-                windowSize.width -
-                    (menuHorizontal ? 0 : _workspaceNavigationExtent),
-                windowSize.height - 44,
-              ),
-            ) !=
-            null;
+    final hdWindow = usesHdLandscape(
+      windowSize,
+      enabled: widget.layoutSettingsController.hdSettings.enabled,
+    );
     final panelAlignedNavigation =
         _workspaceIndex == 0 &&
         (menuTop ||
@@ -2425,7 +2415,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   }
 }
 
-const double _workspaceNavigationExtent = 48;
+const double _workspaceNavigationExtent = 41;
 
 class WorkspaceNavigation extends StatelessWidget {
   const WorkspaceNavigation({
@@ -2509,6 +2499,7 @@ class WorkspaceNavigation extends StatelessWidget {
                             key: Key('workspace-nav-${destination.id}'),
                             icon: destination.icon,
                             label: destination.label,
+                            horizontal: controller.workspaceMenuHorizontal,
                             completedCount: switch (destination.id) {
                               'quests' => completedQuestCount,
                               'expedition' =>
@@ -2664,6 +2655,7 @@ class _NavigationButton extends StatelessWidget {
     this.completedCount = 0,
     this.countKey = const Key("quest-completion-count"),
     this.countLabel,
+    this.horizontal = true,
   });
 
   final IconData icon;
@@ -2673,30 +2665,42 @@ class _NavigationButton extends StatelessWidget {
   final int completedCount;
   final Key countKey;
   final String? countLabel;
+  final bool horizontal;
 
   @override
   Widget build(BuildContext context) {
+    final btnSize = horizontal ? const Size(42, 35) : const Size(35, 42);
     return Semantics(
       label: label,
-      child: IconButton(
-        onPressed: onTap,
-        style: IconButton.styleFrom(
-          fixedSize: const Size(42, 42),
-          foregroundColor: selected
-              ? const Color(0xffd4a85f)
-              : const Color(0xff8197a5),
-          backgroundColor: selected
-              ? const Color(0xff2b2c22)
-              : Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        ),
-        icon: QuestCompletionBadge(
-          count: completedCount,
-          countKey: countKey,
-          semanticLabel: countLabel == null
-              ? null
-              : "$countLabel: $completedCount",
-          child: Icon(icon, size: 20),
+      child: SizedBox(
+        width: btnSize.width,
+        height: btnSize.height,
+        child: IconButton(
+          onPressed: onTap,
+          style: IconButton.styleFrom(
+            fixedSize: btnSize,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: horizontal
+                ? const EdgeInsets.only(top: 7.0)
+                : EdgeInsets.zero,
+            foregroundColor: selected
+                ? const Color(0xffd4a85f)
+                : const Color(0xff8197a5),
+            backgroundColor: selected
+                ? const Color(0xff2b2c22)
+                : Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(9),
+            ),
+          ),
+          icon: QuestCompletionBadge(
+            count: completedCount,
+            countKey: countKey,
+            semanticLabel: countLabel == null
+                ? null
+                : "$countLabel: $completedCount",
+            child: Icon(icon, size: 20),
+          ),
         ),
       ),
     );
@@ -2844,6 +2848,12 @@ class _InformationPanelState extends State<_InformationPanel> {
                     .any((module) => module.id == 'fleet' && module.span == 2);
             final child = switch (id) {
               'fleet' => FleetSummaryCard(
+                showLogo: widget.layoutSettingsController.moduleShowLogo(
+                  'fleet',
+                ),
+                showTitle: widget.layoutSettingsController.moduleShowName(
+                  'fleet',
+                ),
                 twoColumnVisible:
                     widget.layoutSettingsController.hdFleetDisplayFields,
                 onOpenDisplaySettings: editing
@@ -2872,6 +2882,12 @@ class _InformationPanelState extends State<_InformationPanel> {
                 onOpenFleet: widget.onOpenFleet,
               ),
               'land_base' => LandBaseSummaryCard(
+                showLogo: widget.layoutSettingsController.moduleShowLogo(
+                  'land_base',
+                ),
+                showTitle: widget.layoutSettingsController.moduleShowName(
+                  'land_base',
+                ),
                 visible: widget.layoutSettingsController.moduleDisplayFields(
                   'land_base',
                 ),
@@ -2891,6 +2907,12 @@ class _InformationPanelState extends State<_InformationPanel> {
                 onToggleCollapse: editing ? () {} : toggle,
               ),
               'expedition' => ExpeditionSummaryCard(
+                showLogo: widget.layoutSettingsController.moduleShowLogo(
+                  'expedition',
+                ),
+                showTitle: widget.layoutSettingsController.moduleShowName(
+                  'expedition',
+                ),
                 visible: widget.layoutSettingsController.moduleDisplayFields(
                   'expedition',
                 ),
@@ -2909,6 +2931,12 @@ class _InformationPanelState extends State<_InformationPanel> {
               ),
 
               'repair' => RepairSummaryCard(
+                showLogo: widget.layoutSettingsController.moduleShowLogo(
+                  'repair',
+                ),
+                showTitle: widget.layoutSettingsController.moduleShowName(
+                  'repair',
+                ),
                 visible: widget.layoutSettingsController.moduleDisplayFields(
                   'repair',
                 ),
@@ -2925,6 +2953,12 @@ class _InformationPanelState extends State<_InformationPanel> {
                 onOpenRepair: widget.onOpenRepair,
               ),
               'construction' => ConstructionSummaryCard(
+                showLogo: widget.layoutSettingsController.moduleShowLogo(
+                  'construction',
+                ),
+                showTitle: widget.layoutSettingsController.moduleShowName(
+                  'construction',
+                ),
                 visible: widget.layoutSettingsController.moduleDisplayFields(
                   'construction',
                 ),
@@ -2941,6 +2975,19 @@ class _InformationPanelState extends State<_InformationPanel> {
                 onOpenConstruction: widget.onOpenConstruction,
               ),
               'quests' => PinnedQuestsSummary(
+                showLogo: widget.layoutSettingsController.moduleShowLogo(
+                  'quests',
+                ),
+                showTitle: widget.layoutSettingsController.moduleShowName(
+                  'quests',
+                ),
+                onOpenDisplaySettings: editing
+                    ? () => showModuleDisplaySettings(
+                        context,
+                        widget.layoutSettingsController,
+                        'quests',
+                      )
+                    : null,
                 controller: widget.gameStateController,
                 collapsed: isCollapsed,
                 onToggleCollapse: editing ? () {} : toggle,
@@ -2948,6 +2995,19 @@ class _InformationPanelState extends State<_InformationPanel> {
               ),
               'battle' => LiveBattleCard(
                 key: const PageStorageKey('dashboard-live-battle'),
+                showLogo: widget.layoutSettingsController.moduleShowLogo(
+                  'battle',
+                ),
+                showTitle: widget.layoutSettingsController.moduleShowName(
+                  'battle',
+                ),
+                onOpenDisplaySettings: editing
+                    ? () => showModuleDisplaySettings(
+                        context,
+                        widget.layoutSettingsController,
+                        'battle',
+                      )
+                    : null,
                 controller: widget.battleController,
                 showEnemyPortraits:
                     widget
@@ -2968,6 +3028,19 @@ class _InformationPanelState extends State<_InformationPanel> {
               ),
               'pre_sortie' => PreSortieCheckSummary(
                 key: const PageStorageKey('dashboard-pre-sortie'),
+                showLogo: widget.layoutSettingsController.moduleShowLogo(
+                  'pre_sortie',
+                ),
+                showTitle: widget.layoutSettingsController.moduleShowName(
+                  'pre_sortie',
+                ),
+                onOpenDisplaySettings: editing
+                    ? () => showModuleDisplaySettings(
+                        context,
+                        widget.layoutSettingsController,
+                        'pre_sortie',
+                      )
+                    : null,
                 controller: widget.gameStateController,
                 settingsController: widget.layoutSettingsController,
                 collapsed: isCollapsed,

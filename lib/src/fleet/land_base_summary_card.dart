@@ -24,10 +24,14 @@ class LandBaseSummaryCard extends StatefulWidget {
     required this.onToggleCollapse,
     this.damagePulseMode = DamagePulseFilter.all,
     this.visible = const {'portrait', 'bars', 'airPower', 'range'},
+    this.showLogo = true,
+    this.showTitle = true,
     this.onOpenDisplaySettings,
   });
 
   final Set<String> visible;
+  final bool showLogo;
+  final bool showTitle;
   final VoidCallback? onOpenDisplaySettings;
   final GameStateController controller;
   final bool collapsed;
@@ -70,6 +74,8 @@ class _LandBaseSummaryCardState extends State<LandBaseSummaryCard> {
         icon: const Icon(Icons.flight_rounded),
         collapsed: widget.collapsed,
         onToggleCollapse: widget.onToggleCollapse,
+        showLogo: widget.showLogo,
+        showTitle: widget.showTitle,
         collapseButtonKey: const Key('land-base-collapse-button'),
         trailing: _LandBaseAreaSwitcher(
           areaIds: areaIds,

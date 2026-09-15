@@ -33,6 +33,8 @@ class FleetSummaryCard extends StatefulWidget {
     this.visible = defaultFields,
     this.twoColumnVisible,
     this.shipTypeLabelMode = FleetShipTypeLabelMode.localizedName,
+    this.showLogo = true,
+    this.showTitle = true,
     this.onOpenDisplaySettings,
   });
 
@@ -47,6 +49,8 @@ class FleetSummaryCard extends StatefulWidget {
   final Set<String> visible;
   final Set<String>? twoColumnVisible;
   final FleetShipTypeLabelMode shipTypeLabelMode;
+  final bool showLogo;
+  final bool showTitle;
   final VoidCallback? onOpenDisplaySettings;
 
   @override
@@ -90,6 +94,8 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
             icon: const Icon(Icons.directions_boat_filled_outlined),
             collapsed: widget.collapsed,
             onToggleCollapse: widget.onToggleCollapse,
+            showLogo: widget.showLogo,
+            showTitle: widget.showTitle,
             headerAction: widget.onOpenDisplaySettings == null
                 ? null
                 : IconButton(

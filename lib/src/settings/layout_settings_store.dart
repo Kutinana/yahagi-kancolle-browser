@@ -165,6 +165,30 @@ class SharedPreferencesLayoutSettingsStore
   }
 
   @override
+  Future<bool> loadModuleShowLogo(String module) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('module_capsule_logo_$module') ?? true;
+  }
+
+  @override
+  Future<void> saveModuleShowLogo(String module, bool show) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('module_capsule_logo_$module', show);
+  }
+
+  @override
+  Future<bool> loadModuleShowName(String module) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('module_capsule_name_$module') ?? true;
+  }
+
+  @override
+  Future<void> saveModuleShowName(String module, bool show) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('module_capsule_name_$module', show);
+  }
+
+  @override
   Future<List<String>?> loadFleetDisplayFields() async {
     final prefs = await SharedPreferences.getInstance();
     final current = prefs.getStringList('fleet_brief_display_fields_v2');

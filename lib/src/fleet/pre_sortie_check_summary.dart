@@ -8,6 +8,7 @@ import '../layout/hd_dashboard_content.dart';
 import 'fleet_ui_strings.dart';
 import 'ship_status_style.dart';
 import '../settings/layout_settings_controller.dart';
+import '../settings/module_display_settings.dart';
 
 enum SortieCheckMode { ships, maps }
 
@@ -19,6 +20,9 @@ class PreSortieCheckSummary extends StatefulWidget {
     required this.onToggleCollapse,
     required this.onOpenFleet,
     this.settingsController,
+    this.showLogo = true,
+    this.showTitle = true,
+    this.onOpenDisplaySettings,
   });
 
   final GameStateController controller;
@@ -26,6 +30,9 @@ class PreSortieCheckSummary extends StatefulWidget {
   final VoidCallback onToggleCollapse;
   final ValueChanged<int> onOpenFleet;
   final LayoutSettingsController? settingsController;
+  final bool showLogo;
+  final bool showTitle;
+  final VoidCallback? onOpenDisplaySettings;
 
   @override
   State<PreSortieCheckSummary> createState() => _PreSortieCheckSummaryState();
@@ -81,10 +88,17 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
             lookupAppLocalizations(const Locale('zh'));
 
         return DashboardCard(
+          headerAction: moduleDisplayGear(
+            context,
+            'pre_sortie',
+            widget.onOpenDisplaySettings,
+          ),
           title: l10n.preSortieCheck,
           icon: const Icon(Icons.security_outlined),
           collapsed: widget.collapsed,
           onToggleCollapse: widget.onToggleCollapse,
+          showLogo: widget.showLogo,
+          showTitle: widget.showTitle,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

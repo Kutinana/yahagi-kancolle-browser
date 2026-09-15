@@ -22,10 +22,14 @@ class RepairSummaryCard extends StatefulWidget {
     required this.onToggleCollapse,
     required this.onOpenRepair,
     this.visible = const {'portrait', 'empty'},
+    this.showLogo = true,
+    this.showTitle = true,
     this.onOpenDisplaySettings,
   });
 
   final Set<String> visible;
+  final bool showLogo;
+  final bool showTitle;
   final VoidCallback? onOpenDisplaySettings;
   final GameStateController controller;
   final bool collapsed;
@@ -70,6 +74,8 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
           icon: const Icon(Icons.build_circle_outlined),
           collapsed: widget.collapsed,
           onToggleCollapse: widget.onToggleCollapse,
+          showLogo: widget.showLogo,
+          showTitle: widget.showTitle,
           trailing: _RepairSummaryModeSelector(
             mode: _mode,
             dockLabel: strings.repairDockMode,
@@ -725,31 +731,42 @@ class _RepairCapsule extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: fitFullName
-                                    ? FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        alignment: Alignment.centerLeft,
-                                        child: _nameText(),
-                                      )
-                                    : _nameText(),
-                              ),
-                              if (dotColor != null)
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  margin: const EdgeInsets.only(left: 4),
-                                  decoration: BoxDecoration(
-                                    color: dotColor,
-                                    shape: BoxShape.circle,
-                                  ),
+                          SizedBox(
+                            height: 16,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: fitFullName
+                                      ? FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: _nameText(),
+                                        )
+                                      : _nameText(),
                                 ),
-                            ],
+                                if (dotColor != null)
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.only(left: 4),
+                                    decoration: BoxDecoration(
+                                      color: dotColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 2),
-                          detail,
+                          SizedBox(
+                            key: const Key('repair-summary-detail-line'),
+                            height: 14,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: detail,
+                            ),
+                          ),
                         ],
                       ),
                     ),

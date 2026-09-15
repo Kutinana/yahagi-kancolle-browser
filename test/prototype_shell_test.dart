@@ -258,22 +258,31 @@ void main() {
         const Size(600, 800),
         const Size(800, 1280),
         const Size(915, 412),
+        const Size(640, 320),
         const Size(412, 915),
+        const Size(393, 873),
+        const Size(540, 1200),
       ]) {
         tester.view.physicalSize = size;
         await tester.pumpAndSettle();
-        expect(bottom, findsNothing);
         expect(
-          find.byKey(const Key('yahagi-hd-label')),
-          size.shortestSide >= 600 ? findsOneWidget : findsNothing,
+          bottom,
+          size.width > size.height ? findsOneWidget : findsNothing,
         );
+        expect(find.byKey(const Key('yahagi-hd-label')), findsOneWidget);
         expect(
           find.byKey(const Key('hd-portrait-grid')),
-          size.shortestSide >= 600 ? findsOneWidget : findsNothing,
+          size.height >= size.width ? findsOneWidget : findsNothing,
         );
         expect(tester.element(game), same(originalElement));
         expect(tester.takeException(), isNull);
       }
+      await layout.setHdEnabled(false);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('hd-portrait-grid')), findsNothing);
+      expect(find.byKey(const Key('yahagi-hd-label')), findsNothing);
+      expect(tester.element(game), same(originalElement));
+      expect(tester.takeException(), isNull);
       expect(deactivations, 0);
       expect(disposals, 0);
     },
@@ -1216,7 +1225,7 @@ void main() {
           final nav = tester.getRect(find.byType(WorkspaceNavigation));
           final surface = tester.getRect(gameSurface);
           if (position == 'top' || position == 'bottom') {
-            expect(nav.height, 48);
+            expect(nav.height, 41);
             final count = layoutSettingsController.workspaceMenuOrder.length;
             if (nav.width >= count * 50 + 20) {
               final first = tester.getRect(

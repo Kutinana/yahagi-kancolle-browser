@@ -205,6 +205,12 @@ class LayoutSettingsController extends ChangeNotifier {
           );
         }
       }
+      for (final module in LayoutSettingsStore.defaultDashboardCardOrder) {
+        controller._moduleShowLogo[module] =
+            await (store as ModuleDisplaySettingsStore).loadModuleShowLogo(module);
+        controller._moduleShowName[module] =
+            await (store as ModuleDisplaySettingsStore).loadModuleShowName(module);
+      }
     }
     controller._expeditionCountdownConfigured = true;
     controller._fleetDisplayFieldsLoaded = true;
@@ -309,6 +315,57 @@ class LayoutSettingsController extends ChangeNotifier {
         module,
         selected.toList(),
       );
+    }
+  }
+
+  final Map<String, bool> _moduleShowLogo = {};
+  final Map<String, bool> _moduleShowName = {};
+
+  bool moduleShowLogo(String module) => _moduleShowLogo[module] ?? true;
+  bool moduleShowName(String module) => _moduleShowName[module] ?? true;
+
+  Future<void> setModuleShowLogo(String module, bool show) async {
+    if (_moduleShowLogo[module] == show) return;
+    _moduleShowLogo[module] = show;
+    notifyListeners();
+    if (_store is ModuleDisplaySettingsStore) {
+      await (_store as ModuleDisplaySettingsStore).saveModuleShowLogo(
+        module,
+        show,
+      );
+    }
+  }
+
+  Future<void> setModuleShowName(String module, bool show) async {
+    if (_moduleShowName[module] == show) return;
+    _moduleShowName[module] = show;
+    notifyListeners();
+    if (_store is ModuleDisplaySettingsStore) {
+      await (_store as ModuleDisplaySettingsStore).saveModuleShowName(
+        module,
+        show,
+      );
+    }
+  }
+
+  Future<void> resetAllModuleCapsuleVisibility() async {
+    final allModules = {
+      ...LayoutSettingsStore.defaultDashboardCardOrder,
+      ...moduleDisplayOptions.keys,
+    };
+    for (final module in allModules) {
+      _moduleShowLogo[module] = true;
+      _moduleShowName[module] = true;
+    }
+    notifyListeners();
+    if (_store is ModuleDisplaySettingsStore) {
+      final store = _store as ModuleDisplaySettingsStore;
+      await Future.wait([
+        for (final module in allModules) ...[
+          store.saveModuleShowLogo(module, true),
+          store.saveModuleShowName(module, true),
+        ],
+      ]);
     }
   }
 
@@ -522,25 +579,31 @@ class LayoutSettingsController extends ChangeNotifier {
     );
   }
 
-  Future<void> resetHdPortraitLayout() => _setHdSettings(
-    _hdSettings.copyWith(
-      portraitModules: [
-        for (final id in LayoutSettingsStore.defaultDashboardCardOrder)
-          HdBottomModule(id, 2),
-      ],
-      portraitHiddenModules: const [],
-    ),
-  );
+  Future<void> resetHdPortraitLayout() async {
+    await resetAllModuleCapsuleVisibility();
+    await _setHdSettings(
+      _hdSettings.copyWith(
+        portraitModules: [
+          for (final id in LayoutSettingsStore.defaultDashboardCardOrder)
+            HdBottomModule(id, 2),
+        ],
+        portraitHiddenModules: const [],
+      ),
+    );
+  }
 
-  Future<void> resetHdLayout() => _setHdSettings(
-    HdLayoutSettings(
-      enabled: _hdSettings.enabled,
-      portraitModules: _hdSettings.portrait,
-      portraitHiddenModules: _hdSettings.portraitHidden.toList(),
-      bottomModules: const [],
-      sidebarOrder: LayoutSettingsStore.defaultDashboardCardOrder,
-    ),
-  );
+  Future<void> resetHdLayout() async {
+    await resetAllModuleCapsuleVisibility();
+    await _setHdSettings(
+      HdLayoutSettings(
+        enabled: _hdSettings.enabled,
+        portraitModules: _hdSettings.portrait,
+        portraitHiddenModules: const [],
+        bottomModules: const [],
+        sidebarOrder: LayoutSettingsStore.defaultDashboardCardOrder,
+      ),
+    );
+  }
 
   double _gameAreaRatio;
   double _informationPanelWidth;
@@ -773,7 +836,7 @@ class LayoutSettingsController extends ChangeNotifier {
     _dashboardCardOrder = List<String>.from(
       LayoutSettingsStore.defaultDashboardCardOrder,
     );
-    notifyListeners();
+    await resetAllModuleCapsuleVisibility();
     await _store.saveDashboardCardOrder(_dashboardCardOrder);
   }
 
