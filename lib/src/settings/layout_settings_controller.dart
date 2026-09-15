@@ -190,6 +190,12 @@ class LayoutSettingsController extends ChangeNotifier {
       }
     }
     if (store is ModuleDisplaySettingsStore) {
+      final savedHd = await (store as ModuleDisplaySettingsStore)
+          .loadModuleDisplayFields('fleet-hd-summary');
+      controller._hdFleetSummaryFields = savedHd
+          ?.where(summaryFields.contains)
+          .take(7)
+          .toSet();
       for (final module in moduleDisplayOptions.keys) {
         final saved = await (store as ModuleDisplaySettingsStore)
             .loadModuleDisplayFields(module);
@@ -219,6 +225,37 @@ class LayoutSettingsController extends ChangeNotifier {
     if (_store is FleetDisplaySettingsStore) {
       await (_store as FleetDisplaySettingsStore).saveFleetDisplayFields(
         _fleetDisplayFields.toList(),
+      );
+    }
+  }
+
+  Set<String>? _hdFleetSummaryFields;
+  Set<String> get hdFleetDisplayFields => {
+    ...fleetDisplayFields.difference(summaryFields),
+    ...(_hdFleetSummaryFields ??
+        {
+          ...fleetDisplayFields.intersection(summaryFields),
+          if (fleetDisplayFields.any(summaryFields.contains)) ...{
+            'firepower',
+            'anti-sub',
+          },
+        }),
+  };
+
+  Future<void> setHdFleetDisplayFields(Iterable<String> fields) async {
+    final selected = fields.toSet();
+    _hdFleetSummaryFields = selected
+        .where(summaryFields.contains)
+        .take(7)
+        .toSet();
+    await setFleetDisplayFields({
+      ...selected.difference(summaryFields),
+      ...fleetDisplayFields.intersection(summaryFields),
+    });
+    if (_store is ModuleDisplaySettingsStore) {
+      await (_store as ModuleDisplaySettingsStore).saveModuleDisplayFields(
+        'fleet-hd-summary',
+        _hdFleetSummaryFields!.toList(),
       );
     }
   }

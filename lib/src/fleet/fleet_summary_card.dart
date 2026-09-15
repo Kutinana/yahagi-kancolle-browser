@@ -31,6 +31,7 @@ class FleetSummaryCard extends StatefulWidget {
     this.moraleRecoveryTimerController,
     this.clock,
     this.visible = defaultFields,
+    this.twoColumnVisible,
     this.shipTypeLabelMode = FleetShipTypeLabelMode.localizedName,
     this.onOpenDisplaySettings,
   });
@@ -44,6 +45,7 @@ class FleetSummaryCard extends StatefulWidget {
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final DateTime Function()? clock;
   final Set<String> visible;
+  final Set<String>? twoColumnVisible;
   final FleetShipTypeLabelMode shipTypeLabelMode;
   final VoidCallback? onOpenDisplaySettings;
 
@@ -66,6 +68,10 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
         ]),
         builder: (context, _) {
           final state = widget.controller.state;
+          final summaryVisible = HdModuleColumns.of(context) == 2
+              ? widget.twoColumnVisible ??
+                    {...widget.visible, 'firepower', 'anti-sub'}
+              : widget.visible;
           final fleetIndex = state.fleets.indexWhere(
             (fleet) => fleet.id == _selectedFleetId,
           );
@@ -107,9 +113,9 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
               onSelected: (id) => setState(() => _selectedFleetId = id),
             ),
             child: _FleetSummaryBody(
-              metrics: widget.visible.any(summaryFields.contains)
+              metrics: summaryVisible.any(summaryFields.contains)
                   ? _FleetSummaryMetrics(
-                      visible: widget.visible,
+                      visible: summaryVisible,
                       state: state,
                       fleetId: _selectedFleetId,
                       metrics: metrics,
@@ -292,10 +298,7 @@ class _FleetSummaryMetrics extends StatelessWidget {
       noValueLabel: noValue,
     );
     final twoColumns = HdModuleColumns.of(context) == 2;
-    final metricFields = {
-      ...visible,
-      if (twoColumns) ...{'firepower', 'anti-sub'},
-    };
+    final metricFields = visible;
     final values =
         <(String, String, String)>[
               (

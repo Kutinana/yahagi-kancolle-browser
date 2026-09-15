@@ -2836,12 +2836,21 @@ class _InformationPanelState extends State<_InformationPanel> {
               }
             }
 
+            final fleetTwoColumns =
+                widget.hd &&
+                (widget.hdPortrait
+                        ? widget.layoutSettingsController.hdSettings.portrait
+                        : widget.layoutSettingsController.hdSettings.bottom)
+                    .any((module) => module.id == 'fleet' && module.span == 2);
             final child = switch (id) {
               'fleet' => FleetSummaryCard(
+                twoColumnVisible:
+                    widget.layoutSettingsController.hdFleetDisplayFields,
                 onOpenDisplaySettings: editing
                     ? () => showFleetDisplaySettings(
                         context,
                         widget.layoutSettingsController,
+                        twoColumns: fleetTwoColumns,
                       )
                     : null,
                 visible: widget.layoutSettingsController.fleetDisplayFields,
