@@ -4,6 +4,7 @@ import '../theme/app_fonts.dart';
 import 'header_resource_settings.dart';
 import 'module_display_settings.dart';
 import 'fleet_display_options.dart';
+import 'hd_layout_settings.dart';
 
 enum FleetMoraleMetricMode { minimumCondition, recoveryCountdown }
 
@@ -95,6 +96,11 @@ abstract interface class FleetMoraleMetricSettingsStore {
   Future<void> saveFleetMoraleMetricMode(FleetMoraleMetricMode mode);
 }
 
+abstract interface class WorkspaceMenuPositionStore {
+  Future<String?> loadWorkspaceMenuPosition();
+  Future<void> saveWorkspaceMenuPosition(String position);
+}
+
 class SharedPreferencesLayoutSettingsStore
     implements
         LayoutSettingsStore,
@@ -103,7 +109,36 @@ class SharedPreferencesLayoutSettingsStore
         FleetMoraleMetricSettingsStore,
         HeaderResourceSettingsStore,
         WorkspaceMenuOrderSettingsStore,
-        InformationPanelSideSettingsStore {
+        HdLayoutSettingsStore,
+        InformationPanelSideSettingsStore,
+        WorkspaceMenuPositionStore {
+  @override
+  Future<String?> loadWorkspaceMenuPosition() async =>
+      (await SharedPreferences.getInstance()).getString(
+        'layout_workspace_menu_position',
+      );
+  @override
+  Future<void> saveWorkspaceMenuPosition(String position) async {
+    await (await SharedPreferences.getInstance()).setString(
+      'layout_workspace_menu_position',
+      position,
+    );
+  }
+
+  @override
+  Future<HdLayoutSettings> loadHdLayoutSettings() async =>
+      HdLayoutSettings.decode(
+        (await SharedPreferences.getInstance()).getString('hd_layout_v1'),
+      );
+
+  @override
+  Future<void> saveHdLayoutSettings(HdLayoutSettings settings) async {
+    await (await SharedPreferences.getInstance()).setString(
+      'hd_layout_v1',
+      settings.encode(),
+    );
+  }
+
   @override
   Future<List<String>?> loadModuleDisplayFields(String module) async {
     final prefs = await SharedPreferences.getInstance();

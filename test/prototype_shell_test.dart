@@ -47,7 +47,238 @@ import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
 import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
+Future<void> _tapWorkspaceNavigationItem(
+  WidgetTester tester,
+  String destinationId,
+) async {
+  final item = find.byKey(Key('workspace-nav-$destinationId'));
+  final navigation = find.byKey(const Key('workspace-navigation-list'));
+  await tester.dragUntilVisible(item, navigation, const Offset(0, -50));
+  await tester.drag(navigation, const Offset(0, -50));
+  await tester.pump();
+  await tester.tap(item);
+}
+
 void main() {
+  testWidgets(
+    'HD is opt-in, keeps a single row and preserves game across toggles and rotation',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 700);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final toolbar = GameToolbarController();
+      final capture = GameCaptureController();
+      final state = GameStateController();
+      final battle = BattleController(gameState: () => state.state);
+      addTearDown(toolbar.dispose);
+      addTearDown(capture.dispose);
+      addTearDown(state.dispose);
+      addTearDown(battle.dispose);
+      var deactivations = 0;
+      var disposals = 0;
+      final layout = await LayoutSettingsController.load(
+        _MemoryLayoutSettingsStore(),
+      );
+      await tester.pumpWidget(
+        YahagiApp(
+          layoutSettingsController: layout,
+          networkSettingsController: NetworkSettingsController(
+            store: _MemoryNetworkSettingsStore(),
+          ),
+          gadgetBypassController: GadgetBypassController(
+            store: _MemoryGadgetBypassStore(),
+            port: _FakeGadgetBypassPort(),
+          ),
+          safetySettingsController: await SafetySettingsController.load(
+            MemorySafetySettingsStore(),
+          ),
+          displayModeController: await DisplayModeController.load(
+            MemoryDisplayModeStore(),
+          ),
+          controller: PrototypeStatusController(),
+          browserController: GameBrowserController(port: _NoopBrowserPort()),
+          captureModeController: await CaptureModeController.load(
+            _MemoryModeStore(),
+          ),
+          gameCaptureController: capture,
+          gameStateController: state,
+          battleController: battle,
+          audioController: await GameAudioController.load(_MemoryAudioStore()),
+          toolbarController: toolbar,
+          gameSurface: _LifecycleProbe(
+            key: const Key('fullscreen-probe'),
+            onDispose: () => disposals++,
+            onDeactivate: () => deactivations++,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      // Keep the shell's parent fixed: layout notifications must update the
+      // workspace without relying on YahagiApp rebuilding its route.
+      final shell = tester.widget<YahagiShell>(find.byType(YahagiShell));
+      final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: app.theme,
+          locale: app.locale,
+          localizationsDelegates: app.localizationsDelegates,
+          supportedLocales: app.supportedLocales,
+          home: shell,
+        ),
+      );
+      await tester.pumpAndSettle();
+      deactivations = 0;
+      disposals = 0;
+      final game = find.byKey(const Key('fullscreen-probe'));
+      final originalElement = tester.element(game);
+      final bottom = find.byKey(const Key('hd-bottom-region'));
+      for (final size in [
+        const Size(800, 600),
+        const Size(1280, 800),
+        const Size(1024, 768),
+        const Size(1440, 900),
+      ]) {
+        tester.view.physicalSize = size;
+        await tester.pumpAndSettle();
+        final oldGameRect = tester.getRect(game);
+        expect(bottom, findsNothing);
+        expect(find.byKey(const Key('yahagi-hd-label')), findsNothing);
+        await layout.setHdEnabled(true);
+        await tester.pumpAndSettle();
+        expect(bottom, findsOneWidget);
+        expect(find.byKey(const Key('yahagi-hd-label')), findsOneWidget);
+        final wasAuto = layout.autoZoom;
+        final previousRatio = layout.gameAreaRatio;
+        await layout.setAutoZoom(false);
+        for (final ratio in [.5, .65, .75]) {
+          await layout.setGameAreaRatio(ratio);
+          await tester.pumpAndSettle();
+          final workspaceWidth = tester
+              .getSize(find.byKey(const Key('game-workspace')))
+              .width;
+          final panelWidth = tester
+              .getSize(find.byKey(const Key('workspace-information-panel')))
+              .width;
+          expect(panelWidth, closeTo((workspaceWidth - 1) * (1 - ratio), .01));
+          expect(tester.getSize(bottom).height, greaterThanOrEqualTo(120));
+          expect(tester.element(game), same(originalElement));
+          expect(tester.takeException(), isNull);
+        }
+        await layout.setAutoZoom(true);
+        await tester.pumpAndSettle();
+        expect(layout.effectiveInformationPanelRatio, .35);
+        expect(
+          tester
+              .getSize(find.byKey(const Key('workspace-information-panel')))
+              .width,
+          closeTo(
+            (tester.getSize(find.byKey(const Key('game-workspace'))).width -
+                    1) *
+                .35,
+            .01,
+          ),
+        );
+        expect(tester.element(game), same(originalElement));
+        await layout.setGameAreaRatio(previousRatio);
+        await layout.setAutoZoom(wasAuto);
+        await tester.pumpAndSettle();
+
+        expect(tester.getSize(game).aspectRatio, closeTo(5 / 3, .001));
+        expect(
+          tester.getRect(game).bottom,
+          closeTo(tester.getRect(bottom).top, .01),
+        );
+        final left = tester.getRect(find.byKey(const Key('hd-slot-left')));
+        final right = tester.getRect(find.byKey(const Key('hd-slot-right')));
+        expect(left.top, right.top);
+        expect(left.bottom, right.bottom);
+        for (final slotKey in ['hd-slot-left', 'hd-slot-right']) {
+          final slot = find.byKey(Key(slotKey));
+          final card = find
+              .descendant(of: slot, matching: find.byType(AnimatedSize))
+              .first;
+          expect(
+            tester.getRect(card).top,
+            closeTo(tester.getRect(slot).top, .01),
+          );
+          expect(
+            tester.getRect(card).bottom,
+            closeTo(tester.getRect(slot).bottom, .01),
+          );
+        }
+
+        expect(left.width, closeTo(right.width, .01));
+        expect(tester.getSize(bottom).height, greaterThanOrEqualTo(120));
+        expect(tester.element(game), same(originalElement));
+        await layout.setHdSplit(false);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('hd-slot-wide')), findsOneWidget);
+        expect(find.byKey(const Key('hd-slot-left')), findsNothing);
+        for (final module in [
+          'fleet',
+          'expedition',
+          'repair',
+          'construction',
+          'quests',
+        ]) {
+          await layout.setHdModule('wide', module);
+          await tester.pumpAndSettle();
+          expect(find.byKey(Key('hd-module-content-$module')), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        }
+        await layout.setHdSplit(true);
+        await layout.setHdEnabled(false);
+        await tester.pumpAndSettle();
+        expect(bottom, findsNothing);
+        expect(find.byKey(const Key('yahagi-hd-label')), findsNothing);
+        expect(tester.getRect(game), oldGameRect);
+        expect(tester.element(game), same(originalElement));
+      }
+      await layout.setHdEnabled(true);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('yahagi-brand-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('game-enter-fullscreen')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('hd-slot-left')), findsNothing);
+      expect(tester.element(game), same(originalElement));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('hd-slot-left')), findsOneWidget);
+      await layout.setInformationPanelOnLeft(true);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byKey(const Key('information-panel'))).right,
+        lessThanOrEqualTo(tester.getRect(game).left),
+      );
+      for (final size in [
+        const Size(600, 800),
+        const Size(800, 1280),
+        const Size(915, 412),
+        const Size(412, 915),
+      ]) {
+        tester.view.physicalSize = size;
+        await tester.pumpAndSettle();
+        expect(bottom, findsNothing);
+        expect(
+          find.byKey(const Key('yahagi-hd-label')),
+          size.shortestSide >= 600 ? findsOneWidget : findsNothing,
+        );
+        expect(
+          find.byKey(const Key('hd-portrait-grid')),
+          size.shortestSide >= 600 ? findsOneWidget : findsNothing,
+        );
+        expect(tester.element(game), same(originalElement));
+        expect(tester.takeException(), isNull);
+      }
+      expect(deactivations, 0);
+      expect(disposals, 0);
+    },
+  );
+
   testWidgets('fullscreen restores the same game and panel; back exits first', (
     tester,
   ) async {
@@ -114,6 +345,10 @@ void main() {
     await tester.pump();
     final offset = scrollable.position.pixels;
 
+    await tester.tap(find.byKey(const Key('yahagi-brand-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('game-toolbar-visible')), findsOneWidget);
+
     for (final useBack in [false, true]) {
       await tester.tap(find.byKey(const Key('game-enter-fullscreen')));
       await tester.pumpAndSettle();
@@ -142,7 +377,9 @@ void main() {
     for (final size in [const Size(412, 915), const Size(915, 412)]) {
       tester.view.physicalSize = size;
       await tester.pumpAndSettle();
-      final exit = tester.getRect(find.byKey(const Key('game-exit-fullscreen')));
+      final exit = tester.getRect(
+        find.byKey(const Key('game-exit-fullscreen')),
+      );
       expect(exit.left, greaterThanOrEqualTo(0));
       expect(exit.top, greaterThanOrEqualTo(0));
       expect(exit.right, lessThanOrEqualTo(size.width));
@@ -381,11 +618,11 @@ void main() {
     await tester.longPress(find.byKey(const ValueKey('fleet')));
     await tester.pumpAndSettle();
     expect(find.byType(Checkbox), findsWidgets);
-    expect(find.byType(ReorderableDelayedDragStartListener), findsWidgets);
+    expect(find.byType(LongPressDraggable<String>), findsWidgets);
     expect(
       find.ancestor(
         of: find.byType(FleetSummaryCard),
-        matching: find.byType(ReorderableDelayedDragStartListener),
+        matching: find.byType(LongPressDraggable<String>),
       ),
       findsOneWidget,
     );
@@ -399,7 +636,7 @@ void main() {
     expect(tester.getSize(dragRegion).width, greaterThan(200));
     expect(
       tester.getSize(find.byType(FleetSummaryCard)).width,
-      closeTo(tester.getSize(dragRegion).width, 0.01),
+      closeTo(tester.getSize(dragRegion).width - 48, 0.01),
     );
     await tester.tap(find.byKey(const Key('dashboard-edit-done')));
     await tester.pumpAndSettle();
@@ -474,7 +711,7 @@ void main() {
     tester.view.physicalSize = const Size(1200, 700);
     tester.binding.handleMetricsChanged();
     await tester.pump(const Duration(seconds: 1));
-    await tester.tap(find.byKey(const Key('workspace-nav-settings')));
+    await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
 
     final settingsLabelX = tester
@@ -645,7 +882,7 @@ void main() {
         gameSurface: const ColoredBox(color: Colors.black),
       ),
     );
-    await tester.tap(find.byKey(const Key('workspace-nav-settings')));
+    await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('settings-tab-4')));
@@ -717,7 +954,7 @@ void main() {
     );
 
     expect(find.byKey(const Key('unsupported-game-surface')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('workspace-nav-settings')));
+    await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
     expect(
       find.text('当前 WebView 不支持跨框架捕获', skipOffstage: false),
@@ -785,7 +1022,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('workspace-nav-settings')));
+    await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
     expect(find.text('母港接口验证通过', skipOffstage: false), findsOneWidget);
     gameCaptureController.dispose();
@@ -940,9 +1177,21 @@ void main() {
     await layoutSettingsController.setInformationPanelOnLeft(true);
     tester.view.physicalSize = const Size(700, 900);
     await tester.pumpAndSettle();
+    final verticalPanelRect = tester.getRect(informationPanel);
+    final verticalGameRect = tester.getRect(gameSurface);
+    final verticalNavigationRect = tester.getRect(
+      find.byType(WorkspaceNavigation),
+    );
+    expect(verticalGameRect.width, closeTo(700, 0.01));
     expect(
-      tester.getRect(informationPanel).top,
-      greaterThanOrEqualTo(tester.getRect(gameSurface).bottom),
+      verticalPanelRect.top,
+      greaterThanOrEqualTo(verticalGameRect.bottom),
+    );
+    expect(verticalNavigationRect.top, verticalPanelRect.top);
+    expect(verticalNavigationRect.bottom, verticalPanelRect.bottom);
+    expect(
+      verticalNavigationRect.left,
+      greaterThanOrEqualTo(verticalPanelRect.right),
     );
     tester.view.physicalSize = const Size(1400, 720);
     await layoutSettingsController.setInformationPanelOnLeft(false);
@@ -956,6 +1205,67 @@ void main() {
       greaterThan(tester.getCenter(gameSurface).dx),
     );
     expect(disposeCount, 0);
+
+    for (final hd in [false, true]) {
+      await layoutSettingsController.setHdEnabled(hd);
+      for (final size in [const Size(800, 1280), const Size(1280, 800)]) {
+        tester.view.physicalSize = size;
+        for (final position in ['top', 'bottom', 'left', 'right']) {
+          await layoutSettingsController.setWorkspaceMenuPosition(position);
+          await tester.pumpAndSettle();
+          final nav = tester.getRect(find.byType(WorkspaceNavigation));
+          final surface = tester.getRect(gameSurface);
+          if (position == 'top' || position == 'bottom') {
+            expect(nav.height, 48);
+            final count = layoutSettingsController.workspaceMenuOrder.length;
+            if (nav.width >= count * 50 + 20) {
+              final first = tester.getRect(
+                find.byKey(
+                  ValueKey(
+                    'workspace-nav-item-${layoutSettingsController.workspaceMenuOrder.first}',
+                  ),
+                ),
+              );
+              final last = tester.getRect(
+                find.byKey(
+                  ValueKey(
+                    'workspace-nav-item-${layoutSettingsController.workspaceMenuOrder.last}',
+                  ),
+                ),
+              );
+              expect(
+                first.left - nav.left,
+                closeTo(nav.right - last.right, .01),
+              );
+            }
+
+            expect(nav.top, greaterThanOrEqualTo(surface.bottom - .01));
+            expect(
+              tester
+                  .widget<ReorderableListView>(
+                    find.byKey(const Key('workspace-navigation-list')),
+                  )
+                  .scrollDirection,
+              Axis.horizontal,
+            );
+            if (position == 'top' && size.height > size.width) {
+              expect(
+                nav.bottom,
+                lessThanOrEqualTo(tester.getRect(informationPanel).top),
+              );
+            }
+          }
+          expect(tester.element(gameSurface), same(originalGameSurfaceElement));
+          expect(disposeCount, 0);
+          expect(deactivateCount, 0);
+          expect(tester.takeException(), isNull);
+        }
+      }
+    }
+    await layoutSettingsController.setHdEnabled(false);
+    await layoutSettingsController.setWorkspaceMenuOnRight(true);
+    tester.view.physicalSize = const Size(1400, 720);
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('header-senka-summary')));
     await tester.pumpAndSettle();
@@ -1334,12 +1644,11 @@ class _RepairNavigationReducer extends GameStateReducer {
 
 class _ToolboxStateReducer extends GameStateReducer {
   @override
-  GameState reduce(GameState state, CapturedApiEvent event) =>
-      const GameState(
-        admiralLevel: 77,
-        hasPortData: true,
-        hasEquipmentInventory: true,
-      );
+  GameState reduce(GameState state, CapturedApiEvent event) => const GameState(
+    admiralLevel: 77,
+    hasPortData: true,
+    hasEquipmentInventory: true,
+  );
 }
 
 class _LifecycleProbe extends StatefulWidget {

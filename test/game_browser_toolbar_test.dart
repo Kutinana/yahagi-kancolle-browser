@@ -202,6 +202,7 @@ void main() {
         find.byKey(const Key('game-audio-toggle')),
         find.byKey(const Key('browser-screenshot')),
         find.byKey(const Key('browser-fit-screen')),
+        find.byKey(const Key('game-enter-fullscreen')),
         find.byKey(const Key('browser-back')),
         find.byKey(const Key('browser-reload')),
         find.byKey(const Key('browser-home')),
@@ -213,6 +214,8 @@ void main() {
           greaterThan(tester.getCenter(overlayActions[index - 1]).dx),
         );
       }
+      expect(find.byIcon(Icons.open_in_full_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.fullscreen), findsNothing);
     },
   );
 

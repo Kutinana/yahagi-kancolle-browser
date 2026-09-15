@@ -135,6 +135,28 @@ void main() {
     expect(find.textContaining('1.0.2'), findsOneWidget);
   });
 
+  testWidgets('about header wraps actions on a narrow viewport', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      withTopNotice(const AboutSupportSettingsPage(currentVersion: '1.0.2')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final github = tester.getRect(find.textContaining('GitHub'));
+    final update = tester.getRect(find.text('检查更新'));
+    expect(github.left, greaterThanOrEqualTo(0));
+    expect(github.right, lessThanOrEqualTo(320));
+    expect(update.left, greaterThanOrEqualTo(0));
+    expect(update.right, lessThanOrEqualTo(320));
+  });
+
   testWidgets('compact landscape keeps the full about content reachable', (
     tester,
   ) async {

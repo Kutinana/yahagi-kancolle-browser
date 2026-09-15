@@ -5,6 +5,32 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
 void main() {
+  test(
+    'menu position migrates legacy side and persists all four positions',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'layout_workspace_menu_on_right': true,
+      });
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      addTearDown(controller.dispose);
+      expect(controller.workspaceMenuPosition, 'right');
+      for (final position in ['top', 'bottom', 'left', 'right']) {
+        await controller.setWorkspaceMenuPosition(position);
+        final restored = await LayoutSettingsController.load(
+          SharedPreferencesLayoutSettingsStore(),
+        );
+        expect(restored.workspaceMenuPosition, position);
+        expect(
+          restored.workspaceMenuHorizontal,
+          position == 'top' || position == 'bottom',
+        );
+        restored.dispose();
+      }
+    },
+  );
+
   test('information panel defaults right and persists both sides', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     var controller = await LayoutSettingsController.load(
@@ -253,7 +279,11 @@ void main() {
         SharedPreferencesLayoutSettingsStore(),
       );
 
-      expect(controller.headerResourceOrder, hasLength(28));
+      expect(controller.headerResourceOrder, contains(headerFrameRefreshId));
+      expect(
+        controller.visibleHeaderResourceIds,
+        isNot(contains(headerFrameRefreshId)),
+      );
       expect(controller.headerResourceOrder.first, headerSenkaId);
       expect(controller.visibleHeaderResourceIds, <String>[
         headerSenkaId,
@@ -289,10 +319,10 @@ void main() {
         headerSenkaId,
         'anchorage-timer',
         'nosaki-timer',
+        headerFrameRefreshId,
         headerShipCapacityId,
         headerEquipmentCapacityId,
         'material-2',
-        'material-1',
       ]);
       expect(controller.visibleHeaderResourceIds, <String>[
         headerSenkaId,
@@ -332,9 +362,13 @@ void main() {
       expect(
         controller.headerResourceOrder.sublist(
           nosakiIndex + 1,
-          nosakiIndex + 3,
+          nosakiIndex + 4,
         ),
-        <String>[headerShipCapacityId, headerEquipmentCapacityId],
+        <String>[
+          headerFrameRefreshId,
+          headerShipCapacityId,
+          headerEquipmentCapacityId,
+        ],
       );
       expect(
         controller.headerResourceOrder.where(legacyOrder.contains),

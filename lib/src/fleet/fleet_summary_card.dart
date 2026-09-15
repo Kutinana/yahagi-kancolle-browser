@@ -4,6 +4,7 @@ import '../game_state/fleet_metrics.dart';
 import '../game_state/game_state_controller.dart';
 import '../game_state/game_state.dart';
 import 'dashboard_card.dart';
+import '../layout/hd_dashboard_content.dart';
 import 'combat_mechanism.dart';
 import 'ship_repair_status.dart';
 import 'fleet_ui_strings.dart';
@@ -30,6 +31,7 @@ class FleetSummaryCard extends StatefulWidget {
     this.moraleRecoveryTimerController,
     this.clock,
     this.visible = defaultFields,
+    this.twoColumnVisible,
     this.shipTypeLabelMode = FleetShipTypeLabelMode.localizedName,
     this.onOpenDisplaySettings,
   });
@@ -43,6 +45,7 @@ class FleetSummaryCard extends StatefulWidget {
   final MoraleRecoveryTimerController? moraleRecoveryTimerController;
   final DateTime Function()? clock;
   final Set<String> visible;
+  final Set<String>? twoColumnVisible;
   final FleetShipTypeLabelMode shipTypeLabelMode;
   final VoidCallback? onOpenDisplaySettings;
 
@@ -65,6 +68,10 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
         ]),
         builder: (context, _) {
           final state = widget.controller.state;
+          final summaryVisible = HdModuleColumns.of(context) == 2
+              ? widget.twoColumnVisible ??
+                    {...widget.visible, 'firepower', 'anti-sub'}
+              : widget.visible;
           final fleetIndex = state.fleets.indexWhere(
             (fleet) => fleet.id == _selectedFleetId,
           );
@@ -105,62 +112,91 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
               selectedFleetId: _selectedFleetId,
               onSelected: (id) => setState(() => _selectedFleetId = id),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (widget.visible.any(summaryFields.contains)) ...[
-                  _FleetSummaryMetrics(
-                    visible: widget.visible,
-                    state: state,
-                    fleetId: _selectedFleetId,
-                    metrics: metrics,
-                    now: now,
-                    moraleRecoveryTimerController:
-                        widget.moraleRecoveryTimerController,
-                  ),
-                  const SizedBox(height: 6),
-                ],
-                if (ships.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.center,
-                    child: Text(
-                      fleetText(context, '无数据'),
-                      style: TextStyle(color: Color(0xff8197a5)),
-                    ),
-                  )
-                else
-                  for (final ship in ships) ...[
-                    FleetShipStatusCapsule(
+            child: _FleetSummaryBody(
+              metrics: summaryVisible.any(summaryFields.contains)
+                  ? _FleetSummaryMetrics(
+                      visible: summaryVisible,
                       state: state,
-                      ship: ship,
-                      visible: widget.visible,
-                      shipTypeLabelMode: widget.shipTypeLabelMode,
-                      damagePulseFilter: widget.visible.contains('portrait')
-                          ? widget.damagePulseFilter
-                          : DamagePulseFilter.off,
-                      moraleSparkleEnabled:
-                          widget.visible.contains('portrait') &&
-                          widget.moraleSparkleEnabled,
-                      repairStatus: shipRepairStatusFor(
-                        state: state,
-                        shipId: ship.id,
-                        anchorageRepairStartedAt:
-                            widget.controller.anchorageRepairStartedAt,
-                        nosakiSparkleStartedAt:
-                            widget.controller.nosakiSparkleStartedAt,
-                        now: now,
+                      fleetId: _selectedFleetId,
+                      metrics: metrics,
+                      now: now,
+                      moraleRecoveryTimerController:
+                          widget.moraleRecoveryTimerController,
+                    )
+                  : null,
+              ships: ships.isEmpty
+                  ? Container(
+                      padding: const EdgeInsets.all(16),
+                      alignment: Alignment.center,
+                      child: Text(
+                        fleetText(context, '无数据'),
+                        style: TextStyle(color: Color(0xff8197a5)),
                       ),
-                      specialAttack: ship == ships.first ? specialAttack : null,
-                      onTap: () => widget.onOpenFleet(_selectedFleetId),
+                    )
+                  : HdDashboardItems(
+                      children: [
+                        for (final ship in ships)
+                          FleetShipStatusCapsule(
+                            state: state,
+                            ship: ship,
+                            visible: widget.visible,
+                            shipTypeLabelMode: widget.shipTypeLabelMode,
+                            damagePulseFilter:
+                                widget.visible.contains('portrait')
+                                ? widget.damagePulseFilter
+                                : DamagePulseFilter.off,
+                            moraleSparkleEnabled:
+                                widget.visible.contains('portrait') &&
+                                widget.moraleSparkleEnabled,
+                            repairStatus: shipRepairStatusFor(
+                              state: state,
+                              shipId: ship.id,
+                              anchorageRepairStartedAt:
+                                  widget.controller.anchorageRepairStartedAt,
+                              nosakiSparkleStartedAt:
+                                  widget.controller.nosakiSparkleStartedAt,
+                              now: now,
+                            ),
+                            specialAttack: ship == ships.first
+                                ? specialAttack
+                                : null,
+                            onTap: () => widget.onOpenFleet(_selectedFleetId),
+                          ),
+                      ],
                     ),
-                    if (ship != ships.last) const SizedBox(height: 3),
-                  ],
-              ],
             ),
           );
         },
       ),
+    );
+  }
+}
+
+/// Wide HD cards keep their summary in a narrow rail beside the ship grid.
+class _FleetSummaryBody extends StatelessWidget {
+  const _FleetSummaryBody({required this.metrics, required this.ships});
+  final Widget? metrics;
+  final Widget ships;
+  @override
+  Widget build(BuildContext context) {
+    if (HdModuleColumns.of(context) > 1) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (metrics != null) ...[
+            SizedBox(width: 70, child: metrics),
+            const SizedBox(width: 6),
+          ],
+          Expanded(child: ships),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (metrics != null) ...[metrics!, const SizedBox(height: 6)],
+        ships,
+      ],
     );
   }
 }
@@ -261,6 +297,8 @@ class _FleetSummaryMetrics extends StatelessWidget {
       recoveredLabel: requiredL10n.moraleRecovered,
       noValueLabel: noValue,
     );
+    final twoColumns = HdModuleColumns.of(context) == 2;
+    final metricFields = visible;
     final values =
         <(String, String, String)>[
               (
@@ -320,37 +358,41 @@ class _FleetSummaryMetrics extends StatelessWidget {
                 recoveryValue,
               ),
             ]
-            .where((value) => visible.contains(value.$1))
-            .take(maximumSummaryFields)
+            .where((value) => metricFields.contains(value.$1))
+            .take(twoColumns ? 7 : maximumSummaryFields)
             .toList();
     if (values.isEmpty) return const SizedBox.shrink();
-    return Row(
+    Widget metricAt(int index) => _FleetSummaryMetric(
+      id: values[index].$1,
+      label: values[index].$2,
+      value: values[index].$3,
+      semanticLabel: switch (values[index].$1) {
+        'air-power' when hasAirPowerDetails => requiredL10n.showAirPowerDetails,
+        _ => null,
+      },
+      onTap:
+          values[index].$1 == 'air-power' &&
+              hasAirPowerDetails &&
+              current != null
+          ? () => showFleetAirPowerDetails(context, current)
+          : values[index].$1 == 'line-of-sight' &&
+                current != null &&
+                current.formula33.isNotEmpty
+          ? () => showFleetLineOfSightDetails(context, current)
+          : null,
+    );
+    final vertical = HdModuleColumns.of(context) > 1;
+    return Flex(
       key: const Key('fleet-summary-metrics'),
+      direction: vertical ? Axis.vertical : Axis.horizontal,
+      crossAxisAlignment: vertical
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.center,
       children: [
         for (var index = 0; index < values.length; index++) ...[
-          Expanded(
-            child: _FleetSummaryMetric(
-              id: values[index].$1,
-              label: values[index].$2,
-              value: values[index].$3,
-              semanticLabel: switch (values[index].$1) {
-                'air-power' when hasAirPowerDetails =>
-                  requiredL10n.showAirPowerDetails,
-                _ => null,
-              },
-              onTap:
-                  values[index].$1 == 'air-power' &&
-                      hasAirPowerDetails &&
-                      current != null
-                  ? () => showFleetAirPowerDetails(context, current)
-                  : values[index].$1 == 'line-of-sight' &&
-                        current != null &&
-                        current.formula33.isNotEmpty
-                  ? () => showFleetLineOfSightDetails(context, current)
-                  : null,
-            ),
-          ),
-          if (index != values.length - 1) const SizedBox(width: 4),
+          if (vertical) metricAt(index) else Expanded(child: metricAt(index)),
+          if (index != values.length - 1)
+            SizedBox(width: vertical ? 0 : 4, height: vertical ? 3 : 0),
         ],
       ],
     );
@@ -387,7 +429,7 @@ class _FleetSummaryMetric extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 28,
+          height: HdModuleColumns.of(context) > 1 ? 26 : 28,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Column(

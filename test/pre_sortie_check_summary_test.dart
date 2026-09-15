@@ -1,3 +1,4 @@
+import 'package:yahagi_kancolle_browser/src/layout/hd_dashboard_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
@@ -157,6 +158,102 @@ void main() {
     }
     expect(openedFleetIds, <int>[1, 1, 1, 1, 1]);
   });
+  testWidgets(
+    'HD short warnings share columns while long warnings fill and wrap',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1280, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final state = GameState(
+        hasMasterData: true,
+        hasPortData: true,
+        masterShips: {
+          1: MasterShip(
+            id: 1,
+            name: List.filled(20, '非常长的舰娘名称').join(),
+            shipTypeId: 2,
+            maxFuel: 100,
+            maxAmmo: 100,
+            slotCount: 3,
+          ),
+        },
+        ships: const {
+          1: OwnedShip(
+            id: 1,
+            masterId: 1,
+            level: 1,
+            currentHp: 1,
+            maxHp: 20,
+            condition: 10,
+          ),
+        },
+        fleets: const [
+          Fleet(id: 1, name: '一队', shipIds: [1]),
+        ],
+      );
+      final controller = GameStateController(
+        gameStateStore: _StaticStore(state),
+      );
+      await controller.initialize();
+      addTearDown(controller.dispose);
+      var opened = 0;
+      for (final columns in [2, 3]) {
+        for (final scale in [1.0, 1.5]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MediaQuery(
+                  data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                  child: SizedBox(
+                    width: 1050,
+                    child: SingleChildScrollView(
+                      child: HdModuleColumns(
+                        columns: columns,
+                        child: PreSortieCheckSummary(
+                          controller: controller,
+                          collapsed: false,
+                          onToggleCollapse: () {},
+                          onOpenFleet: (id) => opened = id,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final supply = tester.getRect(
+            find.byKey(const Key('pre-sortie-warning-1-supply')),
+          );
+          final fatigue = tester.getRect(
+            find.byKey(const Key('pre-sortie-warning-1-fatigue')),
+          );
+          final longItem = find.byKey(
+            const Key('pre-sortie-warning-1-main-equipment'),
+          );
+          final longRect = tester.getRect(longItem);
+          expect(
+            longRect.width,
+            closeTo(supply.width * columns + 8 * (columns - 1), .1),
+          );
+          expect(supply.width, closeTo(fatigue.width, .1));
+          expect(longRect.top, greaterThan(fatigue.bottom));
+          expect(longRect.height, greaterThan(supply.height));
+          await tester.ensureVisible(longItem);
+          await tester.pumpAndSettle();
+          opened = 0;
+          await tester.tap(longItem);
+          expect(opened, 1);
+          expect(tester.takeException(), isNull);
+        }
+      }
+    },
+  );
 }
 
 class _StaticStore extends GameStateStore {

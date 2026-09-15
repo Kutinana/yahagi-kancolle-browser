@@ -4281,6 +4281,48 @@ abstract class AppLocalizations {
   /// **'重新载入游戏'**
   String get reloadGame;
 
+  /// No description provided for @frameRefreshShortcutLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'框架刷新'**
+  String get frameRefreshShortcutLabel;
+
+  /// No description provided for @frameRefreshShortcutConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定刷新游戏框架？'**
+  String get frameRefreshShortcutConfirmTitle;
+
+  /// No description provided for @frameRefreshShortcutConfirmDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新载入游戏框架通常更快，但可能导致猫袭或网络异常。请自行承担风险。'**
+  String get frameRefreshShortcutConfirmDescription;
+
+  /// No description provided for @frameRefreshShortcutSkipConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'下次不再提醒'**
+  String get frameRefreshShortcutSkipConfirmation;
+
+  /// No description provided for @frameRefreshShortcutConfirmAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认刷新'**
+  String get frameRefreshShortcutConfirmAction;
+
+  /// No description provided for @mouseRightClickFrameRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'鼠标右键刷新框架'**
+  String get mouseRightClickFrameRefresh;
+
+  /// No description provided for @mouseRightClickFrameRefreshDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启后，在游戏画面内按鼠标右键可直接刷新游戏框架。触屏长按不会触发。'**
+  String get mouseRightClickFrameRefreshDescription;
+
   /// No description provided for @gameFrameNotFound.
   ///
   /// In zh, this message translates to:
@@ -5607,6 +5649,120 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'设置保存失败，请重试。'**
   String get mouseWheelCompatibilitySaveFailed;
+
+  /// No description provided for @hdMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'HD 模式'**
+  String get hdMode;
+
+  /// No description provided for @hdModeDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启后，使用专为大屏设备优化的 UI 配置（推荐 8 寸以上设备）。非大屏设备强行开启可能导致界面显示异常、布局溢出或应用崩溃等问题。'**
+  String get hdModeDescription;
+
+  /// No description provided for @hdBottomLayout.
+  ///
+  /// In zh, this message translates to:
+  /// **'HD 下栏布局'**
+  String get hdBottomLayout;
+
+  /// No description provided for @hdSplit.
+  ///
+  /// In zh, this message translates to:
+  /// **'两个 1×1'**
+  String get hdSplit;
+
+  /// No description provided for @hdWide.
+  ///
+  /// In zh, this message translates to:
+  /// **'一个 1×2'**
+  String get hdWide;
+
+  /// No description provided for @hdLeftModule.
+  ///
+  /// In zh, this message translates to:
+  /// **'左侧模块'**
+  String get hdLeftModule;
+
+  /// No description provided for @hdRightModule.
+  ///
+  /// In zh, this message translates to:
+  /// **'右侧模块'**
+  String get hdRightModule;
+
+  /// No description provided for @hdWideModule.
+  ///
+  /// In zh, this message translates to:
+  /// **'整宽模块'**
+  String get hdWideModule;
+
+  /// No description provided for @hdCustomize.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义布局'**
+  String get hdCustomize;
+
+  /// No description provided for @hdEditHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按拖动手柄排序或移入下栏；拖到已有模块上交换位置。勾选显示，取消勾选隐藏。'**
+  String get hdEditHint;
+
+  /// No description provided for @hdHalfWidth.
+  ///
+  /// In zh, this message translates to:
+  /// **'半宽 1×1'**
+  String get hdHalfWidth;
+
+  /// No description provided for @hdFullWidth.
+  ///
+  /// In zh, this message translates to:
+  /// **'整宽 1×2'**
+  String get hdFullWidth;
+
+  /// No description provided for @hdDropArea.
+  ///
+  /// In zh, this message translates to:
+  /// **'可放置功能区'**
+  String get hdDropArea;
+
+  /// No description provided for @workspaceMenuPosition.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜单栏位置'**
+  String get workspaceMenuPosition;
+
+  /// No description provided for @workspaceMenuPositionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'上方位于游戏画面下方。'**
+  String get workspaceMenuPositionDesc;
+
+  /// No description provided for @menuPositionTop.
+  ///
+  /// In zh, this message translates to:
+  /// **'上'**
+  String get menuPositionTop;
+
+  /// No description provided for @menuPositionBottom.
+  ///
+  /// In zh, this message translates to:
+  /// **'下'**
+  String get menuPositionBottom;
+
+  /// No description provided for @menuPositionLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'左'**
+  String get menuPositionLeft;
+
+  /// No description provided for @menuPositionRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'右'**
+  String get menuPositionRight;
 }
 
 class _AppLocalizationsDelegate

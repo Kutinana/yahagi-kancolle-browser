@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'fleet_ui_strings.dart';
 
@@ -109,6 +110,7 @@ class CompactResourceBar extends StatefulWidget {
     this.onSenkaTap,
     this.onAnchorageTimerTap,
     this.onNosakiTimerTap,
+    this.onFrameRefreshTap,
   });
 
   final GameState state;
@@ -120,14 +122,37 @@ class CompactResourceBar extends StatefulWidget {
   final VoidCallback? onSenkaTap;
   final VoidCallback? onAnchorageTimerTap;
   final VoidCallback? onNosakiTimerTap;
+  final VoidCallback? onFrameRefreshTap;
 
   @override
   State<CompactResourceBar> createState() => _CompactResourceBarState();
 }
 
 class _CompactResourceBarState extends State<CompactResourceBar> {
+  late final ScrollController _scrollController = ScrollController();
   bool _editing = false;
   DateTime _now = DateTime.now().toUtc();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent ||
+        event.kind != PointerDeviceKind.mouse ||
+        event.scrollDelta.dx != 0 ||
+        event.scrollDelta.dy == 0 ||
+        !_scrollController.hasClients) {
+      return;
+    }
+    // The child Scrollable keeps priority for native horizontal/Shift scrolling.
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.position.pointerScroll(event.scrollDelta.dy);
+    });
+  }
 
   String get _anchorageElapsed {
     if (!AnchorageRepairCalculator.hasReadyFleet(widget.state)) {
@@ -178,120 +203,129 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
-    return SizedBox(
-      height: 30,
-      child: _editing
-          ? Row(
-              key: const Key('header-resource-edit-mode'),
-              children: [
-                _EditButton(
-                  key: const Key('header-resource-reset'),
-                  icon: Icons.restart_alt_rounded,
-                  tooltip: fleetText(context, '恢复默认'),
-                  onPressed: controller?.resetHeaderResources,
-                ),
-                const SizedBox(width: 4),
-                _EditButton(
-                  key: const Key('header-resource-edit-done'),
-                  icon: Icons.check_rounded,
-                  tooltip: fleetText(context, '完成'),
-                  onPressed: () => setState(() => _editing = false),
-                ),
-                const SizedBox(width: 4),
-                _EditButton(
-                  key: const Key('header-resource-filter'),
-                  icon: Icons.filter_alt_rounded,
-                  tooltip: fleetText(context, '筛选显示项目'),
-                  onPressed: controller == null
-                      ? null
-                      : () => _showResourceFilter(controller),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: ReorderableListView.builder(
-                    padding: EdgeInsets.zero,
-                    scrollDirection: Axis.horizontal,
-                    buildDefaultDragHandles: false,
-                    itemCount: ids.length,
-                    onReorderItem: (oldIndex, newIndex) {
-                      if (controller == null) return;
-                      final reordered = List<String>.from(ids);
-                      final item = reordered.removeAt(oldIndex);
-                      reordered.insert(
-                        newIndex.clamp(0, reordered.length),
-                        item,
-                      );
-                      controller.setHeaderResourceOrder(reordered);
-                    },
-                    itemBuilder: (context, index) {
-                      final id = ids[index];
-                      return Padding(
-                        key: ValueKey('header-resource-edit-$id'),
-                        padding: EdgeInsets.only(
-                          right: index + 1 < ids.length ? 6 : 0,
-                        ),
-                        child: ReorderableDelayedDragStartListener(
-                          index: index,
-                          child: _buildEditableItem(
-                            id,
-                            visible: visible.contains(id),
-                          ),
-                        ),
-                      );
-                    },
+    return Listener(
+      onPointerSignal: _onPointerSignal,
+      child: SizedBox(
+        height: 30,
+        child: _editing
+            ? Row(
+                key: const Key('header-resource-edit-mode'),
+                children: [
+                  _EditButton(
+                    key: const Key('header-resource-reset'),
+                    icon: Icons.restart_alt_rounded,
+                    tooltip: fleetText(context, '恢复默认'),
+                    onPressed: controller?.resetHeaderResources,
                   ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              key: const Key('header-resource-list'),
-              padding: EdgeInsets.zero,
-              primary: false,
-              scrollDirection: Axis.horizontal,
-              itemCount: ids.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 6),
-              itemBuilder: (context, index) {
-                final id = ids[index];
-                return GestureDetector(
-                  key: Key('header-resource-$id'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: switch (id) {
-                    headerSenkaId => widget.onSenkaTap,
-                    headerAnchorageTimerId => widget.onAnchorageTimerTap,
-                    headerNosakiTimerId => widget.onNosakiTimerTap,
-                    _ => null,
-                  },
-                  onLongPress: () => setState(() => _editing = true),
-                  child: Tooltip(
-                    message: switch (id) {
-                      headerSenkaId => fleetText(context, '战果'),
-                      headerAnchorageTimerId => fleetText(context, '泊地修理计时'),
-                      headerNosakiTimerId => fleetText(context, '野埼刷闪计时'),
-                      headerShipCapacityId => l10n.shipGirl,
-                      headerEquipmentCapacityId => l10n.equipment,
-                      _ => fleetText(context, headerResourceById[id]!.label),
-                    },
-                    triggerMode:
-                        id == headerSenkaId ||
-                            id == headerAnchorageTimerId ||
-                            id == headerNosakiTimerId
-                        ? TooltipTriggerMode.manual
-                        : TooltipTriggerMode.tap,
-                    child: SizedBox(
-                      width: switch (id) {
-                        headerSenkaId => 142,
-                        headerAnchorageTimerId => 128,
-                        headerNosakiTimerId => 128,
-                        headerShipCapacityId => 118,
-                        headerEquipmentCapacityId => 138,
-                        _ => 82,
+                  const SizedBox(width: 4),
+                  _EditButton(
+                    key: const Key('header-resource-edit-done'),
+                    icon: Icons.check_rounded,
+                    tooltip: fleetText(context, '完成'),
+                    onPressed: () => setState(() => _editing = false),
+                  ),
+                  const SizedBox(width: 4),
+                  _EditButton(
+                    key: const Key('header-resource-filter'),
+                    icon: Icons.filter_alt_rounded,
+                    tooltip: fleetText(context, '筛选显示项目'),
+                    onPressed: controller == null
+                        ? null
+                        : () => _showResourceFilter(controller),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      scrollController: _scrollController,
+                      padding: EdgeInsets.zero,
+                      scrollDirection: Axis.horizontal,
+                      buildDefaultDragHandles: false,
+                      itemCount: ids.length,
+                      onReorderItem: (oldIndex, newIndex) {
+                        if (controller == null) return;
+                        final reordered = List<String>.from(ids);
+                        final item = reordered.removeAt(oldIndex);
+                        reordered.insert(
+                          newIndex.clamp(0, reordered.length),
+                          item,
+                        );
+                        controller.setHeaderResourceOrder(reordered);
                       },
-                      child: _buildDisplayItem(id),
+                      itemBuilder: (context, index) {
+                        final id = ids[index];
+                        return Padding(
+                          key: ValueKey('header-resource-edit-$id'),
+                          padding: EdgeInsets.only(
+                            right: index + 1 < ids.length ? 6 : 0,
+                          ),
+                          child: ReorderableDelayedDragStartListener(
+                            index: index,
+                            child: _buildEditableItem(
+                              id,
+                              visible: visible.contains(id),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                );
-              },
-            ),
+                ],
+              )
+            : ListView.separated(
+                controller: _scrollController,
+                key: const Key('header-resource-list'),
+                padding: EdgeInsets.zero,
+                primary: false,
+                scrollDirection: Axis.horizontal,
+                itemCount: ids.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 6),
+                itemBuilder: (context, index) {
+                  final id = ids[index];
+                  return GestureDetector(
+                    key: Key('header-resource-$id'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: switch (id) {
+                      headerSenkaId => widget.onSenkaTap,
+                      headerAnchorageTimerId => widget.onAnchorageTimerTap,
+                      headerNosakiTimerId => widget.onNosakiTimerTap,
+                      headerFrameRefreshId => widget.onFrameRefreshTap,
+                      _ => null,
+                    },
+                    onLongPress: () => setState(() => _editing = true),
+                    child: Tooltip(
+                      message: switch (id) {
+                        headerSenkaId => fleetText(context, '战果'),
+                        headerAnchorageTimerId => fleetText(context, '泊地修理计时'),
+                        headerNosakiTimerId => fleetText(context, '野埼刷闪计时'),
+                        headerFrameRefreshId => l10n.frameRefreshShortcutLabel,
+                        headerShipCapacityId => l10n.shipGirl,
+                        headerEquipmentCapacityId => l10n.equipment,
+                        _ => fleetText(context, headerResourceById[id]!.label),
+                      },
+                      triggerMode:
+                          id == headerSenkaId ||
+                              id == headerAnchorageTimerId ||
+                              id == headerNosakiTimerId ||
+                              id == headerFrameRefreshId
+                          ? TooltipTriggerMode.manual
+                          : TooltipTriggerMode.tap,
+                      child: SizedBox(
+                        width: switch (id) {
+                          headerSenkaId => 142,
+                          headerAnchorageTimerId => 128,
+                          headerNosakiTimerId => 128,
+                          headerFrameRefreshId => 98,
+                          headerShipCapacityId => 118,
+                          headerEquipmentCapacityId => 138,
+                          _ => 82,
+                        },
+                        child: _buildDisplayItem(id),
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
     );
   }
 
@@ -304,6 +338,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     }
     if (id == headerNosakiTimerId) {
       return _HeaderNosakiTimerSummary(elapsed: _nosakiElapsed);
+    }
+    if (id == headerFrameRefreshId) {
+      return const _HeaderFrameRefreshPill();
     }
     if (id == headerShipCapacityId || id == headerEquipmentCapacityId) {
       return _buildCapacityPill(id);
@@ -330,6 +367,13 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
       return _EditableHeaderNosakiTimerItem(
         elapsed: _nosakiElapsed,
         visible: visible,
+      );
+    }
+    if (id == headerFrameRefreshId) {
+      return _EditableHeaderCapacityItem(
+        width: 98,
+        visible: visible,
+        child: const _HeaderFrameRefreshPill(),
       );
     }
     if (id == headerShipCapacityId || id == headerEquipmentCapacityId) {
@@ -446,6 +490,17 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                                 controller.toggleHeaderResourceVisible(id),
                           );
                         }
+                        if (id == headerFrameRefreshId) {
+                          return _HeaderCapacityFilterRow(
+                            id: id,
+                            label: l10n.frameRefreshShortcutLabel,
+                            value: '',
+                            icon: Icons.refresh_rounded,
+                            visible: visible.contains(id),
+                            onChanged: () =>
+                                controller.toggleHeaderResourceVisible(id),
+                          );
+                        }
                         if (id == headerShipCapacityId ||
                             id == headerEquipmentCapacityId) {
                           final ships = id == headerShipCapacityId;
@@ -478,6 +533,48 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HeaderFrameRefreshPill extends StatelessWidget {
+  const _HeaderFrameRefreshPill();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    return Container(
+      key: const Key('header-frame-refresh'),
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xff142735),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xff315064)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.refresh_rounded, size: 17, color: Color(0xffd4a85f)),
+          const SizedBox(width: 4),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                l10n.frameRefreshShortcutLabel,
+                maxLines: 1,
+                style: const TextStyle(
+                  color: Color(0xffdce6eb),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

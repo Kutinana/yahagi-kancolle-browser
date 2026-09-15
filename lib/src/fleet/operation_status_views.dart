@@ -395,9 +395,16 @@ class _OperationCard extends StatelessWidget {
                       children: [
                         portrait,
                         const SizedBox(width: 10),
-                        SizedBox(width: 118, child: identity),
-                        const Spacer(),
-                        SizedBox(width: 74, child: trailing),
+                        Expanded(flex: 3, child: identity),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          flex: 2,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: SizedBox(width: 74, child: trailing),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),

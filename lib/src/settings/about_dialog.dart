@@ -196,113 +196,154 @@ class AboutContentWidget extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xff3c586b),
-                      width: 2,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black38,
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/app_icon.png',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'ヤハギ',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xffd4a85f).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(
-                              0xffd4a85f,
-                            ).withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          l10n.version.replaceFirst(
-                            RegExp(r'\d+(?:\.\d+){1,2}'),
-                            currentVersion,
-                          ),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xffd4a85f),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                Widget buildIdentity() => Row(
                   children: [
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xffd4a85f),
-                        foregroundColor: const Color(0xff081521),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xff3c586b),
+                          width: 2,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black38,
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/app_icon.png',
+                          fit: BoxFit.cover,
                         ),
                       ),
-                      icon: const Icon(Icons.code, size: 18),
-                      label: Text(
-                        l10n.viewOnGitHub,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      onPressed: () async {
-                        await _openExternalUrl(context, Uri.parse(githubUrl));
-                      },
                     ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff142735),
-                        foregroundColor: const Color(0xff8197a5),
-                        side: const BorderSide(color: Color(0xff294052)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'ヤハギ',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xffd4a85f,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(
+                                  0xffd4a85f,
+                                ).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              l10n.version.replaceFirst(
+                                RegExp(r'\d+(?:\.\d+){1,2}'),
+                                currentVersion,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xffd4a85f),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      icon: const Icon(Icons.system_update_alt, size: 18),
-                      label: Text(l10n.checkForUpdates),
-                      onPressed: () => _checkForUpdates(context),
                     ),
                   ],
-                ),
-              ],
+                );
+
+                Widget buildGitHubButton({double? width}) => SizedBox(
+                  width: width,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xffd4a85f),
+                      foregroundColor: const Color(0xff081521),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    icon: const Icon(Icons.code, size: 18),
+                    label: Text(
+                      l10n.viewOnGitHub,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onPressed: () async {
+                      await _openExternalUrl(context, Uri.parse(githubUrl));
+                    },
+                  ),
+                );
+
+                Widget buildUpdateButton({double? width}) => SizedBox(
+                  width: width,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff142735),
+                      foregroundColor: const Color(0xff8197a5),
+                      side: const BorderSide(color: Color(0xff294052)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    icon: const Icon(Icons.system_update_alt, size: 18),
+                    label: Text(l10n.checkForUpdates),
+                    onPressed: () => _checkForUpdates(context),
+                  ),
+                );
+
+                final isCompact = constraints.maxWidth < 520;
+                final actionWidth = constraints.maxWidth < 360
+                    ? constraints.maxWidth
+                    : null;
+                final actions = Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  alignment: isCompact
+                      ? WrapAlignment.start
+                      : WrapAlignment.end,
+                  children: [
+                    buildGitHubButton(width: actionWidth),
+                    buildUpdateButton(width: actionWidth),
+                  ],
+                );
+
+                if (isCompact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      buildIdentity(),
+                      const SizedBox(height: 16),
+                      actions,
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: buildIdentity()),
+                    const SizedBox(width: 16),
+                    actions,
+                  ],
+                );
+              },
             ),
           ),
 

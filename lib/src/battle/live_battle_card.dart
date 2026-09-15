@@ -80,11 +80,6 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
           onToggleCollapse: widget.onToggleCollapse,
           titleBadge: idle ? const _IdleBadge() : _StatusBadge(battle: battle),
           trailing: _ModeSwitch(mode: _mode, onChanged: _setMode),
-          borderColor: widget.collapsed || idle
-              ? null
-              : battle.status == LiveBattleStatus.forecast
-              ? const Color(0xff8b6a2b)
-              : const Color(0xff2f7469),
           child: Column(
             key: widget.collapsed
                 ? const Key('live-battle-collapsed')
@@ -326,6 +321,7 @@ class _CompactBattlePanel extends StatelessWidget {
       if (battle.airSuperiority != null)
         AirSuperiorityPill(label: battle.airSuperiority!),
       for (final chip in metaChips) MetaChip(label: chip.$1, color: chip.$2),
+      for (final entry in dropEntries) DropPill(text: entry),
     ];
 
     return Column(
@@ -354,16 +350,6 @@ class _CompactBattlePanel extends StatelessWidget {
                   if (statusPills.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 5),
                     Wrap(spacing: 4, runSpacing: 4, children: statusPills),
-                  ],
-                  if (dropEntries.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: <Widget>[
-                        for (final entry in dropEntries) DropPill(text: entry),
-                      ],
-                    ),
                   ],
                   if (battle.rewardItems.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 4),

@@ -4,6 +4,7 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import 'dashboard_card.dart';
+import '../layout/hd_dashboard_content.dart';
 import 'fleet_ui_strings.dart';
 import 'ship_status_style.dart';
 import '../settings/layout_settings_controller.dart';
@@ -84,11 +85,21 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
           icon: const Icon(Icons.security_outlined),
           collapsed: widget.collapsed,
           onToggleCollapse: widget.onToggleCollapse,
-          trailing: _SortieSummaryModeSelector(
-            mode: _mode,
-            shipsLabel: l10n.sortieCheckShipsMode,
-            mapsLabel: l10n.sortieCheckMapsMode,
-            onChanged: _setMode,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (HdModuleColumns.of(context) > 1 &&
+                  _mode == SortieCheckMode.maps) ...[
+                _buildShowClearedToggle(l10n),
+                const SizedBox(width: 6),
+              ],
+              _SortieSummaryModeSelector(
+                mode: _mode,
+                shipsLabel: l10n.sortieCheckShipsMode,
+                mapsLabel: l10n.sortieCheckMapsMode,
+                onChanged: _setMode,
+              ),
+            ],
           ),
           child: _mode == SortieCheckMode.ships
               ? _buildShipsCheckView(state, l10n)
@@ -109,57 +120,91 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: warnings
-          .map(
-            (warning) => Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Material(
-                key: Key(
-                  'pre-sortie-warning-surface-${warning.fleetId}-${warning.kind.keyName}',
+    Widget buildWarning(_PreSortieWarning warning) => Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Material(
+        key: Key(
+          'pre-sortie-warning-surface-${warning.fleetId}-${warning.kind.keyName}',
+        ),
+        color: warning.kind.foreground.withValues(alpha: 0.2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: BorderSide(color: warning.kind.foreground, width: 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: Key(
+            'pre-sortie-warning-${warning.fleetId}-${warning.kind.keyName}',
+          ),
+          onTap: () => widget.onOpenFleet(warning.fleetId),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  warning.kind.icon,
+                  color: warning.kind.foreground,
+                  size: 16,
                 ),
-                color: warning.kind.foreground.withValues(alpha: 0.2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: warning.kind.foreground, width: 1),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  key: Key(
-                    'pre-sortie-warning-${warning.fleetId}-${warning.kind.keyName}',
-                  ),
-                  onTap: () => widget.onOpenFleet(warning.fleetId),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          warning.kind.icon,
-                          color: warning.kind.foreground,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            warning.message,
-                            style: TextStyle(
-                              color: warning.kind.foreground,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    warning.message,
+                    style: TextStyle(
+                      color: warning.kind.foreground,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          )
-          .toList(),
+          ),
+        ),
+      ),
+    );
+    final columns = HdModuleColumns.of(context);
+    if (columns == 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: warnings.map(buildWarning).toList(),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        const textInsets = 48.0; // Padding, icon and icon-to-text gap.
+        final cellWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          children: [
+            for (final warning in warnings)
+              Builder(
+                builder: (context) {
+                  final painter = TextPainter(
+                    text: TextSpan(
+                      text: warning.message,
+                      style: DefaultTextStyle.of(
+                        context,
+                      ).style.merge(const TextStyle(fontSize: 13)),
+                    ),
+                    textDirection: Directionality.of(context),
+                    textScaler: MediaQuery.textScalerOf(context),
+                    locale: Localizations.maybeLocaleOf(context),
+                  )..layout();
+                  final fullRow =
+                      warning.message.contains('\n') ||
+                      painter.width > cellWidth - textInsets;
+                  painter.dispose();
+                  return SizedBox(
+                    width: fullRow ? constraints.maxWidth : cellWidth,
+                    child: buildWarning(warning),
+                  );
+                },
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -217,37 +262,13 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            InkWell(
-              key: const Key('map-gauge-toggle-show-cleared'),
-              onTap: _toggleShowClearedMaps,
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _effectiveShowClearedMaps
-                          ? Icons.check_box_outlined
-                          : Icons.check_box_outline_blank_outlined,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.showClearedMaps,
-                      style: const TextStyle(fontSize: 11, color: Colors.white),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
+        if (HdModuleColumns.of(context) == 1) ...[
+          Align(
+            alignment: Alignment.centerRight,
+            child: _buildShowClearedToggle(l10n),
+          ),
+          const SizedBox(height: 4),
+        ],
         if (displayedGauges.isEmpty)
           Center(
             child: Padding(
@@ -259,16 +280,48 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
             ),
           )
         else
-          ...displayedGauges.map(
-            (gauge) => _MapGaugeRow(
-              key: Key('map-gauge-row-${gauge.mapAreaId}-${gauge.mapNo}'),
-              gauge: gauge,
-              state: state,
-            ),
+          HdDashboardItems(
+            spacing: 0,
+            runSpacing: 0,
+            children: displayedGauges
+                .map(
+                  (gauge) => _MapGaugeRow(
+                    key: Key('map-gauge-row-${gauge.mapAreaId}-${gauge.mapNo}'),
+                    gauge: gauge,
+                    state: state,
+                  ),
+                )
+                .toList(),
           ),
       ],
     );
   }
+
+  Widget _buildShowClearedToggle(AppLocalizations l10n) => InkWell(
+    key: const Key('map-gauge-toggle-show-cleared'),
+    onTap: _toggleShowClearedMaps,
+    borderRadius: BorderRadius.circular(4),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _effectiveShowClearedMaps
+                ? Icons.check_box_outlined
+                : Icons.check_box_outline_blank_outlined,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            l10n.showClearedMaps,
+            style: const TextStyle(fontSize: 11, color: Colors.white),
+          ),
+        ],
+      ),
+    ),
+  );
 
   List<_PreSortieWarning> _generateWarnings(
     GameState state,

@@ -1,12 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yahagi_kancolle_browser/src/settings/header_resource_settings.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/resource_grid.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
 void main() {
+  testWidgets('frame refresh capsule defaults hidden and becomes actionable', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    var refreshCalls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: const GameState(),
+            settingsController: controller,
+            onFrameRefreshTap: () => refreshCalls += 1,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      defaultVisibleHeaderResourceIds,
+      isNot(contains(headerFrameRefreshId)),
+    );
+    expect(
+      find.byKey(const Key('header-resource-frame-refresh')),
+      findsNothing,
+    );
+    await controller.toggleHeaderResourceVisible(headerFrameRefreshId);
+    await tester.pump();
+    final refresh = find.byKey(const Key('header-resource-frame-refresh'));
+    expect(refresh, findsOneWidget);
+    expect(find.text('框架刷新'), findsOneWidget);
+    expect(tester.getSize(refresh).width, 98);
+    await tester.tap(refresh);
+    expect(refreshCalls, 1);
+  });
+
   test('formats anchorage repair elapsed time for the header capsule', () {
     final startedAt = DateTime.utc(2026, 8, 11, 1, 2, 3);
 
@@ -310,70 +349,119 @@ void main() {
     expect(find.byKey(const Key('header-resource-material-2')), findsOneWidget);
   });
 
-  testWidgets('header shows --:--:-- for anchorage when damaged, while nosaki shows continuous timer when started', (tester) async {
-    final startedAt = DateTime.utc(2026, 8, 20, 10);
-    // Damaged Akashi (hp 10/45 <= 50%) and damaged Nozaki (hp 30/48 < max)
-    const damagedState = GameState(
-      fleets: <Fleet>[
-        Fleet(id: 1, name: '第一舰队', shipIds: <int>[1, 2]),
-      ],
-      ships: <int, OwnedShip>{
-        1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 10, maxHp: 45), // Akashi heavy damage
-        2: OwnedShip(id: 2, masterId: 1002, level: 80, currentHp: 30, maxHp: 48, currentFuel: 100, currentAmmo: 100), // Nozaki damaged
-      },
-      masterShips: <int, MasterShip>{
-        187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
-        1002: MasterShip(id: 1002, name: '野埼改', shipTypeId: 22, maxFuel: 100, maxAmmo: 100),
-      },
-    );
+  testWidgets(
+    'header shows --:--:-- for anchorage when damaged, while nosaki shows continuous timer when started',
+    (tester) async {
+      final startedAt = DateTime.utc(2026, 8, 20, 10);
+      // Damaged Akashi (hp 10/45 <= 50%) and damaged Nozaki (hp 30/48 < max)
+      const damagedState = GameState(
+        fleets: <Fleet>[
+          Fleet(id: 1, name: '第一舰队', shipIds: <int>[1, 2]),
+        ],
+        ships: <int, OwnedShip>{
+          1: OwnedShip(
+            id: 1,
+            masterId: 187,
+            level: 80,
+            currentHp: 10,
+            maxHp: 45,
+          ), // Akashi heavy damage
+          2: OwnedShip(
+            id: 2,
+            masterId: 1002,
+            level: 80,
+            currentHp: 30,
+            maxHp: 48,
+            currentFuel: 100,
+            currentAmmo: 100,
+          ), // Nozaki damaged
+        },
+        masterShips: <int, MasterShip>{
+          187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
+          1002: MasterShip(
+            id: 1002,
+            name: '野埼改',
+            shipTypeId: 22,
+            maxFuel: 100,
+            maxAmmo: 100,
+          ),
+        },
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: CompactResourceBar(
-            state: damagedState,
-            anchorageRepairStartedAt: startedAt,
-            nosakiSparkleStartedAt: startedAt,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CompactResourceBar(
+              state: damagedState,
+              anchorageRepairStartedAt: startedAt,
+              nosakiSparkleStartedAt: startedAt,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('泊地：--:--:--'), findsOneWidget);
-    expect(find.text('野埼：--:--:--'), findsNothing);
-  });
+      expect(find.text('泊地：--:--:--'), findsOneWidget);
+      expect(find.text('野埼：--:--:--'), findsNothing);
+    },
+  );
 
-  testWidgets('header shows active elapsed time when Akashi and Nozaki are ready', (tester) async {
-    final startedAt = DateTime.now().toUtc().subtract(const Duration(minutes: 10));
-    const readyState = GameState(
-      fleets: <Fleet>[
-        Fleet(id: 1, name: '第一舰队', shipIds: <int>[1, 2]),
-      ],
-      ships: <int, OwnedShip>{
-        1: OwnedShip(id: 1, masterId: 187, level: 80, currentHp: 45, maxHp: 45),
-        2: OwnedShip(id: 2, masterId: 1002, level: 80, currentHp: 48, maxHp: 48, currentFuel: 100, currentAmmo: 100, condition: 49),
-      },
-      masterShips: <int, MasterShip>{
-        187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
-        1002: MasterShip(id: 1002, name: '野埼改', shipTypeId: 22, maxFuel: 100, maxAmmo: 100),
-      },
-    );
+  testWidgets(
+    'header shows active elapsed time when Akashi and Nozaki are ready',
+    (tester) async {
+      final startedAt = DateTime.now().toUtc().subtract(
+        const Duration(minutes: 10),
+      );
+      const readyState = GameState(
+        fleets: <Fleet>[
+          Fleet(id: 1, name: '第一舰队', shipIds: <int>[1, 2]),
+        ],
+        ships: <int, OwnedShip>{
+          1: OwnedShip(
+            id: 1,
+            masterId: 187,
+            level: 80,
+            currentHp: 45,
+            maxHp: 45,
+          ),
+          2: OwnedShip(
+            id: 2,
+            masterId: 1002,
+            level: 80,
+            currentHp: 48,
+            maxHp: 48,
+            currentFuel: 100,
+            currentAmmo: 100,
+            condition: 49,
+          ),
+        },
+        masterShips: <int, MasterShip>{
+          187: MasterShip(id: 187, name: '明石改', shipTypeId: 19),
+          1002: MasterShip(
+            id: 1002,
+            name: '野埼改',
+            shipTypeId: 22,
+            maxFuel: 100,
+            maxAmmo: 100,
+          ),
+        },
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: CompactResourceBar(
-            state: readyState,
-            anchorageRepairStartedAt: startedAt,
-            nosakiSparkleStartedAt: startedAt,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CompactResourceBar(
+              state: readyState,
+              anchorageRepairStartedAt: startedAt,
+              nosakiSparkleStartedAt: startedAt,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('泊地：--:--:--'), findsNothing);
-    expect(find.text('野埼：--:--:--'), findsNothing);
-    expect(find.textContaining('泊地：00:10:'), findsOneWidget);
-    expect(find.textContaining('野埼：00:10:'), findsOneWidget);
-  });
+      expect(find.text('泊地：--:--:--'), findsNothing);
+      expect(find.text('野埼：--:--:--'), findsNothing);
+      expect(find.textContaining('泊地：00:10:'), findsOneWidget);
+      expect(find.textContaining('野埼：00:10:'), findsOneWidget);
+    },
+  );
 }

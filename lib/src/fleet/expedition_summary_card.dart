@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import 'dashboard_card.dart';
+import '../layout/hd_dashboard_content.dart';
 import '../settings/module_display_settings.dart';
 import '../expedition/expedition_mission_picker.dart' show expeditionDisplayId;
 import 'fleet_ui_strings.dart';
@@ -100,28 +101,31 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
             ),
           )
         else
-          ...activeFleets.map((fleet) {
-            final mission = state.masterMissions[fleet.mission.missionId];
-            final missionName = mission?.name ?? fleetText(context, '未知远征');
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6.0),
-              child: _buildExpeditionItem(
-                fleet.id,
-                fleet.name,
-                expeditionDisplayId(fleet.mission.missionId, mission),
-                missionName,
-                OperationCountdownText(
-                  completionTime: fleet.mission.completionTime,
-                  completedText: fleetText(context, '已返母港'),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+          HdDashboardItems(
+            spacing: 0,
+            children: activeFleets.map((fleet) {
+              final mission = state.masterMissions[fleet.mission.missionId];
+              final missionName = mission?.name ?? fleetText(context, '未知远征');
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6.0),
+                child: _buildExpeditionItem(
+                  fleet.id,
+                  fleet.name,
+                  expeditionDisplayId(fleet.mission.missionId, mission),
+                  missionName,
+                  OperationCountdownText(
+                    completionTime: fleet.mission.completionTime,
+                    completedText: fleetText(context, '已返母港'),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    countingColor: const Color(0xffd4a85f),
                   ),
-                  countingColor: const Color(0xffd4a85f),
                 ),
-              ),
-            );
-          }),
+              );
+            }).toList(),
+          ),
         const SizedBox(height: 2),
       ],
     );

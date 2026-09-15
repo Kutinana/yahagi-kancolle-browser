@@ -2231,6 +2231,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reloadGame => '重新载入游戏';
 
   @override
+  String get frameRefreshShortcutLabel => '框架刷新';
+
+  @override
+  String get frameRefreshShortcutConfirmTitle => '确定刷新游戏框架？';
+
+  @override
+  String get frameRefreshShortcutConfirmDescription =>
+      '重新载入游戏框架通常更快，但可能导致猫袭或网络异常。请自行承担风险。';
+
+  @override
+  String get frameRefreshShortcutSkipConfirmation => '下次不再提醒';
+
+  @override
+  String get frameRefreshShortcutConfirmAction => '确认刷新';
+
+  @override
+  String get mouseRightClickFrameRefresh => '鼠标右键刷新框架';
+
+  @override
+  String get mouseRightClickFrameRefreshDescription =>
+      '开启后，在游戏画面内按鼠标右键可直接刷新游戏框架。触屏长按不会触发。';
+
+  @override
   String get gameFrameNotFound => '尚未找到游戏框架，请进入游戏后重试。';
 
   @override
@@ -2974,6 +2997,64 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mouseWheelCompatibilitySaveFailed => '设置保存失败，请重试。';
+
+  @override
+  String get hdMode => 'HD 模式';
+
+  @override
+  String get hdModeDescription =>
+      '开启后，使用专为大屏设备优化的 UI 配置（推荐 8 寸以上设备）。非大屏设备强行开启可能导致界面显示异常、布局溢出或应用崩溃等问题。';
+
+  @override
+  String get hdBottomLayout => 'HD 下栏布局';
+
+  @override
+  String get hdSplit => '两个 1×1';
+
+  @override
+  String get hdWide => '一个 1×2';
+
+  @override
+  String get hdLeftModule => '左侧模块';
+
+  @override
+  String get hdRightModule => '右侧模块';
+
+  @override
+  String get hdWideModule => '整宽模块';
+
+  @override
+  String get hdCustomize => '自定义布局';
+
+  @override
+  String get hdEditHint => '长按拖动手柄排序或移入下栏；拖到已有模块上交换位置。勾选显示，取消勾选隐藏。';
+
+  @override
+  String get hdHalfWidth => '半宽 1×1';
+
+  @override
+  String get hdFullWidth => '整宽 1×2';
+
+  @override
+  String get hdDropArea => '可放置功能区';
+
+  @override
+  String get workspaceMenuPosition => '菜单栏位置';
+
+  @override
+  String get workspaceMenuPositionDesc => '上方位于游戏画面下方。';
+
+  @override
+  String get menuPositionTop => '上';
+
+  @override
+  String get menuPositionBottom => '下';
+
+  @override
+  String get menuPositionLeft => '左';
+
+  @override
+  String get menuPositionRight => '右';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5204,6 +5285,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get reloadGame => '重新載入遊戲';
 
   @override
+  String get frameRefreshShortcutLabel => '框架重新整理';
+
+  @override
+  String get frameRefreshShortcutConfirmTitle => '確定要重新整理遊戲框架嗎？';
+
+  @override
+  String get frameRefreshShortcutConfirmDescription =>
+      '重新載入遊戲框架通常更快，但可能導致貓襲或網路異常。請自行承擔風險。';
+
+  @override
+  String get frameRefreshShortcutSkipConfirmation => '下次不再提醒';
+
+  @override
+  String get frameRefreshShortcutConfirmAction => '確認重新整理';
+
+  @override
+  String get mouseRightClickFrameRefresh => '滑鼠右鍵重新整理框架';
+
+  @override
+  String get mouseRightClickFrameRefreshDescription =>
+      '開啟後，在遊戲畫面內按滑鼠右鍵可直接重新整理遊戲框架。觸控長按不會觸發。';
+
+  @override
   String get gameFrameNotFound => '尚未找到遊戲框架，請進入遊戲後重試。';
 
   @override
@@ -5947,4 +6051,62 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get mouseWheelCompatibilitySaveFailed => '設定儲存失敗，請重試。';
+
+  @override
+  String get hdMode => 'HD 模式';
+
+  @override
+  String get hdModeDescription =>
+      '開啟後，使用專為大螢幕裝置最佳化的 UI 配置（建議 8 吋以上裝置）。非大螢幕裝置強行開啟可能導致介面顯示異常、版面溢出或應用程式當機等問題。';
+
+  @override
+  String get hdBottomLayout => 'HD 下欄配置';
+
+  @override
+  String get hdSplit => '兩個 1×1';
+
+  @override
+  String get hdWide => '一個 1×2';
+
+  @override
+  String get hdLeftModule => '左側模組';
+
+  @override
+  String get hdRightModule => '右側模組';
+
+  @override
+  String get hdWideModule => '整寬模組';
+
+  @override
+  String get hdCustomize => '自訂配置';
+
+  @override
+  String get hdEditHint => '長按拖曳把手排序或移入下欄；拖到既有模組上交換位置。勾選顯示，取消勾選隱藏。';
+
+  @override
+  String get hdHalfWidth => '半寬 1×1';
+
+  @override
+  String get hdFullWidth => '全寬 1×2';
+
+  @override
+  String get hdDropArea => '可放置功能區';
+
+  @override
+  String get workspaceMenuPosition => '選單列位置';
+
+  @override
+  String get workspaceMenuPositionDesc => '上方位於遊戲畫面下方。';
+
+  @override
+  String get menuPositionTop => '上';
+
+  @override
+  String get menuPositionBottom => '下';
+
+  @override
+  String get menuPositionLeft => '左';
+
+  @override
+  String get menuPositionRight => '右';
 }

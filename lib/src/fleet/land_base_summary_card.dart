@@ -5,6 +5,7 @@ import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import '../settings/battle_status_effect_settings.dart';
 import 'dashboard_card.dart';
+import '../layout/hd_dashboard_content.dart';
 import '../settings/module_display_settings.dart';
 import 'equipment_type_icon.dart';
 import 'fleet_ship_status_capsule.dart';
@@ -88,17 +89,16 @@ class _LandBaseSummaryCardState extends State<LandBaseSummaryCard> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  _AreaHeading(
-                    areaId: areaId!,
-                    name:
-                        state.masterMapAreas[areaId] ??
-                        l10n.landBaseAreaFallback(areaId),
-                  ),
-                  const SizedBox(height: 6),
                   LayoutBuilder(
                     builder: (context, constraints) {
                       const gap = 4.0;
-                      final columnCount = constraints.maxWidth >= 680 ? 2 : 1;
+                      final columnCount =
+                          context
+                              .dependOnInheritedWidgetOfExactType<
+                                HdModuleColumns
+                              >()
+                              ?.columns ??
+                          (constraints.maxWidth >= 680 ? 2 : 1);
                       final rowWidth =
                           (constraints.maxWidth - gap * (columnCount - 1)) /
                           columnCount;
@@ -181,31 +181,6 @@ class _LandBaseAreaSwitcher extends StatelessWidget {
           ),
       ],
     ),
-  );
-}
-
-class _AreaHeading extends StatelessWidget {
-  const _AreaHeading({required this.areaId, required this.name});
-
-  final int areaId;
-  final String name;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: <Widget>[
-      Expanded(
-        child: Text(
-          '[$areaId] $name',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xffdce6eb),
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    ],
   );
 }
 

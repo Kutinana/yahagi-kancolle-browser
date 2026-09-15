@@ -2252,6 +2252,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reloadGame => 'ゲームを再読み込み';
 
   @override
+  String get frameRefreshShortcutLabel => 'ゲームフレームを更新';
+
+  @override
+  String get frameRefreshShortcutConfirmTitle => 'ゲームフレームを更新しますか？';
+
+  @override
+  String get frameRefreshShortcutConfirmDescription =>
+      'ゲームフレームだけを再読み込みするため通常は高速ですが、猫や通信エラーが発生する可能性があります。自己責任で使用してください。';
+
+  @override
+  String get frameRefreshShortcutSkipConfirmation => '次回から表示しない';
+
+  @override
+  String get frameRefreshShortcutConfirmAction => '更新する';
+
+  @override
+  String get mouseRightClickFrameRefresh => '右クリックでゲームフレームを更新';
+
+  @override
+  String get mouseRightClickFrameRefreshDescription =>
+      '有効にすると、ゲーム画面内で右クリックしたときにゲームフレームを直接更新します。タッチの長押しでは実行されません。';
+
+  @override
   String get gameFrameNotFound => 'ゲームフレームが見つかりません。ゲームに入ってから再試行してください。';
 
   @override
@@ -3004,4 +3027,63 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mouseWheelCompatibilitySaveFailed => '設定を保存できませんでした。もう一度お試しください。';
+
+  @override
+  String get hdMode => 'HD モード';
+
+  @override
+  String get hdModeDescription =>
+      '大画面端末向けに最適化した UI を使用します（8インチ以上を推奨）。小画面端末で無理に有効にすると、表示の乱れ、レイアウトのはみ出し、アプリのクラッシュなどが発生する可能性があります。';
+
+  @override
+  String get hdBottomLayout => 'HD 下部レイアウト';
+
+  @override
+  String get hdSplit => '1×1 を2つ';
+
+  @override
+  String get hdWide => '1×2 を1つ';
+
+  @override
+  String get hdLeftModule => '左パネル';
+
+  @override
+  String get hdRightModule => '右パネル';
+
+  @override
+  String get hdWideModule => '全幅パネル';
+
+  @override
+  String get hdCustomize => 'レイアウト編集';
+
+  @override
+  String get hdEditHint =>
+      'ハンドルを長押しして並べ替えや下部への移動ができます。配置済みのパネルにドロップすると交換します。チェックで表示を切り替えます。';
+
+  @override
+  String get hdHalfWidth => '半幅 1×1';
+
+  @override
+  String get hdFullWidth => '全幅 1×2';
+
+  @override
+  String get hdDropArea => '機能パネルを配置できます';
+
+  @override
+  String get workspaceMenuPosition => 'メニューの位置';
+
+  @override
+  String get workspaceMenuPositionDesc => '上はゲーム画面のすぐ下に表示します。';
+
+  @override
+  String get menuPositionTop => '上';
+
+  @override
+  String get menuPositionBottom => '下';
+
+  @override
+  String get menuPositionLeft => '左';
+
+  @override
+  String get menuPositionRight => '右';
 }

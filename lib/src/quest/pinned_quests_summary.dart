@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../game_state/game_state_controller.dart';
 import '../game_state/game_state.dart';
 import '../fleet/dashboard_card.dart';
+import '../layout/hd_dashboard_content.dart';
 
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
@@ -62,74 +63,82 @@ class PinnedQuestsSummary extends StatelessWidget {
                   ),
                 )
               else ...<Widget>[
-                ...pinnedQuests.map(
-                  (q) => Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => onOpenQuest(q.id),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 6),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xff0d1a26),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
+                HdDashboardItems(
+                  spacing: 3,
+                  runSpacing: 3,
+                  children: pinnedQuests
+                      .map(
+                        (q) => Material(
+                          key: Key('quest-summary-item-${q.id}'),
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => onOpenQuest(q.id),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 2,
+                                horizontal: 8,
+                                vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: q.categoryColor.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(4),
+                                color: const Color(0xff0d1a26),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text(
-                                switch (q.category) {
-                                  1 => l10n.questFormation,
-                                  2 || 8 || 9 || 10 => l10n.questSortie,
-                                  3 => l10n.questExercise,
-                                  4 => l10n.expedition,
-                                  5 => l10n.questSupplyRepair,
-                                  6 || 11 => l10n.questFactory,
-                                  7 => l10n.questRemodeling,
-                                  _ => l10n.questOther,
-                                },
-                                style: TextStyle(
-                                  color: q.categoryColor,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: q.categoryColor.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      switch (q.category) {
+                                        1 => l10n.questFormation,
+                                        2 || 8 || 9 || 10 => l10n.questSortie,
+                                        3 => l10n.questExercise,
+                                        4 => l10n.expedition,
+                                        5 => l10n.questSupplyRepair,
+                                        6 || 11 => l10n.questFactory,
+                                        7 => l10n.questRemodeling,
+                                        _ => l10n.questOther,
+                                      },
+                                      style: TextStyle(
+                                        color: q.categoryColor,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      q.title,
+                                      style: const TextStyle(fontSize: 12),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _getProgressText(q, l10n),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _getProgressColor(q),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                q.title,
-                                style: const TextStyle(fontSize: 12),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              _getProgressText(q, l10n),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: _getProgressColor(q),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
+                      )
+                      .toList(),
                 ),
                 for (var index = 0; index < missingQuestCount; index++)
                   Padding(

@@ -11,6 +11,16 @@ abstract interface class GameFrameReloadPort {
   Future<GameFrameReloadResult> reload();
 }
 
+GameFrameReloadResult decodeGameFrameReloadResult(String? result) =>
+    switch (result) {
+      'reloaded' => GameFrameReloadResult.reloaded,
+      'game_frame_not_found' => GameFrameReloadResult.gameFrameNotFound,
+      'html_wrap_not_found' => GameFrameReloadResult.htmlWrapNotFound,
+      'blocked' => GameFrameReloadResult.blocked,
+      'unsupported' => GameFrameReloadResult.unsupported,
+      _ => throw StateError('Invalid game frame reload result: $result'),
+    };
+
 final class MethodChannelGameFrameReloadPort implements GameFrameReloadPort {
   MethodChannelGameFrameReloadPort({MethodChannel? channel})
     : _channel =
@@ -24,13 +34,6 @@ final class MethodChannelGameFrameReloadPort implements GameFrameReloadPort {
   @override
   Future<GameFrameReloadResult> reload() async {
     final result = await _channel.invokeMethod<String>('reload');
-    return switch (result) {
-      'reloaded' => GameFrameReloadResult.reloaded,
-      'game_frame_not_found' => GameFrameReloadResult.gameFrameNotFound,
-      'html_wrap_not_found' => GameFrameReloadResult.htmlWrapNotFound,
-      'blocked' => GameFrameReloadResult.blocked,
-      'unsupported' => GameFrameReloadResult.unsupported,
-      _ => throw StateError('Invalid game frame reload result: $result'),
-    };
+    return decodeGameFrameReloadResult(result);
   }
 }

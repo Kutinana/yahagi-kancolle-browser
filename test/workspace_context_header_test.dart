@@ -315,6 +315,38 @@ void main() {
     expect(changedMode, SenkaCenterMode.calendar);
   });
 
+  testWidgets('senka header fits a portrait workspace', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 80);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      _localizedApp(
+        home: const Scaffold(
+          body: SizedBox(
+            width: 390,
+            height: 44,
+            child: WorkspaceContextHeader(
+              workspaceIndex: 9,
+              state: state,
+              selectedFleetId: 1,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    final header = tester.getRect(find.byType(WorkspaceContextHeader));
+    final tabs = tester.getRect(find.byKey(const Key('senka-mode-tabs')));
+    expect(tabs.left, greaterThanOrEqualTo(header.left));
+    expect(tabs.right, lessThanOrEqualTo(header.right));
+    expect(find.byKey(const Key('senka-tab-info')), findsOneWidget);
+    expect(find.byKey(const Key('senka-tab-calendar')), findsOneWidget);
+    expect(find.byKey(const Key('senka-tab-calculator')), findsOneWidget);
+  });
+
   testWidgets('quest workspace switches between active and all quests', (
     tester,
   ) async {

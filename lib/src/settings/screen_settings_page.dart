@@ -14,7 +14,9 @@ import 'layout_settings_controller.dart';
 import 'screen_awake_controller.dart';
 import 'game_mouse_wheel_settings.dart';
 import 'game_mouse_wheel_settings_section.dart';
+import 'game_frame_refresh_shortcut_settings.dart';
 import 'settings_ui_helpers.dart';
+import 'hd_layout_settings_section.dart';
 
 class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
   const ScreenSettingsPage({
@@ -27,6 +29,7 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.gameFrameRateSettingsController,
     this.screenAwakeController,
     this.gameMouseWheelSettingsController,
+    this.gameFrameRefreshShortcutSettings,
     this.gameRenderingModeController,
     this.isBattleActive = false,
   });
@@ -39,6 +42,7 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
   final ScreenAwakeController? screenAwakeController;
   final GameMouseWheelSettingsController? gameMouseWheelSettingsController;
+  final GameFrameRefreshShortcutSettings? gameFrameRefreshShortcutSettings;
   final GameRenderingModeController? gameRenderingModeController;
   final bool isBattleActive;
 
@@ -130,19 +134,86 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                     const Divider(color: Color(0xff294052), height: 1),
                     DisplayModeSection(controller: displayModeController),
                     const Divider(color: Color(0xff294052), height: 1),
-                    buildSwitchTile(
-                      title: l10n.workspaceMenuOnRight,
-                      titleKey: const Key('settings-workspace-menu-right'),
-                      subtitle: l10n.workspaceMenuOnRightDesc,
-                      value: layoutSettingsController.workspaceMenuOnRight,
-                      onChanged:
-                          layoutSettingsController.setWorkspaceMenuOnRight,
-                      trailingBeforeSwitch: OutlinedButton.icon(
-                        key: const Key('settings-reset-workspace-menu-order'),
-                        onPressed:
-                            layoutSettingsController.resetWorkspaceMenuOrder,
-                        icon: const Icon(Icons.restore, size: 18),
-                        label: Text(l10n.restoreDefaultOrder),
+                    Padding(
+                      key: const Key('settings-workspace-menu-position'),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.workspaceMenuPosition,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  l10n.workspaceMenuPositionDesc,
+                                  style: const TextStyle(
+                                    color: Color(0xff8197a5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              OutlinedButton.icon(
+                                key: const Key(
+                                  'settings-reset-workspace-menu-order',
+                                ),
+                                onPressed: layoutSettingsController
+                                    .resetWorkspaceMenuOrder,
+                                icon: const Icon(Icons.restore, size: 18),
+                                label: Text(l10n.restoreDefaultOrder),
+                              ),
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                width: 60,
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  padding: const EdgeInsets.only(left: 14),
+                                  underline: const SizedBox.shrink(),
+                                  value: layoutSettingsController
+                                      .workspaceMenuPosition,
+                                  items: [
+                                    DropdownMenuItem(
+                                      value: 'top',
+                                      child: Text(l10n.menuPositionTop),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'bottom',
+                                      child: Text(l10n.menuPositionBottom),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'left',
+                                      child: Text(l10n.menuPositionLeft),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'right',
+                                      child: Text(l10n.menuPositionRight),
+                                    ),
+                                  ],
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      layoutSettingsController
+                                          .setWorkspaceMenuPosition(value);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                     const Divider(color: Color(0xff294052), height: 1),
@@ -165,11 +236,21 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+            buildSectionTitle(l10n.hdMode),
+            buildCard(
+              child: HdLayoutSettingsSection(
+                controller: layoutSettingsController,
+              ),
+            ),
             if (gameMouseWheelSettingsController case final wheel?) ...<Widget>[
               const SizedBox(height: 24),
               buildSectionTitle(l10n.mouseWheelCompatibility),
               buildCard(
-                child: GameMouseWheelSettingsSection(controller: wheel),
+                child: GameMouseWheelSettingsSection(
+                  controller: wheel,
+                  frameRefreshSettings: gameFrameRefreshShortcutSettings,
+                ),
               ),
             ],
             if (gameFrameRateSettingsController != null) ...<Widget>[

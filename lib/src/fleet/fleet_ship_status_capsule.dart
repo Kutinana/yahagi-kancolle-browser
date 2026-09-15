@@ -184,52 +184,77 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
                                 ).isNotEmpty ||
                                 (show('equipment') &&
                                     equipment.isNotEmpty)) ...[
-                              Row(
-                                children: [
-                                  if (_badges(
-                                    typeLabel,
-                                    master,
-                                    allMechanisms,
-                                  ).isNotEmpty)
-                                    Expanded(
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        alignment: Alignment.centerLeft,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: _spaced(
-                                            _badges(
-                                              typeLabel,
-                                              master,
-                                              allMechanisms,
+                              SizedBox(
+                                height: 16,
+                                child: Row(
+                                  children: [
+                                    if (_badges(
+                                      typeLabel,
+                                      master,
+                                      allMechanisms,
+                                    ).isNotEmpty)
+                                      Expanded(
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: _spaced(
+                                              _badges(
+                                                typeLabel,
+                                                master,
+                                                allMechanisms,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  if (show('equipment'))
-                                    Row(
-                                      key: Key('equipment-${ship.id}'),
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        for (final eq in equipment)
-                                          if (eq.master != null &&
-                                              eq.master!.type.length >= 4)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                left: 4,
-                                              ),
-                                              child: EquipmentTypeIconImage(
-                                                iconId: eq.master!.type[3],
-                                                width: 16,
-                                                height: 16,
-                                                filterQuality:
-                                                    FilterQuality.medium,
-                                              ),
-                                            ),
-                                      ],
-                                    ),
-                                ],
+                                    if (show('equipment'))
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth:
+                                              identityConstraints.maxWidth *
+                                              (_badges(
+                                                    typeLabel,
+                                                    master,
+                                                    allMechanisms,
+                                                  ).isEmpty
+                                                  ? 1
+                                                  : .5),
+                                        ),
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerRight,
+                                          child: Row(
+                                            key: Key('equipment-${ship.id}'),
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              for (final eq in equipment)
+                                                if (eq.master != null &&
+                                                    eq.master!.type.length >= 4)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          left: 4,
+                                                        ),
+                                                    child:
+                                                        EquipmentTypeIconImage(
+                                                          iconId: eq
+                                                              .master!
+                                                              .type[3],
+                                                          width: 16,
+                                                          height: 16,
+                                                          filterQuality:
+                                                              FilterQuality
+                                                                  .medium,
+                                                        ),
+                                                  ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 2),
                             ],
@@ -785,19 +810,12 @@ class CompactStatusMeter extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
-      child: Row(
-        mainAxisAlignment: alignRight
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        children: [
-          SizedBox(width: 12, child: Center(child: icon)),
-          const SizedBox(width: 4),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              minWidth: alignRight && !showTrack ? 0 : 40,
-              maxWidth: 40,
-            ),
-            child: FittedBox(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Preserve the value when a narrow multi-column card cannot fit
+          // both the fixed-size icon and the progress track.
+          if (constraints.maxWidth < 40) {
+            return FittedBox(
               fit: BoxFit.scaleDown,
               alignment: alignRight
                   ? Alignment.centerRight
@@ -812,34 +830,70 @@ class CompactStatusMeter extends StatelessWidget {
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-            ),
-          ),
-          if (showTrack) const SizedBox(width: 2),
-          if (showTrack)
-            Expanded(
-              child: FractionallySizedBox(
-                heightFactor: 0.45,
-                child: Container(
-                  key: trackKey,
-                  decoration: BoxDecoration(
-                    color: const Color(0xff294052),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: ratio,
-                    heightFactor: 1.0,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: barColor,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
+            );
+          }
+          final valueWidth =
+              ((constraints.maxWidth - 18) * (showTrack ? .65 : 1)).clamp(
+                0.0,
+                40.0,
+              );
+          return Row(
+            mainAxisAlignment: alignRight
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
+            children: [
+              SizedBox(width: 12, child: Center(child: icon)),
+              const SizedBox(width: 4),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: alignRight && !showTrack ? 0 : valueWidth,
+                  maxWidth: valueWidth,
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: alignRight
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    key: valueKey,
+                    style: TextStyle(
+                      color: valueColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 9,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+              if (showTrack) const SizedBox(width: 2),
+              if (showTrack)
+                Expanded(
+                  child: FractionallySizedBox(
+                    heightFactor: 0.45,
+                    child: Container(
+                      key: trackKey,
+                      decoration: BoxDecoration(
+                        color: const Color(0xff294052),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: ratio,
+                        heightFactor: 1.0,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
