@@ -371,7 +371,7 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
               ship.currentAmmo < masterShip.maxAmmo) {
             hasUnresupplied = true;
           }
-          if (ship.condition < 30) {
+          if (ship.condition < 40) {
             hasFatigue = true;
           }
           final filledMainSlots = ship.slotIds.where((id) => id > 0).length;

@@ -18,6 +18,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exitFullscreenShort => '退出';
 
   @override
+  String get exitFullscreenConfirmTitle => '确定退出游戏全屏？';
+
+  @override
+  String get exitFullscreenConfirmDescription => '退出全屏后将恢复控制台与工具栏显示。';
+
+  @override
+  String get exitFullscreenSkipConfirmation => '下次不再提醒';
+
+  @override
+  String get exitFullscreenConfirmAction => '退出全屏';
+
+  @override
   String get gameFullscreenHint => '点击浮钮或按返回键退出全屏；可拖动浮钮调整位置';
 
   @override
@@ -109,6 +121,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get diagnosticLoggingDesc => '仅记录性能和错误摘要，不包含账号、密码或登录凭据';
+
+  @override
+  String get telemetryAnonymousStatsTitle => '匿名设备与使用统计';
+
+  @override
+  String get telemetryAnonymousStatsDesc =>
+      '帮助统计当前在线提督人数、日活跃量与机型/WebView版本分布以协助优化。仅包含设备环境信息，绝不收集任何游戏账号、密码或网络凭据。';
 
   @override
   String get diagnosticPrivacyTitle => '隐私安全诊断';
@@ -222,6 +241,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get layoutSettings => '界面与布局';
+
+  @override
+  String get uiDisplaySizeTitle => '界面UI大小';
+
+  @override
+  String get uiDisplaySizeDesc => '调整顶部状态栏与导航菜单栏的显示尺寸';
+
+  @override
+  String get uiDisplaySizeNormal => '普通';
+
+  @override
+  String get uiDisplaySizeCompact => '紧凑';
 
   @override
   String get gameAreaRatio => '游戏区域占比';
@@ -2247,13 +2278,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get frameRefreshShortcutConfirmAction => '确认刷新';
 
   @override
-  String get mouseRightClickFrameRefresh => '鼠标右键刷新框架';
-
-  @override
-  String get mouseRightClickFrameRefreshDescription =>
-      '开启后，在游戏画面内按鼠标右键可直接刷新游戏框架。触屏长按不会触发。';
-
-  @override
   String get gameFrameNotFound => '尚未找到游戏框架，请进入游戏后重试。';
 
   @override
@@ -3055,6 +3079,180 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get menuPositionRight => '右';
+
+  @override
+  String get topNoticeSectionTitle => '顶栏消息通知';
+
+  @override
+  String get topNoticeEnabledTitle => '顶栏通知';
+
+  @override
+  String get topNoticeEnabledSubtitle => '在顶栏「ヤハギ」右侧显示开发、改修、出击检查与任务完成提示';
+
+  @override
+  String get topNoticeDurationTitle => '提示停留时间';
+
+  @override
+  String get topNoticeDurationSubtitle => '消息气泡弹出后无操作自动收起的时长';
+
+  @override
+  String get topNoticeDuration5s => '5 秒 (默认)';
+
+  @override
+  String get topNoticeDuration10s => '10 秒';
+
+  @override
+  String get topNoticeDuration15s => '15 秒';
+
+  @override
+  String questCompletionSingleNotice(String title) {
+    return '任务达成：$title';
+  }
+
+  @override
+  String questCompletionMultiNotice(int count) {
+    return '$count 个任务已达成，请前往任务界面';
+  }
+
+  @override
+  String noticeDevSuccess(String name) {
+    return '$name 开发成功';
+  }
+
+  @override
+  String get noticeDevFailed => '装备开发失败';
+
+  @override
+  String get noticeDevFailedPenguin => '装备开发失败';
+
+  @override
+  String get noticeDevSlotFailed => '开发失败';
+
+  @override
+  String get noticeDevDefaultName => '新装备';
+
+  @override
+  String get noticeModFailed => '近代化改修失败';
+
+  @override
+  String get noticeModSuccess => '近代化改修成功';
+
+  @override
+  String noticeModSuccessDetail(String stats) {
+    return '改修成功：$stats';
+  }
+
+  @override
+  String get noticeModSuccessMaxCap => '改修成功 (属性已达上限)';
+
+  @override
+  String get statFirepower => '火力';
+
+  @override
+  String get statTorpedo => '雷装';
+
+  @override
+  String get statAntiAir => '对空';
+
+  @override
+  String get statArmor => '装甲';
+
+  @override
+  String get statLuck => '运';
+
+  @override
+  String get statHp => '耐久';
+
+  @override
+  String get statAsw => '对潜';
+
+  @override
+  String noticeMarriageLuck(String arrow, int delta, int remaining) {
+    return '誓约运提升：运 $arrow +$delta / +$remaining';
+  }
+
+  @override
+  String noticeMarriageLuckMax(String arrow, int delta) {
+    return '誓约运提升：运 $arrow +$delta / MAX';
+  }
+
+  @override
+  String noticePracticeExp(int baseExp, int sExp, int aExp) {
+    return '演习对手经验: $baseExp (S胜: $sExp · A胜: $aExp EXP)';
+  }
+
+  @override
+  String noticePracticeExpCtBonus(int baseExp, String bonus, int sExp) {
+    return '演习对手经验: $baseExp | 练巡加成: +$bonus (S胜: $sExp EXP)';
+  }
+
+  @override
+  String get noticeSortieShipFull => '母港船位已满！出击将无法获得新舰娘';
+
+  @override
+  String noticeSortieShipLow(int count) {
+    return '船位仅剩 $count 个，请注意母港容量';
+  }
+
+  @override
+  String get noticeSortieItemFull => '装备槽已满！出击将无法获得新装备';
+
+  @override
+  String noticeSortieItemLow(int count) {
+    return '装备槽仅剩 $count 个，请注意母港容量';
+  }
+
+  @override
+  String get noticeSortieShipAndItemFull => '母港船位与装备槽已满！出击将无法获得新舰娘与装备';
+
+  @override
+  String noticeSortieShipAndItemLow(int shipCount, int itemCount) {
+    return '船位仅剩 $shipCount 个 · 装备槽仅剩 $itemCount 个，请注意母港容量';
+  }
+
+  @override
+  String get noticeSortieExpansionSlotUnused => '舰队中有未使用的补强增设插槽';
+
+  @override
+  String noticePreSortieCheckFailed(String reasons) {
+    return '出击前检查未通过：$reasons';
+  }
+
+  @override
+  String get noticeSortieReasonUnresupplied => '未补满补给';
+
+  @override
+  String get noticeSortieReasonFatigue => '舰娘疲劳 (黄脸/红脸)';
+
+  @override
+  String get noticeSortieReasonMainSlot => '主装备槽未装满';
+
+  @override
+  String get noticeSortieReasonExpansionSlot => '补强增设插槽闲置';
+
+  @override
+  String get lockUi => '锁定界面';
+
+  @override
+  String get unlockUi => '解锁界面';
+
+  @override
+  String get uiLockedToast => '界面已锁定，长按不会进入自定义';
+
+  @override
+  String get uiUnlockedToast => '界面已解锁';
+
+  @override
+  String get uiLockTitle => '锁定界面布局';
+
+  @override
+  String get uiLockDesc => '锁定后长按卡片与顶栏资源不会进入自定义编辑，防止误触';
+
+  @override
+  String get filterVisibleItems => '筛选显示项目';
+
+  @override
+  String get selectHeaderVisibleItems => '选择顶部显示项目';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3069,6 +3267,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get exitFullscreenShort => '退出';
+
+  @override
+  String get exitFullscreenConfirmTitle => '確定要退出遊戲全螢幕嗎？';
+
+  @override
+  String get exitFullscreenConfirmDescription => '退出全螢幕後將恢復控制台與工具列顯示。';
+
+  @override
+  String get exitFullscreenSkipConfirmation => '下次不再提醒';
+
+  @override
+  String get exitFullscreenConfirmAction => '退出全螢幕';
 
   @override
   String get gameFullscreenHint => '點擊浮鈕或按返回鍵退出全螢幕；可拖動浮鈕調整位置';
@@ -3162,6 +3372,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get diagnosticLoggingDesc => '僅記錄效能和錯誤摘要，不包含帳號、密碼或登入憑據';
+
+  @override
+  String get telemetryAnonymousStatsTitle => '匿名裝置與使用統計';
+
+  @override
+  String get telemetryAnonymousStatsDesc =>
+      '幫助統計目前在線提督人數、日活躍量與機型/WebView版本分佈以協助優化。僅包含裝置環境資訊，絕不收集任何遊戲帳號、密碼或網路憑證。';
 
   @override
   String get diagnosticPrivacyTitle => '隱私安全診斷';
@@ -3275,6 +3492,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get layoutSettings => '介面與配置';
+
+  @override
+  String get uiDisplaySizeTitle => '介面UI大小';
+
+  @override
+  String get uiDisplaySizeDesc => '調整頂部狀態列與導航選單欄的顯示尺寸';
+
+  @override
+  String get uiDisplaySizeNormal => '標準';
+
+  @override
+  String get uiDisplaySizeCompact => '緊湊';
 
   @override
   String get gameAreaRatio => '遊戲區域佔比';
@@ -5301,13 +5530,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get frameRefreshShortcutConfirmAction => '確認重新整理';
 
   @override
-  String get mouseRightClickFrameRefresh => '滑鼠右鍵重新整理框架';
-
-  @override
-  String get mouseRightClickFrameRefreshDescription =>
-      '開啟後，在遊戲畫面內按滑鼠右鍵可直接重新整理遊戲框架。觸控長按不會觸發。';
-
-  @override
   String get gameFrameNotFound => '尚未找到遊戲框架，請進入遊戲後重試。';
 
   @override
@@ -6109,4 +6331,178 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get menuPositionRight => '右';
+
+  @override
+  String get topNoticeSectionTitle => '頂欄消息通知';
+
+  @override
+  String get topNoticeEnabledTitle => '頂欄通知';
+
+  @override
+  String get topNoticeEnabledSubtitle => '在頂欄「ヤハギ」右側顯示開發、改修、出擊檢查與任務完成提示';
+
+  @override
+  String get topNoticeDurationTitle => '提示停留時間';
+
+  @override
+  String get topNoticeDurationSubtitle => '消息氣泡彈出後無操作自動收起的時長';
+
+  @override
+  String get topNoticeDuration5s => '5 秒 (默認)';
+
+  @override
+  String get topNoticeDuration10s => '10 秒';
+
+  @override
+  String get topNoticeDuration15s => '15 秒';
+
+  @override
+  String questCompletionSingleNotice(String title) {
+    return '任務達成：$title';
+  }
+
+  @override
+  String questCompletionMultiNotice(int count) {
+    return '$count 個任務已達成，請前往任務介面';
+  }
+
+  @override
+  String noticeDevSuccess(String name) {
+    return '$name 開發成功';
+  }
+
+  @override
+  String get noticeDevFailed => '裝備開發失敗';
+
+  @override
+  String get noticeDevFailedPenguin => '裝備開發失敗';
+
+  @override
+  String get noticeDevSlotFailed => '開發失敗';
+
+  @override
+  String get noticeDevDefaultName => '新裝備';
+
+  @override
+  String get noticeModFailed => '近代化改修失敗';
+
+  @override
+  String get noticeModSuccess => '近代化改修成功';
+
+  @override
+  String noticeModSuccessDetail(String stats) {
+    return '改修成功：$stats';
+  }
+
+  @override
+  String get noticeModSuccessMaxCap => '改修成功 (屬性已達上限)';
+
+  @override
+  String get statFirepower => '火力';
+
+  @override
+  String get statTorpedo => '雷裝';
+
+  @override
+  String get statAntiAir => '對空';
+
+  @override
+  String get statArmor => '裝甲';
+
+  @override
+  String get statLuck => '運';
+
+  @override
+  String get statHp => '耐久';
+
+  @override
+  String get statAsw => '對潛';
+
+  @override
+  String noticeMarriageLuck(String arrow, int delta, int remaining) {
+    return '誓約運提升：運 $arrow +$delta / +$remaining';
+  }
+
+  @override
+  String noticeMarriageLuckMax(String arrow, int delta) {
+    return '誓約運提升：運 $arrow +$delta / MAX';
+  }
+
+  @override
+  String noticePracticeExp(int baseExp, int sExp, int aExp) {
+    return '演習對手經驗: $baseExp (S勝: $sExp · A勝: $aExp EXP)';
+  }
+
+  @override
+  String noticePracticeExpCtBonus(int baseExp, String bonus, int sExp) {
+    return '演習對手經驗: $baseExp | 練巡加成: +$bonus (S勝: $sExp EXP)';
+  }
+
+  @override
+  String get noticeSortieShipFull => '母港船位已滿！出擊將無法獲得新艦娘';
+
+  @override
+  String noticeSortieShipLow(int count) {
+    return '船位僅剩 $count 個，請注意母港容量';
+  }
+
+  @override
+  String get noticeSortieItemFull => '裝備槽已滿！出擊將無法獲得新裝備';
+
+  @override
+  String noticeSortieItemLow(int count) {
+    return '裝備槽僅剩 $count 個，請注意母港容量';
+  }
+
+  @override
+  String get noticeSortieShipAndItemFull => '母港船位與裝備槽已滿！出擊將無法獲得新艦娘與裝備';
+
+  @override
+  String noticeSortieShipAndItemLow(int shipCount, int itemCount) {
+    return '船位僅剩 $shipCount 個 · 裝備槽僅剩 $itemCount 個，請注意母港容量';
+  }
+
+  @override
+  String get noticeSortieExpansionSlotUnused => '艦隊中有未使用的補強增設插槽';
+
+  @override
+  String noticePreSortieCheckFailed(String reasons) {
+    return '出擊前檢查未通過：$reasons';
+  }
+
+  @override
+  String get noticeSortieReasonUnresupplied => '未補滿補給';
+
+  @override
+  String get noticeSortieReasonFatigue => '艦娘疲勞 (黃臉/紅臉)';
+
+  @override
+  String get noticeSortieReasonMainSlot => '主裝備槽未裝滿';
+
+  @override
+  String get noticeSortieReasonExpansionSlot => '補強增設插槽閒置';
+
+  @override
+  String get lockUi => '鎖定介面';
+
+  @override
+  String get unlockUi => '解鎖介面';
+
+  @override
+  String get uiLockedToast => '介面已鎖定，長按不會進入自訂編輯';
+
+  @override
+  String get uiUnlockedToast => '介面已解鎖';
+
+  @override
+  String get uiLockTitle => '鎖定介面配置';
+
+  @override
+  String get uiLockDesc => '鎖定後長按卡片與頂欄資源不會進入自訂編輯，防止誤觸';
+
+  @override
+  String get filterVisibleItems => '篩選顯示項目';
+
+  @override
+  String get selectHeaderVisibleItems => '選擇頂部顯示項目';
 }

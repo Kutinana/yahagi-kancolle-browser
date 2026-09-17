@@ -125,6 +125,8 @@ void main() {
       'resourceTrendBuildMaterial',
       'resourceTrendLatest',
       'appTitle',
+      'exitFullscreenShort',
+      'exitFullscreenSkipConfirmation',
       'repair',
       'construction',
       'httpProxy',
@@ -274,6 +276,20 @@ void main() {
       // established wording in both Chinese scripts.
       'developmentAvailableRecipes',
       'developmentFuelShort',
+      'frameRefreshShortcutSkipConfirmation',
+      'hdMode',
+      'menuPositionBottom',
+      'menuPositionLeft',
+      'menuPositionRight',
+      'menuPositionTop',
+      'noticeModSuccess',
+      'noticeModSuccessDetail',
+      'questAvailable',
+      'questInferredCompleted',
+      'statFirepower',
+      'statHp',
+      'topNoticeDuration10s',
+      'topNoticeDuration15s',
     };
     const reviewedJa = <String>{
       // The warning title uses shared game terminology.
@@ -336,6 +352,14 @@ void main() {
       'noro6',
       'jervis',
       'deckBuilderV4',
+      'menuPositionTop',
+      'menuPositionBottom',
+      'menuPositionLeft',
+      'menuPositionRight',
+      'statArmor',
+      'statFirepower',
+      'statHp',
+      'statTorpedo',
     };
 
     Set<String> identical(String locale) {

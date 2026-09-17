@@ -2,10 +2,17 @@
   "enterGameFullscreen": "ゲームを全画面表示",
   "exitGameFullscreen": "全画面表示を終了",
   "exitFullscreenShort": "解除",
+  "exitFullscreenConfirmTitle": "ゲームの全画面表示を終了しますか？",
+  "exitFullscreenConfirmDescription": "全画面表示を終了すると、操作パネルとツールバーの表示に戻ります。",
+  "exitFullscreenSkipConfirmation": "次回から表示しない",
+  "exitFullscreenConfirmAction": "終了する",
   "gameFullscreenHint": "フローティングボタンまたは戻るキーで解除できます。ボタンはドラッグで移動できます",
   "gameFullscreenUnavailable": "解除ボタンを表示できないため、通常表示に戻しました",
   "questCompletionNotice": "達成した任務があります",
   "questCompletionCount": "達成済み・報酬未受領の任務が{count}件",
+  "@questCompletionCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "resourceTrend90d": "90日",
   "resourceTrendInventoryTitle": "在庫推移",
   "resourceTrendCustomize": "表示する資源",
@@ -33,6 +40,8 @@
   "diagnosticLoggingSection": "クライアント診断ログ",
   "diagnosticLoggingTitle": "クライアント診断ログを記録",
   "diagnosticLoggingDesc": "性能とエラーの概要のみを記録し、アカウント、パスワード、ログイン情報は含みません",
+  "telemetryAnonymousStatsTitle": "匿名の端末および利用統計",
+  "telemetryAnonymousStatsDesc": "オンライン提督数、DAU、機種／WebView バージョンの分布を把握し、アプリの最適化に役立てます。端末環境情報のみを送信し、ゲームアカウントやパスワード、認証情報は一切収集しません。",
   "diagnosticPrivacyTitle": "プライバシー保護診断",
   "diagnosticPrivacyDesc": "エクスポート前に内容を再検査します。ログにはアカウント、パスワード、Cookie、トークン、リクエスト本文、レスポンス本文、チャット内容、スクリーンショットを記録せず、自動送信もしません。",
   "diagnosticStatusEnabled": "記録中",
@@ -71,6 +80,10 @@
   "settings": "設定",
   "settingsTitle": "設定",
   "layoutSettings": "UIとレイアウト",
+  "uiDisplaySizeTitle": "UIの表示サイズ",
+  "uiDisplaySizeDesc": "上部ステータスバーとメニューバーの表示サイズを調整します",
+  "uiDisplaySizeNormal": "標準",
+  "uiDisplaySizeCompact": "コンパクト",
   "gameAreaRatio": "ゲーム画面の比率",
   "infoPanelWidth": "情報パネルの幅（縦画面では無効）",
   "autoZoom": "推奨表示比率を適用（ゲームとメニューの比率 65:35）",
@@ -710,6 +723,7 @@
   "questNoResults": "条件に一致する任務がありません",
   "questNoResultsHint": "検索内容を変更するか、絞り込みを解除してください。",
   "questResultsCount": "全 {count} 件",
+  "@questResultsCount": {"placeholders": {"count": {"type": "int"}}},
   "clear": "クリア",
   "done": "完了",
   "clearAll": "すべてクリア",
@@ -776,8 +790,6 @@
   "frameRefreshShortcutConfirmDescription": "ゲームフレームだけを再読み込みするため通常は高速ですが、猫や通信エラーが発生する可能性があります。自己責任で使用してください。",
   "frameRefreshShortcutSkipConfirmation": "次回から表示しない",
   "frameRefreshShortcutConfirmAction": "更新する",
-  "mouseRightClickFrameRefresh": "右クリックでゲームフレームを更新",
-  "mouseRightClickFrameRefreshDescription": "有効にすると、ゲーム画面内で右クリックしたときにゲームフレームを直接更新します。タッチの長押しでは実行されません。",
   "gameFrameNotFound": "ゲームフレームが見つかりません。ゲームに入ってから再試行してください。",
   "gameHtmlWrapNotFound": "ゲーム本体が見つかりません。読み込みを待ってから再試行してください。",
   "gameFrameReloadBlocked": "ゲームフレームを再読み込みできませんでした。しばらくしてから再試行してください。",
@@ -1049,5 +1061,163 @@
   "menuPositionTop": "上",
   "menuPositionBottom": "下",
   "menuPositionLeft": "左",
-  "menuPositionRight": "右"
+  "menuPositionRight": "右",
+  "topNoticeSectionTitle": "トップバー通知",
+  "topNoticeEnabledTitle": "トップバー通知",
+  "topNoticeEnabledSubtitle": "「ヤハギ」アイコン右側に開発、改修、出撃前確認、任務達成通知を表示します",
+  "topNoticeDurationTitle": "表示時間",
+  "topNoticeDurationSubtitle": "通知ポップアップが表示されてから自動で閉じるまでの時間",
+  "topNoticeDuration5s": "5秒 (デフォルト)",
+  "topNoticeDuration10s": "10秒",
+  "topNoticeDuration15s": "15秒",
+  "questCompletionSingleNotice": "任務達成：{title}",
+  "@questCompletionSingleNotice": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "questCompletionMultiNotice": "{count}件の任務が達成されました。任務画面で報酬を受け取ってください",
+  "@questCompletionMultiNotice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeDevSuccess": "{name} の開発に成功しました",
+  "@noticeDevSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeDevFailed": "装備開発に失敗しました",
+  "noticeDevFailedPenguin": "装備開発に失敗しました",
+  "noticeDevSlotFailed": "開発失敗",
+  "noticeDevDefaultName": "新装備",
+  "noticeModFailed": "近代化改修に失敗しました",
+  "noticeModSuccess": "近代化改修に成功しました",
+  "noticeModSuccessDetail": "近代化改修成功：{stats}",
+  "@noticeModSuccessDetail": {
+    "placeholders": {
+      "stats": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeModSuccessMaxCap": "近代化改修成功 (能力値は既に上限です)",
+  "statFirepower": "火力",
+  "statTorpedo": "雷装",
+  "statAntiAir": "対空",
+  "statArmor": "装甲",
+  "statLuck": "運",
+  "statHp": "耐久",
+  "statAsw": "対潜",
+  "noticeMarriageLuck": "ケッコンカッコカリ：運 {arrow} +{delta} / +{remaining}",
+  "@noticeMarriageLuck": {
+    "placeholders": {
+      "arrow": {
+        "type": "String"
+      },
+      "delta": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeMarriageLuckMax": "ケッコンカッコカリ：運 {arrow} +{delta} / MAX",
+  "@noticeMarriageLuckMax": {
+    "placeholders": {
+      "arrow": {
+        "type": "String"
+      },
+      "delta": {
+        "type": "int"
+      }
+    }
+  },
+  "noticePracticeExp": "演習相手経験値: {baseExp} (S勝利: {sExp} · A勝利: {aExp} EXP)",
+  "@noticePracticeExp": {
+    "placeholders": {
+      "baseExp": {
+        "type": "int"
+      },
+      "sExp": {
+        "type": "int"
+      },
+      "aExp": {
+        "type": "int"
+      }
+    }
+  },
+  "noticePracticeExpCtBonus": "演習相手経験値: {baseExp} | 練習巡洋艦ボーナス: +{bonus} (S勝利: {sExp} EXP)",
+  "@noticePracticeExpCtBonus": {
+    "placeholders": {
+      "baseExp": {
+        "type": "int"
+      },
+      "bonus": {
+        "type": "String"
+      },
+      "sExp": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeSortieShipFull": "艦船保有数が上限に達しています！出撃しても新しい艦娘を入手できません",
+  "noticeSortieShipLow": "艦船の空き枠は残り {count} 隻です。母港容量にご注意ください",
+  "@noticeSortieShipLow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeSortieItemFull": "装備保有数が上限に達しています！出撃しても新しい装備を入手できません",
+  "noticeSortieItemLow": "装備の空き枠は残り {count} 個です。母港容量にご注意ください",
+  "@noticeSortieItemLow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeSortieShipAndItemFull": "艦船・装備保有数が上限に達しています！出撃しても新しい艦娘と装備を入手できません",
+  "noticeSortieShipAndItemLow": "艦船の空き枠は残り {shipCount} 隻、装備は残り {itemCount} 個です。母港容量にご注意ください",
+  "@noticeSortieShipAndItemLow": {
+    "placeholders": {
+      "shipCount": {
+        "type": "int"
+      },
+      "itemCount": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeSortieExpansionSlotUnused": "艦隊に未使用の補強増設スロットがあります",
+  "noticePreSortieCheckFailed": "出撃前チェック未通過：{reasons}",
+  "@noticePreSortieCheckFailed": {
+    "placeholders": {
+      "reasons": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeSortieReasonUnresupplied": "補給未完了",
+  "noticeSortieReasonFatigue": "疲労状態 (間宮点滅/赤疲労)",
+  "noticeSortieReasonMainSlot": "主スロット未装備",
+  "noticeSortieReasonExpansionSlot": "増設スロット未装備",
+  "lockUi": "レイアウトをロック",
+  "unlockUi": "レイアウトのロックを解除",
+  "uiLockedToast": "画面レイアウトがロックされました（長押し編集を無効化）",
+  "uiUnlockedToast": "画面レイアウトのロックを解除しました",
+  "uiLockTitle": "画面レイアウトをロック",
+  "uiLockDesc": "ロック中はカードや上部バーを長押ししても編集モードに入りません",
+  "filterVisibleItems": "表示項目の絞り込み",
+  "selectHeaderVisibleItems": "上部に表示する項目を選択"
 }

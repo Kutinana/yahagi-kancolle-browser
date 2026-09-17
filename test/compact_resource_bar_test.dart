@@ -464,4 +464,32 @@ void main() {
       expect(find.textContaining('野埼：00:10:'), findsOneWidget);
     },
   );
+
+  testWidgets('compact header UI size adjusts bar height and pill sizes', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    await controller.setHeaderUiSize(HeaderUiSize.compact);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: const GameState(),
+            settingsController: controller,
+          ),
+        ),
+      ),
+    );
+
+    // Verify fuel capsule width is 74 and height is 26 in compact mode
+    final fuelPill = find.byKey(const Key('header-resource-material-1'));
+    expect(fuelPill, findsOneWidget);
+    expect(tester.getSize(fuelPill).height, 26);
+    expect(tester.getSize(fuelPill).width, 74);
+  });
 }
+

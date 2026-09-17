@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../theme/app_fonts.dart';
 import 'header_resource_settings.dart';
+import 'workspace_menu_settings.dart';
 import 'fleet_display_options.dart';
 import 'module_display_settings.dart';
 import 'layout_settings_store.dart';
@@ -212,9 +213,100 @@ class LayoutSettingsController extends ChangeNotifier {
             await (store as ModuleDisplaySettingsStore).loadModuleShowName(module);
       }
     }
+    if (store is TopNoticeSettingsStore) {
+      final topNoticeStore = store as TopNoticeSettingsStore;
+      controller._topNoticeEnabled = await topNoticeStore.loadTopNoticeEnabled();
+      controller._topNoticeDurationSeconds =
+          await topNoticeStore.loadTopNoticeDurationSeconds();
+    }
+    if (store is UiDisplaySizeSettingsStore) {
+      controller._uiDisplaySize =
+          await (store as UiDisplaySizeSettingsStore).loadUiDisplaySize();
+    } else if (store is HeaderUiSizeSettingsStore) {
+      controller._uiDisplaySize =
+          await (store as HeaderUiSizeSettingsStore).loadHeaderUiSize();
+    } else if (store is WorkspaceMenuSizeSettingsStore) {
+      controller._uiDisplaySize =
+          await (store as WorkspaceMenuSizeSettingsStore).loadWorkspaceMenuSize();
+    }
+    if (store is UiLockSettingsStore) {
+      controller._uiLocked =
+          await (store as UiLockSettingsStore).loadUiLocked();
+    }
     controller._expeditionCountdownConfigured = true;
     controller._fleetDisplayFieldsLoaded = true;
     return controller;
+  }
+
+  bool _uiLocked = false;
+  bool get uiLocked => _uiLocked;
+
+  Future<void> setUiLocked(bool locked) async {
+    if (_uiLocked == locked) return;
+    final previous = _uiLocked;
+    _uiLocked = locked;
+    notifyListeners();
+    if (_store is UiLockSettingsStore) {
+      try {
+        await (_store as UiLockSettingsStore).saveUiLocked(locked);
+      } catch (e) {
+        _uiLocked = previous;
+        notifyListeners();
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> toggleUiLocked() => setUiLocked(!_uiLocked);
+
+  UiDisplaySize _uiDisplaySize = UiDisplaySize.normal;
+  UiDisplaySize get uiDisplaySize => _uiDisplaySize;
+
+  Future<void> setUiDisplaySize(UiDisplaySize size) async {
+    if (_uiDisplaySize == size) return;
+    _uiDisplaySize = size;
+    notifyListeners();
+    if (_store is UiDisplaySizeSettingsStore) {
+      await (_store as UiDisplaySizeSettingsStore).saveUiDisplaySize(size);
+    } else {
+      if (_store is HeaderUiSizeSettingsStore) {
+        await (_store as HeaderUiSizeSettingsStore).saveHeaderUiSize(size);
+      }
+      if (_store is WorkspaceMenuSizeSettingsStore) {
+        await (_store as WorkspaceMenuSizeSettingsStore).saveWorkspaceMenuSize(size);
+      }
+    }
+  }
+
+  HeaderUiSize get headerUiSize => _uiDisplaySize;
+  Future<void> setHeaderUiSize(HeaderUiSize size) => setUiDisplaySize(size);
+
+  WorkspaceMenuSize get workspaceMenuSize => _uiDisplaySize;
+  Future<void> setWorkspaceMenuSize(WorkspaceMenuSize size) =>
+      setUiDisplaySize(size);
+
+  bool _topNoticeEnabled = true;
+  int _topNoticeDurationSeconds = 5;
+
+  bool get topNoticeEnabled => _topNoticeEnabled;
+  int get topNoticeDurationSeconds => _topNoticeDurationSeconds;
+
+  Future<void> setTopNoticeEnabled(bool enabled) async {
+    if (_topNoticeEnabled == enabled) return;
+    _topNoticeEnabled = enabled;
+    notifyListeners();
+    if (_store is TopNoticeSettingsStore) {
+      await (_store as TopNoticeSettingsStore).saveTopNoticeEnabled(enabled);
+    }
+  }
+
+  Future<void> setTopNoticeDurationSeconds(int seconds) async {
+    if (_topNoticeDurationSeconds == seconds) return;
+    _topNoticeDurationSeconds = seconds;
+    notifyListeners();
+    if (_store is TopNoticeSettingsStore) {
+      await (_store as TopNoticeSettingsStore).saveTopNoticeDurationSeconds(seconds);
+    }
   }
 
   Set<String> _fleetDisplayFields = {...defaultFields};

@@ -7,6 +7,7 @@ import '../game_state/game_state.dart';
 import '../settings/header_resource_settings.dart';
 import '../settings/layout_settings_controller.dart';
 import '../performance/second_tick_scope.dart';
+import '../widgets/top_notice.dart';
 import 'anchorage_repair_calculator.dart';
 import 'header_resource_catalog.dart';
 
@@ -134,9 +135,35 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
   DateTime _now = DateTime.now().toUtc();
 
   @override
+  void initState() {
+    super.initState();
+    widget.settingsController?.addListener(_handleSettingsChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant CompactResourceBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.settingsController != widget.settingsController) {
+      oldWidget.settingsController?.removeListener(_handleSettingsChanged);
+      widget.settingsController?.addListener(_handleSettingsChanged);
+    }
+    if (widget.settingsController?.uiLocked == true) {
+      _editing = false;
+    }
+  }
+
+  @override
   void dispose() {
+    widget.settingsController?.removeListener(_handleSettingsChanged);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _handleSettingsChanged() {
+    if (!mounted) return;
+    if (widget.settingsController?.uiLocked == true && _editing) {
+      setState(() => _editing = false);
+    }
   }
 
   void _onPointerSignal(PointerSignalEvent event) {
@@ -189,12 +216,18 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
   }
 
   Widget _buildBar(LayoutSettingsController? controller) {
+    final uiSize = controller?.uiDisplaySize ?? UiDisplaySize.normal;
+    final isCompact = uiSize == UiDisplaySize.compact;
+    final barHeight = headerCapsuleHeight(uiSize);
+    final separatorWidth = isCompact ? 5.0 : 6.0;
+
     final order = controller?.headerResourceOrder ?? allHeaderResourceIds;
     final visible =
         (controller?.visibleHeaderResourceIds ??
                 defaultVisibleHeaderResourceIds)
             .toSet();
-    final ids = _editing
+    final isEditing = _editing && controller?.uiLocked != true;
+    final ids = isEditing
         ? order
         : <String>[
             for (final id in order)
@@ -206,29 +239,35 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     return Listener(
       onPointerSignal: _onPointerSignal,
       child: SizedBox(
-        height: 30,
-        child: _editing
+        height: barHeight,
+        child: isEditing
             ? Row(
                 key: const Key('header-resource-edit-mode'),
                 children: [
                   _EditButton(
                     key: const Key('header-resource-reset'),
                     icon: Icons.restart_alt_rounded,
-                    tooltip: fleetText(context, '恢复默认'),
+                    tooltip: l10n.restoreDefaultOrder,
+                    size: barHeight,
+                    iconSize: isCompact ? 16 : 18,
                     onPressed: controller?.resetHeaderResources,
                   ),
                   const SizedBox(width: 4),
                   _EditButton(
                     key: const Key('header-resource-edit-done'),
                     icon: Icons.check_rounded,
-                    tooltip: fleetText(context, '完成'),
+                    tooltip: l10n.editDone,
+                    size: barHeight,
+                    iconSize: isCompact ? 16 : 18,
                     onPressed: () => setState(() => _editing = false),
                   ),
                   const SizedBox(width: 4),
                   _EditButton(
                     key: const Key('header-resource-filter'),
                     icon: Icons.filter_alt_rounded,
-                    tooltip: fleetText(context, '筛选显示项目'),
+                    tooltip: l10n.filterVisibleItems,
+                    size: barHeight,
+                    iconSize: isCompact ? 16 : 18,
                     onPressed: controller == null
                         ? null
                         : () => _showResourceFilter(controller),
@@ -256,13 +295,14 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                         return Padding(
                           key: ValueKey('header-resource-edit-$id'),
                           padding: EdgeInsets.only(
-                            right: index + 1 < ids.length ? 6 : 0,
+                            right: index + 1 < ids.length ? separatorWidth : 0,
                           ),
                           child: ReorderableDelayedDragStartListener(
                             index: index,
                             child: _buildEditableItem(
                               id,
                               visible: visible.contains(id),
+                              uiSize: uiSize,
                             ),
                           ),
                         );
@@ -278,7 +318,8 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                 primary: false,
                 scrollDirection: Axis.horizontal,
                 itemCount: ids.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 6),
+                separatorBuilder: (context, index) =>
+                    SizedBox(width: separatorWidth),
                 itemBuilder: (context, index) {
                   final id = ids[index];
                   return GestureDetector(
@@ -291,7 +332,13 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                       headerFrameRefreshId => widget.onFrameRefreshTap,
                       _ => null,
                     },
-                    onLongPress: () => setState(() => _editing = true),
+                    onLongPress: () {
+                      if (controller?.uiLocked == true) {
+                        TopNotice.show(context, message: l10n.uiLockedToast);
+                      } else {
+                        setState(() => _editing = true);
+                      }
+                    },
                     child: Tooltip(
                       message: switch (id) {
                         headerSenkaId => fleetText(context, '战果'),
@@ -311,15 +358,15 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                           : TooltipTriggerMode.tap,
                       child: SizedBox(
                         width: switch (id) {
-                          headerSenkaId => 142,
-                          headerAnchorageTimerId => 128,
-                          headerNosakiTimerId => 128,
-                          headerFrameRefreshId => 98,
-                          headerShipCapacityId => 118,
-                          headerEquipmentCapacityId => 138,
-                          _ => 82,
+                          headerSenkaId => isCompact ? 132 : 142,
+                          headerAnchorageTimerId => isCompact ? 118 : 128,
+                          headerNosakiTimerId => isCompact ? 118 : 128,
+                          headerFrameRefreshId => isCompact ? 88 : 98,
+                          headerShipCapacityId => isCompact ? 108 : 118,
+                          headerEquipmentCapacityId => isCompact ? 126 : 138,
+                          _ => isCompact ? 74 : 82,
                         },
-                        child: _buildDisplayItem(id),
+                        child: _buildDisplayItem(id, uiSize: uiSize),
                       ),
                     ),
                   );
@@ -329,58 +376,85 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     );
   }
 
-  Widget _buildDisplayItem(String id) {
+  Widget _buildDisplayItem(
+    String id, {
+    HeaderUiSize uiSize = HeaderUiSize.normal,
+  }) {
     if (id == headerSenkaId) {
-      return _HeaderSenkaSummary(senka: widget.senka, rank: widget.rank);
+      return _HeaderSenkaSummary(
+        senka: widget.senka,
+        rank: widget.rank,
+        uiSize: uiSize,
+      );
     }
     if (id == headerAnchorageTimerId) {
-      return _HeaderAnchorageTimerSummary(elapsed: _anchorageElapsed);
+      return _HeaderAnchorageTimerSummary(
+        elapsed: _anchorageElapsed,
+        uiSize: uiSize,
+      );
     }
     if (id == headerNosakiTimerId) {
-      return _HeaderNosakiTimerSummary(elapsed: _nosakiElapsed);
+      return _HeaderNosakiTimerSummary(
+        elapsed: _nosakiElapsed,
+        uiSize: uiSize,
+      );
     }
     if (id == headerFrameRefreshId) {
-      return const _HeaderFrameRefreshPill();
+      return _HeaderFrameRefreshPill(uiSize: uiSize);
     }
     if (id == headerShipCapacityId || id == headerEquipmentCapacityId) {
-      return _buildCapacityPill(id);
+      return _buildCapacityPill(id, uiSize: uiSize);
     }
     final spec = headerResourceById[id]!;
-    return _HeaderResourceItem(spec: spec, value: spec.value(widget.state));
+    return _HeaderResourceItem(
+      spec: spec,
+      value: spec.value(widget.state),
+      uiSize: uiSize,
+    );
   }
 
-  Widget _buildEditableItem(String id, {required bool visible}) {
+  Widget _buildEditableItem(
+    String id, {
+    required bool visible,
+    HeaderUiSize uiSize = HeaderUiSize.normal,
+  }) {
+    final isCompact = uiSize == HeaderUiSize.compact;
     if (id == headerSenkaId) {
       return _EditableHeaderSenkaItem(
         senka: widget.senka,
         rank: widget.rank,
         visible: visible,
+        uiSize: uiSize,
       );
     }
     if (id == headerAnchorageTimerId) {
       return _EditableHeaderAnchorageTimerItem(
         elapsed: _anchorageElapsed,
         visible: visible,
+        uiSize: uiSize,
       );
     }
     if (id == headerNosakiTimerId) {
       return _EditableHeaderNosakiTimerItem(
         elapsed: _nosakiElapsed,
         visible: visible,
+        uiSize: uiSize,
       );
     }
     if (id == headerFrameRefreshId) {
       return _EditableHeaderCapacityItem(
-        width: 98,
+        width: isCompact ? 88 : 98,
         visible: visible,
-        child: const _HeaderFrameRefreshPill(),
+        child: _HeaderFrameRefreshPill(uiSize: uiSize),
       );
     }
     if (id == headerShipCapacityId || id == headerEquipmentCapacityId) {
       return _EditableHeaderCapacityItem(
-        width: id == headerShipCapacityId ? 118 : 138,
+        width: id == headerShipCapacityId
+            ? (isCompact ? 108 : 118)
+            : (isCompact ? 126 : 138),
         visible: visible,
-        child: _buildCapacityPill(id),
+        child: _buildCapacityPill(id, uiSize: uiSize),
       );
     }
     final spec = headerResourceById[id]!;
@@ -388,10 +462,14 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
       spec: spec,
       value: spec.value(widget.state),
       visible: visible,
+      uiSize: uiSize,
     );
   }
 
-  Widget _buildCapacityPill(String id) {
+  Widget _buildCapacityPill(
+    String id, {
+    HeaderUiSize uiSize = HeaderUiSize.normal,
+  }) {
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
@@ -407,6 +485,7 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
       maximum: ships
           ? widget.state.maxShipCount
           : widget.state.maxEquipmentCount,
+      uiSize: uiSize,
     );
   }
 
@@ -433,8 +512,8 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                   children: [
                     Expanded(
                       child: Text(
-                        fleetText(context, '选择顶部显示项目'),
-                        style: TextStyle(
+                        l10n.selectHeaderVisibleItems,
+                        style: const TextStyle(
                           color: Color(0xffe0b25c),
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -443,7 +522,7 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                     ),
                     IconButton(
                       key: const Key('header-resource-filter-done'),
-                      tooltip: fleetText(context, '完成'),
+                      tooltip: l10n.editDone,
                       onPressed: () => Navigator.of(dialogContext).pop(),
                       icon: const Icon(
                         Icons.check_rounded,
@@ -458,6 +537,13 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                 child: AnimatedBuilder(
                   animation: controller,
                   builder: (context, _) {
+                    if (controller.uiLocked) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                      });
+                    }
                     final visible = controller.visibleHeaderResourceIds.toSet();
                     return ListView.builder(
                       key: const Key('header-resource-filter-list'),
@@ -466,28 +552,31 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                       itemBuilder: (context, index) {
                         final id = controller.headerResourceOrder[index];
                         if (id == headerSenkaId) {
-                          return _HeaderSenkaFilterRow(
+                           return _HeaderSenkaFilterRow(
                             senka: widget.senka,
                             rank: widget.rank,
                             visible: visible.contains(id),
-                            onChanged: () =>
-                                controller.toggleHeaderResourceVisible(id),
+                            onChanged: controller.uiLocked
+                                ? null
+                                : () => controller.toggleHeaderResourceVisible(id),
                           );
                         }
                         if (id == headerAnchorageTimerId) {
                           return _HeaderAnchorageTimerFilterRow(
                             elapsed: _anchorageElapsed,
                             visible: visible.contains(id),
-                            onChanged: () =>
-                                controller.toggleHeaderResourceVisible(id),
+                            onChanged: controller.uiLocked
+                                ? null
+                                : () => controller.toggleHeaderResourceVisible(id),
                           );
                         }
                         if (id == headerNosakiTimerId) {
                           return _HeaderNosakiTimerFilterRow(
                             elapsed: _nosakiElapsed,
                             visible: visible.contains(id),
-                            onChanged: () =>
-                                controller.toggleHeaderResourceVisible(id),
+                            onChanged: controller.uiLocked
+                                ? null
+                                : () => controller.toggleHeaderResourceVisible(id),
                           );
                         }
                         if (id == headerFrameRefreshId) {
@@ -497,8 +586,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                             value: '',
                             icon: Icons.refresh_rounded,
                             visible: visible.contains(id),
-                            onChanged: () =>
-                                controller.toggleHeaderResourceVisible(id),
+                            onChanged: controller.uiLocked
+                                ? null
+                                : () => controller.toggleHeaderResourceVisible(id),
                           );
                         }
                         if (id == headerShipCapacityId ||
@@ -513,8 +603,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                                 ? Icons.directions_boat_filled_rounded
                                 : Icons.build_rounded,
                             visible: visible.contains(id),
-                            onChanged: () =>
-                                controller.toggleHeaderResourceVisible(id),
+                            onChanged: controller.uiLocked
+                                ? null
+                                : () => controller.toggleHeaderResourceVisible(id),
                           );
                         }
                         final spec = headerResourceById[id]!;
@@ -522,8 +613,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                           spec: spec,
                           value: spec.value(widget.state),
                           visible: visible.contains(id),
-                          onChanged: () =>
-                              controller.toggleHeaderResourceVisible(id),
+                          onChanged: controller.uiLocked
+                              ? null
+                              : () => controller.toggleHeaderResourceVisible(id),
                         );
                       },
                     );
@@ -539,36 +631,43 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
 }
 
 class _HeaderFrameRefreshPill extends StatelessWidget {
-  const _HeaderFrameRefreshPill();
+  const _HeaderFrameRefreshPill({this.uiSize = HeaderUiSize.normal});
+
+  final HeaderUiSize uiSize;
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = uiSize == HeaderUiSize.compact;
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
     return Container(
       key: const Key('header-frame-refresh'),
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      height: isCompact ? 26 : 30,
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 8),
       decoration: BoxDecoration(
         color: const Color(0xff142735),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(isCompact ? 7 : 8),
         border: Border.all(color: const Color(0xff315064)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.refresh_rounded, size: 17, color: Color(0xffd4a85f)),
-          const SizedBox(width: 4),
+          Icon(
+            Icons.refresh_rounded,
+            size: isCompact ? 15 : 17,
+            color: const Color(0xffd4a85f),
+          ),
+          SizedBox(width: isCompact ? 3 : 4),
           Flexible(
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
                 l10n.frameRefreshShortcutLabel,
                 maxLines: 1,
-                style: const TextStyle(
-                  color: Color(0xffdce6eb),
-                  fontSize: 12,
+                style: TextStyle(
+                  color: const Color(0xffdce6eb),
+                  fontSize: isCompact ? 11 : 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -586,38 +685,43 @@ class _HeaderCapacityPill extends StatelessWidget {
     required this.label,
     required this.current,
     required this.maximum,
+    this.uiSize = HeaderUiSize.normal,
   });
 
   final String label;
   final int? current;
   final int? maximum;
+  final HeaderUiSize uiSize;
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: 30,
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    decoration: BoxDecoration(
-      color: const Color(0xff142735),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xff315064)),
-    ),
-    alignment: Alignment.centerLeft,
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
+  Widget build(BuildContext context) {
+    final isCompact = uiSize == HeaderUiSize.compact;
+    return Container(
+      height: isCompact ? 26 : 30,
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 8),
+      decoration: BoxDecoration(
+        color: const Color(0xff142735),
+        borderRadius: BorderRadius.circular(isCompact ? 7 : 8),
+        border: Border.all(color: const Color(0xff315064)),
+      ),
       alignment: Alignment.centerLeft,
-      child: Text(
-        '$label: ${current ?? '—'} / ${maximum ?? '—'}',
-        maxLines: 1,
-        softWrap: false,
-        style: const TextStyle(
-          color: Color(0xffdce6eb),
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          '$label: ${current ?? '—'} / ${maximum ?? '—'}',
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            color: const Color(0xffdce6eb),
+            fontSize: isCompact ? 11.5 : 12.5,
+            fontWeight: FontWeight.w700,
+            fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 String formatAnchorageRepairElapsed(DateTime? startedAt, DateTime now) {
@@ -647,21 +751,26 @@ String formatNosakiSparkleElapsed(DateTime? startedAt, DateTime now) {
 }
 
 class _HeaderAnchorageTimerSummary extends StatelessWidget {
-  const _HeaderAnchorageTimerSummary({required this.elapsed});
+  const _HeaderAnchorageTimerSummary({
+    required this.elapsed,
+    this.uiSize = HeaderUiSize.normal,
+  });
 
   final String elapsed;
+  final HeaderUiSize uiSize;
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = uiSize == HeaderUiSize.compact;
     final isActive = elapsed != '--:--:--';
     return Container(
       key: const Key('header-anchorage-timer-summary'),
-      width: 128,
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      width: isCompact ? 118 : 128,
+      height: isCompact ? 26 : 30,
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 8),
       decoration: BoxDecoration(
         color: const Color(0xff142735),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(isCompact ? 7 : 8),
         border: Border.all(color: const Color(0xff315064)),
       ),
       alignment: Alignment.centerLeft,
@@ -673,7 +782,7 @@ class _HeaderAnchorageTimerSummary extends StatelessWidget {
           maxLines: 1,
           style: TextStyle(
             color: isActive ? const Color(0xffdce6eb) : const Color(0xff9fb3bf),
-            fontSize: 12.5,
+            fontSize: isCompact ? 11.5 : 12.5,
             fontWeight: FontWeight.w700,
             fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
           ),
@@ -684,21 +793,26 @@ class _HeaderAnchorageTimerSummary extends StatelessWidget {
 }
 
 class _HeaderNosakiTimerSummary extends StatelessWidget {
-  const _HeaderNosakiTimerSummary({required this.elapsed});
+  const _HeaderNosakiTimerSummary({
+    required this.elapsed,
+    this.uiSize = HeaderUiSize.normal,
+  });
 
   final String elapsed;
+  final HeaderUiSize uiSize;
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = uiSize == HeaderUiSize.compact;
     final isActive = elapsed != '--:--:--';
     return Container(
       key: const Key('header-nosaki-timer-summary'),
-      width: 128,
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      width: isCompact ? 118 : 128,
+      height: isCompact ? 26 : 30,
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 8),
       decoration: BoxDecoration(
         color: const Color(0xff142735),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(isCompact ? 7 : 8),
         border: Border.all(color: const Color(0xff315064)),
       ),
       alignment: Alignment.centerLeft,
@@ -710,7 +824,7 @@ class _HeaderNosakiTimerSummary extends StatelessWidget {
           maxLines: 1,
           style: TextStyle(
             color: isActive ? const Color(0xffdce6eb) : const Color(0xff9fb3bf),
-            fontSize: 12.5,
+            fontSize: isCompact ? 11.5 : 12.5,
             fontWeight: FontWeight.w700,
             fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
           ),
@@ -721,38 +835,46 @@ class _HeaderNosakiTimerSummary extends StatelessWidget {
 }
 
 class _HeaderSenkaSummary extends StatelessWidget {
-  const _HeaderSenkaSummary({required this.senka, required this.rank});
+  const _HeaderSenkaSummary({
+    required this.senka,
+    required this.rank,
+    this.uiSize = HeaderUiSize.normal,
+  });
 
   final double? senka;
   final int? rank;
+  final HeaderUiSize uiSize;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const Key('header-senka-summary'),
-    width: 142,
-    height: 30,
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    decoration: BoxDecoration(
-      color: const Color(0xff142735),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xff315064)),
-    ),
-    alignment: Alignment.centerLeft,
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
+  Widget build(BuildContext context) {
+    final isCompact = uiSize == HeaderUiSize.compact;
+    return Container(
+      key: const Key('header-senka-summary'),
+      width: isCompact ? 132 : 142,
+      height: isCompact ? 26 : 30,
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 8),
+      decoration: BoxDecoration(
+        color: const Color(0xff142735),
+        borderRadius: BorderRadius.circular(isCompact ? 7 : 8),
+        border: Border.all(color: const Color(0xff315064)),
+      ),
       alignment: Alignment.centerLeft,
-      child: Text(
-        fleetText(context, '战果：${_formatSenka(senka)}（#${rank ?? '--'}）'),
-        maxLines: 1,
-        style: const TextStyle(
-          color: Color(0xffe0b25c),
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          fleetText(context, '战果：${_formatSenka(senka)}（#${rank ?? '--'}）'),
+          maxLines: 1,
+          style: TextStyle(
+            color: const Color(0xffe0b25c),
+            fontSize: isCompact ? 11.5 : 12.5,
+            fontWeight: FontWeight.w700,
+            fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 String _formatSenka(double? value) {
@@ -762,48 +884,56 @@ String _formatSenka(double? value) {
 }
 
 class _HeaderResourceItem extends StatelessWidget {
-  const _HeaderResourceItem({required this.spec, required this.value});
+  const _HeaderResourceItem({
+    required this.spec,
+    required this.value,
+    this.uiSize = HeaderUiSize.normal,
+  });
 
   final HeaderResourceSpec spec;
   final int? value;
+  final HeaderUiSize uiSize;
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: 30,
-    padding: const EdgeInsets.symmetric(horizontal: 5),
-    decoration: BoxDecoration(
-      color: const Color(0xff142735),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xff315064)),
-    ),
-    child: Row(
-      children: [
-        Image.asset(
-          spec.assetPath,
-          width: 17,
-          height: 17,
-          filterQuality: FilterQuality.medium,
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value?.toString() ?? '—',
-              maxLines: 1,
-              style: const TextStyle(
-                color: Color(0xffdce6eb),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+  Widget build(BuildContext context) {
+    final isCompact = uiSize == HeaderUiSize.compact;
+    return Container(
+      height: isCompact ? 26 : 30,
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 4 : 5),
+      decoration: BoxDecoration(
+        color: const Color(0xff142735),
+        borderRadius: BorderRadius.circular(isCompact ? 7 : 8),
+        border: Border.all(color: const Color(0xff315064)),
+      ),
+      child: Row(
+        children: [
+          Image.asset(
+            spec.assetPath,
+            width: isCompact ? 15 : 17,
+            height: isCompact ? 15 : 17,
+            filterQuality: FilterQuality.medium,
+          ),
+          SizedBox(width: isCompact ? 3 : 4),
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value?.toString() ?? '—',
+                maxLines: 1,
+                style: TextStyle(
+                  color: const Color(0xffdce6eb),
+                  fontSize: isCompact ? 11.5 : 12.5,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _EditableHeaderResourceItem extends StatelessWidget {
@@ -811,18 +941,20 @@ class _EditableHeaderResourceItem extends StatelessWidget {
     required this.spec,
     required this.value,
     required this.visible,
+    this.uiSize = HeaderUiSize.normal,
   });
 
   final HeaderResourceSpec spec;
   final int? value;
   final bool visible;
+  final HeaderUiSize uiSize;
 
   @override
   Widget build(BuildContext context) => Opacity(
     opacity: visible ? 1 : 0.42,
     child: SizedBox(
-      width: 82,
-      child: _HeaderResourceItem(spec: spec, value: value),
+      width: uiSize == HeaderUiSize.compact ? 74 : 82,
+      child: _HeaderResourceItem(spec: spec, value: value, uiSize: uiSize),
     ),
   );
 }
@@ -832,18 +964,20 @@ class _EditableHeaderSenkaItem extends StatelessWidget {
     required this.senka,
     required this.rank,
     required this.visible,
+    this.uiSize = HeaderUiSize.normal,
   });
 
   final double? senka;
   final int? rank;
   final bool visible;
+  final HeaderUiSize uiSize;
 
   @override
   Widget build(BuildContext context) => Opacity(
     opacity: visible ? 1 : 0.42,
     child: SizedBox(
-      width: 142,
-      child: _HeaderSenkaSummary(senka: senka, rank: rank),
+      width: uiSize == HeaderUiSize.compact ? 132 : 142,
+      child: _HeaderSenkaSummary(senka: senka, rank: rank, uiSize: uiSize),
     ),
   );
 }
@@ -852,17 +986,19 @@ class _EditableHeaderAnchorageTimerItem extends StatelessWidget {
   const _EditableHeaderAnchorageTimerItem({
     required this.elapsed,
     required this.visible,
+    this.uiSize = HeaderUiSize.normal,
   });
 
   final String elapsed;
   final bool visible;
+  final HeaderUiSize uiSize;
 
   @override
   Widget build(BuildContext context) => Opacity(
     opacity: visible ? 1 : 0.42,
     child: SizedBox(
-      width: 128,
-      child: _HeaderAnchorageTimerSummary(elapsed: elapsed),
+      width: uiSize == HeaderUiSize.compact ? 118 : 128,
+      child: _HeaderAnchorageTimerSummary(elapsed: elapsed, uiSize: uiSize),
     ),
   );
 }
@@ -871,17 +1007,19 @@ class _EditableHeaderNosakiTimerItem extends StatelessWidget {
   const _EditableHeaderNosakiTimerItem({
     required this.elapsed,
     required this.visible,
+    this.uiSize = HeaderUiSize.normal,
   });
 
   final String elapsed;
   final bool visible;
+  final HeaderUiSize uiSize;
 
   @override
   Widget build(BuildContext context) => Opacity(
     opacity: visible ? 1 : 0.42,
     child: SizedBox(
-      width: 128,
-      child: _HeaderNosakiTimerSummary(elapsed: elapsed),
+      width: uiSize == HeaderUiSize.compact ? 118 : 128,
+      child: _HeaderNosakiTimerSummary(elapsed: elapsed, uiSize: uiSize),
     ),
   );
 }
@@ -919,7 +1057,7 @@ class _HeaderCapacityFilterRow extends StatelessWidget {
   final String value;
   final IconData icon;
   final bool visible;
-  final VoidCallback onChanged;
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -934,7 +1072,7 @@ class _HeaderCapacityFilterRow extends StatelessWidget {
             Checkbox(
               key: Key('header-resource-visible-$id'),
               value: visible,
-              onChanged: (_) => onChanged(),
+              onChanged: onChanged == null ? null : (_) => onChanged!(),
               visualDensity: VisualDensity.compact,
             ),
             Icon(icon, size: 24, color: const Color(0xff9fb3bf)),
@@ -977,7 +1115,7 @@ class _HeaderSenkaFilterRow extends StatelessWidget {
   final double? senka;
   final int? rank;
   final bool visible;
-  final VoidCallback onChanged;
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -992,7 +1130,7 @@ class _HeaderSenkaFilterRow extends StatelessWidget {
             Checkbox(
               key: const Key('header-resource-visible-senka'),
               value: visible,
-              onChanged: (_) => onChanged(),
+              onChanged: onChanged == null ? null : (_) => onChanged!(),
               visualDensity: VisualDensity.compact,
             ),
             const Icon(
@@ -1037,7 +1175,7 @@ class _HeaderAnchorageTimerFilterRow extends StatelessWidget {
 
   final String elapsed;
   final bool visible;
-  final VoidCallback onChanged;
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -1052,7 +1190,7 @@ class _HeaderAnchorageTimerFilterRow extends StatelessWidget {
             Checkbox(
               key: const Key('header-resource-visible-anchorage-timer'),
               value: visible,
-              onChanged: (_) => onChanged(),
+              onChanged: onChanged == null ? null : (_) => onChanged!(),
               visualDensity: VisualDensity.compact,
             ),
             const Icon(
@@ -1097,7 +1235,7 @@ class _HeaderNosakiTimerFilterRow extends StatelessWidget {
 
   final String elapsed;
   final bool visible;
-  final VoidCallback onChanged;
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -1112,7 +1250,7 @@ class _HeaderNosakiTimerFilterRow extends StatelessWidget {
             Checkbox(
               key: const Key('header-resource-visible-nosaki-timer'),
               value: visible,
-              onChanged: (_) => onChanged(),
+              onChanged: onChanged == null ? null : (_) => onChanged!(),
               visualDensity: VisualDensity.compact,
             ),
             const Icon(
@@ -1159,7 +1297,7 @@ class _HeaderResourceFilterRow extends StatelessWidget {
   final HeaderResourceSpec spec;
   final int? value;
   final bool visible;
-  final VoidCallback onChanged;
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -1174,7 +1312,7 @@ class _HeaderResourceFilterRow extends StatelessWidget {
             Checkbox(
               key: Key('header-resource-visible-${spec.id}'),
               value: visible,
-              onChanged: (_) => onChanged(),
+              onChanged: onChanged == null ? null : (_) => onChanged!(),
               visualDensity: VisualDensity.compact,
             ),
             Image.asset(
@@ -1219,21 +1357,25 @@ class _EditButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.size = 30,
+    this.iconSize = 18,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
+  final double size;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 30,
-    height: 30,
+    width: size,
+    height: size,
     child: IconButton(
       padding: EdgeInsets.zero,
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, size: 18, color: const Color(0xffe0b25c)),
+      icon: Icon(icon, size: iconSize, color: const Color(0xffe0b25c)),
     ),
   );
 }

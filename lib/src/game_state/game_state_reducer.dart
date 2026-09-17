@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../battle/sortie_damage_control_ledger.dart';
 import '../bridge/captured_api_event.dart';
 import '../capture/game_capture_path_catalog.dart';
 import 'combat_state.dart';
@@ -596,6 +597,58 @@ class GameStateReducer {
     }
     if (updatedShips == null) return state;
     return state.copyWith(ships: updatedShips, updatedAt: capturedAt);
+  }
+
+  GameState applyDamageControlConsumption(
+    GameState state,
+    Map<int, List<DamageControlEquipmentRef>> consumedByShipId,
+    DateTime capturedAt,
+  ) {
+    Map<int, OwnedShip>? updatedShips;
+    Map<int, OwnedSlotItem>? updatedSlotItems;
+
+    for (final entry in consumedByShipId.entries) {
+      final shipId = entry.key;
+      final consumedRefs = entry.value;
+      final ship = (updatedShips ?? state.ships)[shipId];
+      if (ship == null || consumedRefs.isEmpty) continue;
+
+      var currentSlotIds = List<int>.of(ship.slotIds);
+      var currentExtraSlotId = ship.extraSlotId;
+      var shipChanged = false;
+
+      for (final ref in consumedRefs) {
+        final instanceId = ref.instanceId;
+        final slotIndex = currentSlotIds.indexOf(instanceId);
+        if (slotIndex >= 0) {
+          currentSlotIds[slotIndex] = -1;
+          shipChanged = true;
+          updatedSlotItems ??= Map<int, OwnedSlotItem>.of(state.slotItems);
+          updatedSlotItems.remove(instanceId);
+        } else if (currentExtraSlotId == instanceId) {
+          currentExtraSlotId = -1;
+          shipChanged = true;
+          updatedSlotItems ??= Map<int, OwnedSlotItem>.of(state.slotItems);
+          updatedSlotItems.remove(instanceId);
+        }
+      }
+
+      if (shipChanged) {
+        updatedShips ??= Map<int, OwnedShip>.of(state.ships);
+        updatedShips[shipId] = _copyShip(
+          ship,
+          slotIds: List<int>.unmodifiable(currentSlotIds),
+          extraSlotId: currentExtraSlotId,
+        );
+      }
+    }
+
+    if (updatedShips == null) return state;
+    return state.copyWith(
+      ships: updatedShips,
+      slotItems: updatedSlotItems ?? state.slotItems,
+      updatedAt: capturedAt,
+    );
   }
 
   GameState _charge(

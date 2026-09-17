@@ -31,3 +31,18 @@ final class IsolateBattlePredictionExecutor
     });
   }
 }
+
+final class ImmediateBattlePredictionExecutor
+    implements BattlePredictionExecutor {
+  const ImmediateBattlePredictionExecutor();
+
+  @override
+  Future<BattlePredictionAppendResult> append({
+    required BattlePredictionEngine engine,
+    required String path,
+    required Map<String, Object?> data,
+  }) async {
+    final prediction = engine.append(path: path, data: data);
+    return (engine: engine, prediction: prediction);
+  }
+}

@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_fonts.dart';
 import 'header_resource_settings.dart';
+import 'workspace_menu_settings.dart';
 import 'module_display_settings.dart';
 import 'fleet_display_options.dart';
 import 'hd_layout_settings.dart';
@@ -101,6 +102,33 @@ abstract interface class WorkspaceMenuPositionStore {
   Future<void> saveWorkspaceMenuPosition(String position);
 }
 
+abstract interface class UiDisplaySizeSettingsStore {
+  Future<UiDisplaySize> loadUiDisplaySize();
+  Future<void> saveUiDisplaySize(UiDisplaySize size);
+}
+
+abstract interface class HeaderUiSizeSettingsStore {
+  Future<HeaderUiSize> loadHeaderUiSize();
+  Future<void> saveHeaderUiSize(HeaderUiSize size);
+}
+
+abstract interface class WorkspaceMenuSizeSettingsStore {
+  Future<WorkspaceMenuSize> loadWorkspaceMenuSize();
+  Future<void> saveWorkspaceMenuSize(WorkspaceMenuSize size);
+}
+
+abstract interface class UiLockSettingsStore {
+  Future<bool> loadUiLocked();
+  Future<void> saveUiLocked(bool locked);
+}
+
+abstract interface class TopNoticeSettingsStore {
+  Future<bool> loadTopNoticeEnabled();
+  Future<void> saveTopNoticeEnabled(bool enabled);
+  Future<int> loadTopNoticeDurationSeconds();
+  Future<void> saveTopNoticeDurationSeconds(int seconds);
+}
+
 class SharedPreferencesLayoutSettingsStore
     implements
         LayoutSettingsStore,
@@ -108,10 +136,15 @@ class SharedPreferencesLayoutSettingsStore
         FleetDisplaySettingsStore,
         FleetMoraleMetricSettingsStore,
         HeaderResourceSettingsStore,
+        UiDisplaySizeSettingsStore,
+        HeaderUiSizeSettingsStore,
+        WorkspaceMenuSizeSettingsStore,
         WorkspaceMenuOrderSettingsStore,
         HdLayoutSettingsStore,
         InformationPanelSideSettingsStore,
-        WorkspaceMenuPositionStore {
+        WorkspaceMenuPositionStore,
+        TopNoticeSettingsStore,
+        UiLockSettingsStore {
   @override
   Future<String?> loadWorkspaceMenuPosition() async =>
       (await SharedPreferences.getInstance()).getString(
@@ -263,7 +296,54 @@ class SharedPreferencesLayoutSettingsStore
   static const _keyHeaderResourceOrder = 'layout_header_resource_order';
   static const _keyVisibleHeaderResourceIds =
       'layout_visible_header_resource_ids';
+  static const _keyUiDisplaySize = 'layout_ui_display_size';
+  static const _keyHeaderUiSize = 'layout_header_ui_size';
+  static const _keyWorkspaceMenuSize = 'layout_workspace_menu_size';
   static const _keyFleetMoraleMetricMode = 'layout_fleet_morale_metric_mode';
+
+  @override
+  Future<UiDisplaySize> loadUiDisplaySize() async {
+    final prefs = await SharedPreferences.getInstance();
+    final direct = prefs.getString(_keyUiDisplaySize);
+    if (direct != null) {
+      return UiDisplaySize.values.firstWhere(
+        (size) => size.name == direct,
+        orElse: () => UiDisplaySize.normal,
+      );
+    }
+    final legacyHeader = prefs.getString(_keyHeaderUiSize);
+    final legacyMenu = prefs.getString(_keyWorkspaceMenuSize);
+    if (legacyHeader == UiDisplaySize.compact.name ||
+        legacyMenu == UiDisplaySize.compact.name) {
+      return UiDisplaySize.compact;
+    }
+    if (legacyHeader == UiDisplaySize.normal.name ||
+        legacyMenu == UiDisplaySize.normal.name) {
+      return UiDisplaySize.normal;
+    }
+    return UiDisplaySize.normal;
+  }
+
+  @override
+  Future<void> saveUiDisplaySize(UiDisplaySize size) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUiDisplaySize, size.name);
+    await prefs.setString(_keyHeaderUiSize, size.name);
+    await prefs.setString(_keyWorkspaceMenuSize, size.name);
+  }
+
+  @override
+  Future<HeaderUiSize> loadHeaderUiSize() => loadUiDisplaySize();
+
+  @override
+  Future<void> saveHeaderUiSize(HeaderUiSize size) => saveUiDisplaySize(size);
+
+  @override
+  Future<WorkspaceMenuSize> loadWorkspaceMenuSize() => loadUiDisplaySize();
+
+  @override
+  Future<void> saveWorkspaceMenuSize(WorkspaceMenuSize size) =>
+      saveUiDisplaySize(size);
 
   @override
   Future<FleetMoraleMetricMode> loadFleetMoraleMetricMode() async {
@@ -488,6 +568,47 @@ class SharedPreferencesLayoutSettingsStore
     } else {
       await prefs.setString(_keyLocaleCode, localeCode);
     }
+  }
+
+  static const _keyTopNoticeEnabled = 'top_notice_enabled';
+  static const _keyTopNoticeDuration = 'top_notice_duration_sec';
+
+  @override
+  Future<bool> loadTopNoticeEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyTopNoticeEnabled) ?? true;
+  }
+
+  @override
+  Future<void> saveTopNoticeEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyTopNoticeEnabled, enabled);
+  }
+
+  static const _keyUiLocked = 'layout_ui_locked';
+
+  @override
+  Future<bool> loadUiLocked() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyUiLocked) ?? false;
+  }
+
+  @override
+  Future<void> saveUiLocked(bool locked) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyUiLocked, locked);
+  }
+
+  @override
+  Future<int> loadTopNoticeDurationSeconds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyTopNoticeDuration) ?? 5;
+  }
+
+  @override
+  Future<void> saveTopNoticeDurationSeconds(int seconds) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyTopNoticeDuration, seconds);
   }
 }
 

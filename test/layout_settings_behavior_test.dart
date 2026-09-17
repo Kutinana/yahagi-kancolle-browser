@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yahagi_kancolle_browser/src/settings/header_resource_settings.dart';
+import 'package:yahagi_kancolle_browser/src/settings/workspace_menu_settings.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
@@ -425,4 +426,126 @@ void main() {
 
     expect(controller.headerResourceOrder.first, headerEquipmentCapacityId);
   });
+
+  test('header UI size defaults to normal and persists compact', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    var controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(controller.headerUiSize, HeaderUiSize.normal);
+
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    await controller.setHeaderUiSize(HeaderUiSize.compact);
+    expect(controller.headerUiSize, HeaderUiSize.compact);
+    expect(notifications, 1);
+
+    controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(controller.headerUiSize, HeaderUiSize.compact);
+  });
+
+  test('workspace menu size defaults to normal and persists compact', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    var controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(controller.workspaceMenuSize, WorkspaceMenuSize.normal);
+
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    await controller.setWorkspaceMenuSize(WorkspaceMenuSize.compact);
+    expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
+    expect(notifications, 1);
+
+    controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
+  });
+
+  test('UI display size unifies header and menu sizes and persists across reloads', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    var controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(controller.uiDisplaySize, UiDisplaySize.normal);
+    expect(controller.headerUiSize, HeaderUiSize.normal);
+    expect(controller.workspaceMenuSize, WorkspaceMenuSize.normal);
+
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    await controller.setUiDisplaySize(UiDisplaySize.compact);
+    expect(controller.uiDisplaySize, UiDisplaySize.compact);
+    expect(controller.headerUiSize, HeaderUiSize.compact);
+    expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
+    expect(notifications, 1);
+
+    controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    expect(controller.uiDisplaySize, UiDisplaySize.compact);
+    expect(controller.headerUiSize, HeaderUiSize.compact);
+    expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
+  });
+
+  group('UI display size migration and fallback', () {
+    test('migrates legacy header-only compact setting', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_header_ui_size': 'compact',
+      });
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(controller.uiDisplaySize, UiDisplaySize.compact);
+    });
+
+    test('migrates legacy menu-only compact setting', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_workspace_menu_size': 'compact',
+      });
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(controller.uiDisplaySize, UiDisplaySize.compact);
+    });
+
+    test('compact takes precedence when legacy settings differ', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_header_ui_size': 'normal',
+        'layout_workspace_menu_size': 'compact',
+      });
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(controller.uiDisplaySize, UiDisplaySize.compact);
+    });
+
+    test('direct setting takes precedence over legacy settings', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_ui_display_size': 'normal',
+        'layout_header_ui_size': 'compact',
+        'layout_workspace_menu_size': 'compact',
+      });
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(controller.uiDisplaySize, UiDisplaySize.normal);
+    });
+
+    test('gracefully falls back to normal on corrupted or unknown values', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_ui_display_size': 'super_giant_unknown_mode',
+      });
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(controller.uiDisplaySize, UiDisplaySize.normal);
+    });
+  });
 }
+

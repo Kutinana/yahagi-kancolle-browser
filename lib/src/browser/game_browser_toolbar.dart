@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../settings/ui_display_size.dart';
 
 import 'game_browser_controller.dart';
 
@@ -22,9 +23,12 @@ class GameBrowserToolbar extends StatelessWidget {
     required this.onFitScreen,
     this.onEnterFullscreen,
     this.onScreenshot,
+    this.uiLocked = false,
+    this.onToggleUiLock,
     this.persistent = false,
     this.enableBackdropBlur = true,
     this.interactionEnabled = true,
+    this.compact = false,
   });
 
   final GameBrowserMode mode;
@@ -41,9 +45,12 @@ class GameBrowserToolbar extends StatelessWidget {
   final VoidCallback onFitScreen;
   final VoidCallback? onEnterFullscreen;
   final VoidCallback? onScreenshot;
+  final bool uiLocked;
+  final VoidCallback? onToggleUiLock;
   final bool persistent;
   final bool enableBackdropBlur;
   final bool interactionEnabled;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -56,13 +63,22 @@ class GameBrowserToolbar extends StatelessWidget {
         persistent &&
         screenSize.width > screenSize.height &&
         screenSize.shortestSide < 600;
-    final toolbarHeight = isLandscapePhone ? 36.0 : (persistent ? 42.0 : 34.0);
+    final toolbarHeight = isLandscapePhone
+        ? 36.0
+        : (persistent
+            ? 42.0
+            : browserToolbarHeight(
+                compact ? UiDisplaySize.compact : UiDisplaySize.normal,
+              ));
     final persistentActionSize = isLandscapePhone
         ? 34.0
         : (persistent ? 40.0 : 28.0);
     final navigationActionSize = isLandscapePhone
         ? 34.0
         : (persistent ? 36.0 : 28.0);
+    final iconSize = isLandscapePhone
+        ? 16.0
+        : (compact ? 15.0 : (persistent ? 18.0 : 16.0));
     final toolbar = Container(
       height: toolbarHeight,
       decoration: BoxDecoration(
@@ -147,6 +163,7 @@ class GameBrowserToolbar extends StatelessWidget {
                 tooltip: l10n.back,
                 onPressed: interactionEnabled ? onBack : null,
                 size: navigationActionSize,
+                iconSize: iconSize,
               ),
               _ToolbarButton(
                 key: const Key('browser-reload'),
@@ -154,13 +171,16 @@ class GameBrowserToolbar extends StatelessWidget {
                 tooltip: l10n.reload,
                 onPressed: interactionEnabled ? onReload : null,
                 size: navigationActionSize,
+                iconSize: iconSize,
               ),
+              _buildLockButton(l10n, navigationActionSize, iconSize),
               _ToolbarButton(
                 key: const Key('browser-home'),
                 icon: Icons.home_outlined,
                 tooltip: l10n.home,
                 onPressed: interactionEnabled ? onHome : null,
                 size: navigationActionSize,
+                iconSize: iconSize,
               ),
             ] else ...[
               _ToolbarButton(
@@ -169,7 +189,10 @@ class GameBrowserToolbar extends StatelessWidget {
                 tooltip: l10n.reload,
                 onPressed: interactionEnabled ? onReload : null,
                 size: navigationActionSize,
+                iconSize: iconSize,
               ),
+              _buildLockButton(l10n, navigationActionSize, iconSize),
+              const SizedBox(width: 4),
               TextButton.icon(
                 key: const Key('browser-enter-dmm'),
                 onPressed: interactionEnabled ? onEnterDmm : null,
@@ -206,6 +229,29 @@ class GameBrowserToolbar extends StatelessWidget {
           : toolbar,
     );
   }
+
+  Widget _buildLockButton(
+    AppLocalizations l10n,
+    double size,
+    double iconSize,
+  ) {
+    if (onToggleUiLock == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(left: 4.0),
+      child: _ToolbarButton(
+        key: const Key('browser-ui-lock'),
+        icon: uiLocked ? Icons.lock : Icons.lock_open,
+        tooltip: uiLocked ? l10n.unlockUi : l10n.lockUi,
+        onPressed: interactionEnabled ? onToggleUiLock : null,
+        size: size,
+        iconSize: iconSize,
+        iconColor: uiLocked ? const Color(0xffffd54f) : null,
+        backgroundColor: uiLocked
+            ? const Color(0xffffd54f).withValues(alpha: 0.22)
+            : null,
+      ),
+    );
+  }
 }
 
 class _ToolbarButton extends StatelessWidget {
@@ -215,16 +261,22 @@ class _ToolbarButton extends StatelessWidget {
     required this.tooltip,
     required this.onPressed,
     this.size = 36,
+    this.iconSize,
+    this.iconColor,
+    this.backgroundColor,
   });
 
   final IconData icon;
   final String tooltip;
-  final Future<void> Function()? onPressed;
+  final VoidCallback? onPressed;
   final double size;
+  final double? iconSize;
+  final Color? iconColor;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.square(
+    Widget button = SizedBox.square(
       dimension: size,
       child: IconButton(
         padding: EdgeInsets.zero,
@@ -233,8 +285,18 @@ class _ToolbarButton extends StatelessWidget {
         onPressed: onPressed,
         hoverColor: const Color(0xffd4a85f).withValues(alpha: 0.15),
         splashColor: const Color(0xffd4a85f).withValues(alpha: 0.2),
-        icon: Icon(icon, size: 18),
+        icon: Icon(icon, size: iconSize ?? 18, color: iconColor),
       ),
     );
+    if (backgroundColor != null) {
+      button = DecoratedBox(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: button,
+      );
+    }
+    return button;
   }
 }

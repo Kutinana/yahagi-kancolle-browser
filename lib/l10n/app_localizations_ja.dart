@@ -18,6 +18,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exitFullscreenShort => '解除';
 
   @override
+  String get exitFullscreenConfirmTitle => 'ゲームの全画面表示を終了しますか？';
+
+  @override
+  String get exitFullscreenConfirmDescription =>
+      '全画面表示を終了すると、操作パネルとツールバーの表示に戻ります。';
+
+  @override
+  String get exitFullscreenSkipConfirmation => '次回から表示しない';
+
+  @override
+  String get exitFullscreenConfirmAction => '終了する';
+
+  @override
   String get gameFullscreenHint => 'フローティングボタンまたは戻るキーで解除できます。ボタンはドラッグで移動できます';
 
   @override
@@ -110,6 +123,13 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get diagnosticLoggingDesc =>
       '性能とエラーの概要のみを記録し、アカウント、パスワード、ログイン情報は含みません';
+
+  @override
+  String get telemetryAnonymousStatsTitle => '匿名の端末および利用統計';
+
+  @override
+  String get telemetryAnonymousStatsDesc =>
+      'オンライン提督数、DAU、機種／WebView バージョンの分布を把握し、アプリの最適化に役立てます。端末環境情報のみを送信し、ゲームアカウントやパスワード、認証情報は一切収集しません。';
 
   @override
   String get diagnosticPrivacyTitle => 'プライバシー保護診断';
@@ -223,6 +243,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get layoutSettings => 'UIとレイアウト';
+
+  @override
+  String get uiDisplaySizeTitle => 'UIの表示サイズ';
+
+  @override
+  String get uiDisplaySizeDesc => '上部ステータスバーとメニューバーの表示サイズを調整します';
+
+  @override
+  String get uiDisplaySizeNormal => '標準';
+
+  @override
+  String get uiDisplaySizeCompact => 'コンパクト';
 
   @override
   String get gameAreaRatio => 'ゲーム画面の比率';
@@ -2268,13 +2300,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get frameRefreshShortcutConfirmAction => '更新する';
 
   @override
-  String get mouseRightClickFrameRefresh => '右クリックでゲームフレームを更新';
-
-  @override
-  String get mouseRightClickFrameRefreshDescription =>
-      '有効にすると、ゲーム画面内で右クリックしたときにゲームフレームを直接更新します。タッチの長押しでは実行されません。';
-
-  @override
   String get gameFrameNotFound => 'ゲームフレームが見つかりません。ゲームに入ってから再試行してください。';
 
   @override
@@ -3086,4 +3111,179 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get menuPositionRight => '右';
+
+  @override
+  String get topNoticeSectionTitle => 'トップバー通知';
+
+  @override
+  String get topNoticeEnabledTitle => 'トップバー通知';
+
+  @override
+  String get topNoticeEnabledSubtitle => '「ヤハギ」アイコン右側に開発、改修、出撃前確認、任務達成通知を表示します';
+
+  @override
+  String get topNoticeDurationTitle => '表示時間';
+
+  @override
+  String get topNoticeDurationSubtitle => '通知ポップアップが表示されてから自動で閉じるまでの時間';
+
+  @override
+  String get topNoticeDuration5s => '5秒 (デフォルト)';
+
+  @override
+  String get topNoticeDuration10s => '10秒';
+
+  @override
+  String get topNoticeDuration15s => '15秒';
+
+  @override
+  String questCompletionSingleNotice(String title) {
+    return '任務達成：$title';
+  }
+
+  @override
+  String questCompletionMultiNotice(int count) {
+    return '$count件の任務が達成されました。任務画面で報酬を受け取ってください';
+  }
+
+  @override
+  String noticeDevSuccess(String name) {
+    return '$name の開発に成功しました';
+  }
+
+  @override
+  String get noticeDevFailed => '装備開発に失敗しました';
+
+  @override
+  String get noticeDevFailedPenguin => '装備開発に失敗しました';
+
+  @override
+  String get noticeDevSlotFailed => '開発失敗';
+
+  @override
+  String get noticeDevDefaultName => '新装備';
+
+  @override
+  String get noticeModFailed => '近代化改修に失敗しました';
+
+  @override
+  String get noticeModSuccess => '近代化改修に成功しました';
+
+  @override
+  String noticeModSuccessDetail(String stats) {
+    return '近代化改修成功：$stats';
+  }
+
+  @override
+  String get noticeModSuccessMaxCap => '近代化改修成功 (能力値は既に上限です)';
+
+  @override
+  String get statFirepower => '火力';
+
+  @override
+  String get statTorpedo => '雷装';
+
+  @override
+  String get statAntiAir => '対空';
+
+  @override
+  String get statArmor => '装甲';
+
+  @override
+  String get statLuck => '運';
+
+  @override
+  String get statHp => '耐久';
+
+  @override
+  String get statAsw => '対潜';
+
+  @override
+  String noticeMarriageLuck(String arrow, int delta, int remaining) {
+    return 'ケッコンカッコカリ：運 $arrow +$delta / +$remaining';
+  }
+
+  @override
+  String noticeMarriageLuckMax(String arrow, int delta) {
+    return 'ケッコンカッコカリ：運 $arrow +$delta / MAX';
+  }
+
+  @override
+  String noticePracticeExp(int baseExp, int sExp, int aExp) {
+    return '演習相手経験値: $baseExp (S勝利: $sExp · A勝利: $aExp EXP)';
+  }
+
+  @override
+  String noticePracticeExpCtBonus(int baseExp, String bonus, int sExp) {
+    return '演習相手経験値: $baseExp | 練習巡洋艦ボーナス: +$bonus (S勝利: $sExp EXP)';
+  }
+
+  @override
+  String get noticeSortieShipFull => '艦船保有数が上限に達しています！出撃しても新しい艦娘を入手できません';
+
+  @override
+  String noticeSortieShipLow(int count) {
+    return '艦船の空き枠は残り $count 隻です。母港容量にご注意ください';
+  }
+
+  @override
+  String get noticeSortieItemFull => '装備保有数が上限に達しています！出撃しても新しい装備を入手できません';
+
+  @override
+  String noticeSortieItemLow(int count) {
+    return '装備の空き枠は残り $count 個です。母港容量にご注意ください';
+  }
+
+  @override
+  String get noticeSortieShipAndItemFull =>
+      '艦船・装備保有数が上限に達しています！出撃しても新しい艦娘と装備を入手できません';
+
+  @override
+  String noticeSortieShipAndItemLow(int shipCount, int itemCount) {
+    return '艦船の空き枠は残り $shipCount 隻、装備は残り $itemCount 個です。母港容量にご注意ください';
+  }
+
+  @override
+  String get noticeSortieExpansionSlotUnused => '艦隊に未使用の補強増設スロットがあります';
+
+  @override
+  String noticePreSortieCheckFailed(String reasons) {
+    return '出撃前チェック未通過：$reasons';
+  }
+
+  @override
+  String get noticeSortieReasonUnresupplied => '補給未完了';
+
+  @override
+  String get noticeSortieReasonFatigue => '疲労状態 (間宮点滅/赤疲労)';
+
+  @override
+  String get noticeSortieReasonMainSlot => '主スロット未装備';
+
+  @override
+  String get noticeSortieReasonExpansionSlot => '増設スロット未装備';
+
+  @override
+  String get lockUi => 'レイアウトをロック';
+
+  @override
+  String get unlockUi => 'レイアウトのロックを解除';
+
+  @override
+  String get uiLockedToast => '画面レイアウトがロックされました（長押し編集を無効化）';
+
+  @override
+  String get uiUnlockedToast => '画面レイアウトのロックを解除しました';
+
+  @override
+  String get uiLockTitle => '画面レイアウトをロック';
+
+  @override
+  String get uiLockDesc => 'ロック中はカードや上部バーを長押ししても編集モードに入りません';
+
+  @override
+  String get filterVisibleItems => '表示項目の絞り込み';
+
+  @override
+  String get selectHeaderVisibleItems => '上部に表示する項目を選択';
 }

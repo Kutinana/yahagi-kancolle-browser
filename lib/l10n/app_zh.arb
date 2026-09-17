@@ -2,6 +2,10 @@
   "enterGameFullscreen": "游戏全屏",
   "exitGameFullscreen": "退出全屏",
   "exitFullscreenShort": "退出",
+  "exitFullscreenConfirmTitle": "确定退出游戏全屏？",
+  "exitFullscreenConfirmDescription": "退出全屏后将恢复控制台与工具栏显示。",
+  "exitFullscreenSkipConfirmation": "下次不再提醒",
+  "exitFullscreenConfirmAction": "退出全屏",
   "gameFullscreenHint": "点击浮钮或按返回键退出全屏；可拖动浮钮调整位置",
   "gameFullscreenUnavailable": "无法显示退出按钮，已恢复普通布局",
   "questCompletionNotice": "有任务已完成",
@@ -36,6 +40,8 @@
   "diagnosticLoggingSection": "客户端诊断日志",
   "diagnosticLoggingTitle": "记录客户端诊断日志",
   "diagnosticLoggingDesc": "仅记录性能和错误摘要，不包含账号、密码或登录凭据",
+  "telemetryAnonymousStatsTitle": "匿名设备与使用统计",
+  "telemetryAnonymousStatsDesc": "帮助统计当前在线提督人数、日活跃量与机型/WebView版本分布以协助优化。仅包含设备环境信息，绝不收集任何游戏账号、密码或网络凭据。",
   "diagnosticPrivacyTitle": "隐私安全诊断",
   "diagnosticPrivacyDesc": "导出前会再次检查内容。日志不记录账号、密码、Cookie、令牌、请求正文、响应正文、聊天内容或截图，也不会自动上传。",
   "diagnosticStatusEnabled": "正在记录",
@@ -74,6 +80,10 @@
   "settings": "设置",
   "settingsTitle": "设置",
   "layoutSettings": "界面与布局",
+  "uiDisplaySizeTitle": "界面UI大小",
+  "uiDisplaySizeDesc": "调整顶部状态栏与导航菜单栏的显示尺寸",
+  "uiDisplaySizeNormal": "普通",
+  "uiDisplaySizeCompact": "紧凑",
   "gameAreaRatio": "游戏区域占比",
   "infoPanelWidth": "信息面板宽度（竖屏模式无效）",
   "autoZoom": "应用推荐显示比例（游戏与菜单比例 65:35）",
@@ -780,8 +790,6 @@
   "frameRefreshShortcutConfirmDescription": "重新载入游戏框架通常更快，但可能导致猫袭或网络异常。请自行承担风险。",
   "frameRefreshShortcutSkipConfirmation": "下次不再提醒",
   "frameRefreshShortcutConfirmAction": "确认刷新",
-  "mouseRightClickFrameRefresh": "鼠标右键刷新框架",
-  "mouseRightClickFrameRefreshDescription": "开启后，在游戏画面内按鼠标右键可直接刷新游戏框架。触屏长按不会触发。",
   "gameFrameNotFound": "尚未找到游戏框架，请进入游戏后重试。",
   "gameHtmlWrapNotFound": "尚未找到游戏本体，请等待页面载入后重试。",
   "gameFrameReloadBlocked": "游戏框架未能重新载入，请稍后重试。",
@@ -1053,5 +1061,163 @@
   "menuPositionTop": "上",
   "menuPositionBottom": "下",
   "menuPositionLeft": "左",
-  "menuPositionRight": "右"
+  "menuPositionRight": "右",
+  "topNoticeSectionTitle": "顶栏消息通知",
+  "topNoticeEnabledTitle": "顶栏通知",
+  "topNoticeEnabledSubtitle": "在顶栏「ヤハギ」右侧显示开发、改修、出击检查与任务完成提示",
+  "topNoticeDurationTitle": "提示停留时间",
+  "topNoticeDurationSubtitle": "消息气泡弹出后无操作自动收起的时长",
+  "topNoticeDuration5s": "5 秒 (默认)",
+  "topNoticeDuration10s": "10 秒",
+  "topNoticeDuration15s": "15 秒",
+  "questCompletionSingleNotice": "任务达成：{title}",
+  "@questCompletionSingleNotice": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "questCompletionMultiNotice": "{count} 个任务已达成，请前往任务界面",
+  "@questCompletionMultiNotice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeDevSuccess": "{name} 开发成功",
+  "@noticeDevSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeDevFailed": "装备开发失败",
+  "noticeDevFailedPenguin": "装备开发失败",
+  "noticeDevSlotFailed": "开发失败",
+  "noticeDevDefaultName": "新装备",
+  "noticeModFailed": "近代化改修失败",
+  "noticeModSuccess": "近代化改修成功",
+  "noticeModSuccessDetail": "改修成功：{stats}",
+  "@noticeModSuccessDetail": {
+    "placeholders": {
+      "stats": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeModSuccessMaxCap": "改修成功 (属性已达上限)",
+  "statFirepower": "火力",
+  "statTorpedo": "雷装",
+  "statAntiAir": "对空",
+  "statArmor": "装甲",
+  "statLuck": "运",
+  "statHp": "耐久",
+  "statAsw": "对潜",
+  "noticeMarriageLuck": "誓约运提升：运 {arrow} +{delta} / +{remaining}",
+  "@noticeMarriageLuck": {
+    "placeholders": {
+      "arrow": {
+        "type": "String"
+      },
+      "delta": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeMarriageLuckMax": "誓约运提升：运 {arrow} +{delta} / MAX",
+  "@noticeMarriageLuckMax": {
+    "placeholders": {
+      "arrow": {
+        "type": "String"
+      },
+      "delta": {
+        "type": "int"
+      }
+    }
+  },
+  "noticePracticeExp": "演习对手经验: {baseExp} (S胜: {sExp} · A胜: {aExp} EXP)",
+  "@noticePracticeExp": {
+    "placeholders": {
+      "baseExp": {
+        "type": "int"
+      },
+      "sExp": {
+        "type": "int"
+      },
+      "aExp": {
+        "type": "int"
+      }
+    }
+  },
+  "noticePracticeExpCtBonus": "演习对手经验: {baseExp} | 练巡加成: +{bonus} (S胜: {sExp} EXP)",
+  "@noticePracticeExpCtBonus": {
+    "placeholders": {
+      "baseExp": {
+        "type": "int"
+      },
+      "bonus": {
+        "type": "String"
+      },
+      "sExp": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeSortieShipFull": "母港船位已满！出击将无法获得新舰娘",
+  "noticeSortieShipLow": "船位仅剩 {count} 个，请注意母港容量",
+  "@noticeSortieShipLow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeSortieItemFull": "装备槽已满！出击将无法获得新装备",
+  "noticeSortieItemLow": "装备槽仅剩 {count} 个，请注意母港容量",
+  "@noticeSortieItemLow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeSortieShipAndItemFull": "母港船位与装备槽已满！出击将无法获得新舰娘与装备",
+  "noticeSortieShipAndItemLow": "船位仅剩 {shipCount} 个 · 装备槽仅剩 {itemCount} 个，请注意母港容量",
+  "@noticeSortieShipAndItemLow": {
+    "placeholders": {
+      "shipCount": {
+        "type": "int"
+      },
+      "itemCount": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeSortieExpansionSlotUnused": "舰队中有未使用的补强增设插槽",
+  "noticePreSortieCheckFailed": "出击前检查未通过：{reasons}",
+  "@noticePreSortieCheckFailed": {
+    "placeholders": {
+      "reasons": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeSortieReasonUnresupplied": "未补满补给",
+  "noticeSortieReasonFatigue": "舰娘疲劳 (黄脸/红脸)",
+  "noticeSortieReasonMainSlot": "主装备槽未装满",
+  "noticeSortieReasonExpansionSlot": "补强增设插槽闲置",
+  "lockUi": "锁定界面",
+  "unlockUi": "解锁界面",
+  "uiLockedToast": "界面已锁定，长按不会进入自定义",
+  "uiUnlockedToast": "界面已解锁",
+  "uiLockTitle": "锁定界面布局",
+  "uiLockDesc": "锁定后长按卡片与顶栏资源不会进入自定义编辑，防止误触",
+  "filterVisibleItems": "筛选显示项目",
+  "selectHeaderVisibleItems": "选择顶部显示项目"
 }

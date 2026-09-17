@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'src/widgets/app_scroll_behavior.dart';
@@ -37,6 +38,7 @@ import 'src/browser/game_toolbar_controller.dart';
 import 'src/browser/game_toolbar_display_controller.dart';
 import 'src/browser/game_screenshot_controller.dart';
 import 'src/browser/game_surface_boundary.dart';
+import 'src/browser/game_surface_viewport.dart';
 import 'src/browser/game_workspace_visibility.dart';
 import 'src/browser/game_environment_host.dart';
 import 'src/browser/game_application_restart_port.dart';
@@ -48,6 +50,7 @@ import 'src/capture/battle_result_warning_overlay.dart';
 import 'src/capture/capture_mode_controller.dart';
 import 'src/capture/capture_mode_store.dart';
 import 'src/capture/game_capture_controller.dart';
+import 'src/notice/game_info_notice_controller.dart';
 import 'src/capture/game_capture_port.dart';
 import 'src/diagnostics/diagnostic_controller.dart';
 import 'src/diagnostics/diagnostic_event.dart';
@@ -55,12 +58,17 @@ import 'src/diagnostics/diagnostic_export_service.dart';
 import 'src/diagnostics/diagnostic_game_api_observer.dart';
 import 'src/diagnostics/diagnostic_performance_monitor.dart';
 import 'src/diagnostics/diagnostic_platform_port.dart';
+import 'src/telemetry/telemetry_controller.dart';
+import 'src/telemetry/telemetry_service.dart';
+import 'src/telemetry/telemetry_settings_store.dart';
 import 'src/diagnostics/diagnostic_recorder.dart';
 import 'src/diagnostics/diagnostic_settings_store.dart';
 import 'src/diagnostics/diagnostic_storage.dart';
 import 'src/development/development_repository.dart';
 import 'src/fleet/fleet_information_center.dart';
 import 'src/settings/battle_status_effect_settings.dart';
+import 'src/settings/header_resource_settings.dart';
+import 'src/settings/workspace_menu_settings.dart';
 import 'src/fleet/anchorage_repair_navigation.dart';
 import 'src/fleet/anchorage_repair_view.dart';
 import 'src/fleet/fleet_summary_card.dart';
@@ -116,6 +124,7 @@ import 'src/quest/quest_catalog_update_service.dart';
 import 'src/quest/shared_preferences_quest_store.dart';
 import 'src/settings/layout_settings_controller.dart';
 import 'src/settings/layout_settings_store.dart';
+import 'src/settings/ui_display_size.dart';
 import 'src/settings/network_settings_controller.dart';
 import 'src/settings/network_settings_store.dart';
 import 'src/settings/display_mode_controller.dart';
@@ -331,6 +340,7 @@ Future<void> main() async {
     gameState: () => gameStateController.state,
     waitForGameState: () => gameStateController.idle,
     onFriendlyHpUpdated: gameStateController.applyFriendlyBattleHp,
+    onDamageControlConsumed: gameStateController.applyDamageControlConsumption,
     damageAlertPort: const MethodChannelBattleDamageAlertPort(),
     battleStatusEffectSettings: () =>
         safetySettingsController.battleStatusEffects,
@@ -415,6 +425,12 @@ Future<void> main() async {
       );
     },
   );
+  final headerNoticeController = TopNoticeController();
+  final gameInfoNoticeController = GameInfoNoticeController(
+    stateProvider: () => gameStateController.state,
+    layoutSettingsController: layoutSettingsController,
+    topNoticeController: headerNoticeController,
+  );
   gameApiEventPipeline = GameApiEventPipeline(
     settleGameState: () async {
       await gameStateController.idle;
@@ -429,6 +445,7 @@ Future<void> main() async {
       senkaController,
       battleController,
       newShipReminderController,
+      gameInfoNoticeController,
     ],
     onBackgroundDecodeFallback: (path) {
       if (!kcwikiReportController.enabled) return;
@@ -542,6 +559,17 @@ Future<void> main() async {
     },
   );
   await diagnosticController.initialize();
+  const telemetrySettingsStore = SharedPreferencesTelemetrySettingsStore();
+  final telemetryService = AppTelemetryService(
+    aptabaseAppKey: 'A-US-7813890229',
+    telemetryDeckAppID: '685D5F38-DD7D-48CB-896D-88642F96F92D',
+    appVersion: currentVersion,
+    diagnosticPlatformPort: diagnosticPlatform,
+  );
+  final telemetryController = await TelemetryController.create(
+    store: telemetrySettingsStore,
+    service: telemetryService,
+  );
   const notificationTimerAnchorStore =
       SharedPreferencesNotificationTimerAnchorStore();
   final notificationTimerAnchors = await notificationTimerAnchorStore.load();
@@ -595,9 +623,11 @@ Future<void> main() async {
       currentVersion: currentVersion,
       releaseChecker: releaseChecker,
       screenAwakeController: screenAwakeController,
+      headerNoticeController: headerNoticeController,
       gameMouseWheelSettingsController: gameMouseWheelSettingsController,
       gameFrameRefreshShortcutSettings: gameFrameRefreshShortcutSettings,
       diagnosticController: diagnosticController,
+      telemetryController: telemetryController,
       nativeWebViewGenerationSink: (value) {
         diagnosticNativeWebViewGeneration = value;
       },
@@ -606,6 +636,11 @@ Future<void> main() async {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(fcdMapController.checkForUpdates());
     unawaited(questCatalogController.checkForUpdates());
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (telemetryController.enabled) {
+        unawaited(telemetryController.startIfEnabled());
+      }
+    });
   });
 }
 
@@ -679,12 +714,14 @@ class YahagiApp extends StatelessWidget {
     this.currentVersion = '1.0.2',
     this.releaseChecker,
     this.screenAwakeController,
+    this.headerNoticeController,
     this.gameMouseWheelSettingsController,
     this.gameFrameRefreshShortcutSettings,
     this.toolbarDisplayController,
     this.gameScreenshotController,
     this.showDeveloperDiagnostics = false,
     this.diagnosticController,
+    this.telemetryController,
     this.gameRouteObserver,
     this.nativeWebViewGenerationSink,
   });
@@ -722,12 +759,14 @@ class YahagiApp extends StatelessWidget {
   final String currentVersion;
   final ReleaseChecker? releaseChecker;
   final ScreenAwakeController? screenAwakeController;
+  final TopNoticeController? headerNoticeController;
   final GameMouseWheelSettingsController? gameMouseWheelSettingsController;
   final GameFrameRefreshShortcutSettings? gameFrameRefreshShortcutSettings;
   final GameToolbarDisplayController? toolbarDisplayController;
   final GameScreenshotController? gameScreenshotController;
   final bool showDeveloperDiagnostics;
   final DiagnosticController? diagnosticController;
+  final TelemetryController? telemetryController;
   final RouteObserver<ModalRoute<dynamic>>? gameRouteObserver;
   final void Function(int)? nativeWebViewGenerationSink;
 
@@ -735,6 +774,9 @@ class YahagiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     battleController.bindFriendlyHpUpdater(
       gameStateController.applyFriendlyBattleHp,
+    );
+    battleController.bindDamageControlUpdater(
+      gameStateController.applyDamageControlConsumption,
     );
     return AnimatedBuilder(
       animation: Listenable.merge(<Listenable>[
@@ -824,8 +866,10 @@ class YahagiApp extends StatelessWidget {
                       gameFrameRefreshShortcutSettings,
                   toolbarDisplayController: toolbarDisplayController,
                   gameScreenshotController: gameScreenshotController,
+                  headerNoticeController: headerNoticeController,
                   showDeveloperDiagnostics: showDeveloperDiagnostics,
                   diagnosticController: diagnosticController,
+                  telemetryController: telemetryController,
                   gameSurface: _buildGameSurface(),
                 ),
               ),
@@ -983,11 +1027,13 @@ class YahagiShell extends StatefulWidget {
     this.gameFrameRefreshShortcutSettings,
     this.toolbarDisplayController,
     this.gameScreenshotController,
+    this.headerNoticeController,
     this.fcdMapController,
     this.questCatalogController,
     this.improvementPlannerController,
     this.showDeveloperDiagnostics = false,
     this.diagnosticController,
+    this.telemetryController,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -1027,8 +1073,10 @@ class YahagiShell extends StatefulWidget {
   final GameFrameRefreshShortcutSettings? gameFrameRefreshShortcutSettings;
   final GameToolbarDisplayController? toolbarDisplayController;
   final GameScreenshotController? gameScreenshotController;
+  final TopNoticeController? headerNoticeController;
   final bool showDeveloperDiagnostics;
   final DiagnosticController? diagnosticController;
+  final TelemetryController? telemetryController;
 
   @override
   State<YahagiShell> createState() => _YahagiShellState();
@@ -1073,7 +1121,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    widget.displayModeController.addListener(_applyOrientationPolicy);
+    widget.displayModeController.addListener(_onDisplayModeChanged);
     widget.layoutSettingsController.addListener(_onLayoutSettingsChanged);
     widget.newShipReminderController?.addListener(_handleNewShipAlert);
     _gameFrameReloadChannel.setMethodCallHandler(
@@ -1094,13 +1142,14 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     _gameFrameReloadChannel.setMethodCallHandler(null);
-    widget.displayModeController.removeListener(_applyOrientationPolicy);
+    widget.displayModeController.removeListener(_onDisplayModeChanged);
     widget.layoutSettingsController.removeListener(_onLayoutSettingsChanged);
     widget.newShipReminderController?.removeListener(_handleNewShipAlert);
     widget.kcwikiReportConsumer?.dispose();
     _questFilters.dispose();
     _windowMetricsRecoveryScheduler.dispose();
     _backgroundGameRetentionCoordinator?.dispose();
+    widget.telemetryController?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -1188,7 +1237,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     // The route may keep the shell's parent unchanged. Rebuild the workspace
     // explicitly so manual panel ratios apply without navigating or resizing.
     setState(() {
-      if (!widget.layoutSettingsController.hdSettings.enabled) {
+      if (!widget.layoutSettingsController.hdSettings.enabled ||
+          widget.layoutSettingsController.uiLocked) {
         _hdEditing = false;
       }
     });
@@ -1236,6 +1286,17 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         widget.browserController.fitGameScreen().catchError((Object _) {});
       });
     });
+  }
+
+  void _onDisplayModeChanged() {
+    _applyOrientationPolicy();
+    if (mounted) {
+      setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.browserController.fitGameScreen().catchError((Object _) {});
+      });
+    }
   }
 
   void _applyOrientationPolicy() {
@@ -1300,8 +1361,11 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         widget.browserController,
         widget.audioController,
         ?widget.gameRenderingModeController,
+        widget.layoutSettingsController,
       ]),
       builder: (context, _) => GameBrowserToolbar(
+        compact: widget.layoutSettingsController.uiDisplaySize ==
+            UiDisplaySize.compact,
         enableBackdropBlur:
             widget.gameRenderingModeController?.mode.enablesToolbarBlur ?? true,
         interactionEnabled:
@@ -1349,18 +1413,33 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                     : result.errorMessage == null
                     ? l10n.screenshotFailed
                     : '${l10n.screenshotFailed}\n${result.errorMessage}';
+                final isSuccess = result.path != null;
+                final tone = isSuccess
+                    ? TopNoticeTone.success
+                    : TopNoticeTone.error;
                 TopNotice.show(
                   context,
                   message: message,
-                  tone: result.path != null
-                      ? TopNoticeTone.success
-                      : TopNoticeTone.error,
+                  tone: tone,
                 );
               },
+        uiLocked: widget.layoutSettingsController.uiLocked,
+        onToggleUiLock: () {
+          final next = !widget.layoutSettingsController.uiLocked;
+          unawaited(widget.layoutSettingsController.setUiLocked(next));
+          if (context.mounted) {
+            final l10n = AppLocalizations.of(context)!;
+            TopNotice.show(
+              context,
+              message: next ? l10n.uiLockedToast : l10n.uiUnlockedToast,
+            );
+          }
+        },
         persistent: false,
       ),
     );
 
+    final screenDisplayMode = widget.displayModeController.displayMode;
     final windowSize = MediaQuery.sizeOf(context);
     final menuHorizontal =
         widget.layoutSettingsController.workspaceMenuHorizontal;
@@ -1368,17 +1447,20 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         widget.layoutSettingsController.workspaceMenuPosition == 'top';
     final hdPortrait =
         widget.layoutSettingsController.hdSettings.enabled &&
-        windowSize.height >= windowSize.width;
-    final hdWindow = usesHdLandscape(
-      windowSize,
-      enabled: widget.layoutSettingsController.hdSettings.enabled,
-    );
+        (screenDisplayMode == DisplayMode.portrait ||
+            (screenDisplayMode != DisplayMode.landscape &&
+                windowSize.height >= windowSize.width));
+    final hdWindow = screenDisplayMode != DisplayMode.portrait &&
+        usesHdLandscape(
+          windowSize,
+          enabled: widget.layoutSettingsController.hdSettings.enabled,
+        );
     final panelAlignedNavigation =
         _workspaceIndex == 0 &&
         (menuTop ||
             (!menuHorizontal &&
                 !hdWindow &&
-                usesVerticalWorkspace(windowSize)));
+                usesVerticalWorkspace(windowSize, screenDisplayMode)));
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -1406,29 +1488,39 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
               );
             },
             child: QuestCompletionDrawerHost(
+              controller: widget.headerNoticeController,
               child: Column(
                 children: [
                   Offstage(
                     offstage: _gameFullscreen,
-                    child: Container(
-                      height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: const BoxDecoration(
-                        color: Color(0xff122431),
-                        border: Border(
-                          bottom: BorderSide(color: Color(0xff294052)),
-                        ),
-                      ),
-                      child: TooltipVisibility(
-                        visible: false,
-                        child: AnimatedBuilder(
-                          animation: widget.toolbarController,
-                          builder: (context, _) {
-                            final isGameWorkspace = _workspaceIndex == 0;
-                            final isToolbarVisible =
-                                isGameWorkspace &&
-                                widget.toolbarController.isVisible;
-                            return Row(
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([
+                        widget.toolbarController,
+                        widget.layoutSettingsController,
+                      ]),
+                      builder: (context, _) {
+                        final uiSize =
+                            widget.layoutSettingsController.uiDisplaySize;
+                        final isCompact = uiSize == UiDisplaySize.compact;
+                        final headerHeight = topHeaderHeight(uiSize);
+                        final isGameWorkspace = _workspaceIndex == 0;
+                        final isToolbarVisible =
+                            isGameWorkspace &&
+                            widget.toolbarController.isVisible;
+                        return Container(
+                          height: headerHeight,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isCompact ? 8 : 10,
+                          ),
+                          decoration: const BoxDecoration(
+                            color: Color(0xff122431),
+                            border: Border(
+                              bottom: BorderSide(color: Color(0xff294052)),
+                            ),
+                          ),
+                          child: TooltipVisibility(
+                            visible: false,
+                            child: Row(
                               children: [
                                 Material(
                                   color: isToolbarVisible
@@ -1442,34 +1534,36 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                         ? widget.toolbarController.toggle
                                         : null,
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 6,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isCompact ? 6 : 8,
+                                        vertical: isCompact ? 2 : 6,
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Image.asset(
                                             'assets/app_icon.png',
-                                            width: 22,
-                                            height: 22,
+                                            width: isCompact ? 18 : 22,
+                                            height: isCompact ? 18 : 22,
                                             fit: BoxFit.contain,
                                           ),
-                                          const SizedBox(width: 8),
-                                          const Text(
+                                          SizedBox(width: isCompact ? 6 : 8),
+                                          Text(
                                             'ヤハギ',
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
+                                              fontSize: isCompact ? 13 : null,
                                             ),
                                           ),
                                           if (hdWindow || hdPortrait) ...[
                                             const SizedBox(width: 5),
-                                            const Text(
+                                            Text(
                                               'HD',
-                                              key: Key('yahagi-hd-label'),
+                                              key: const Key('yahagi-hd-label'),
                                               style: TextStyle(
-                                                color: Color(0xffffd54f),
+                                                color: const Color(0xffffd54f),
                                                 fontWeight: FontWeight.w800,
+                                                fontSize: isCompact ? 12 : null,
                                               ),
                                             ),
                                           ],
@@ -1479,7 +1573,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                               isToolbarVisible
                                                   ? Icons.chevron_left
                                                   : Icons.chevron_right,
-                                              size: 16,
+                                              size: isCompact ? 14 : 16,
                                               color: isToolbarVisible
                                                   ? const Color(0xffd4a85f)
                                                   : const Color(0xff8197a5),
@@ -1490,7 +1584,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: isCompact ? 6 : 8),
                                 Expanded(
                                   child: QuestCompletionHeaderSlot(
                                     toolbarVisible: isToolbarVisible,
@@ -1772,10 +1866,10 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                   ),
                                 ),
                               ],
-                            );
-                          },
-                        ),
-                      ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   Expanded(
@@ -1794,10 +1888,12 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                       children: [
                         if (!panelAlignedNavigation)
                           Offstage(
+                            key: const Key('workspace-navigation-sidebar'),
                             offstage: _gameFullscreen,
                             child: buildWorkspaceNavigation(),
                           ),
                         Expanded(
+                          key: const Key('workspace-content-expanded'),
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
@@ -1841,6 +1937,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                 constraints.maxWidth,
                                                 constraints.maxHeight,
                                               ),
+                                              screenDisplayMode,
                                             );
                                         final gameFlex = (gameAreaRatio * 1000)
                                             .round();
@@ -1853,24 +1950,16 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                   .gameRenderingModeController
                                                   ?.mode,
                                             );
-                                        final gameSurfaceWrapper = ColoredBox(
-                                          color: const Color(0xff0a1823),
-                                          child: Center(
-                                            child: Padding(
-                                              padding: _gameFullscreen
-                                                  ? MediaQuery.viewPaddingOf(
-                                                      context,
-                                                    )
-                                                  : EdgeInsets.zero,
-                                              child: AspectRatio(
-                                                aspectRatio: 1200 / 720,
-                                                child: GameSurfaceBoundary(
-                                                  child: widget.gameSurface,
-                                                ),
+                                        final gameSurfaceWrapper =
+                                            GameSurfaceViewport(
+                                              aspectRatio: 1200 / 720,
+                                              fullscreen: _gameFullscreen,
+                                              isLandscape: isLandscape,
+                                              displayMode: screenDisplayMode,
+                                              child: GameSurfaceBoundary(
+                                                child: widget.gameSurface,
                                               ),
-                                            ),
-                                          ),
-                                        );
+                                            );
                                         final gameWidget = GameBrowserOverlay(
                                           controller: widget.toolbarController,
                                           gameSurface: gameSurfaceWrapper,
@@ -1882,7 +1971,11 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                           hdEditing: _hdEditing,
                                           onHdEditingChanged: (editing) =>
                                               setState(
-                                                () => _hdEditing = editing,
+                                                () => _hdEditing =
+                                                    editing &&
+                                                    !widget
+                                                        .layoutSettingsController
+                                                        .uiLocked,
                                               ),
                                           hd: hdGeometry != null || hdPortrait,
                                           hdPortrait: hdPortrait,
@@ -1981,9 +2074,15 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                 .informationPanelOnLeft;
                                         final infoPanelExtent =
                                             availableWidth - gamePanelExtent;
+                                        final menuNavigationExtent =
+                                            workspaceNavigationExtent(
+                                              widget
+                                                  .layoutSettingsController
+                                                  .uiDisplaySize,
+                                            );
 
                                         final topMenuExtent = menuTop
-                                            ? _workspaceNavigationExtent
+                                            ? menuNavigationExtent
                                             : 0.0;
                                         final topMenuY =
                                             hdGeometry?.gameHeight ??
@@ -2085,26 +2184,32 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                             !widget
                                                                 .layoutSettingsController
                                                                 .workspaceMenuOnRight
-                                                        ? _workspaceNavigationExtent
+                                                        ? menuNavigationExtent
                                                         : 0),
                                               top: isLandscape
                                                   ? 0
                                                   : gamePanelExtent +
                                                         dividerExtent +
                                                         topMenuExtent,
-                                              width: isLandscape
-                                                  ? infoPanelExtent
-                                                  : constraints.maxWidth -
-                                                        (panelAlignedNavigation &&
-                                                                !menuHorizontal
-                                                            ? _workspaceNavigationExtent
-                                                            : 0),
-                                              height: isLandscape
-                                                  ? constraints.maxHeight
-                                                  : constraints.maxHeight -
-                                                        gamePanelExtent -
-                                                        dividerExtent -
-                                                        topMenuExtent,
+                                              width: math.max(
+                                                0.0,
+                                                isLandscape
+                                                    ? infoPanelExtent
+                                                    : constraints.maxWidth -
+                                                          (panelAlignedNavigation &&
+                                                                  !menuHorizontal
+                                                              ? menuNavigationExtent
+                                                              : 0),
+                                              ),
+                                              height: math.max(
+                                                0.0,
+                                                isLandscape
+                                                    ? constraints.maxHeight
+                                                    : constraints.maxHeight -
+                                                          gamePanelExtent -
+                                                          dividerExtent -
+                                                          topMenuExtent,
+                                              ),
                                               child: Offstage(
                                                 offstage: _gameFullscreen,
                                                 child: Padding(
@@ -2139,18 +2244,24 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                     hdGeometry.gameHeight +
                                                     topMenuExtent,
                                                 width: hdGeometry.gameWidth,
-                                                height:
-                                                    hdGeometry.bottomHeight -
-                                                    topMenuExtent,
+                                                height: math.max(
+                                                  0.0,
+                                                  hdGeometry.bottomHeight -
+                                                      topMenuExtent,
+                                                ),
                                                 child: Offstage(
                                                   offstage: _gameFullscreen,
                                                   child: HdBottomStrip(
                                                     editing: _hdEditing,
-                                                    onStartEditing: () =>
-                                                        setState(
-                                                          () =>
-                                                              _hdEditing = true,
-                                                        ),
+                                                    onStartEditing: widget
+                                                            .layoutSettingsController
+                                                            .uiLocked
+                                                        ? null
+                                                        : () => setState(
+                                                              () =>
+                                                                  _hdEditing =
+                                                                      true,
+                                                            ),
                                                     controller: widget
                                                         .layoutSettingsController,
                                                     moduleBuilder: (module) =>
@@ -2173,7 +2284,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                               .workspaceMenuOnRight
                                                           ? constraints
                                                                     .maxWidth -
-                                                                _workspaceNavigationExtent
+                                                                menuNavigationExtent
                                                           : 0),
                                                 top: menuHorizontal
                                                     ? topMenuY
@@ -2184,12 +2295,15 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                           ? gamePanelExtent
                                                           : constraints
                                                                 .maxWidth)
-                                                    : _workspaceNavigationExtent,
+                                                    : menuNavigationExtent,
                                                 height: menuHorizontal
-                                                    ? _workspaceNavigationExtent
-                                                    : constraints.maxHeight -
-                                                          gamePanelExtent -
-                                                          dividerExtent,
+                                                    ? menuNavigationExtent
+                                                    : math.max(
+                                                        0.0,
+                                                        constraints.maxHeight -
+                                                            gamePanelExtent -
+                                                            dividerExtent,
+                                                      ),
                                                 child:
                                                     buildWorkspaceNavigation(),
                                               ),
@@ -2379,6 +2493,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                       widget.showDeveloperDiagnostics,
                                   diagnosticController:
                                       widget.diagnosticController,
+                                  telemetryController:
+                                      widget.telemetryController,
                                   selectedIndex: _settingsTabIndex,
                                 ),
                               if (_workspaceIndex == 9 &&
@@ -2415,8 +2531,6 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
   }
 }
 
-const double _workspaceNavigationExtent = 41;
-
 class WorkspaceNavigation extends StatelessWidget {
   const WorkspaceNavigation({
     super.key,
@@ -2440,15 +2554,19 @@ class WorkspaceNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final menuSize = controller.uiDisplaySize;
+    final menuExtent = workspaceNavigationExtent(menuSize);
+    final isCompact = menuSize == UiDisplaySize.compact;
+    final itemExtent = isCompact ? 50.0 : 52.0;
     return SecondTickBuilder(
       now: clock,
       enabled: gameStateController != null,
       builder: (context, now, _) => Container(
         width: controller.workspaceMenuHorizontal
             ? null
-            : _workspaceNavigationExtent,
+            : menuExtent,
         height: controller.workspaceMenuHorizontal
-            ? _workspaceNavigationExtent
+            ? menuExtent
             : null,
         decoration: BoxDecoration(
           color: const Color(0xff0a1823),
@@ -2470,7 +2588,7 @@ class WorkspaceNavigation extends StatelessWidget {
             return LayoutBuilder(
               builder: (context, constraints) {
                 final centeredPadding =
-                    (constraints.maxWidth - ordered.length * 50) / 2;
+                    (constraints.maxWidth - ordered.length * itemExtent) / 2;
                 return ReorderableListView.builder(
                   key: const Key('workspace-navigation-list'),
                   scrollDirection: controller.workspaceMenuHorizontal
@@ -2482,7 +2600,7 @@ class WorkspaceNavigation extends StatelessWidget {
                               ? centeredPadding
                               : 10,
                         )
-                      : const EdgeInsets.symmetric(vertical: 10),
+                      : EdgeInsets.symmetric(vertical: isCompact ? 10 : 8),
                   buildDefaultDragHandles: false,
                   itemCount: ordered.length,
                   onReorderItem: controller.reorderWorkspaceMenu,
@@ -2490,9 +2608,12 @@ class WorkspaceNavigation extends StatelessWidget {
                     final destination = ordered[index];
                     return SizedBox(
                       key: ValueKey('workspace-nav-item-${destination.id}'),
-                      width: controller.workspaceMenuHorizontal ? 50 : null,
-                      height: controller.workspaceMenuHorizontal ? null : 50,
-                      child: Center(
+                      width: controller.workspaceMenuHorizontal ? itemExtent : null,
+                      height: controller.workspaceMenuHorizontal ? null : itemExtent,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => onSelected(destination.pageIndex),
+                        child: Center(
                         child: ReorderableDelayedDragStartListener(
                           index: index,
                           child: _NavigationButton(
@@ -2500,6 +2621,7 @@ class WorkspaceNavigation extends StatelessWidget {
                             icon: destination.icon,
                             label: destination.label,
                             horizontal: controller.workspaceMenuHorizontal,
+                            menuSize: menuSize,
                             completedCount: switch (destination.id) {
                               'quests' => completedQuestCount,
                               'expedition' =>
@@ -2548,8 +2670,9 @@ class WorkspaceNavigation extends StatelessWidget {
                           ),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  );
+                },
                 );
               },
             );
@@ -2656,6 +2779,7 @@ class _NavigationButton extends StatelessWidget {
     this.countKey = const Key("quest-completion-count"),
     this.countLabel,
     this.horizontal = true,
+    this.menuSize = UiDisplaySize.normal,
   });
 
   final IconData icon;
@@ -2666,10 +2790,15 @@ class _NavigationButton extends StatelessWidget {
   final Key countKey;
   final String? countLabel;
   final bool horizontal;
+  final UiDisplaySize menuSize;
 
   @override
   Widget build(BuildContext context) {
-    final btnSize = horizontal ? const Size(42, 35) : const Size(35, 42);
+    final isCompact = menuSize == UiDisplaySize.compact;
+    final btnSize = horizontal
+        ? (isCompact ? const Size(42, 35) : const Size(44, 40))
+        : (isCompact ? const Size(35, 42) : const Size(40, 44));
+    final iconSize = isCompact ? 20.0 : 22.0;
     return Semantics(
       label: label,
       child: SizedBox(
@@ -2699,7 +2828,7 @@ class _NavigationButton extends StatelessWidget {
             semanticLabel: countLabel == null
                 ? null
                 : "$countLabel: $completedCount",
-            child: Icon(icon, size: 20),
+            child: Icon(icon, size: iconSize),
           ),
         ),
       ),
@@ -2765,9 +2894,37 @@ class _InformationPanelState extends State<_InformationPanel> {
   final Set<String> _hdCollapsed = {};
 
   @override
+  void initState() {
+    super.initState();
+    widget.layoutSettingsController.addListener(_handleLayoutSettingsChanged);
+  }
+
+  @override
   void didUpdateWidget(covariant _InformationPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.hd != widget.hd) _isEditing = false;
+    if (oldWidget.layoutSettingsController !=
+        widget.layoutSettingsController) {
+      oldWidget.layoutSettingsController.removeListener(
+        _handleLayoutSettingsChanged,
+      );
+      widget.layoutSettingsController.addListener(_handleLayoutSettingsChanged);
+    }
+    if (oldWidget.hd != widget.hd || widget.layoutSettingsController.uiLocked) {
+      _isEditing = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.layoutSettingsController.removeListener(_handleLayoutSettingsChanged);
+    super.dispose();
+  }
+
+  void _handleLayoutSettingsChanged() {
+    if (!mounted) return;
+    if (widget.layoutSettingsController.uiLocked && _isEditing) {
+      setState(() => _isEditing = false);
+    }
   }
 
   @override
@@ -2800,7 +2957,9 @@ class _InformationPanelState extends State<_InformationPanel> {
               widget.gameCaptureController.state ==
                   GameCaptureState.unsupported;
 
-          final editing = widget.hd ? widget.hdEditing : _isEditing;
+          final editing =
+              (widget.hd ? widget.hdEditing : _isEditing) &&
+              !widget.layoutSettingsController.uiLocked;
           final collapsedIds =
               widget.layoutSettingsController.dashboardCardCollapsed;
           final hiddenIds = widget.hd
@@ -3112,7 +3271,16 @@ class _InformationPanelState extends State<_InformationPanel> {
             return GestureDetector(
               onLongPress: editing
                   ? null
-                  : () => widget.onHdEditingChanged?.call(true),
+                  : () {
+                      if (widget.layoutSettingsController.uiLocked) {
+                        final l10n =
+                            AppLocalizations.of(context) ??
+                            lookupAppLocalizations(const Locale('zh'));
+                        TopNotice.show(context, message: l10n.uiLockedToast);
+                        return;
+                      }
+                      widget.onHdEditingChanged?.call(true);
+                    },
               child: LayoutBuilder(
                 builder: (context, constraints) => SingleChildScrollView(
                   key: ValueKey('hd-scroll-${widget.singleModule}'),
@@ -3131,9 +3299,20 @@ class _InformationPanelState extends State<_InformationPanel> {
           return GestureDetector(
             onLongPress: editing
                 ? null
-                : widget.hd
-                ? () => widget.onHdEditingChanged?.call(true)
-                : () => setState(() => _isEditing = true),
+                : () {
+                    if (widget.layoutSettingsController.uiLocked) {
+                      final l10n =
+                          AppLocalizations.of(context) ??
+                          lookupAppLocalizations(const Locale('zh'));
+                      TopNotice.show(context, message: l10n.uiLockedToast);
+                      return;
+                    }
+                    if (widget.hd) {
+                      widget.onHdEditingChanged?.call(true);
+                    } else {
+                      setState(() => _isEditing = true);
+                    }
+                  },
             child: ListView(
               primary: widget.hd ? false : null,
               key: widget.singleModule == null

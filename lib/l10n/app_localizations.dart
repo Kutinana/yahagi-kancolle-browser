@@ -117,6 +117,30 @@ abstract class AppLocalizations {
   /// **'退出'**
   String get exitFullscreenShort;
 
+  /// No description provided for @exitFullscreenConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定退出游戏全屏？'**
+  String get exitFullscreenConfirmTitle;
+
+  /// No description provided for @exitFullscreenConfirmDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出全屏后将恢复控制台与工具栏显示。'**
+  String get exitFullscreenConfirmDescription;
+
+  /// No description provided for @exitFullscreenSkipConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'下次不再提醒'**
+  String get exitFullscreenSkipConfirmation;
+
+  /// No description provided for @exitFullscreenConfirmAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出全屏'**
+  String get exitFullscreenConfirmAction;
+
   /// No description provided for @gameFullscreenHint.
   ///
   /// In zh, this message translates to:
@@ -290,6 +314,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'仅记录性能和错误摘要，不包含账号、密码或登录凭据'**
   String get diagnosticLoggingDesc;
+
+  /// No description provided for @telemetryAnonymousStatsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'匿名设备与使用统计'**
+  String get telemetryAnonymousStatsTitle;
+
+  /// No description provided for @telemetryAnonymousStatsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮助统计当前在线提督人数、日活跃量与机型/WebView版本分布以协助优化。仅包含设备环境信息，绝不收集任何游戏账号、密码或网络凭据。'**
+  String get telemetryAnonymousStatsDesc;
 
   /// No description provided for @diagnosticPrivacyTitle.
   ///
@@ -500,6 +536,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'界面与布局'**
   String get layoutSettings;
+
+  /// No description provided for @uiDisplaySizeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'界面UI大小'**
+  String get uiDisplaySizeTitle;
+
+  /// No description provided for @uiDisplaySizeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整顶部状态栏与导航菜单栏的显示尺寸'**
+  String get uiDisplaySizeDesc;
+
+  /// No description provided for @uiDisplaySizeNormal.
+  ///
+  /// In zh, this message translates to:
+  /// **'普通'**
+  String get uiDisplaySizeNormal;
+
+  /// No description provided for @uiDisplaySizeCompact.
+  ///
+  /// In zh, this message translates to:
+  /// **'紧凑'**
+  String get uiDisplaySizeCompact;
 
   /// No description provided for @gameAreaRatio.
   ///
@@ -4311,18 +4371,6 @@ abstract class AppLocalizations {
   /// **'确认刷新'**
   String get frameRefreshShortcutConfirmAction;
 
-  /// No description provided for @mouseRightClickFrameRefresh.
-  ///
-  /// In zh, this message translates to:
-  /// **'鼠标右键刷新框架'**
-  String get mouseRightClickFrameRefresh;
-
-  /// No description provided for @mouseRightClickFrameRefreshDescription.
-  ///
-  /// In zh, this message translates to:
-  /// **'开启后，在游戏画面内按鼠标右键可直接刷新游戏框架。触屏长按不会触发。'**
-  String get mouseRightClickFrameRefreshDescription;
-
   /// No description provided for @gameFrameNotFound.
   ///
   /// In zh, this message translates to:
@@ -5763,6 +5811,306 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'右'**
   String get menuPositionRight;
+
+  /// No description provided for @topNoticeSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'顶栏消息通知'**
+  String get topNoticeSectionTitle;
+
+  /// No description provided for @topNoticeEnabledTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'顶栏通知'**
+  String get topNoticeEnabledTitle;
+
+  /// No description provided for @topNoticeEnabledSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'在顶栏「ヤハギ」右侧显示开发、改修、出击检查与任务完成提示'**
+  String get topNoticeEnabledSubtitle;
+
+  /// No description provided for @topNoticeDurationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'提示停留时间'**
+  String get topNoticeDurationTitle;
+
+  /// No description provided for @topNoticeDurationSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'消息气泡弹出后无操作自动收起的时长'**
+  String get topNoticeDurationSubtitle;
+
+  /// No description provided for @topNoticeDuration5s.
+  ///
+  /// In zh, this message translates to:
+  /// **'5 秒 (默认)'**
+  String get topNoticeDuration5s;
+
+  /// No description provided for @topNoticeDuration10s.
+  ///
+  /// In zh, this message translates to:
+  /// **'10 秒'**
+  String get topNoticeDuration10s;
+
+  /// No description provided for @topNoticeDuration15s.
+  ///
+  /// In zh, this message translates to:
+  /// **'15 秒'**
+  String get topNoticeDuration15s;
+
+  /// No description provided for @questCompletionSingleNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务达成：{title}'**
+  String questCompletionSingleNotice(String title);
+
+  /// No description provided for @questCompletionMultiNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个任务已达成，请前往任务界面'**
+  String questCompletionMultiNotice(int count);
+
+  /// No description provided for @noticeDevSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} 开发成功'**
+  String noticeDevSuccess(String name);
+
+  /// No description provided for @noticeDevFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备开发失败'**
+  String get noticeDevFailed;
+
+  /// No description provided for @noticeDevFailedPenguin.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备开发失败'**
+  String get noticeDevFailedPenguin;
+
+  /// No description provided for @noticeDevSlotFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'开发失败'**
+  String get noticeDevSlotFailed;
+
+  /// No description provided for @noticeDevDefaultName.
+  ///
+  /// In zh, this message translates to:
+  /// **'新装备'**
+  String get noticeDevDefaultName;
+
+  /// No description provided for @noticeModFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'近代化改修失败'**
+  String get noticeModFailed;
+
+  /// No description provided for @noticeModSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'近代化改修成功'**
+  String get noticeModSuccess;
+
+  /// No description provided for @noticeModSuccessDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'改修成功：{stats}'**
+  String noticeModSuccessDetail(String stats);
+
+  /// No description provided for @noticeModSuccessMaxCap.
+  ///
+  /// In zh, this message translates to:
+  /// **'改修成功 (属性已达上限)'**
+  String get noticeModSuccessMaxCap;
+
+  /// No description provided for @statFirepower.
+  ///
+  /// In zh, this message translates to:
+  /// **'火力'**
+  String get statFirepower;
+
+  /// No description provided for @statTorpedo.
+  ///
+  /// In zh, this message translates to:
+  /// **'雷装'**
+  String get statTorpedo;
+
+  /// No description provided for @statAntiAir.
+  ///
+  /// In zh, this message translates to:
+  /// **'对空'**
+  String get statAntiAir;
+
+  /// No description provided for @statArmor.
+  ///
+  /// In zh, this message translates to:
+  /// **'装甲'**
+  String get statArmor;
+
+  /// No description provided for @statLuck.
+  ///
+  /// In zh, this message translates to:
+  /// **'运'**
+  String get statLuck;
+
+  /// No description provided for @statHp.
+  ///
+  /// In zh, this message translates to:
+  /// **'耐久'**
+  String get statHp;
+
+  /// No description provided for @statAsw.
+  ///
+  /// In zh, this message translates to:
+  /// **'对潜'**
+  String get statAsw;
+
+  /// No description provided for @noticeMarriageLuck.
+  ///
+  /// In zh, this message translates to:
+  /// **'誓约运提升：运 {arrow} +{delta} / +{remaining}'**
+  String noticeMarriageLuck(String arrow, int delta, int remaining);
+
+  /// No description provided for @noticeMarriageLuckMax.
+  ///
+  /// In zh, this message translates to:
+  /// **'誓约运提升：运 {arrow} +{delta} / MAX'**
+  String noticeMarriageLuckMax(String arrow, int delta);
+
+  /// No description provided for @noticePracticeExp.
+  ///
+  /// In zh, this message translates to:
+  /// **'演习对手经验: {baseExp} (S胜: {sExp} · A胜: {aExp} EXP)'**
+  String noticePracticeExp(int baseExp, int sExp, int aExp);
+
+  /// No description provided for @noticePracticeExpCtBonus.
+  ///
+  /// In zh, this message translates to:
+  /// **'演习对手经验: {baseExp} | 练巡加成: +{bonus} (S胜: {sExp} EXP)'**
+  String noticePracticeExpCtBonus(int baseExp, String bonus, int sExp);
+
+  /// No description provided for @noticeSortieShipFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'母港船位已满！出击将无法获得新舰娘'**
+  String get noticeSortieShipFull;
+
+  /// No description provided for @noticeSortieShipLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'船位仅剩 {count} 个，请注意母港容量'**
+  String noticeSortieShipLow(int count);
+
+  /// No description provided for @noticeSortieItemFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备槽已满！出击将无法获得新装备'**
+  String get noticeSortieItemFull;
+
+  /// No description provided for @noticeSortieItemLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备槽仅剩 {count} 个，请注意母港容量'**
+  String noticeSortieItemLow(int count);
+
+  /// No description provided for @noticeSortieShipAndItemFull.
+  ///
+  /// In zh, this message translates to:
+  /// **'母港船位与装备槽已满！出击将无法获得新舰娘与装备'**
+  String get noticeSortieShipAndItemFull;
+
+  /// No description provided for @noticeSortieShipAndItemLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'船位仅剩 {shipCount} 个 · 装备槽仅剩 {itemCount} 个，请注意母港容量'**
+  String noticeSortieShipAndItemLow(int shipCount, int itemCount);
+
+  /// No description provided for @noticeSortieExpansionSlotUnused.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰队中有未使用的补强增设插槽'**
+  String get noticeSortieExpansionSlotUnused;
+
+  /// No description provided for @noticePreSortieCheckFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'出击前检查未通过：{reasons}'**
+  String noticePreSortieCheckFailed(String reasons);
+
+  /// No description provided for @noticeSortieReasonUnresupplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'未补满补给'**
+  String get noticeSortieReasonUnresupplied;
+
+  /// No description provided for @noticeSortieReasonFatigue.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰娘疲劳 (黄脸/红脸)'**
+  String get noticeSortieReasonFatigue;
+
+  /// No description provided for @noticeSortieReasonMainSlot.
+  ///
+  /// In zh, this message translates to:
+  /// **'主装备槽未装满'**
+  String get noticeSortieReasonMainSlot;
+
+  /// No description provided for @noticeSortieReasonExpansionSlot.
+  ///
+  /// In zh, this message translates to:
+  /// **'补强增设插槽闲置'**
+  String get noticeSortieReasonExpansionSlot;
+
+  /// No description provided for @lockUi.
+  ///
+  /// In zh, this message translates to:
+  /// **'锁定界面'**
+  String get lockUi;
+
+  /// No description provided for @unlockUi.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁界面'**
+  String get unlockUi;
+
+  /// No description provided for @uiLockedToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'界面已锁定，长按不会进入自定义'**
+  String get uiLockedToast;
+
+  /// No description provided for @uiUnlockedToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'界面已解锁'**
+  String get uiUnlockedToast;
+
+  /// No description provided for @uiLockTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'锁定界面布局'**
+  String get uiLockTitle;
+
+  /// No description provided for @uiLockDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'锁定后长按卡片与顶栏资源不会进入自定义编辑，防止误触'**
+  String get uiLockDesc;
+
+  /// No description provided for @filterVisibleItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选显示项目'**
+  String get filterVisibleItems;
+
+  /// No description provided for @selectHeaderVisibleItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择顶部显示项目'**
+  String get selectHeaderVisibleItems;
 }
 
 class _AppLocalizationsDelegate

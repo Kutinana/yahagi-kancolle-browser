@@ -254,6 +254,91 @@ void main() {
       }
     },
   );
+
+  testWidgets(
+    'fatigue warning is triggered for both yellow face (30-39) and red face (< 30), but not for >= 40',
+    (tester) async {
+      Future<void> testCondition(int condition, bool shouldWarn) async {
+        final state = GameState(
+          hasMasterData: true,
+          hasPortData: true,
+          masterShips: const {
+            1: MasterShip(
+              id: 1,
+              name: '吹雪',
+              shipTypeId: 2,
+              maxFuel: 20,
+              maxAmmo: 20,
+              slotCount: 1,
+            ),
+          },
+          ships: {
+            1: OwnedShip(
+              id: 1,
+              masterId: 1,
+              level: 50,
+              currentHp: 30,
+              maxHp: 30,
+              currentFuel: 20,
+              currentAmmo: 20,
+              condition: condition,
+              slotIds: const [101],
+              extraSlotId: 0,
+            ),
+          },
+          fleets: const [
+            Fleet(id: 1, name: '第1舰队', shipIds: [1]),
+          ],
+        );
+        final controller = GameStateController(
+          gameStateStore: _StaticStore(state),
+        );
+        await controller.initialize();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: PreSortieCheckSummary(
+                controller: controller,
+                collapsed: false,
+                onToggleCollapse: () {},
+                onOpenFleet: (_) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final finder = find.text('第1舰队 舰娘疲劳未恢复');
+        if (shouldWarn) {
+          expect(finder, findsOneWidget, reason: 'Condition $condition should trigger fatigue warning');
+        } else {
+          expect(finder, findsNothing, reason: 'Condition $condition should NOT trigger fatigue warning');
+        }
+      }
+
+      // Red face (< 30)
+      await testCondition(20, true);
+      await testCondition(29, true);
+
+      // Yellow face (30 - 39)
+      await testCondition(30, true);
+      await testCondition(35, true);
+      await testCondition(39, true);
+
+      // Normal (>= 40)
+      await testCondition(40, false);
+      await testCondition(49, false);
+
+      // Sparkle (>= 50)
+      await testCondition(50, false);
+      await testCondition(85, false);
+    },
+  );
 }
 
 class _StaticStore extends GameStateStore {

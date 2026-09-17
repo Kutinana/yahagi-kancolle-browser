@@ -20,6 +20,7 @@ import '../logbook/logbook_database.dart';
 import '../prototype_status_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../senka/senka_controller.dart';
+import '../telemetry/telemetry_controller.dart';
 import '../kcwiki_report/kcwiki_report_settings.dart';
 import '../widgets/top_notice.dart';
 import '../widgets/adaptive_input_dialog.dart';
@@ -48,6 +49,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.fcdMapController,
     this.questCatalogController,
     this.improvementPlannerController,
+    this.telemetryController,
   });
 
   final CaptureModeController captureModeController;
@@ -64,6 +66,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final FcdMapController? fcdMapController;
   final QuestCatalogController? questCatalogController;
   final ImprovementPlannerController? improvementPlannerController;
+  final TelemetryController? telemetryController;
 
   AccountSession get _accountSession =>
       gameStateController.accountSession ?? LogbookDatabase.accountSession;
@@ -140,6 +143,19 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                         onChanged: diagnostics.setEnabled,
                       ),
                     ),
+                    if (telemetryController case final telemetry?) ...<Widget>[
+                      const Divider(color: Color(0xff294052), height: 1),
+                      AnimatedBuilder(
+                        animation: telemetry,
+                        builder: (context, _) => buildSwitchTile(
+                          switchKey: const Key('telemetryStatsSwitch'),
+                          title: l10n.telemetryAnonymousStatsTitle,
+                          subtitle: l10n.telemetryAnonymousStatsDesc,
+                          value: telemetry.enabled,
+                          onChanged: telemetry.setEnabled,
+                        ),
+                      ),
+                    ],
                     const Divider(color: Color(0xff294052), height: 1),
                     DiagnosticUserSection(controller: diagnostics),
                   ],
