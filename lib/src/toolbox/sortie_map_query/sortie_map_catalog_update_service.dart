@@ -62,6 +62,7 @@ final class SortieMapCatalogUpdateService
     this.timeout = const Duration(seconds: 20),
     this.maximumManifestBytes = 64 * 1024,
     this.maximumArchiveBytes = 64 * 1024 * 1024,
+    this.beforeBodyRead,
   });
 
   final http.Client client;
@@ -70,6 +71,7 @@ final class SortieMapCatalogUpdateService
   final Duration timeout;
   final int maximumManifestBytes;
   final int maximumArchiveBytes;
+  final Future<void> Function(Uri uri)? beforeBodyRead;
 
   @override
   Future<SortieMapCatalogUpdateResult> checkAndUpdate({
@@ -251,6 +253,7 @@ final class SortieMapCatalogUpdateService
       await _discardResponse(response, responseAbort!);
       throw const FormatException('Sortie update response is too large.');
     }
+    await beforeBodyRead?.call(requestUri);
     return _readResponse(response, maximumBytes, deadline, responseAbort!);
   }
 }
@@ -289,15 +292,6 @@ Future<Uint8List> _readResponse(
   final bytes = BytesBuilder(copy: false);
   final result = Completer<Uint8List>();
   late StreamSubscription<List<int>> subscription;
-  final timer = Timer(_remaining(deadline), () {
-    if (!result.isCompleted) {
-      result.completeError(
-        TimeoutException('Sortie update response timed out.'),
-      );
-    }
-    if (!abort.isCompleted) abort.complete();
-    unawaited(subscription.cancel());
-  });
   subscription = response.stream.listen(
     (chunk) {
       if (result.isCompleted) return;
@@ -319,10 +313,23 @@ Future<Uint8List> _readResponse(
     },
     cancelOnError: true,
   );
+  Timer? timer;
   try {
+    timer = Timer(_remaining(deadline), () {
+      if (!result.isCompleted) {
+        result.completeError(
+          TimeoutException('Sortie update response timed out.'),
+        );
+      }
+      if (!abort.isCompleted) abort.complete();
+      unawaited(subscription.cancel());
+    });
     return await result.future;
+  } on TimeoutException {
+    if (!abort.isCompleted) abort.complete();
+    rethrow;
   } finally {
-    timer.cancel();
+    timer?.cancel();
     await subscription.cancel();
   }
 }
