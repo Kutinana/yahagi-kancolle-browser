@@ -109,6 +109,9 @@ test/fixtures/poi_ezexped/*
 !test/fixtures/poi_ezexped/expedition_rules.json
 test/*/fixtures/
 
+# Generated sortie data release packages
+/data/sortie/dist/
+
 # Local Git worktrees
 .worktrees/
 .superpowers/

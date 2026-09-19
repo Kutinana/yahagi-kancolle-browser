@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "2026.09.20",
+  "revision": 2026092001,
+  "publishedAt": "2026-09-20T00:00:00Z",
+  "minimumAppVersion": "1.0.8",
+  "archive": {
+    "tag": "sortie-data-2026.09.20",
+    "fileName": "sortie-data-2026.09.20.zip",
+    "bytes": 29937153,
+    "sha256": "560a9de2bfa70429ddb45f34bfe6f4ca87eac3b34d336f477c4832db13eb6981"
+  },
+  "counts": {
+    "maps": 37,
+    "nodes": 490,
+    "formations": 1446
+  }
+}

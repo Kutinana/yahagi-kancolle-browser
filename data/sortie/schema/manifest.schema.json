@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yamatosaki/yahagi-kancolle-browser/data/sortie/schema/manifest.schema.json",
+  "title": "Yahagi sortie map update manifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "dataVersion",
+    "revision",
+    "publishedAt",
+    "minimumAppVersion",
+    "archive",
+    "counts"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "dataVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+    "revision": {"type": "integer", "minimum": 1},
+    "publishedAt": {"type": "string", "format": "date-time"},
+    "minimumAppVersion": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"},
+    "archive": {
+      "type": "object",
+      "required": ["tag", "fileName", "bytes", "sha256"],
+      "properties": {
+        "tag": {"type": "string", "pattern": "^sortie-data-[0-9A-Za-z._-]+$"},
+        "fileName": {"type": "string", "pattern": "^sortie-data-[0-9A-Za-z._-]+\\.zip$"},
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "counts": {
+      "type": "object",
+      "required": ["maps", "nodes", "formations"],
+      "properties": {
+        "maps": {"type": "integer", "minimum": 1},
+        "nodes": {"type": "integer", "minimum": 1},
+        "formations": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

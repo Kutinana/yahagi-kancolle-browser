@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yamatosaki/yahagi-kancolle-browser/data/sortie/schema/catalog.schema.json",
+  "title": "Yahagi sortie map catalog",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "dataVersion",
+    "revision",
+    "publishedAt",
+    "source",
+    "maps"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "dataVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+    "revision": {"type": "integer", "minimum": 1},
+    "publishedAt": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "format": "uri"},
+    "maps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/map"}
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "map": {
+      "type": "object",
+      "required": [
+        "id",
+        "nameJa",
+        "difficulty",
+        "coverAsset",
+        "mapAsset",
+        "mapAspectRatio",
+        "nodes"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[0-9]+-[0-9]+$"},
+        "nameJa": {"type": "string", "minLength": 1},
+        "difficulty": {"type": "integer", "minimum": 0},
+        "coverAsset": {"type": "string", "minLength": 1},
+        "mapAsset": {"type": "string", "minLength": 1},
+        "mapAspectRatio": {"type": "number", "exclusiveMinimum": 0},
+        "nodes": {"type": "array"}
+      },
+      "additionalProperties": true
+    }
+  }
+}
