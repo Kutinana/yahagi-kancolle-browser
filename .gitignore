@@ -53,6 +53,7 @@ app.*.map.json
 /test_dmg_urls.dart
 /retreat_demo.html
 docs/superpowers/
+docs/testing/
 docs/internal/*
 docs/plans/
 docs/specs/
