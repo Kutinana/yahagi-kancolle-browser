@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
+import 'package:image/image.dart' as image;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
@@ -15,12 +17,14 @@ final class SortieMapCatalogInstallExpectation {
     required this.mapCount,
     required this.nodeCount,
     required this.formationCount,
+    this.minimumAppVersion = '0.0.0',
   });
 
   final SortieMapCatalogVersion version;
   final int mapCount;
   final int nodeCount;
   final int formationCount;
+  final String minimumAppVersion;
 }
 
 final class InstalledSortieMapCatalog {
@@ -45,12 +49,17 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
     this.maximumArchiveBytes = 64 * 1024 * 1024,
     this.maximumFiles = 256,
     this.maximumUncompressedBytes = 96 * 1024 * 1024,
+    this.currentAppVersion = '999.999.999',
+    this.phaseHook,
   });
 
-  static Future<FileSortieMapCatalogStore> create() async {
+  static Future<FileSortieMapCatalogStore> create({
+    required String currentAppVersion,
+  }) async {
     final support = await getApplicationSupportDirectory();
     return FileSortieMapCatalogStore(
       root: Directory(path.join(support.path, 'sortie-catalog')),
+      currentAppVersion: currentAppVersion,
     );
   }
 
@@ -58,6 +67,8 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
   final int maximumArchiveBytes;
   final int maximumFiles;
   final int maximumUncompressedBytes;
+  final String currentAppVersion;
+  final Future<void> Function(String phase)? phaseHook;
 
   File get _activeFile => File(path.join(root.path, 'active.json'));
 
@@ -83,43 +94,11 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
         'Sortie archive exceeds the safe input limit.',
       );
     }
-    final archive = ZipDecoder().decodeBytes(bytes, verify: true);
-    if (archive.isEmpty || archive.length > maximumFiles) {
-      throw const FormatException('Sortie archive file count is invalid.');
-    }
-
-    var totalBytes = 0;
-    final files = <String, Uint8List>{};
-    for (final item in archive) {
-      if (!item.isFile || item.isSymbolicLink) {
-        throw const FormatException(
-          'Sortie archive contains an unsupported entry.',
-        );
-      }
-      final name = item.name.replaceAll('\\', '/');
-      if (!_isSafeArchivePath(name) || !_isAllowedArchivePath(name)) {
-        throw FormatException('Unsafe sortie archive path: $name');
-      }
-      if (files.containsKey(name)) {
-        throw FormatException('Duplicate sortie archive path: $name');
-      }
-      if (item.size < 0 || totalBytes + item.size > maximumUncompressedBytes) {
-        throw const FormatException(
-          'Sortie archive expands beyond the safe limit.',
-        );
-      }
-      final content = item.readBytes();
-      if (content == null) {
-        throw FormatException('Cannot read sortie archive path: $name');
-      }
-      totalBytes += content.length;
-      if (totalBytes > maximumUncompressedBytes) {
-        throw const FormatException(
-          'Sortie archive expands beyond the safe limit.',
-        );
-      }
-      files[name] = content;
-    }
+    final files = _decodeArchiveSafely(
+      bytes,
+      maximumFiles: maximumFiles,
+      maximumUncompressedBytes: maximumUncompressedBytes,
+    );
 
     final rawCatalog = files['sortie_map_catalog.json'];
     if (rawCatalog == null) {
@@ -128,8 +107,11 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
     final data = SortieMapCatalogData.fromJsonString(utf8.decode(rawCatalog));
     _validateCatalog(data, files);
     if (expected != null) _validateExpectation(data, expected);
+    final effectiveExpectation = expected ?? _expectationFrom(data);
+    final metadata = _buildInstallMetadata(effectiveExpectation, files);
 
     final versionName = data.revision.toString();
+    final previousPointer = await _readActivePointer();
     await root.create(recursive: true);
     final versions = Directory(path.join(root.path, 'versions'));
     await versions.create(recursive: true);
@@ -142,44 +124,118 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
         await target.parent.create(recursive: true);
         await target.writeAsBytes(entry.value, flush: true);
       }
+      await File(
+        path.join(staging.path, '.install-metadata.json'),
+      ).writeAsString(jsonEncode(metadata), flush: true);
       await _readInstalled(staging);
       final target = Directory(path.join(versions.path, versionName));
       final previous = Directory('${target.path}.previous');
       if (await previous.exists()) await previous.delete(recursive: true);
       if (await target.exists()) await target.rename(previous.path);
+      var committed = false;
       try {
+        await phaseHook?.call('beforeVersionRename');
         await staging.rename(target.path);
+        final installed = await _readInstalled(target);
+        await _writeActivePointer(versionName);
+        committed = true;
+        try {
+          await phaseHook?.call('beforeCleanup');
+          if (await previous.exists()) await previous.delete(recursive: true);
+          await _cleanupVersions(
+            versions,
+            keep: <String>{versionName, ?previousPointer},
+          );
+        } catch (_) {
+          // Cleanup happens after the atomic commit and must never turn a
+          // successful activation into a reported failure.
+        }
+        return installed;
       } catch (_) {
-        if (await previous.exists()) await previous.rename(target.path);
+        if (!committed) {
+          if (await target.exists()) await target.delete(recursive: true);
+          if (await previous.exists()) await previous.rename(target.path);
+        }
         rethrow;
       }
-      await _writeActivePointer(versionName);
-      if (await previous.exists()) await previous.delete(recursive: true);
-      return _readInstalled(target);
     } finally {
       if (await staging.exists()) await staging.delete(recursive: true);
     }
   }
 
   Future<InstalledSortieMapCatalog> _readInstalled(Directory directory) async {
-    final catalogFile = File(
-      path.join(directory.path, 'sortie_map_catalog.json'),
+    final canonicalRoot = await directory.resolveSymbolicLinks();
+    final metadataFile = await _resolveContainedFile(
+      canonicalRoot,
+      File(path.join(directory.path, '.install-metadata.json')),
+      '.install-metadata.json',
     );
-    final data = SortieMapCatalogData.fromJsonString(
-      await catalogFile.readAsString(),
+    final metadata = _parseInstallMetadata(await metadataFile.readAsString());
+    if (!SortieMapCatalogManifest.isVersionCompatible(
+      currentAppVersion,
+      metadata.minimumAppVersion,
+    )) {
+      throw const FormatException(
+        'Cached sortie catalog requires a newer app version.',
+      );
+    }
+    final catalogFile = await _resolveContainedFile(
+      canonicalRoot,
+      File(path.join(directory.path, 'sortie_map_catalog.json')),
+      'sortie_map_catalog.json',
     );
+    final catalogBytes = await catalogFile.readAsBytes();
+    final expectedCatalog = metadata.files['sortie_map_catalog.json'];
+    if (expectedCatalog == null ||
+        catalogBytes.length != expectedCatalog.bytes ||
+        sha256.convert(catalogBytes).toString() != expectedCatalog.sha256) {
+      throw const FormatException('Cached sortie catalog was tampered with.');
+    }
+    final data = SortieMapCatalogData.fromJsonString(utf8.decode(catalogBytes));
+    _validateCatalogStructure(data);
+    _validateExpectation(data, metadata.expectation);
+    final expectedPaths = <String>{'sortie_map_catalog.json'};
     for (final map in data.maps) {
       for (final logical in <String>[map.coverAsset, map.mapAsset]) {
-        final file = File(path.join(directory.path, logical));
-        if (!await file.exists() ||
-            !_hasPngSignature(
-              await file.openRead(0, 8).fold(<int>[], (a, b) => a..addAll(b)),
-            )) {
+        expectedPaths.add(logical);
+        final file = await _resolveContainedFile(
+          canonicalRoot,
+          File(path.join(directory.path, logical)),
+          logical,
+        );
+        final expectedFile = metadata.files[logical];
+        if (expectedFile == null) {
           throw FormatException('Invalid sortie image: $logical');
+        }
+        final bytes = await file.readAsBytes();
+        if (bytes.length != expectedFile.bytes ||
+            sha256.convert(bytes).toString() != expectedFile.sha256) {
+          throw FormatException('Tampered sortie image: $logical');
         }
       }
     }
+    if (metadata.files.keys.toSet().difference(expectedPaths).isNotEmpty ||
+        expectedPaths.difference(metadata.files.keys.toSet()).isNotEmpty) {
+      throw const FormatException(
+        'Cached sortie metadata has an unexpected file set.',
+      );
+    }
     return InstalledSortieMapCatalog(data: data, root: directory);
+  }
+
+  Future<File> _resolveContainedFile(
+    String canonicalRoot,
+    File file,
+    String logicalPath,
+  ) async {
+    if (!await file.exists()) {
+      throw FormatException('Missing cached sortie file: $logicalPath');
+    }
+    final canonicalFile = await file.resolveSymbolicLinks();
+    if (!path.isWithin(canonicalRoot, canonicalFile)) {
+      throw FormatException('Cached sortie file escapes root: $logicalPath');
+    }
+    return File(canonicalFile);
   }
 
   Future<String?> _readActivePointer() async {
@@ -209,12 +265,29 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
     if (await backup.exists()) await backup.delete();
     if (await _activeFile.exists()) await _activeFile.rename(backup.path);
     try {
+      await phaseHook?.call('beforePointerCommit');
       await temporary.rename(_activeFile.path);
-      if (await backup.exists()) await backup.delete();
     } catch (_) {
       if (await _activeFile.exists()) await _activeFile.delete();
       if (await backup.exists()) await backup.rename(_activeFile.path);
       rethrow;
+    }
+    try {
+      if (await backup.exists()) await backup.delete();
+    } catch (_) {
+      // The pointer rename above is the commit point. Backup cleanup is
+      // best-effort and cannot change a successful result into a failure.
+    }
+  }
+
+  Future<void> _cleanupVersions(
+    Directory versions, {
+    required Set<String> keep,
+  }) async {
+    await for (final entity in versions.list(followLinks: false)) {
+      if (entity is Directory && !keep.contains(path.basename(entity.path))) {
+        await entity.delete(recursive: true);
+      }
     }
   }
 }
@@ -235,12 +308,292 @@ bool _isAllowedArchivePath(String value) =>
     value == 'sortie_map_catalog.json' ||
     RegExp(r'^(covers|maps)/[A-Za-z0-9-]+\.png$').hasMatch(value);
 
+Map<String, Uint8List> _decodeArchiveSafely(
+  List<int> bytes, {
+  required int maximumFiles,
+  required int maximumUncompressedBytes,
+}) {
+  try {
+    final directory = ZipDirectory()
+      ..read(InputMemoryStream(Uint8List.fromList(bytes)));
+    final headers = directory.fileHeaders;
+    if (headers.isEmpty || headers.length > maximumFiles) {
+      throw const FormatException('Sortie archive file count is invalid.');
+    }
+
+    var declaredTotal = 0;
+    final names = <String>{};
+    for (final header in headers) {
+      final name = header.filename.replaceAll('\\', '/');
+      final unixMode = header.externalFileAttributes >> 16;
+      final fileType = unixMode & 0xf000;
+      final encrypted = header.generalPurposeBitFlag & 0x1 != 0;
+      if (encrypted ||
+          (header.compressionMethod != ZipFile.zipCompressionStore &&
+              header.compressionMethod != ZipFile.zipCompressionDeflate) ||
+          (fileType != 0 && fileType != 0x8000)) {
+        throw const FormatException(
+          'Sortie archive contains an unsupported entry.',
+        );
+      }
+      if (!_isSafeArchivePath(name) || !_isAllowedArchivePath(name)) {
+        throw FormatException('Unsafe sortie archive path: $name');
+      }
+      if (!names.add(name)) {
+        throw FormatException('Duplicate sortie archive path: $name');
+      }
+      if (header.compressedSize < 0 ||
+          header.compressedSize > bytes.length ||
+          header.uncompressedSize < 0 ||
+          declaredTotal + header.uncompressedSize > maximumUncompressedBytes) {
+        throw const FormatException(
+          'Sortie archive expands beyond the safe limit.',
+        );
+      }
+      declaredTotal += header.uncompressedSize;
+    }
+
+    var actualTotal = 0;
+    final files = <String, Uint8List>{};
+    for (final header in headers) {
+      final remaining = maximumUncompressedBytes - actualTotal;
+      final output = _BoundedOutputMemoryStream(maximumBytes: remaining);
+      final file = header.file;
+      if (file == null) {
+        throw FormatException(
+          'Cannot read sortie archive path: ${header.filename}',
+        );
+      }
+      file.decompress(output);
+      final content = output.getBytes();
+      if (content.length != header.uncompressedSize ||
+          getCrc32(content) != header.crc32) {
+        throw FormatException(
+          'Sortie archive entry integrity check failed: ${header.filename}',
+        );
+      }
+      actualTotal += content.length;
+      files[header.filename.replaceAll('\\', '/')] = content;
+    }
+    return files;
+  } on FormatException {
+    rethrow;
+  } on Object catch (error) {
+    throw FormatException('Sortie archive cannot be decoded.', error);
+  }
+}
+
+final class _BoundedOutputMemoryStream extends OutputStream {
+  _BoundedOutputMemoryStream({required this.maximumBytes})
+    : super(byteOrder: ByteOrder.littleEndian);
+
+  final int maximumBytes;
+  final BytesBuilder _builder = BytesBuilder(copy: false);
+
+  @override
+  int get length => _builder.length;
+
+  void _reserve(int count) {
+    if (count < 0 || length + count > maximumBytes) {
+      throw const FormatException(
+        'Sortie archive actual output exceeds the safe limit.',
+      );
+    }
+  }
+
+  @override
+  void writeByte(int value) {
+    _reserve(1);
+    _builder.addByte(value);
+  }
+
+  @override
+  void writeBytes(List<int> bytes, {int? length}) {
+    final count = length ?? bytes.length;
+    _reserve(count);
+    _builder.add(count == bytes.length ? bytes : bytes.take(count).toList());
+  }
+
+  @override
+  void writeStream(InputStream stream) {
+    while (!stream.isEOS) {
+      final count = stream.length > 8192 ? 8192 : stream.length;
+      writeBytes(stream.readBytes(count).toUint8List());
+    }
+  }
+
+  @override
+  Uint8List subset(int start, [int? end]) {
+    final bytes = _builder.toBytes();
+    final finish = end ?? bytes.length;
+    return Uint8List.sublistView(bytes, start, finish);
+  }
+
+  @override
+  void clear() => _builder.clear();
+
+  @override
+  void flush() {}
+}
+
+final class _CachedFileMetadata {
+  const _CachedFileMetadata({required this.bytes, required this.sha256});
+
+  final int bytes;
+  final String sha256;
+}
+
+final class _InstallMetadata {
+  const _InstallMetadata({
+    required this.expectation,
+    required this.minimumAppVersion,
+    required this.files,
+  });
+
+  final SortieMapCatalogInstallExpectation expectation;
+  final String minimumAppVersion;
+  final Map<String, _CachedFileMetadata> files;
+}
+
+SortieMapCatalogInstallExpectation _expectationFrom(
+  SortieMapCatalogData data,
+) => SortieMapCatalogInstallExpectation(
+  version: data.versionInfo,
+  mapCount: data.maps.length,
+  nodeCount: data.maps.fold<int>(0, (sum, map) => sum + map.nodes.length),
+  formationCount: data.maps.fold<int>(
+    0,
+    (sum, map) =>
+        sum +
+        map.nodes.fold<int>(
+          0,
+          (nodeSum, node) => nodeSum + node.formations.length,
+        ),
+  ),
+);
+
+Map<String, Object?> _buildInstallMetadata(
+  SortieMapCatalogInstallExpectation expectation,
+  Map<String, Uint8List> files,
+) => <String, Object?>{
+  'schemaVersion': 1,
+  'dataVersion': expectation.version.label,
+  'revision': expectation.version.revision,
+  'minimumAppVersion': expectation.minimumAppVersion,
+  'counts': <String, int>{
+    'maps': expectation.mapCount,
+    'nodes': expectation.nodeCount,
+    'formations': expectation.formationCount,
+  },
+  'files': <String, Object?>{
+    for (final entry in files.entries)
+      entry.key: <String, Object?>{
+        'bytes': entry.value.length,
+        'sha256': sha256.convert(entry.value).toString(),
+      },
+  },
+};
+
+_InstallMetadata _parseInstallMetadata(String raw) {
+  final decoded = jsonDecode(raw);
+  if (decoded is! Map<String, dynamic> || decoded['schemaVersion'] != 1) {
+    throw const FormatException('Cached sortie metadata is invalid.');
+  }
+  final dataVersion = decoded['dataVersion'];
+  final revision = decoded['revision'];
+  final minimumAppVersion = decoded['minimumAppVersion'];
+  final counts = decoded['counts'];
+  final rawFiles = decoded['files'];
+  if (dataVersion is! String ||
+      dataVersion.isEmpty ||
+      revision is! int ||
+      revision <= 0 ||
+      minimumAppVersion is! String ||
+      counts is! Map<String, dynamic> ||
+      rawFiles is! Map<String, dynamic>) {
+    throw const FormatException('Cached sortie metadata fields are invalid.');
+  }
+  int count(String key) {
+    final value = counts[key];
+    if (value is! int || value < 0) {
+      throw FormatException('Cached sortie count is invalid: $key');
+    }
+    return value;
+  }
+
+  final files = <String, _CachedFileMetadata>{};
+  for (final entry in rawFiles.entries) {
+    final value = entry.value;
+    if (!_isAllowedArchivePath(entry.key) ||
+        value is! Map<String, dynamic> ||
+        value['bytes'] is! int ||
+        (value['bytes'] as int) < 0 ||
+        value['sha256'] is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(value['sha256'] as String)) {
+      throw FormatException(
+        'Cached sortie file metadata is invalid: ${entry.key}',
+      );
+    }
+    files[entry.key] = _CachedFileMetadata(
+      bytes: value['bytes'] as int,
+      sha256: value['sha256'] as String,
+    );
+  }
+  final expectation = SortieMapCatalogInstallExpectation(
+    version: SortieMapCatalogVersion(label: dataVersion, revision: revision),
+    mapCount: count('maps'),
+    nodeCount: count('nodes'),
+    formationCount: count('formations'),
+    minimumAppVersion: minimumAppVersion,
+  );
+  return _InstallMetadata(
+    expectation: expectation,
+    minimumAppVersion: minimumAppVersion,
+    files: files,
+  );
+}
+
 void _validateCatalog(SortieMapCatalogData data, Map<String, Uint8List> files) {
-  if (data.schemaVersion != 1 || data.maps.isEmpty) {
+  _validateCatalogStructure(data);
+  final expected = <String>{'sortie_map_catalog.json'};
+  for (final map in data.maps) {
+    for (final logical in <String>[map.coverAsset, map.mapAsset]) {
+      final content = files[logical];
+      if (content == null ||
+          !_hasPngSignature(content) ||
+          !_hasSafePngDimensions(content)) {
+        throw FormatException('Missing sortie image: $logical');
+      }
+      image.Image? decoded;
+      try {
+        decoded = image.decodePng(content);
+      } on Object {
+        decoded = null;
+      }
+      if (decoded == null ||
+          decoded.width <= 0 ||
+          decoded.height <= 0 ||
+          decoded.width > 8192 ||
+          decoded.height > 8192 ||
+          decoded.width * decoded.height > 40 * 1000 * 1000) {
+        throw FormatException('Invalid sortie PNG: $logical');
+      }
+      expected.add(logical);
+    }
+  }
+  if (files.keys.toSet().difference(expected).isNotEmpty) {
+    throw const FormatException('Sortie archive contains unreferenced files.');
+  }
+}
+
+void _validateCatalogStructure(SortieMapCatalogData data) {
+  if (data.schemaVersion != 1 ||
+      data.revision <= 0 ||
+      data.dataVersion.isEmpty ||
+      data.maps.isEmpty) {
     throw const FormatException('Sortie catalog metadata is invalid.');
   }
   final mapIds = <String>{};
-  final expected = <String>{'sortie_map_catalog.json'};
   for (final map in data.maps) {
     if (!mapIds.add(map.id)) {
       throw FormatException('Duplicate sortie map id: ${map.id}');
@@ -255,11 +608,6 @@ void _validateCatalog(SortieMapCatalogData data, Map<String, Uint8List> files) {
       if (!_isAllowedArchivePath(image)) {
         throw FormatException('Unsafe sortie image path: $image');
       }
-      final content = files[image];
-      if (content == null || !_hasPngSignature(content)) {
-        throw FormatException('Missing sortie image: $image');
-      }
-      expected.add(image);
     }
     if (map.coverAsset != 'covers/${map.id}.png' ||
         map.mapAsset != 'maps/${map.id}.png') {
@@ -267,9 +615,6 @@ void _validateCatalog(SortieMapCatalogData data, Map<String, Uint8List> files) {
         'Sortie image names do not match map id: ${map.id}',
       );
     }
-  }
-  if (files.keys.toSet().difference(expected).isNotEmpty) {
-    throw const FormatException('Sortie archive contains unreferenced files.');
   }
 }
 
@@ -308,3 +653,22 @@ bool _hasPngSignature(List<int> bytes) =>
     bytes[5] == 10 &&
     bytes[6] == 26 &&
     bytes[7] == 10;
+
+bool _hasSafePngDimensions(List<int> bytes) {
+  if (bytes.length < 24 ||
+      ascii.decode(bytes.sublist(12, 16), allowInvalid: true) != 'IHDR') {
+    return false;
+  }
+  int uint32(int offset) =>
+      (bytes[offset] << 24) |
+      (bytes[offset + 1] << 16) |
+      (bytes[offset + 2] << 8) |
+      bytes[offset + 3];
+  final width = uint32(16);
+  final height = uint32(20);
+  return width > 0 &&
+      height > 0 &&
+      width <= 8192 &&
+      height <= 8192 &&
+      width * height <= 40 * 1000 * 1000;
+}

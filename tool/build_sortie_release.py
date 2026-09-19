@@ -63,7 +63,7 @@ def build_release(
     manifest_path: Path = DEFAULT_MANIFEST,
     dist_dir: Path = DEFAULT_DIST,
     *,
-    minimum_app_version: str = "1.0.8",
+    minimum_app_version: str = "1.0.8-beta.2",
 ) -> Path:
     catalog = _load_catalog(assets_root)
     archived = deepcopy(catalog)
@@ -147,7 +147,7 @@ def main() -> None:
     parser.add_argument("--assets-root", type=Path, default=DEFAULT_ASSETS_ROOT)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--dist", type=Path, default=DEFAULT_DIST)
-    parser.add_argument("--minimum-app-version", default="1.0.8")
+    parser.add_argument("--minimum-app-version", default="1.0.8-beta.2")
     args = parser.parse_args()
     archive = build_release(
         args.assets_root,

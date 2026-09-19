@@ -33,8 +33,9 @@
    python -m unittest tool.test_build_sortie_release -v
    ```
 
-5. 提交并推送源资料、随包快照与 `manifest.json`，然后创建清单中
-   `archive.tag` 对应的 GitHub Release，并上传 `data/sortie/dist/` 中名称与
-   `archive.fileName` 完全相同的 ZIP。
+5. 先创建清单中 `archive.tag` 对应的 GitHub Release，并上传
+   `data/sortie/dist/` 中名称与 `archive.fileName` 完全相同的 ZIP；下载复验
+   文件大小与 SHA-256 后，再提交并推送源资料、随包快照与 `manifest.json`。
+   这样客户端永远不会先读到一个尚未可下载的发布清单。
 
 发布前不要修改已发布标签下的文件；需要修正时应提高 `revision` 并使用新版本号和新标签。

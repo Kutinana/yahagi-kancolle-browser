@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:pub_semver/pub_semver.dart';
+
 final class SortieMapCatalogVersion
     implements Comparable<SortieMapCatalogVersion> {
   const SortieMapCatalogVersion({
@@ -90,7 +92,15 @@ final class SortieMapCatalogManifest {
   final int formationCount;
 
   bool isCompatibleWith(String appVersion) =>
-      _compareSemanticVersions(appVersion, minimumAppVersion) >= 0;
+      isVersionCompatible(appVersion, minimumAppVersion);
+
+  static bool isVersionCompatible(String appVersion, String minimumVersion) {
+    try {
+      return Version.parse(appVersion) >= Version.parse(minimumVersion);
+    } on FormatException {
+      return false;
+    }
+  }
 
   Uri get releaseUri => Uri.https(
     'github.com',
@@ -133,26 +143,4 @@ int _nonNegativeInt(Map<String, dynamic> json, String key) {
     throw FormatException('$key must be a non-negative integer.');
   }
   return value;
-}
-
-int _compareSemanticVersions(String left, String right) {
-  List<int>? parse(String value) {
-    final match = RegExp(r'^(\d+)\.(\d+)\.(\d+)').firstMatch(value);
-    return match == null
-        ? null
-        : <int>[
-            int.parse(match.group(1)!),
-            int.parse(match.group(2)!),
-            int.parse(match.group(3)!),
-          ];
-  }
-
-  final a = parse(left);
-  final b = parse(right);
-  if (a == null || b == null) return -1;
-  for (var index = 0; index < 3; index++) {
-    final result = a[index].compareTo(b[index]);
-    if (result != 0) return result;
-  }
-  return 0;
 }

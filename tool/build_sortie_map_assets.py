@@ -172,10 +172,36 @@ def _copy_trimmed_png(source: Path, target: Path) -> float:
     """Copy a PNG after removing its fully transparent outer rows and columns."""
     with Image.open(source) as image:
         rgba = image.convert("RGBA")
+        if (
+            rgba.width <= 0
+            or rgba.height <= 0
+            or rgba.width > 8192
+            or rgba.height > 8192
+            or rgba.width * rgba.height > 40_000_000
+        ):
+            raise ValueError(f"PNG dimensions exceed the safe limit: {source}")
         alpha_bounds = rgba.getchannel("A").getbbox()
         trimmed = rgba.crop(alpha_bounds) if alpha_bounds is not None else rgba
         trimmed.save(target)
         return trimmed.width / trimmed.height
+
+
+def _copy_validated_png(source: Path, target: Path) -> None:
+    """Validate the complete PNG payload and copy it to the asset snapshot."""
+    with Image.open(source) as image:
+        if image.format != "PNG":
+            raise ValueError(f"Expected a PNG image: {source}")
+        image.load()
+        width, height = image.size
+        if (
+            width <= 0
+            or height <= 0
+            or width > 8192
+            or height > 8192
+            or width * height > 40_000_000
+        ):
+            raise ValueError(f"PNG dimensions exceed the safe limit: {source}")
+    shutil.copy2(source, target)
 
 
 def build_assets(
@@ -289,7 +315,7 @@ def build_assets(
         map_source = _image_for(image_root / "路线图", map_id)
         cover_target = cover_output / f"{map_id}.png"
         map_target = map_output / f"{map_id}.png"
-        shutil.copy2(cover_source, cover_target)
+        _copy_validated_png(cover_source, cover_target)
         map_aspect_ratio = _copy_trimmed_png(map_source, map_target)
         maps.append(
             {

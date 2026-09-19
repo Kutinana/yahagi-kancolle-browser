@@ -342,13 +342,16 @@ Future<void> main() async {
   final bundledSortieMapCatalog = await SortieMapCatalog.loadAsset();
   late FileSortieMapCatalogStore sortieMapCatalogStore;
   try {
-    sortieMapCatalogStore = await FileSortieMapCatalogStore.create();
+    sortieMapCatalogStore = await FileSortieMapCatalogStore.create(
+      currentAppVersion: currentVersion,
+    );
   } catch (error) {
     debugPrint('海域资料目录不可用，改用临时缓存: $error');
     sortieMapCatalogStore = FileSortieMapCatalogStore(
       root: Directory(
         '${Directory.systemTemp.path}${Platform.pathSeparator}yahagi-sortie-catalog',
       ),
+      currentAppVersion: currentVersion,
     );
   }
   final cachedSortieMapCatalog = await sortieMapCatalogStore.loadCached();

@@ -3,7 +3,7 @@
   "dataVersion": "2026.09.20",
   "revision": 2026092001,
   "publishedAt": "2026-09-20T00:00:00Z",
-  "minimumAppVersion": "1.0.8",
+  "minimumAppVersion": "1.0.8-beta.2",
   "archive": {
     "tag": "sortie-data-2026.09.20",
     "fileName": "sortie-data-2026.09.20.zip",

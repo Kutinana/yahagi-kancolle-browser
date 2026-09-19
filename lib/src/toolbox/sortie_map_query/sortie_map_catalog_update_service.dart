@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
@@ -116,6 +117,7 @@ final class SortieMapCatalogUpdateService
             mapCount: manifest.mapCount,
             nodeCount: manifest.nodeCount,
             formationCount: manifest.formationCount,
+            minimumAppVersion: manifest.minimumAppVersion,
           ),
         );
         if (installed.data.revision != manifest.version.revision ||
@@ -177,6 +179,10 @@ final class SortieMapCatalogUpdateService
   }
 
   Future<List<int>> _get(Uri uri, int maximumBytes) async {
+    return _getWithRedirects(uri, maximumBytes).timeout(timeout);
+  }
+
+  Future<List<int>> _getWithRedirects(Uri uri, int maximumBytes) async {
     final allowedManifest = sortieMapManifestSources
         .map(Uri.parse)
         .contains(uri);
@@ -195,7 +201,7 @@ final class SortieMapCatalogUpdateService
       final request = http.Request('GET', requestUri)
         ..followRedirects = false
         ..headers['User-Agent'] = 'Yahagi-Kancolle-Browser/$appVersion';
-      response = await client.send(request).timeout(timeout);
+      response = await client.send(request);
       if (!_isRedirectStatus(response.statusCode)) break;
       final location = response.headers['location'];
       if (!allowedArchive || location == null || redirects == 5) {
@@ -222,14 +228,14 @@ final class SortieMapCatalogUpdateService
     if (contentLength != null && contentLength > maximumBytes) {
       throw const FormatException('Sortie update response is too large.');
     }
-    final bytes = <int>[];
-    await for (final chunk in response.stream.timeout(timeout)) {
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in response.stream) {
       if (bytes.length + chunk.length > maximumBytes) {
         throw const FormatException('Sortie update response is too large.');
       }
-      bytes.addAll(chunk);
+      bytes.add(chunk);
     }
-    return bytes;
+    return bytes.takeBytes();
   }
 }
 

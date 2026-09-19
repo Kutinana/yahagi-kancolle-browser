@@ -1331,7 +1331,15 @@ class _AssetImage extends StatelessWidget {
     final cached = file;
     return cached == null
         ? Image.asset(asset, fit: fit, errorBuilder: errorBuilder)
-        : Image.file(cached, fit: fit, errorBuilder: errorBuilder);
+        : Image.file(
+            cached,
+            fit: fit,
+            errorBuilder: (context, error, stackTrace) => Image.asset(
+              'assets/images/sortie_maps/$asset',
+              fit: fit,
+              errorBuilder: errorBuilder,
+            ),
+          );
   }
 }
 

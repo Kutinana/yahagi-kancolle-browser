@@ -50,6 +50,8 @@ dependencies:
   package_info_plus: ^10.2.1
   crypto: ^3.0.7
   archive: ^4.0.9
+  pub_semver: ^2.2.0
+  image: ^4.9.1
   device_info_plus: 13.2.0
   telemetrydecksdk: ^4.0.0
 

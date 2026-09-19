@@ -112,6 +112,26 @@ void main() {
     expect(result, isA<SortieMapCatalogUpdated>());
     expect(installer.installed, archive);
   });
+
+  test('applies one deadline to the complete streamed download', () async {
+    final archive = <int>[1, 2, 3, 4];
+    final installer = _Installer();
+    final client = _SlowArchiveClient(_manifest(archive, revision: 8));
+
+    final result = await SortieMapCatalogUpdateService(
+      client: client,
+      installer: installer,
+      appVersion: '1.0.8',
+      timeout: const Duration(milliseconds: 35),
+    ).checkAndUpdate(current: _catalog(7));
+
+    expect(result, isA<SortieMapCatalogUpdateFailed>());
+    expect(
+      (result as SortieMapCatalogUpdateFailed).kind,
+      SortieMapCatalogUpdateFailure.network,
+    );
+    expect(installer.installed, isNull);
+  });
 }
 
 String _manifest(List<int> bytes, {required int revision}) => jsonEncode({
@@ -179,6 +199,29 @@ final class _Installer implements SortieMapCatalogInstaller {
     return InstalledSortieMapCatalog(
       data: _catalog(8),
       root: Directory.systemTemp,
+    );
+  }
+}
+
+final class _SlowArchiveClient extends http.BaseClient {
+  _SlowArchiveClient(this.manifest);
+
+  final String manifest;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.host == 'raw.githubusercontent.com') {
+      return http.StreamedResponse(
+        Stream<List<int>>.value(utf8.encode(manifest)),
+        200,
+      );
+    }
+    return http.StreamedResponse(
+      Stream<List<int>>.periodic(
+        const Duration(milliseconds: 20),
+        (_) => const <int>[1],
+      ).take(4),
+      200,
     );
   }
 }

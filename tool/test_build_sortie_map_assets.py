@@ -8,12 +8,24 @@ from PIL import Image
 
 from tool.build_sortie_map_assets import (
     _copy_trimmed_png,
+    _copy_validated_png,
     _enemy_name_zh,
     build_assets,
 )
 
 
 class BuildSortieMapAssetsTest(unittest.TestCase):
+    def test_rejects_a_truncated_cover_png(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "broken.png"
+            target = root / "output.png"
+            source.write_bytes(b"\x89PNG\r\n\x1a\ntruncated")
+
+            with self.assertRaises(Exception):
+                _copy_validated_png(source, target)
+            self.assertFalse(target.exists())
+
     def test_normalizes_enemy_class_kana_and_known_spacing_artifacts(self):
         self.assertEqual(_enemy_name_zh("空母WO级"), "空母ヲ级")
         self.assertEqual(_enemy_name_zh("未知HI级"), "未知HI级")

@@ -71,6 +71,7 @@ class BuildSortieReleaseTest(unittest.TestCase):
             self.assertEqual(first_bytes, second_bytes)
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["revision"], 2026092001)
+            self.assertEqual(manifest["minimumAppVersion"], "1.0.8-beta.2")
             self.assertEqual(manifest["counts"], {
                 "maps": 1,
                 "nodes": 1,
