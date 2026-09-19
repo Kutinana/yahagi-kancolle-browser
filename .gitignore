@@ -47,7 +47,15 @@ app.*.map.json
 
 # Local development scratch files
 .scratch-resource-trend/
+.scratch-*/
 .superpowers/
+.codex-work/
+.codex-*/
+.reference/
+.docx-qa-*/
+.jtmp/
+.android-sdk-backups/
+.build-tools/
 /check_url.dart
 /test_cipher.dart
 /test_dmg_urls.dart
@@ -57,11 +65,25 @@ docs/testing/
 docs/internal/*
 docs/plans/
 docs/specs/
+docs/battle-detail-poi-parity.md
 docs/previews/*
 !docs/previews/combined-fleet-prophet-sidebar-preview.png
 docs/demos/
 docs/TECHNICAL_REPORT.md
 docs/项目交接与下一步路线-2026-07-31.md
+*更新说明*.md
+*配置手册*.md
+*设计方案*.md
+*技术方案*.md
+*开发文档*
+ui.txt
+ui-demos/
+design-tool.html
+fullscreen_exit_button_demo.html
+*.apk
+*.apk.sha256
+outputs/
+backups/
 temp_fonts/
 find_zh.py
 fix.py
