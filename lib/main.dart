@@ -121,6 +121,10 @@ import 'src/quest/quest_center_page.dart';
 import 'src/quest/quest_catalog_controller.dart';
 import 'src/quest/quest_catalog_store.dart';
 import 'src/quest/quest_catalog_update_service.dart';
+import 'src/toolbox/sortie_map_query/sortie_map_catalog.dart';
+import 'src/toolbox/sortie_map_query/sortie_map_catalog_controller.dart';
+import 'src/toolbox/sortie_map_query/sortie_map_catalog_store.dart';
+import 'src/toolbox/sortie_map_query/sortie_map_catalog_update_service.dart';
 import 'src/quest/shared_preferences_quest_store.dart';
 import 'src/settings/layout_settings_controller.dart';
 import 'src/settings/layout_settings_store.dart';
@@ -334,6 +338,36 @@ Future<void> main() async {
     ),
     lastCheckedAt: questCatalogState?.lastCheckedAt,
     sourceHost: questCatalogState?.source ?? '',
+  );
+  final bundledSortieMapCatalog = await SortieMapCatalog.loadAsset();
+  late FileSortieMapCatalogStore sortieMapCatalogStore;
+  try {
+    sortieMapCatalogStore = await FileSortieMapCatalogStore.create();
+  } catch (error) {
+    debugPrint('海域资料目录不可用，改用临时缓存: $error');
+    sortieMapCatalogStore = FileSortieMapCatalogStore(
+      root: Directory(
+        '${Directory.systemTemp.path}${Platform.pathSeparator}yahagi-sortie-catalog',
+      ),
+    );
+  }
+  final cachedSortieMapCatalog = await sortieMapCatalogStore.loadCached();
+  final useCachedSortieMapCatalog =
+      cachedSortieMapCatalog != null &&
+      cachedSortieMapCatalog.data.versionInfo.compareTo(
+            bundledSortieMapCatalog.versionInfo,
+          ) >=
+          0;
+  final sortieMapCatalogController = SortieMapCatalogController(
+    data: useCachedSortieMapCatalog
+        ? cachedSortieMapCatalog.data
+        : bundledSortieMapCatalog,
+    cacheRoot: useCachedSortieMapCatalog ? cachedSortieMapCatalog.root : null,
+    updater: SortieMapCatalogUpdateService(
+      client: http.Client(),
+      installer: sortieMapCatalogStore,
+      appVersion: currentVersion,
+    ),
   );
   final battleController = BattleController(
     accountSession: accountSession,
@@ -618,6 +652,7 @@ Future<void> main() async {
       battleController: battleController,
       fcdMapController: fcdMapController,
       questCatalogController: questCatalogController,
+      sortieMapCatalogController: sortieMapCatalogController,
       improvementPlannerController: improvementPlannerController,
       currentVersion: currentVersion,
       releaseChecker: releaseChecker,
@@ -708,6 +743,7 @@ class YahagiApp extends StatelessWidget {
     required this.battleController,
     this.fcdMapController,
     this.questCatalogController,
+    this.sortieMapCatalogController,
     this.improvementPlannerController,
     this.gameSurface,
     this.currentVersion = '1.0.2',
@@ -753,6 +789,7 @@ class YahagiApp extends StatelessWidget {
   final BattleController battleController;
   final FcdMapController? fcdMapController;
   final QuestCatalogController? questCatalogController;
+  final SortieMapCatalogController? sortieMapCatalogController;
   final ImprovementPlannerController? improvementPlannerController;
   final Widget? gameSurface;
   final String currentVersion;
@@ -855,6 +892,7 @@ class YahagiApp extends StatelessWidget {
                   battleController: battleController,
                   fcdMapController: fcdMapController,
                   questCatalogController: questCatalogController,
+                  sortieMapCatalogController: sortieMapCatalogController,
                   improvementPlannerController: improvementPlannerController,
                   currentVersion: currentVersion,
                   releaseChecker: releaseChecker,
@@ -1029,6 +1067,7 @@ class YahagiShell extends StatefulWidget {
     this.headerNoticeController,
     this.fcdMapController,
     this.questCatalogController,
+    this.sortieMapCatalogController,
     this.improvementPlannerController,
     this.showDeveloperDiagnostics = false,
     this.diagnosticController,
@@ -1064,6 +1103,7 @@ class YahagiShell extends StatefulWidget {
   final BattleController battleController;
   final FcdMapController? fcdMapController;
   final QuestCatalogController? questCatalogController;
+  final SortieMapCatalogController? sortieMapCatalogController;
   final ImprovementPlannerController? improvementPlannerController;
   final String currentVersion;
   final ReleaseChecker? releaseChecker;
@@ -2485,6 +2525,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                   fcdMapController: widget.fcdMapController,
                                   questCatalogController:
                                       widget.questCatalogController,
+                                  sortieMapCatalogController:
+                                      widget.sortieMapCatalogController,
                                   improvementPlannerController:
                                       widget.improvementPlannerController,
                                   showTitle: false,
@@ -2512,6 +2554,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                   builder: (context, _) => ToolboxPage(
                                     state: widget.gameStateController.state,
                                     mode: _toolboxMode,
+                                    sortieMapCatalogController:
+                                        widget.sortieMapCatalogController,
                                   ),
                                 ),
                             ],

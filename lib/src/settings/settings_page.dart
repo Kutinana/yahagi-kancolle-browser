@@ -22,6 +22,7 @@ import 'game_mouse_wheel_settings.dart';
 import 'game_frame_refresh_shortcut_settings.dart';
 import '../battle/fcd_map_controller.dart';
 import '../quest/quest_catalog_controller.dart';
+import '../toolbox/sortie_map_query/sortie_map_catalog_controller.dart';
 import '../improvement/improvement_planner_controller.dart';
 import 'screen_settings_page.dart';
 import 'battle_settings_page.dart';
@@ -64,6 +65,7 @@ class SettingsPage extends StatelessWidget {
     this.toolbarDisplayController,
     this.fcdMapController,
     this.questCatalogController,
+    this.sortieMapCatalogController,
     this.improvementPlannerController,
     this.showTitle = true,
     this.showDeveloperDiagnostics = false,
@@ -102,6 +104,7 @@ class SettingsPage extends StatelessWidget {
   final GameToolbarDisplayController? toolbarDisplayController;
   final FcdMapController? fcdMapController;
   final QuestCatalogController? questCatalogController;
+  final SortieMapCatalogController? sortieMapCatalogController;
   final ImprovementPlannerController? improvementPlannerController;
   final bool showDeveloperDiagnostics;
   final BattlePredictionSettingsController? battlePredictionSettingsController;
@@ -161,6 +164,7 @@ class SettingsPage extends StatelessWidget {
           gameRenderingModeController: gameRenderingModeController,
           fcdMapController: fcdMapController,
           questCatalogController: questCatalogController,
+          sortieMapCatalogController: sortieMapCatalogController,
           improvementPlannerController: improvementPlannerController,
           telemetryController: telemetryController,
         ),
