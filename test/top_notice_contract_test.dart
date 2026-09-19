@@ -18,6 +18,7 @@ import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/display_mode_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/display_mode_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/header_resource_settings.dart';
+import 'package:yahagi_kancolle_browser/src/settings/hd_layout_settings.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller.dart';
@@ -414,6 +415,24 @@ class _LayoutSettingsControllerStub extends ChangeNotifier
   bool get informationPanelOnLeft => false;
 
   @override
+  bool get workspaceMenuHorizontal => false;
+
+  @override
+  String get workspaceMenuPosition => 'left';
+
+  @override
+  HdLayoutSettings get hdSettings => const HdLayoutSettings();
+
+  @override
+  UiDisplaySize get uiDisplaySize => UiDisplaySize.normal;
+
+  @override
+  bool get topNoticeEnabled => true;
+
+  @override
+  int get topNoticeDurationSeconds => 5;
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => _unexpected(invocation);
 }
 
@@ -431,9 +450,6 @@ class _GadgetBypassControllerStub extends ChangeNotifier
 
 class _SafetySettingsControllerStub extends ChangeNotifier
     implements SafetySettingsController {
-  @override
-  bool get battleDamageVibrationEnabled => false;
-
   @override
   dynamic noSuchMethod(Invocation invocation) => _unexpected(invocation);
 }

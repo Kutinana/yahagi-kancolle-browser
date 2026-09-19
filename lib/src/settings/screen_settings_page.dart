@@ -15,6 +15,7 @@ import 'screen_awake_controller.dart';
 import 'game_mouse_wheel_settings.dart';
 import 'game_mouse_wheel_settings_section.dart';
 import 'game_frame_refresh_shortcut_settings.dart';
+import 'header_resource_settings.dart';
 import 'settings_ui_helpers.dart';
 import 'hd_layout_settings_section.dart';
 
@@ -104,6 +105,63 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                             ],
                             onChanged: (value) {
                               layoutSettingsController.setLocaleCode(value);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(color: Color(0xff294052), height: 1),
+                    Padding(
+                      key: const Key('settings-ui-display-size-row'),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.uiDisplaySizeTitle,
+                                  key: const Key('settings-ui-display-size-label'),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  l10n.uiDisplaySizeDesc,
+                                  style: const TextStyle(
+                                    color: Color(0xff8197a5),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          DropdownButton<UiDisplaySize>(
+                            key: const Key('settings-ui-display-size-dropdown'),
+                            value: layoutSettingsController.uiDisplaySize,
+                            underline: const SizedBox(),
+                            alignment: AlignmentDirectional.centerEnd,
+                            items: [
+                              DropdownMenuItem(
+                                value: UiDisplaySize.normal,
+                                child: Text(l10n.uiDisplaySizeNormal),
+                              ),
+                              DropdownMenuItem(
+                                value: UiDisplaySize.compact,
+                                child: Text(l10n.uiDisplaySizeCompact),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                layoutSettingsController.setUiDisplaySize(value);
+                              }
                             },
                           ),
                         ],
@@ -232,6 +290,112 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                         label: Text(l10n.restoreDefaultOrder),
                       ),
                     ),
+                    const Divider(color: Color(0xff294052), height: 1),
+                    buildSwitchTile(
+                      title: l10n.uiLockTitle,
+                      titleKey: const Key('settings-ui-lock-switch'),
+                      subtitle: l10n.uiLockDesc,
+                      value: layoutSettingsController.uiLocked,
+                      onChanged: layoutSettingsController.setUiLocked,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            buildSectionTitle(l10n.topNoticeSectionTitle),
+            buildCard(
+              child: AnimatedBuilder(
+                animation: layoutSettingsController,
+                builder: (context, _) => Column(
+                  children: [
+                    buildSwitchTile(
+                      title: l10n.topNoticeEnabledTitle,
+                      titleKey: const Key('settings-top-notice-enabled'),
+                      subtitle: l10n.topNoticeEnabledSubtitle,
+                      value: layoutSettingsController.topNoticeEnabled,
+                      onChanged: layoutSettingsController.setTopNoticeEnabled,
+                    ),
+                    const Divider(color: Color(0xff294052), height: 1),
+                    Opacity(
+                      opacity: layoutSettingsController.topNoticeEnabled ? 1.0 : 0.45,
+                      child: IgnorePointer(
+                        ignoring: !layoutSettingsController.topNoticeEnabled,
+                        child: Padding(
+                          key: const Key('settings-top-notice-duration-row'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.topNoticeDurationTitle,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      l10n.topNoticeDurationSubtitle,
+                                      style: const TextStyle(
+                                        color: Color(0xff8197a5),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              DropdownButtonHideUnderline(
+                                child: DropdownButton<int>(
+                                  key: const Key('settings-top-notice-duration-dropdown'),
+                                  value: const [5, 10, 15].contains(
+                                    layoutSettingsController.topNoticeDurationSeconds,
+                                  )
+                                      ? layoutSettingsController.topNoticeDurationSeconds
+                                      : 5,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: layoutSettingsController.topNoticeEnabled
+                                        ? const Color(0xffd4a85f)
+                                        : const Color(0xff526776),
+                                  ),
+                                  items: [
+                                    DropdownMenuItem(
+                                      value: 5,
+                                      child: Text(l10n.topNoticeDuration5s),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 10,
+                                      child: Text(l10n.topNoticeDuration10s),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 15,
+                                      child: Text(l10n.topNoticeDuration15s),
+                                    ),
+                                  ],
+                                  onChanged: layoutSettingsController.topNoticeEnabled
+                                      ? (value) {
+                                          if (value != null) {
+                                            layoutSettingsController
+                                                .setTopNoticeDurationSeconds(value);
+                                          }
+                                        }
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -249,7 +413,6 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
               buildCard(
                 child: GameMouseWheelSettingsSection(
                   controller: wheel,
-                  frameRefreshSettings: gameFrameRefreshShortcutSettings,
                 ),
               ),
             ],

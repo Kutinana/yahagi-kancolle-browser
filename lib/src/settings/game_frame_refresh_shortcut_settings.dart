@@ -5,22 +5,18 @@ final class GameFrameRefreshShortcutSettings extends ChangeNotifier {
   GameFrameRefreshShortcutSettings._(
     this._preferences,
     this._skipHeaderConfirmation,
-    this._rightClickEnabled,
   );
 
   static const skipHeaderConfirmationPreferenceKey =
       'game.frameRefreshSkipConfirmation';
-  static const rightClickPreferenceKey = 'game.mouseRightClickFrameRefresh';
 
   final SharedPreferences _preferences;
   bool _skipHeaderConfirmation;
-  bool _rightClickEnabled;
   bool _saving = false;
   bool _saveFailed = false;
   bool _disposed = false;
 
   bool get skipHeaderConfirmation => _skipHeaderConfirmation;
-  bool get rightClickEnabled => _rightClickEnabled;
   bool get saving => _saving;
   bool get saveFailed => _saveFailed;
 
@@ -29,7 +25,6 @@ final class GameFrameRefreshShortcutSettings extends ChangeNotifier {
     return GameFrameRefreshShortcutSettings._(
       preferences,
       preferences.getBool(skipHeaderConfirmationPreferenceKey) ?? false,
-      preferences.getBool(rightClickPreferenceKey) ?? false,
     );
   }
 
@@ -38,13 +33,6 @@ final class GameFrameRefreshShortcutSettings extends ChangeNotifier {
     value: value,
     currentValue: _skipHeaderConfirmation,
     apply: (saved) => _skipHeaderConfirmation = saved,
-  );
-
-  Future<void> setRightClickEnabled(bool value) => _save(
-    key: rightClickPreferenceKey,
-    value: value,
-    currentValue: _rightClickEnabled,
-    apply: (saved) => _rightClickEnabled = saved,
   );
 
   Future<void> _save({

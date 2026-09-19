@@ -22,10 +22,14 @@ class ExpeditionSummaryCard extends StatefulWidget {
     required this.onOpenExpedition,
     required this.onOpenExpeditionCheck,
     this.visible = const {'fleet', 'number', 'name', 'time'},
+    this.showLogo = true,
+    this.showTitle = true,
     this.onOpenDisplaySettings,
   });
 
   final Set<String> visible;
+  final bool showLogo;
+  final bool showTitle;
   final VoidCallback? onOpenDisplaySettings;
   final GameStateController controller;
   final bool collapsed;
@@ -64,6 +68,8 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
           icon: const Icon(Icons.explore_outlined),
           collapsed: widget.collapsed,
           onToggleCollapse: widget.onToggleCollapse,
+          showLogo: widget.showLogo,
+          showTitle: widget.showTitle,
           trailing: ExpeditionModeSelector(
             mode: _mode,
             compact: true,

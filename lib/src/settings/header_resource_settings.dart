@@ -1,3 +1,9 @@
+import 'ui_display_size.dart';
+
+export 'ui_display_size.dart';
+
+typedef HeaderUiSize = UiDisplaySize;
+
 const headerSenkaId = 'senka';
 const headerAnchorageTimerId = 'anchorage-timer';
 const headerNosakiTimerId = 'nosaki-timer';

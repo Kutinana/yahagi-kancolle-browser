@@ -17,10 +17,14 @@ class ConstructionSummaryCard extends StatelessWidget {
     required this.onToggleCollapse,
     required this.onOpenConstruction,
     this.visible = const {'portrait', 'empty'},
+    this.showLogo = true,
+    this.showTitle = true,
     this.onOpenDisplaySettings,
   });
 
   final Set<String> visible;
+  final bool showLogo;
+  final bool showTitle;
   final VoidCallback? onOpenDisplaySettings;
   final GameStateController controller;
   final bool collapsed;
@@ -44,6 +48,8 @@ class ConstructionSummaryCard extends StatelessWidget {
           icon: const Icon(Icons.handyman_outlined),
           collapsed: collapsed,
           onToggleCollapse: onToggleCollapse,
+          showLogo: showLogo,
+          showTitle: showTitle,
           child: ModuleSlotGrid(
             emptyLabel: '暂无建造',
             children: [

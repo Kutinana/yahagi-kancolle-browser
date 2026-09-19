@@ -62,6 +62,7 @@ abstract final class GameCapturePathCatalog {
     '/kcsapi/api_req_mission/result',
     '/kcsapi/api_req_mission/start',
     '/kcsapi/api_req_practice/battle_result',
+    '/kcsapi/api_req_member/get_practice_enemyinfo',
   };
 
   static const Set<String> battleMap = <String>{

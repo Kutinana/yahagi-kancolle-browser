@@ -1,8 +1,6 @@
 package app.yahagi.kancollebrowser.browser
 
 import android.app.Activity
-import android.content.Context
-import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -43,7 +41,6 @@ internal object GameFrameReloadBridgeScript {
           window.__yahagiGameFrameReloadInstalled = true;
 
           const post = (payload) => bridge.postMessage(JSON.stringify(payload));
-          let rightClickEnabled = false;
           let lastAvailability;
           const reportTarget = () => {
             const available = document.getElementById('htmlWrap') !== null;
@@ -69,10 +66,6 @@ internal object GameFrameReloadBridgeScript {
               return;
             }
             if (!data) return;
-            if (data.kind === 'right_click_setting') {
-              rightClickEnabled = data.enabled === true;
-              return;
-            }
             if (data.kind !== 'reload' || typeof data.requestId !== 'string') {
               return;
             }
@@ -93,21 +86,6 @@ internal object GameFrameReloadBridgeScript {
             post({kind: 'result', requestId: data.requestId, result: result});
           };
 
-          document.addEventListener('contextmenu', (event) => {
-            if (!rightClickEnabled || !event.isTrusted || event.button !== 2) return;
-            const canvas = event.target instanceof Element
-              ? event.target.closest('canvas')
-              : null;
-            if (!canvas) return;
-            event.preventDefault();
-            post({
-              kind: 'secondary_click',
-              trusted: true,
-              button: event.button,
-              canvas: true,
-            });
-          }, true);
-
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', startObserving, {once: true});
           } else {
@@ -115,15 +93,6 @@ internal object GameFrameReloadBridgeScript {
           }
         })();
         """.trimIndent()
-}
-
-internal object GameFrameRightClickPolicy {
-    fun accepts(
-        enabled: Boolean,
-        trusted: Boolean,
-        button: Int,
-        overGameCanvas: Boolean,
-    ): Boolean = enabled && trusted && button == 2 && overGameCanvas
 }
 
 internal class GameFrameReloadRequestCoordinator(
@@ -170,29 +139,13 @@ internal class AndroidGameFrameReloadBridge(
     private companion object {
         const val TAG = "GameFrameReload"
         const val RELOAD_TIMEOUT_MILLIS = 5_000L
-        const val FLUTTER_PREFERENCES_NAME = "FlutterSharedPreferences"
-        const val RIGHT_CLICK_PREFERENCE_KEY =
-            "flutter.game.mouseRightClickFrameRefresh"
     }
 
-    private val preferences = activity.getSharedPreferences(
-        FLUTTER_PREFERENCES_NAME,
-        Context.MODE_PRIVATE,
-    )
-    private val preferenceListener =
-        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == RIGHT_CLICK_PREFERENCE_KEY) {
-                mainHandler.post(::broadcastRightClickSetting)
-            }
-        }
     private var attachedWebView: WebView? = null
     private val scriptHandlers = mutableListOf<ScriptHandler>()
     private var listenerInstalled = false
     private val targetFrames: MutableSet<JavaScriptReplyProxy> =
         Collections.newSetFromMap(IdentityHashMap())
-    private val documentFrames: MutableSet<JavaScriptReplyProxy> =
-        Collections.newSetFromMap(IdentityHashMap())
-    private var preferenceListenerRegistered = false
     private val coordinator = GameFrameReloadRequestCoordinator()
     private var timeoutAction: Runnable? = null
 
@@ -243,8 +196,6 @@ internal class AndroidGameFrameReloadBridge(
                 )
             }
             attachedWebView = webView
-            preferences.registerOnSharedPreferenceChangeListener(preferenceListener)
-            preferenceListenerRegistered = true
             Log.i(TAG, "configured frame-level reload bridge")
         } catch (error: RuntimeException) {
             scriptHandlers.forEach(ScriptHandler::remove)
@@ -323,8 +274,6 @@ internal class AndroidGameFrameReloadBridge(
 
         when (payload.optString("kind")) {
             "target" -> {
-                documentFrames.add(replyProxy)
-                postRightClickSetting(replyProxy)
                 if (payload.optBoolean("available", false)) {
                     targetFrames.add(replyProxy)
                 } else {
@@ -337,36 +286,6 @@ internal class AndroidGameFrameReloadBridge(
                 if (requestId.isEmpty() || result !in setOf("reloaded", "blocked")) return
                 coordinator.complete(requestId, result)
             }
-            "secondary_click" -> {
-                if (!GameFrameRightClickPolicy.accepts(
-                        enabled = isRightClickEnabled(),
-                        trusted = payload.optBoolean("trusted", false),
-                        button = payload.optInt("button", -1),
-                        overGameCanvas = payload.optBoolean("canvas", false),
-                    )
-                ) return
-                reload(onShortcutComplete)
-            }
-        }
-    }
-
-    private fun isRightClickEnabled(): Boolean =
-        preferences.getBoolean(RIGHT_CLICK_PREFERENCE_KEY, false)
-
-    private fun broadcastRightClickSetting() {
-        documentFrames.toList().forEach(::postRightClickSetting)
-    }
-
-    private fun postRightClickSetting(frame: JavaScriptReplyProxy) {
-        val payload = JSONObject()
-            .put("kind", "right_click_setting")
-            .put("enabled", isRightClickEnabled())
-            .toString()
-        try {
-            frame.postMessage(payload)
-        } catch (_: RuntimeException) {
-            documentFrames.remove(frame)
-            targetFrames.remove(frame)
         }
     }
 
@@ -378,11 +297,6 @@ internal class AndroidGameFrameReloadBridge(
         attachedWebView?.let(::disableWebView)
         attachedWebView = null
         targetFrames.clear()
-        documentFrames.clear()
-        if (preferenceListenerRegistered) {
-            preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
-            preferenceListenerRegistered = false
-        }
     }
 
     private fun cancelTimeout() {

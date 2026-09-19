@@ -3,6 +3,7 @@ import '../game_state/game_state_controller.dart';
 import '../game_state/game_state.dart';
 import '../fleet/dashboard_card.dart';
 import '../layout/hd_dashboard_content.dart';
+import '../settings/module_display_settings.dart';
 
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
@@ -13,12 +14,18 @@ class PinnedQuestsSummary extends StatelessWidget {
     required this.collapsed,
     required this.onToggleCollapse,
     required this.onOpenQuest,
+    this.showLogo = true,
+    this.showTitle = true,
+    this.onOpenDisplaySettings,
   });
 
   final GameStateController controller;
   final bool collapsed;
   final VoidCallback onToggleCollapse;
   final ValueChanged<int> onOpenQuest;
+  final bool showLogo;
+  final bool showTitle;
+  final VoidCallback? onOpenDisplaySettings;
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +46,17 @@ class PinnedQuestsSummary extends StatelessWidget {
             lookupAppLocalizations(const Locale('zh'));
 
         return DashboardCard(
+          headerAction: moduleDisplayGear(
+            context,
+            'quests',
+            onOpenDisplaySettings,
+          ),
           title: l10n.questBrief,
           icon: const Icon(Icons.assignment_outlined),
           collapsed: collapsed,
           onToggleCollapse: onToggleCollapse,
+          showLogo: showLogo,
+          showTitle: showTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

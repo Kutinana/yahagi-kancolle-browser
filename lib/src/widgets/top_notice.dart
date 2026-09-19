@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-enum TopNoticeTone { neutral, success, error }
+enum TopNoticeTone { neutral, success, error, warning, info, quest, marriage }
 
 const topNoticeKey = Key('top-notice');
 const topNoticeTextKey = Key('top-notice-text');
@@ -13,11 +13,15 @@ class TopNoticeData {
     required this.id,
     required this.message,
     required this.tone,
+    this.customIcon,
+    this.customColor,
   });
 
   final int id;
   final String message;
   final TopNoticeTone tone;
+  final IconData? customIcon;
+  final Color? customColor;
 }
 
 class TopNoticeController extends ChangeNotifier {
@@ -31,10 +35,18 @@ class TopNoticeController extends ChangeNotifier {
     required String message,
     TopNoticeTone tone = TopNoticeTone.neutral,
     Duration duration = const Duration(seconds: 4),
+    IconData? customIcon,
+    Color? customColor,
   }) {
     _timer?.cancel();
     final id = _nextId++;
-    _current = TopNoticeData(id: id, message: message, tone: tone);
+    _current = TopNoticeData(
+      id: id,
+      message: message,
+      tone: tone,
+      customIcon: customIcon,
+      customColor: customColor,
+    );
     notifyListeners();
     _timer = Timer(duration, () {
       if (_current?.id != id) {
@@ -196,6 +208,8 @@ class _NoticeCapsule extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = _paletteFor(notice.tone);
+    final foreground = notice.customColor ?? palette.foreground;
+    final icon = notice.customIcon ?? palette.icon;
     return Semantics(
       key: topNoticeKey,
       container: true,
@@ -222,7 +236,7 @@ class _NoticeCapsule extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(palette.icon, size: 20, color: palette.foreground),
+                  Icon(icon, size: 20, color: foreground),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
@@ -231,7 +245,7 @@ class _NoticeCapsule extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: palette.foreground,
+                        color: foreground,
                         fontSize: 14,
                         decoration: TextDecoration.none,
                       ),
@@ -266,6 +280,30 @@ _TopNoticePalette _paletteFor(TopNoticeTone tone) {
       border: Color(0xff9b464c),
       foreground: Color(0xffffaaa4),
       icon: Icons.error_outline_rounded,
+    ),
+    TopNoticeTone.warning => const _TopNoticePalette(
+      background: Color(0xff3d3217),
+      border: Color(0xffa78b4f),
+      foreground: Color(0xfffde68a),
+      icon: Icons.warning_amber_rounded,
+    ),
+    TopNoticeTone.info => const _TopNoticePalette(
+      background: Color(0xff132b3d),
+      border: Color(0xff388ab8),
+      foreground: Color(0xffbae6fd),
+      icon: Icons.insights_rounded,
+    ),
+    TopNoticeTone.quest => const _TopNoticePalette(
+      background: Color(0xff2d2417),
+      border: Color(0xffa7874f),
+      foreground: Color(0xfff7e2ba),
+      icon: Icons.assignment_turned_in_outlined,
+    ),
+    TopNoticeTone.marriage => const _TopNoticePalette(
+      background: Color(0xff3d172e),
+      border: Color(0xffb83889),
+      foreground: Color(0xfffbcfe8),
+      icon: Icons.favorite_rounded,
     ),
   };
 }

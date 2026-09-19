@@ -8,6 +8,7 @@ import '../bridge/captured_api_event.dart';
 import '../quest/quest_store.dart';
 import '../quest/quest_progress_engine.dart';
 import '../battle/battle_models.dart';
+import '../battle/sortie_damage_control_ledger.dart';
 import '../performance/frame_notification_coalescer.dart';
 import 'game_state.dart';
 import 'game_api_event_pipeline.dart';
@@ -21,6 +22,7 @@ import '../fleet/timer_mechanics_service.dart';
 final class GameStateController extends ChangeNotifier
     implements GameApiEventConsumer {
   GameStateController({
+    GameState? initialState,
     GameStateReducer? reducer,
     this.questStore,
     this.questProgress,
@@ -29,7 +31,9 @@ final class GameStateController extends ChangeNotifier
     LogbookEventRecorder? logbookRecorder,
     FrameNotificationCoalescer? captureNotifications,
     TimerMechanicsService? timerService,
-  }) : _reducer = reducer ?? GameStateReducer(),
+  }) : _state = initialState ?? GameState.empty,
+       _hasAcceptedLiveEvent = initialState != null,
+       _reducer = reducer ?? GameStateReducer(),
        _logbookRecorder = logbookRecorder ?? LogbookEventRecorder(),
        _captureNotifications =
            captureNotifications ?? FrameNotificationCoalescer(),
@@ -210,14 +214,14 @@ final class GameStateController extends ChangeNotifier
     notifyListeners();
   }
 
-  GameState _state = GameState.empty;
+  GameState _state;
   Future<void> _queue = Future<void>.value();
   Future<void> _logbookQueue = Future<void>.value();
   String? _lastLogbookError;
   String? _lastError;
   String? _lastUpdatedPath;
   bool _disposed = false;
-  bool _hasAcceptedLiveEvent = false;
+  bool _hasAcceptedLiveEvent;
 
   GameState get state => _state;
   String? get lastError => _lastError;
@@ -345,6 +349,29 @@ final class GameStateController extends ChangeNotifier
       final next = _reducer.applyFriendlyBattleHp(
         previous,
         hpByShipId,
+        capturedAt,
+      );
+      if (identical(next, previous)) return;
+      _state = next;
+      _captureNotifications.schedule(notifyListeners);
+      gameStateStore?.save(next);
+    });
+  }
+
+  void applyDamageControlConsumption(
+    Map<int, List<DamageControlEquipmentRef>> consumedByShipId,
+    DateTime capturedAt,
+  ) {
+    if (_disposed || consumedByShipId.isEmpty) return;
+    final scope = accountSession?.current;
+    _queue = _queue.then((_) {
+      if (!_isCurrent(scope)) return;
+      final previous = _state;
+      // A delayed prediction is not authoritative after returning to port.
+      if (!previous.combatState.isActive) return;
+      final next = _reducer.applyDamageControlConsumption(
+        previous,
+        consumedByShipId,
         capturedAt,
       );
       if (identical(next, previous)) return;

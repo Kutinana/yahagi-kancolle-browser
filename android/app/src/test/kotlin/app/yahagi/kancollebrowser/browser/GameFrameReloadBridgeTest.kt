@@ -49,26 +49,12 @@ class GameFrameReloadBridgeTest {
     }
 
     @Test
-    fun scriptForwardsOnlyTrustedRightClicksOnTheGameCanvas() {
+    fun scriptDoesNotInstallRightClickOrContextMenuHandlers() {
         val source = GameFrameReloadBridgeScript.source
 
-        assertTrue(source.contains("contextmenu"))
-        assertTrue(source.contains("event.isTrusted"))
-        assertTrue(source.contains("event.button !== 2"))
-        assertTrue(source.contains("closest('canvas')"))
-        assertTrue(source.contains("rightClickEnabled"))
-        assertTrue(source.contains("event.preventDefault()"))
-        assertTrue(source.contains("data.kind === 'right_click_setting'"))
-        assertTrue(source.contains("kind: 'secondary_click'"))
-    }
-
-    @Test
-    fun rightClickPolicyRequiresEverySafetyCondition() {
-        assertTrue(GameFrameRightClickPolicy.accepts(true, true, 2, true))
-        assertFalse(GameFrameRightClickPolicy.accepts(false, true, 2, true))
-        assertFalse(GameFrameRightClickPolicy.accepts(true, false, 2, true))
-        assertFalse(GameFrameRightClickPolicy.accepts(true, true, 0, true))
-        assertFalse(GameFrameRightClickPolicy.accepts(true, true, 2, false))
+        assertFalse(source.contains("contextmenu"))
+        assertFalse(source.contains("rightClickEnabled"))
+        assertFalse(source.contains("secondary_click"))
     }
 
     @Test

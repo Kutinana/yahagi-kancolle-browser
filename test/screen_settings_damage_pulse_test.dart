@@ -5,6 +5,7 @@ import 'package:yahagi_kancolle_browser/src/audio/game_audio_controller.dart';
 import 'package:yahagi_kancolle_browser/src/audio/game_audio_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/display_mode_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/display_mode_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/header_resource_settings.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/screen_settings_page.dart';
@@ -232,4 +233,48 @@ void main() {
       );
     },
   );
+
+  testWidgets('screen settings expose UI display size dropdown and switch size', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final layoutController = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    final displayController = await DisplayModeController.load(
+      MemoryDisplayModeStore(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ScreenSettingsPage(
+          layoutSettingsController: layoutController,
+          displayModeController: displayController,
+        ),
+      ),
+    );
+
+    final rowFinder = find.byKey(const Key('settings-ui-display-size-row'));
+    await tester.ensureVisible(rowFinder);
+    expect(rowFinder, findsOneWidget);
+    expect(layoutController.uiDisplaySize, UiDisplaySize.normal);
+
+    final dropdown = find.descendant(
+      of: rowFinder,
+      matching: find.byType(DropdownButton<UiDisplaySize>),
+    );
+    expect(dropdown, findsOneWidget);
+
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+
+    final compactItem = find.text('紧凑').last;
+    await tester.tap(compactItem);
+    await tester.pumpAndSettle();
+
+    expect(layoutController.uiDisplaySize, UiDisplaySize.compact);
+    expect(layoutController.headerUiSize, UiDisplaySize.compact);
+    expect(layoutController.workspaceMenuSize, UiDisplaySize.compact);
+  });
 }
+

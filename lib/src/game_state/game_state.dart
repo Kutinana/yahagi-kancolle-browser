@@ -72,6 +72,18 @@ class MasterShip {
     this.slotCapacities = const <int>[],
     this.buildTimeMinutes = 0,
     this.baseAntiSub = 0,
+    this.baseFirepower = 0,
+    this.maxFirepower = 0,
+    this.baseTorpedo = 0,
+    this.maxTorpedo = 0,
+    this.baseAntiAir = 0,
+    this.maxAntiAir = 0,
+    this.baseArmor = 0,
+    this.maxArmor = 0,
+    this.baseLuck = 0,
+    this.maxLuck = 0,
+    this.baseHp = 0,
+    this.maxHp = 0,
     this.equipTypeIds = const <int>{},
     this.limitedEquipmentIdsByType = const <int, Set<int>>{},
     this.portraitFileName,
@@ -98,12 +110,55 @@ class MasterShip {
   final List<int> slotCapacities;
   final int buildTimeMinutes;
   final int baseAntiSub;
+  final int baseFirepower;
+  final int maxFirepower;
+  final int baseTorpedo;
+  final int maxTorpedo;
+  final int baseAntiAir;
+  final int maxAntiAir;
+  final int baseArmor;
+  final int maxArmor;
+  final int baseLuck;
+  final int maxLuck;
+  final int baseHp;
+  final int maxHp;
   final Set<int> equipTypeIds;
   final Map<int, Set<int>> limitedEquipmentIdsByType;
   final String? portraitFileName;
   final String? portraitVersion;
 
-  MasterShip copyWith({String? portraitFileName, String? portraitVersion}) {
+  /// Returns the remaining capacity for modernization of the stat at index [statIndex]
+  /// (0: firepower, 1: torpedo, 2: antiAir, 3: armor, 4: luck, 5: hp, 6: asw), given current [kyouka].
+  /// Matches Poi's remaining calculation: statusPair[1] - (statusPair[0] + kyouka).
+  int? remainingModernization(int statIndex, int kyouka) {
+    return switch (statIndex) {
+      0 => (maxFirepower > 0) ? maxFirepower - (baseFirepower + kyouka) : null,
+      1 => (maxTorpedo > 0) ? maxTorpedo - (baseTorpedo + kyouka) : null,
+      2 => (maxAntiAir > 0) ? maxAntiAir - (baseAntiAir + kyouka) : null,
+      3 => (maxArmor > 0) ? maxArmor - (baseArmor + kyouka) : null,
+      4 => (maxLuck > 0) ? maxLuck - (baseLuck + kyouka) : null,
+      5 => 2 - kyouka,
+      6 => 9 - kyouka,
+      _ => null,
+    };
+  }
+
+  MasterShip copyWith({
+    String? portraitFileName,
+    String? portraitVersion,
+    int? baseFirepower,
+    int? maxFirepower,
+    int? baseTorpedo,
+    int? maxTorpedo,
+    int? baseAntiAir,
+    int? maxAntiAir,
+    int? baseArmor,
+    int? maxArmor,
+    int? baseLuck,
+    int? maxLuck,
+    int? baseHp,
+    int? maxHp,
+  }) {
     return MasterShip(
       id: id,
       name: name,
@@ -120,6 +175,18 @@ class MasterShip {
       slotCapacities: slotCapacities,
       buildTimeMinutes: buildTimeMinutes,
       baseAntiSub: baseAntiSub,
+      baseFirepower: baseFirepower ?? this.baseFirepower,
+      maxFirepower: maxFirepower ?? this.maxFirepower,
+      baseTorpedo: baseTorpedo ?? this.baseTorpedo,
+      maxTorpedo: maxTorpedo ?? this.maxTorpedo,
+      baseAntiAir: baseAntiAir ?? this.baseAntiAir,
+      maxAntiAir: maxAntiAir ?? this.maxAntiAir,
+      baseArmor: baseArmor ?? this.baseArmor,
+      maxArmor: maxArmor ?? this.maxArmor,
+      baseLuck: baseLuck ?? this.baseLuck,
+      maxLuck: maxLuck ?? this.maxLuck,
+      baseHp: baseHp ?? this.baseHp,
+      maxHp: maxHp ?? this.maxHp,
       equipTypeIds: equipTypeIds,
       limitedEquipmentIdsByType: limitedEquipmentIdsByType,
       portraitFileName: portraitFileName ?? this.portraitFileName,

@@ -13,6 +13,7 @@ import 'package:yahagi_kancolle_browser/src/browser/gadget_bypass_controller.dar
 import 'package:yahagi_kancolle_browser/src/browser/gadget_bypass_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/workspace_menu_settings.dart';
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller.dart';
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
 import 'package:yahagi_kancolle_browser/src/settings/display_mode_controller.dart';
@@ -27,6 +28,7 @@ import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart
 import 'package:yahagi_kancolle_browser/src/browser/game_toolbar_controller.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_toolbar_display_controller.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_screenshot_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_fullscreen_exit_dialog.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/capture/capture_mode.dart';
 import 'package:yahagi_kancolle_browser/src/capture/capture_mode_controller.dart';
@@ -258,22 +260,31 @@ void main() {
         const Size(600, 800),
         const Size(800, 1280),
         const Size(915, 412),
+        const Size(640, 320),
         const Size(412, 915),
+        const Size(393, 873),
+        const Size(540, 1200),
       ]) {
         tester.view.physicalSize = size;
         await tester.pumpAndSettle();
-        expect(bottom, findsNothing);
         expect(
-          find.byKey(const Key('yahagi-hd-label')),
-          size.shortestSide >= 600 ? findsOneWidget : findsNothing,
+          bottom,
+          size.width > size.height ? findsOneWidget : findsNothing,
         );
+        expect(find.byKey(const Key('yahagi-hd-label')), findsOneWidget);
         expect(
           find.byKey(const Key('hd-portrait-grid')),
-          size.shortestSide >= 600 ? findsOneWidget : findsNothing,
+          size.height >= size.width ? findsOneWidget : findsNothing,
         );
         expect(tester.element(game), same(originalElement));
         expect(tester.takeException(), isNull);
       }
+      await layout.setHdEnabled(false);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('hd-portrait-grid')), findsNothing);
+      expect(find.byKey(const Key('yahagi-hd-label')), findsNothing);
+      expect(tester.element(game), same(originalElement));
+      expect(tester.takeException(), isNull);
       expect(deactivations, 0);
       expect(disposals, 0);
     },
@@ -282,7 +293,9 @@ void main() {
   testWidgets('fullscreen restores the same game and panel; back exits first', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      exitFullscreenSkipConfirmationKey: true,
+    });
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1200, 700);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -1216,7 +1229,12 @@ void main() {
           final nav = tester.getRect(find.byType(WorkspaceNavigation));
           final surface = tester.getRect(gameSurface);
           if (position == 'top' || position == 'bottom') {
-            expect(nav.height, 48);
+            expect(
+              nav.height,
+              workspaceNavigationExtent(
+                layoutSettingsController.workspaceMenuSize,
+              ),
+            );
             final count = layoutSettingsController.workspaceMenuOrder.length;
             if (nav.width >= count * 50 + 20) {
               final first = tester.getRect(
@@ -1627,6 +1645,144 @@ void main() {
 
       gameStateController.dispose();
       toolbarController.dispose();
+    },
+  );
+
+  testWidgets(
+    'split-screen: forced portrait and landscape switch layout without window resizing',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.devicePixelRatio = 1;
+      // Start with a wide window geometry (split-screen: 800 x 500)
+      tester.view.physicalSize = const Size(800, 500);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final displayStore = MemoryDisplayModeStore(DisplayMode.auto);
+      final displayController = await DisplayModeController.load(displayStore);
+      final browserPort = _NoopBrowserPort();
+      final browserController = GameBrowserController(port: browserPort);
+      final layout = await LayoutSettingsController.load(
+        _MemoryLayoutSettingsStore(),
+      );
+      // Disable HD so that landscape layout uses the standard vertical divider
+      await layout.setHdEnabled(false);
+
+      final toolbar = GameToolbarController();
+      final capture = GameCaptureController();
+      final state = GameStateController();
+      final battle = BattleController(gameState: () => state.state);
+      addTearDown(toolbar.dispose);
+      addTearDown(capture.dispose);
+      addTearDown(state.dispose);
+      addTearDown(battle.dispose);
+      addTearDown(displayController.dispose);
+      addTearDown(layout.dispose);
+
+      var deactivations = 0;
+      var disposals = 0;
+      const probeKey = Key('split-screen-orientation-probe');
+
+      await tester.pumpWidget(
+        YahagiApp(
+          layoutSettingsController: layout,
+          networkSettingsController: NetworkSettingsController(
+            store: _MemoryNetworkSettingsStore(),
+          ),
+          gadgetBypassController: GadgetBypassController(
+            store: _MemoryGadgetBypassStore(),
+            port: _FakeGadgetBypassPort(),
+          ),
+          safetySettingsController: await SafetySettingsController.load(
+            MemorySafetySettingsStore(),
+          ),
+          displayModeController: displayController,
+          controller: PrototypeStatusController(),
+          browserController: browserController,
+          captureModeController: await CaptureModeController.load(
+            _MemoryModeStore(),
+          ),
+          gameCaptureController: capture,
+          gameStateController: state,
+          battleController: battle,
+          audioController: await GameAudioController.load(_MemoryAudioStore()),
+          toolbarController: toolbar,
+          gameSurface: _LifecycleProbe(
+            key: probeKey,
+            onDispose: () => disposals++,
+            onDeactivate: () => deactivations++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final originalElement = tester.element(find.byKey(probeKey));
+      deactivations = 0;
+      disposals = 0;
+
+      // 1. Wide split-screen window with auto mode -> Landscape layout (VerticalDivider)
+      expect(find.byType(VerticalDivider), findsOneWidget);
+      expect(find.byType(Divider), findsNothing);
+      expect(deactivations, 0);
+      expect(disposals, 0);
+
+      final initialFitCalls = browserPort.fitGameScreenCalls;
+
+      // 2. Force Portrait in split-screen (window size stays 800x500!)
+      await displayController.setDisplayMode(DisplayMode.portrait);
+      await tester.pumpAndSettle();
+
+      // Layout switches to portrait/vertical layout (Divider)
+      expect(find.byType(Divider), findsOneWidget);
+      expect(find.byType(VerticalDivider), findsNothing);
+      expect(browserPort.fitGameScreenCalls, greaterThan(initialFitCalls));
+      expect(deactivations, 0, reason: 'PlatformView must not deactivate on portrait switch');
+      expect(disposals, 0, reason: 'PlatformView must not dispose on portrait switch');
+      expect(tester.element(find.byKey(probeKey)), same(originalElement));
+
+      // 3. Tall split-screen window (400 x 800)
+      tester.view.physicalSize = const Size(400, 800);
+      await displayController.setDisplayMode(DisplayMode.auto);
+      await tester.pumpAndSettle();
+
+      // Auto on tall window -> Portrait layout (Divider)
+      expect(find.byType(Divider), findsOneWidget);
+      expect(find.byType(VerticalDivider), findsNothing);
+      expect(deactivations, 0);
+      expect(disposals, 0);
+      expect(tester.element(find.byKey(probeKey)), same(originalElement));
+
+      final fitCallsBeforeLandscape = browserPort.fitGameScreenCalls;
+
+      // 4. Force Landscape in split-screen (window size stays 400x800!)
+      await displayController.setDisplayMode(DisplayMode.landscape);
+      await tester.pumpAndSettle();
+
+      // Layout switches to landscape layout (VerticalDivider)
+      expect(find.byType(VerticalDivider), findsOneWidget);
+      expect(find.byType(Divider), findsNothing);
+      expect(browserPort.fitGameScreenCalls, greaterThan(fitCallsBeforeLandscape));
+      expect(deactivations, 0, reason: 'PlatformView must not deactivate on landscape switch');
+      expect(disposals, 0, reason: 'PlatformView must not dispose on landscape switch');
+      expect(tester.element(find.byKey(probeKey)), same(originalElement));
+
+      // 5. Continuous rapid switching in split-screen (portrait -> auto -> landscape -> auto)
+      for (final mode in [
+        DisplayMode.portrait,
+        DisplayMode.auto,
+        DisplayMode.landscape,
+        DisplayMode.portrait,
+        DisplayMode.auto,
+      ]) {
+        final previousCalls = browserPort.fitGameScreenCalls;
+        await displayController.setDisplayMode(mode);
+        await tester.pumpAndSettle();
+
+        expect(deactivations, 0, reason: 'Continuous switching to $mode must never deactivate PlatformView');
+        expect(disposals, 0, reason: 'Continuous switching to $mode must never dispose PlatformView');
+        expect(tester.element(find.byKey(probeKey)), same(originalElement));
+        expect(browserPort.fitGameScreenCalls, greaterThan(previousCalls));
+      }
     },
   );
 }

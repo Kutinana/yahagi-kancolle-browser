@@ -54,6 +54,16 @@ final class SortieDamageControlLedger {
         _consumed[shipId] ?? const <DamageControlEquipmentRef>[],
       );
 
+  Map<int, List<DamageControlEquipmentRef>> get consumedByShipId =>
+      Map<int, List<DamageControlEquipmentRef>>.unmodifiable(
+        <int, List<DamageControlEquipmentRef>>{
+          for (final entry in _consumed.entries)
+            if (entry.value.isNotEmpty)
+              entry.key:
+                  List<DamageControlEquipmentRef>.unmodifiable(entry.value),
+        },
+      );
+
   List<BattleShipSnapshot> seedFleet(List<BattleShipSnapshot> ships) {
     var changed = false;
     final result = <BattleShipSnapshot>[];

@@ -35,6 +35,7 @@ import 'background_game_retention_controller.dart';
 import 'game_frame_rate_settings.dart';
 import 'game_rendering_mode_controller.dart';
 import 'game_connector_controller.dart';
+import '../telemetry/telemetry_controller.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -73,6 +74,7 @@ class SettingsPage extends StatelessWidget {
     this.gameConnectorController,
     this.isBattleActive = false,
     this.diagnosticController,
+    this.telemetryController,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -109,6 +111,7 @@ class SettingsPage extends StatelessWidget {
   final GameConnectorController? gameConnectorController;
   final bool isBattleActive;
   final DiagnosticController? diagnosticController;
+  final TelemetryController? telemetryController;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +162,7 @@ class SettingsPage extends StatelessWidget {
           fcdMapController: fcdMapController,
           questCatalogController: questCatalogController,
           improvementPlannerController: improvementPlannerController,
+          telemetryController: telemetryController,
         ),
         AboutSupportSettingsPage(
           currentVersion: currentVersion,

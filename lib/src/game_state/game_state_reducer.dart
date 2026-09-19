@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../battle/sortie_damage_control_ledger.dart';
 import '../bridge/captured_api_event.dart';
 import '../capture/game_capture_path_catalog.dart';
 import 'combat_state.dart';
@@ -596,6 +597,58 @@ class GameStateReducer {
     }
     if (updatedShips == null) return state;
     return state.copyWith(ships: updatedShips, updatedAt: capturedAt);
+  }
+
+  GameState applyDamageControlConsumption(
+    GameState state,
+    Map<int, List<DamageControlEquipmentRef>> consumedByShipId,
+    DateTime capturedAt,
+  ) {
+    Map<int, OwnedShip>? updatedShips;
+    Map<int, OwnedSlotItem>? updatedSlotItems;
+
+    for (final entry in consumedByShipId.entries) {
+      final shipId = entry.key;
+      final consumedRefs = entry.value;
+      final ship = (updatedShips ?? state.ships)[shipId];
+      if (ship == null || consumedRefs.isEmpty) continue;
+
+      var currentSlotIds = List<int>.of(ship.slotIds);
+      var currentExtraSlotId = ship.extraSlotId;
+      var shipChanged = false;
+
+      for (final ref in consumedRefs) {
+        final instanceId = ref.instanceId;
+        final slotIndex = currentSlotIds.indexOf(instanceId);
+        if (slotIndex >= 0) {
+          currentSlotIds[slotIndex] = -1;
+          shipChanged = true;
+          updatedSlotItems ??= Map<int, OwnedSlotItem>.of(state.slotItems);
+          updatedSlotItems.remove(instanceId);
+        } else if (currentExtraSlotId == instanceId) {
+          currentExtraSlotId = -1;
+          shipChanged = true;
+          updatedSlotItems ??= Map<int, OwnedSlotItem>.of(state.slotItems);
+          updatedSlotItems.remove(instanceId);
+        }
+      }
+
+      if (shipChanged) {
+        updatedShips ??= Map<int, OwnedShip>.of(state.ships);
+        updatedShips[shipId] = _copyShip(
+          ship,
+          slotIds: List<int>.unmodifiable(currentSlotIds),
+          extraSlotId: currentExtraSlotId,
+        );
+      }
+    }
+
+    if (updatedShips == null) return state;
+    return state.copyWith(
+      ships: updatedShips,
+      slotItems: updatedSlotItems ?? state.slotItems,
+      updatedAt: capturedAt,
+    );
   }
 
   GameState _charge(
@@ -1368,6 +1421,12 @@ class GameStateReducer {
           ? shipTypes[shipTypeId]?.equipTypeIds ?? const <int>{}
           : _positiveIntKeys(shipOverrideTypes, requireEnabledValue: false);
       final antiSubRange = _optionalList(item['api_tais']);
+      final hougRange = _optionalList(item['api_houg']);
+      final raigRange = _optionalList(item['api_raig']);
+      final tykuRange = _optionalList(item['api_tyku']);
+      final soukRange = _optionalList(item['api_souk']);
+      final luckRange = _optionalList(item['api_luck']);
+      final taikRange = _optionalList(item['api_taik']);
       ships[id] = MasterShip(
         id: id,
         name: name,
@@ -1384,6 +1443,18 @@ class GameStateReducer {
         slotCapacities: _intList(item['api_maxeq'], includeNonPositive: true),
         buildTimeMinutes: _asInt(item['api_buildtime']),
         baseAntiSub: antiSubRange.isEmpty ? 0 : _asInt(antiSubRange.first),
+        baseFirepower: hougRange.isEmpty ? 0 : _asInt(hougRange.first),
+        maxFirepower: hougRange.length > 1 ? _asInt(hougRange[1]) : 0,
+        baseTorpedo: raigRange.isEmpty ? 0 : _asInt(raigRange.first),
+        maxTorpedo: raigRange.length > 1 ? _asInt(raigRange[1]) : 0,
+        baseAntiAir: tykuRange.isEmpty ? 0 : _asInt(tykuRange.first),
+        maxAntiAir: tykuRange.length > 1 ? _asInt(tykuRange[1]) : 0,
+        baseArmor: soukRange.isEmpty ? 0 : _asInt(soukRange.first),
+        maxArmor: soukRange.length > 1 ? _asInt(soukRange[1]) : 0,
+        baseLuck: luckRange.isEmpty ? 0 : _asInt(luckRange.first),
+        maxLuck: luckRange.length > 1 ? _asInt(luckRange[1]) : 0,
+        baseHp: taikRange.isEmpty ? 0 : _asInt(taikRange.first),
+        maxHp: taikRange.length > 1 ? _asInt(taikRange[1]) : 0,
         equipTypeIds: equipTypeIds,
         limitedEquipmentIdsByType: _parseLimitedEquipmentIdsByType(
           shipOverrideTypes,

@@ -35,6 +35,11 @@ final class BattleController extends ChangeNotifier
     this.waitForGameState,
     void Function(Map<int, int> hpByShipId, DateTime capturedAt)?
     onFriendlyHpUpdated,
+    void Function(
+      Map<int, List<DamageControlEquipmentRef>> consumedByShipId,
+      DateTime capturedAt,
+    )?
+    onDamageControlConsumed,
     this.damageAlertPort,
     this.battleStatusEffectSettings,
     this.poiEngineFactory,
@@ -45,6 +50,7 @@ final class BattleController extends ChangeNotifier
     this.formationMemory,
     this.accountSession,
   }) : _friendlyHpUpdater = onFriendlyHpUpdated,
+       _damageControlUpdater = onDamageControlConsumed,
        _captureNotifications =
            captureNotifications ?? FrameNotificationCoalescer(),
        _predictionExecutor =
@@ -63,6 +69,11 @@ final class BattleController extends ChangeNotifier
   final Future<void> Function()? waitForGameState;
   void Function(Map<int, int> hpByShipId, DateTime capturedAt)?
   _friendlyHpUpdater;
+  void Function(
+    Map<int, List<DamageControlEquipmentRef>> consumedByShipId,
+    DateTime capturedAt,
+  )?
+  _damageControlUpdater;
   final FrameNotificationCoalescer _captureNotifications;
   final BattlePredictionExecutor _predictionExecutor;
   final BattleDamageAlertPort? damageAlertPort;
@@ -162,6 +173,26 @@ final class BattleController extends ChangeNotifier
       return;
     }
     _emitFriendlyHp(current, _lastBattleCapturedAt ?? DateTime.now().toUtc());
+  }
+
+  void bindDamageControlUpdater(
+    void Function(
+      Map<int, List<DamageControlEquipmentRef>> consumedByShipId,
+      DateTime capturedAt,
+    ) updater,
+  ) {
+    _damageControlUpdater = updater;
+    final current = _current;
+    if (current == null ||
+        current.context.practice ||
+        current.displayStage == BattleDisplayStage.navigation ||
+        _hasUntrustedPoiLedger ||
+        _sortieDamageControls.consumedByShipId.isEmpty) {
+      return;
+    }
+    _emitDamageControlConsumption(
+      _lastBattleCapturedAt ?? DateTime.now().toUtc(),
+    );
   }
 
   void refreshNodeLabel() {
@@ -668,6 +699,7 @@ final class BattleController extends ChangeNotifier
     _lastBattleCapturedAt = event.capturedAt;
     if (!practice && !hasUntrustedPoiLedger) {
       _emitFriendlyHp(_current!, event.capturedAt);
+      _emitDamageControlConsumption(event.capturedAt);
     }
   }
 
@@ -679,6 +711,12 @@ final class BattleController extends ChangeNotifier
       }),
       capturedAt,
     );
+  }
+
+  void _emitDamageControlConsumption(DateTime capturedAt) {
+    final consumptions = _sortieDamageControls.consumedByShipId;
+    if (consumptions.isEmpty) return;
+    _damageControlUpdater?.call(consumptions, capturedAt);
   }
 
   bool get _hasUntrustedPoiLedger =>
@@ -821,6 +859,9 @@ final class BattleController extends ChangeNotifier
       _session!.completed = true;
       _archiveSession();
     }
+    if (!confirmed.context.practice && !_hasUntrustedPoiLedger) {
+      _emitDamageControlConsumption(event.capturedAt);
+    }
 
     // Log to persistent database
     if (_memberId <= 0) return;
@@ -953,7 +994,8 @@ final class BattleController extends ChangeNotifier
       final shipId = ship.ownedShipId;
       final ownedShip = shipId == null ? null : state.ships[shipId];
       if (shipId == null || ownedShip == null) continue;
-      result[shipId] = <DamageControlEquipmentRef>[
+      final alreadyConsumed = _sortieDamageControls.consumptionsForShip(shipId);
+      final currentEquipment = <DamageControlEquipmentRef>[
         for (final equipment in state.equipmentForShip(ownedShip))
           if (equipment.owned.masterSlotItemId == 42 ||
               equipment.owned.masterSlotItemId == 43)
@@ -961,6 +1003,14 @@ final class BattleController extends ChangeNotifier
               instanceId: equipment.owned.instanceId,
               masterId: equipment.owned.masterSlotItemId,
             ),
+      ];
+      result[shipId] = <DamageControlEquipmentRef>[
+        ...alreadyConsumed,
+        for (final item in currentEquipment)
+          if (!alreadyConsumed.any(
+            (consumed) => consumed.instanceId == item.instanceId,
+          ))
+            item,
       ];
     }
     return result;
@@ -1003,6 +1053,10 @@ final class BattleController extends ChangeNotifier
       for (var index = 0; index < ownedShips.length; index++)
         () {
           final isEscaped = escapedIds.contains(ownedShips[index].id);
+          final equipped = state.equipmentForShip(ownedShips[index]);
+          final consumed = _sortieDamageControls.consumptionsForShip(
+            ownedShips[index].id,
+          );
           return BattleShipSnapshot(
             masterId: ownedShips[index].masterId,
             ownedShipId: ownedShips[index].id,
@@ -1032,8 +1086,13 @@ final class BattleController extends ChangeNotifier
             condition: ownedShips[index].condition,
             details: BattleShipDetails.friendly(ownedShips[index], state),
             equipmentMasterIds: <int>[
-              for (final equipment in state.equipmentForShip(ownedShips[index]))
+              for (final equipment in equipped)
                 equipment.owned.masterSlotItemId,
+              for (final item in consumed)
+                if (!equipped.any(
+                  (eq) => eq.owned.instanceId == item.instanceId,
+                ))
+                  item.masterId,
             ],
             isEscaped: isEscaped,
           );

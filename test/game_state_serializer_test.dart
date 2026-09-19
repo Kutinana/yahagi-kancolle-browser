@@ -115,6 +115,80 @@ void main() {
     expect(restored.hasEquipmentCompatibilityData, isFalse);
   });
 
+  test('MasterShip modernization stats survive cache serialization', () {
+    const state = GameState(
+      masterShips: <int, MasterShip>{
+        690: MasterShip(
+          id: 690,
+          name: '日進改',
+          shipTypeId: 11,
+          baseFirepower: 18,
+          maxFirepower: 54,
+          baseTorpedo: 0,
+          maxTorpedo: 75,
+          baseAntiAir: 22,
+          maxAntiAir: 62,
+          baseArmor: 24,
+          maxArmor: 46,
+          baseLuck: 10,
+          maxLuck: 58,
+          baseHp: 38,
+          maxHp: 44,
+        ),
+      },
+    );
+
+    final restored = GameStateSerializer.deserialize(
+      GameStateSerializer.serialize(state),
+    );
+
+    final ship = restored.masterShips[690];
+    expect(ship, isNotNull);
+    expect(ship!.baseFirepower, 18);
+    expect(ship.maxFirepower, 54);
+    expect(ship.baseTorpedo, 0);
+    expect(ship.maxTorpedo, 75);
+    expect(ship.baseAntiAir, 22);
+    expect(ship.maxAntiAir, 62);
+    expect(ship.baseArmor, 24);
+    expect(ship.maxArmor, 46);
+    expect(ship.baseLuck, 10);
+    expect(ship.maxLuck, 58);
+    expect(ship.baseHp, 38);
+    expect(ship.maxHp, 44);
+  });
+
+  test('old MasterShip cache without modernization stats defaults to 0 safely', () {
+    const legacyJson = '''
+    {
+      "masterShips": {
+        "1": {
+          "id": 1,
+          "name": "吹雪",
+          "shipTypeId": 2
+        }
+      }
+    }
+    ''';
+
+    final restored = GameStateSerializer.deserialize(legacyJson);
+    final ship = restored.masterShips[1];
+    expect(ship, isNotNull);
+    expect(ship!.baseFirepower, 0);
+    expect(ship.maxFirepower, 0);
+    expect(ship.baseTorpedo, 0);
+    expect(ship.maxTorpedo, 0);
+    expect(ship.baseAntiAir, 0);
+    expect(ship.maxAntiAir, 0);
+    expect(ship.baseArmor, 0);
+    expect(ship.maxArmor, 0);
+    expect(ship.baseLuck, 0);
+    expect(ship.maxLuck, 0);
+    expect(ship.baseHp, 0);
+    expect(ship.maxHp, 0);
+  });
+
+
   test('land-base cache keeps identity but drops sortie-only hp', () {
     const state = GameState(
       landBases: <LandBaseState>[

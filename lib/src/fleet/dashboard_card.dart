@@ -9,6 +9,8 @@ class DashboardCard extends StatelessWidget {
     required this.collapsed,
     required this.onToggleCollapse,
     required this.child,
+    this.showLogo = true,
+    this.showTitle = true,
     this.titleBadge,
     this.trailing,
     this.padding,
@@ -22,6 +24,8 @@ class DashboardCard extends StatelessWidget {
   final bool collapsed;
   final VoidCallback onToggleCollapse;
   final Widget child;
+  final bool showLogo;
+  final bool showTitle;
   final Widget? titleBadge;
   final Widget? trailing;
   final EdgeInsetsGeometry? padding;
@@ -57,39 +61,49 @@ class DashboardCard extends StatelessWidget {
                       : constraints.maxWidth,
                   child: Row(
                     children: [
-                      IconTheme(
-                        data: const IconThemeData(
-                          size: 16,
-                          color: Color(0xffd4a85f),
+                      if (showLogo) ...[
+                        IconTheme(
+                          data: const IconThemeData(
+                            size: 16,
+                            color: Color(0xffd4a85f),
+                          ),
+                          child: icon,
                         ),
-                        child: icon,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  title,
-                                  style: const TextStyle(
-                                    color: Color(0xffd4a85f),
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
+                        if (showTitle) const SizedBox(width: 6),
+                      ],
+                      if (showTitle)
+                        Expanded(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    title,
+                                    style: const TextStyle(
+                                      color: Color(0xffd4a85f),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            if (!collapsed && titleBadge != null) ...[
-                              const SizedBox(width: 8),
-                              titleBadge!,
+                              if (!collapsed && titleBadge != null) ...[
+                                const SizedBox(width: 8),
+                                titleBadge!,
+                              ],
                             ],
-                          ],
-                        ),
-                      ),
+                          ),
+                        )
+                      else ...[
+                        const Spacer(),
+                        if (!collapsed && titleBadge != null) ...[
+                          titleBadge!,
+                          const SizedBox(width: 8),
+                        ],
+                      ],
                       if (!collapsed && trailing != null) ...[
                         trailing!,
                         const SizedBox(width: 3),

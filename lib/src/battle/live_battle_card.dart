@@ -13,6 +13,7 @@ import '../fleet/ship_status_visuals.dart';
 import '../fleet/status_density.dart';
 import '../game_state/game_state.dart';
 import '../settings/battle_status_effect_settings.dart';
+import '../settings/module_display_settings.dart';
 import 'detailed_battle_panel.dart';
 import 'land_base_raid_panel.dart';
 import 'official_enemy_preview.dart';
@@ -29,6 +30,9 @@ class LiveBattleCard extends StatefulWidget {
     this.damagePulseMode = DamagePulseFilter.all,
     this.showEnemyPortraits = true,
     this.showLastFormationHint = true,
+    this.showLogo = true,
+    this.showTitle = true,
+    this.onOpenDisplaySettings,
   });
 
   final BattleController controller;
@@ -37,6 +41,9 @@ class LiveBattleCard extends StatefulWidget {
   final DamagePulseFilter damagePulseMode;
   final bool showEnemyPortraits;
   final bool showLastFormationHint;
+  final bool showLogo;
+  final bool showTitle;
+  final VoidCallback? onOpenDisplaySettings;
 
   @override
   State<LiveBattleCard> createState() => _LiveBattleCardState();
@@ -78,6 +85,13 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
           icon: const Icon(Icons.remove_red_eye_outlined),
           collapsed: widget.collapsed,
           onToggleCollapse: widget.onToggleCollapse,
+          showLogo: widget.showLogo,
+          showTitle: widget.showTitle,
+          headerAction: moduleDisplayGear(
+            context,
+            'battle',
+            widget.onOpenDisplaySettings,
+          ),
           titleBadge: idle ? const _IdleBadge() : _StatusBadge(battle: battle),
           trailing: _ModeSwitch(mode: _mode, onChanged: _setMode),
           child: Column(
