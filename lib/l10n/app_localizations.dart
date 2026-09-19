@@ -324,7 +324,7 @@ abstract class AppLocalizations {
   /// No description provided for @telemetryAnonymousStatsDesc.
   ///
   /// In zh, this message translates to:
-  /// **'帮助统计当前在线提督人数、日活跃量与机型/WebView版本分布以协助优化。仅包含设备环境信息，绝不收集任何游戏账号、密码或网络凭据。'**
+  /// **'发送匿名统计数据以帮助开发者持续优化和改进应用。不包含任何账号或隐私信息。'**
   String get telemetryAnonymousStatsDesc;
 
   /// No description provided for @diagnosticPrivacyTitle.
@@ -5983,14 +5983,14 @@ abstract class AppLocalizations {
   /// No description provided for @noticePracticeExp.
   ///
   /// In zh, this message translates to:
-  /// **'演习对手经验: {baseExp} (S胜: {sExp} · A胜: {aExp} EXP)'**
-  String noticePracticeExp(int baseExp, int sExp, int aExp);
+  /// **'演习经验（约）：S胜 {sExp} · A胜 {aExp}'**
+  String noticePracticeExp(int sExp, int aExp);
 
   /// No description provided for @noticePracticeExpCtBonus.
   ///
   /// In zh, this message translates to:
-  /// **'演习对手经验: {baseExp} | 练巡加成: +{bonus} (S胜: {sExp} EXP)'**
-  String noticePracticeExpCtBonus(int baseExp, String bonus, int sExp);
+  /// **'演习经验（约）：S胜 {sExp} · A胜 {aExp} (练巡 +{bonus})'**
+  String noticePracticeExpCtBonus(int sExp, int aExp, String bonus);
 
   /// No description provided for @noticeSortieShipFull.
   ///

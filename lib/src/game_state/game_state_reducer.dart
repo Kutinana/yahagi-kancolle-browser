@@ -1421,6 +1421,12 @@ class GameStateReducer {
           ? shipTypes[shipTypeId]?.equipTypeIds ?? const <int>{}
           : _positiveIntKeys(shipOverrideTypes, requireEnabledValue: false);
       final antiSubRange = _optionalList(item['api_tais']);
+      final hougRange = _optionalList(item['api_houg']);
+      final raigRange = _optionalList(item['api_raig']);
+      final tykuRange = _optionalList(item['api_tyku']);
+      final soukRange = _optionalList(item['api_souk']);
+      final luckRange = _optionalList(item['api_luck']);
+      final taikRange = _optionalList(item['api_taik']);
       ships[id] = MasterShip(
         id: id,
         name: name,
@@ -1437,6 +1443,18 @@ class GameStateReducer {
         slotCapacities: _intList(item['api_maxeq'], includeNonPositive: true),
         buildTimeMinutes: _asInt(item['api_buildtime']),
         baseAntiSub: antiSubRange.isEmpty ? 0 : _asInt(antiSubRange.first),
+        baseFirepower: hougRange.isEmpty ? 0 : _asInt(hougRange.first),
+        maxFirepower: hougRange.length > 1 ? _asInt(hougRange[1]) : 0,
+        baseTorpedo: raigRange.isEmpty ? 0 : _asInt(raigRange.first),
+        maxTorpedo: raigRange.length > 1 ? _asInt(raigRange[1]) : 0,
+        baseAntiAir: tykuRange.isEmpty ? 0 : _asInt(tykuRange.first),
+        maxAntiAir: tykuRange.length > 1 ? _asInt(tykuRange[1]) : 0,
+        baseArmor: soukRange.isEmpty ? 0 : _asInt(soukRange.first),
+        maxArmor: soukRange.length > 1 ? _asInt(soukRange[1]) : 0,
+        baseLuck: luckRange.isEmpty ? 0 : _asInt(luckRange.first),
+        maxLuck: luckRange.length > 1 ? _asInt(luckRange[1]) : 0,
+        baseHp: taikRange.isEmpty ? 0 : _asInt(taikRange.first),
+        maxHp: taikRange.length > 1 ? _asInt(taikRange[1]) : 0,
         equipTypeIds: equipTypeIds,
         limitedEquipmentIdsByType: _parseLimitedEquipmentIdsByType(
           shipOverrideTypes,

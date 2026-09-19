@@ -41,7 +41,7 @@
   "diagnosticLoggingTitle": "クライアント診断ログを記録",
   "diagnosticLoggingDesc": "性能とエラーの概要のみを記録し、アカウント、パスワード、ログイン情報は含みません",
   "telemetryAnonymousStatsTitle": "匿名の端末および利用統計",
-  "telemetryAnonymousStatsDesc": "オンライン提督数、DAU、機種／WebView バージョンの分布を把握し、アプリの最適化に役立てます。端末環境情報のみを送信し、ゲームアカウントやパスワード、認証情報は一切収集しません。",
+  "telemetryAnonymousStatsDesc": "アプリの品質向上と最適化のため匿名の利用統計を送信します。アカウントや個人情報は一切含みません。",
   "diagnosticPrivacyTitle": "プライバシー保護診断",
   "diagnosticPrivacyDesc": "エクスポート前に内容を再検査します。ログにはアカウント、パスワード、Cookie、トークン、リクエスト本文、レスポンス本文、チャット内容、スクリーンショットを記録せず、自動送信もしません。",
   "diagnosticStatusEnabled": "記録中",
@@ -1141,12 +1141,9 @@
       }
     }
   },
-  "noticePracticeExp": "演習相手経験値: {baseExp} (S勝利: {sExp} · A勝利: {aExp} EXP)",
+  "noticePracticeExp": "演習経験値（約）：S勝利 {sExp} · A勝利 {aExp}",
   "@noticePracticeExp": {
     "placeholders": {
-      "baseExp": {
-        "type": "int"
-      },
       "sExp": {
         "type": "int"
       },
@@ -1155,17 +1152,17 @@
       }
     }
   },
-  "noticePracticeExpCtBonus": "演習相手経験値: {baseExp} | 練習巡洋艦ボーナス: +{bonus} (S勝利: {sExp} EXP)",
+  "noticePracticeExpCtBonus": "演習経験値（約）：S勝利 {sExp} · A勝利 {aExp} (練巡 +{bonus})",
   "@noticePracticeExpCtBonus": {
     "placeholders": {
-      "baseExp": {
+      "sExp": {
+        "type": "int"
+      },
+      "aExp": {
         "type": "int"
       },
       "bonus": {
         "type": "String"
-      },
-      "sExp": {
-        "type": "int"
       }
     }
   },

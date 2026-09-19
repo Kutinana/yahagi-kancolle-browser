@@ -129,7 +129,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get telemetryAnonymousStatsDesc =>
-      'オンライン提督数、DAU、機種／WebView バージョンの分布を把握し、アプリの最適化に役立てます。端末環境情報のみを送信し、ゲームアカウントやパスワード、認証情報は一切収集しません。';
+      'アプリの品質向上と最適化のため匿名の利用統計を送信します。アカウントや個人情報は一切含みません。';
 
   @override
   String get diagnosticPrivacyTitle => 'プライバシー保護診断';
@@ -3209,13 +3209,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String noticePracticeExp(int baseExp, int sExp, int aExp) {
-    return '演習相手経験値: $baseExp (S勝利: $sExp · A勝利: $aExp EXP)';
+  String noticePracticeExp(int sExp, int aExp) {
+    return '演習経験値（約）：S勝利 $sExp · A勝利 $aExp';
   }
 
   @override
-  String noticePracticeExpCtBonus(int baseExp, String bonus, int sExp) {
-    return '演習相手経験値: $baseExp | 練習巡洋艦ボーナス: +$bonus (S勝利: $sExp EXP)';
+  String noticePracticeExpCtBonus(int sExp, int aExp, String bonus) {
+    return '演習経験値（約）：S勝利 $sExp · A勝利 $aExp (練巡 +$bonus)';
   }
 
   @override

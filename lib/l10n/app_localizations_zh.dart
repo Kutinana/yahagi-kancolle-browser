@@ -127,7 +127,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get telemetryAnonymousStatsDesc =>
-      '帮助统计当前在线提督人数、日活跃量与机型/WebView版本分布以协助优化。仅包含设备环境信息，绝不收集任何游戏账号、密码或网络凭据。';
+      '发送匿名统计数据以帮助开发者持续优化和改进应用。不包含任何账号或隐私信息。';
 
   @override
   String get diagnosticPrivacyTitle => '隐私安全诊断';
@@ -3177,13 +3177,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String noticePracticeExp(int baseExp, int sExp, int aExp) {
-    return '演习对手经验: $baseExp (S胜: $sExp · A胜: $aExp EXP)';
+  String noticePracticeExp(int sExp, int aExp) {
+    return '演习经验（约）：S胜 $sExp · A胜 $aExp';
   }
 
   @override
-  String noticePracticeExpCtBonus(int baseExp, String bonus, int sExp) {
-    return '演习对手经验: $baseExp | 练巡加成: +$bonus (S胜: $sExp EXP)';
+  String noticePracticeExpCtBonus(int sExp, int aExp, String bonus) {
+    return '演习经验（约）：S胜 $sExp · A胜 $aExp (练巡 +$bonus)';
   }
 
   @override
@@ -3378,7 +3378,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get telemetryAnonymousStatsDesc =>
-      '幫助統計目前在線提督人數、日活躍量與機型/WebView版本分佈以協助優化。僅包含裝置環境資訊，絕不收集任何遊戲帳號、密碼或網路憑證。';
+      '傳送匿名統計資料以協助開發者持續最佳化與改進應用程式。不包含任何帳號或隱私資訊。';
 
   @override
   String get diagnosticPrivacyTitle => '隱私安全診斷';
@@ -6429,13 +6429,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String noticePracticeExp(int baseExp, int sExp, int aExp) {
-    return '演習對手經驗: $baseExp (S勝: $sExp · A勝: $aExp EXP)';
+  String noticePracticeExp(int sExp, int aExp) {
+    return '演習經驗（約）：S勝 $sExp · A勝 $aExp';
   }
 
   @override
-  String noticePracticeExpCtBonus(int baseExp, String bonus, int sExp) {
-    return '演習對手經驗: $baseExp | 練巡加成: +$bonus (S勝: $sExp EXP)';
+  String noticePracticeExpCtBonus(int sExp, int aExp, String bonus) {
+    return '演習經驗（約）：S勝 $sExp · A勝 $aExp (練巡 +$bonus)';
   }
 
   @override

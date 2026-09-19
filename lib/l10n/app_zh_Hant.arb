@@ -41,7 +41,7 @@
   "diagnosticLoggingTitle": "記錄用戶端診斷日誌",
   "diagnosticLoggingDesc": "僅記錄效能和錯誤摘要，不包含帳號、密碼或登入憑據",
   "telemetryAnonymousStatsTitle": "匿名裝置與使用統計",
-  "telemetryAnonymousStatsDesc": "幫助統計目前在線提督人數、日活躍量與機型/WebView版本分佈以協助優化。僅包含裝置環境資訊，絕不收集任何遊戲帳號、密碼或網路憑證。",
+  "telemetryAnonymousStatsDesc": "傳送匿名統計資料以協助開發者持續最佳化與改進應用程式。不包含任何帳號或隱私資訊。",
   "diagnosticPrivacyTitle": "隱私安全診斷",
   "diagnosticPrivacyDesc": "匯出前會再次檢查內容。日誌不記錄帳號、密碼、Cookie、權杖、請求正文、回應正文、聊天內容或截圖，也不會自動上傳。",
   "diagnosticStatusEnabled": "正在記錄",
@@ -1141,12 +1141,9 @@
       }
     }
   },
-  "noticePracticeExp": "演習對手經驗: {baseExp} (S勝: {sExp} · A勝: {aExp} EXP)",
+  "noticePracticeExp": "演習經驗（約）：S勝 {sExp} · A勝 {aExp}",
   "@noticePracticeExp": {
     "placeholders": {
-      "baseExp": {
-        "type": "int"
-      },
       "sExp": {
         "type": "int"
       },
@@ -1155,17 +1152,17 @@
       }
     }
   },
-  "noticePracticeExpCtBonus": "演習對手經驗: {baseExp} | 練巡加成: +{bonus} (S勝: {sExp} EXP)",
+  "noticePracticeExpCtBonus": "演習經驗（約）：S勝 {sExp} · A勝 {aExp} (練巡 +{bonus})",
   "@noticePracticeExpCtBonus": {
     "placeholders": {
-      "baseExp": {
+      "sExp": {
+        "type": "int"
+      },
+      "aExp": {
         "type": "int"
       },
       "bonus": {
         "type": "String"
-      },
-      "sExp": {
-        "type": "int"
       }
     }
   },

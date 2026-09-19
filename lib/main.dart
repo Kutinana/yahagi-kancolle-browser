@@ -561,7 +561,6 @@ Future<void> main() async {
   await diagnosticController.initialize();
   const telemetrySettingsStore = SharedPreferencesTelemetrySettingsStore();
   final telemetryService = AppTelemetryService(
-    aptabaseAppKey: 'A-US-7813890229',
     telemetryDeckAppID: '685D5F38-DD7D-48CB-896D-88642F96F92D',
     appVersion: currentVersion,
     diagnosticPlatformPort: diagnosticPlatform,

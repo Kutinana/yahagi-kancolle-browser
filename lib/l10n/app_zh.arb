@@ -41,7 +41,7 @@
   "diagnosticLoggingTitle": "记录客户端诊断日志",
   "diagnosticLoggingDesc": "仅记录性能和错误摘要，不包含账号、密码或登录凭据",
   "telemetryAnonymousStatsTitle": "匿名设备与使用统计",
-  "telemetryAnonymousStatsDesc": "帮助统计当前在线提督人数、日活跃量与机型/WebView版本分布以协助优化。仅包含设备环境信息，绝不收集任何游戏账号、密码或网络凭据。",
+  "telemetryAnonymousStatsDesc": "发送匿名统计数据以帮助开发者持续优化和改进应用。不包含任何账号或隐私信息。",
   "diagnosticPrivacyTitle": "隐私安全诊断",
   "diagnosticPrivacyDesc": "导出前会再次检查内容。日志不记录账号、密码、Cookie、令牌、请求正文、响应正文、聊天内容或截图，也不会自动上传。",
   "diagnosticStatusEnabled": "正在记录",
@@ -1141,12 +1141,9 @@
       }
     }
   },
-  "noticePracticeExp": "演习对手经验: {baseExp} (S胜: {sExp} · A胜: {aExp} EXP)",
+  "noticePracticeExp": "演习经验（约）：S胜 {sExp} · A胜 {aExp}",
   "@noticePracticeExp": {
     "placeholders": {
-      "baseExp": {
-        "type": "int"
-      },
       "sExp": {
         "type": "int"
       },
@@ -1155,17 +1152,17 @@
       }
     }
   },
-  "noticePracticeExpCtBonus": "演习对手经验: {baseExp} | 练巡加成: +{bonus} (S胜: {sExp} EXP)",
+  "noticePracticeExpCtBonus": "演习经验（约）：S胜 {sExp} · A胜 {aExp} (练巡 +{bonus})",
   "@noticePracticeExpCtBonus": {
     "placeholders": {
-      "baseExp": {
+      "sExp": {
+        "type": "int"
+      },
+      "aExp": {
         "type": "int"
       },
       "bonus": {
         "type": "String"
-      },
-      "sExp": {
-        "type": "int"
       }
     }
   },

@@ -424,6 +424,15 @@ class _LayoutSettingsControllerStub extends ChangeNotifier
   HdLayoutSettings get hdSettings => const HdLayoutSettings();
 
   @override
+  UiDisplaySize get uiDisplaySize => UiDisplaySize.normal;
+
+  @override
+  bool get topNoticeEnabled => true;
+
+  @override
+  int get topNoticeDurationSeconds => 5;
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => _unexpected(invocation);
 }
 
