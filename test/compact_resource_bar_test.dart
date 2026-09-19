@@ -8,6 +8,89 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.
 import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
 
 void main() {
+  testWidgets('furniture coin is hidden by default and can be enabled', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    const state = GameState(
+      furnitureCoins: 88000,
+      hasFurnitureCoinData: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: state,
+            settingsController: controller,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('header-resource-furniture-coin')),
+      findsNothing,
+    );
+
+    await controller.toggleHeaderResourceVisible(headerFurnitureCoinId);
+    await tester.pump();
+    await tester.drag(
+      find.byKey(const Key('header-resource-list')),
+      const Offset(-2000, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('header-resource-furniture-coin')),
+      findsOneWidget,
+    );
+    expect(find.text('88000'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/material/useitem_44.png',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('furniture coin uses a dash before api_fcoin is captured', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    await controller.toggleHeaderResourceVisible(headerFurnitureCoinId);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: GameState.empty,
+            settingsController: controller,
+          ),
+        ),
+      ),
+    );
+    await tester.drag(
+      find.byKey(const Key('header-resource-list')),
+      const Offset(-2000, 0),
+    );
+    await tester.pumpAndSettle();
+
+    final coin = find.byKey(const Key('header-resource-furniture-coin'));
+    expect(coin, findsOneWidget);
+    expect(find.descendant(of: coin, matching: find.text('—')), findsOneWidget);
+  });
+
   testWidgets('frame refresh capsule defaults hidden and becomes actionable', (
     tester,
   ) async {
@@ -492,4 +575,3 @@ void main() {
     expect(tester.getSize(fuelPill).width, 74);
   });
 }
-

@@ -1,4 +1,5 @@
 import '../game_state/game_state.dart';
+import '../settings/header_resource_settings.dart';
 
 class HeaderResourceSpec {
   const HeaderResourceSpec({
@@ -7,6 +8,7 @@ class HeaderResourceSpec {
     required this.assetPath,
     this.type,
     this.useItemId,
+    this.isFurnitureCoin = false,
   });
 
   final String id;
@@ -14,8 +16,12 @@ class HeaderResourceSpec {
   final String assetPath;
   final GameResourceType? type;
   final int? useItemId;
+  final bool isFurnitureCoin;
 
   int? value(GameState state) {
+    if (isFurnitureCoin) {
+      return state.hasFurnitureCoinData ? state.furnitureCoins : null;
+    }
     final material = type;
     return material == null
         ? state.useItemCount(useItemId!)
@@ -71,6 +77,12 @@ const headerResourceCatalog = <HeaderResourceSpec>[
     label: '改修資材',
     assetPath: 'assets/images/material/08.png',
     type: GameResourceType.improvementMaterial,
+  ),
+  HeaderResourceSpec(
+    id: headerFurnitureCoinId,
+    label: '家具コイン',
+    assetPath: 'assets/images/material/useitem_44.png',
+    isFurnitureCoin: true,
   ),
   HeaderResourceSpec(
     id: 'useitem-10',

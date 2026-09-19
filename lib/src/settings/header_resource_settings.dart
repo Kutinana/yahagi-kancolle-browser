@@ -10,6 +10,7 @@ const headerNosakiTimerId = 'nosaki-timer';
 const headerFrameRefreshId = 'frame-refresh';
 const headerShipCapacityId = 'ship-capacity';
 const headerEquipmentCapacityId = 'equipment-capacity';
+const headerFurnitureCoinId = 'furniture-coin';
 
 const allHeaderResourceIds = <String>[
   headerSenkaId,
@@ -41,6 +42,7 @@ const allHeaderResourceIds = <String>[
   'useitem-94',
   'useitem-95',
   'useitem-100',
+  headerFurnitureCoinId,
 ];
 
 const defaultVisibleHeaderResourceIds = <String>[
