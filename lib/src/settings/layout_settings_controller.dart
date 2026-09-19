@@ -105,6 +105,7 @@ class LayoutSettingsController extends ChangeNotifier {
       final migratesEquipmentCapacity = !savedOrder.contains(
         headerEquipmentCapacityId,
       );
+      final migratesFurnitureCoin = !savedOrder.contains(headerFurnitureCoinId);
       controller._headerResourceOrder = normalizeHeaderResourceOrder(
         savedOrder,
       );
@@ -162,7 +163,8 @@ class LayoutSettingsController extends ChangeNotifier {
           migratesAnchorageTimer ||
           migratesNosakiTimer ||
           migratesShipCapacity ||
-          migratesEquipmentCapacity) {
+          migratesEquipmentCapacity ||
+          migratesFurnitureCoin) {
         await headerStore.saveHeaderResourceOrder(
           controller._headerResourceOrder!,
         );

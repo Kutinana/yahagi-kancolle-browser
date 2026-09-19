@@ -305,6 +305,62 @@ void main() {
   );
 
   test(
+    'furniture coin defaults hidden between material 8 and furniture box',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+
+      expect(
+        controller.visibleHeaderResourceIds,
+        isNot(contains(headerFurnitureCoinId)),
+      );
+      final coinIndex = controller.headerResourceOrder.indexOf(
+        headerFurnitureCoinId,
+      );
+      expect(controller.headerResourceOrder[coinIndex - 1], 'material-8');
+      expect(controller.headerResourceOrder[coinIndex + 1], 'useitem-10');
+    },
+  );
+
+  test(
+    'legacy resource order migrates furniture coin without showing it',
+    () async {
+      final legacyOrder = <String>[
+        for (final id in allHeaderResourceIds)
+          if (id != headerFurnitureCoinId) id,
+      ];
+      const legacyVisible = <String>[headerSenkaId, 'material-8', 'useitem-10'];
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'layout_header_resource_order': legacyOrder,
+        'layout_visible_header_resource_ids': legacyVisible,
+      });
+
+      final controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      final coinIndex = controller.headerResourceOrder.indexOf(
+        headerFurnitureCoinId,
+      );
+
+      expect(controller.headerResourceOrder[coinIndex - 1], 'material-8');
+      expect(controller.headerResourceOrder[coinIndex + 1], 'useitem-10');
+      expect(controller.visibleHeaderResourceIds, legacyVisible);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getStringList('layout_header_resource_order'),
+        controller.headerResourceOrder,
+      );
+      expect(
+        prefs.getStringList('layout_visible_header_resource_ids'),
+        legacyVisible,
+      );
+    },
+  );
+
+  test(
     'legacy header order adds senka first without reordering resources',
     () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
@@ -548,4 +604,3 @@ void main() {
     });
   });
 }
-

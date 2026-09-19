@@ -27,6 +27,7 @@ const allHeaderResourceIds = <String>[
   'material-6',
   'material-7',
   'material-8',
+  headerFurnitureCoinId,
   'useitem-10',
   'useitem-11',
   'useitem-12',
@@ -42,7 +43,6 @@ const allHeaderResourceIds = <String>[
   'useitem-94',
   'useitem-95',
   'useitem-100',
-  headerFurnitureCoinId,
 ];
 
 const defaultVisibleHeaderResourceIds = <String>[
@@ -107,6 +107,15 @@ List<String> normalizeHeaderResourceOrder(Iterable<String>? saved) {
     if (id == headerEquipmentCapacityId) {
       final shipIndex = result.indexOf(headerShipCapacityId);
       final insertIndex = shipIndex >= 0 ? shipIndex + 1 : result.length;
+      result.insert(insertIndex, id);
+      continue;
+    }
+    if (id == headerFurnitureCoinId) {
+      final materialIndex = result.indexOf('material-8');
+      final furnitureBoxIndex = result.indexOf('useitem-10');
+      final insertIndex = materialIndex >= 0
+          ? materialIndex + 1
+          : (furnitureBoxIndex >= 0 ? furnitureBoxIndex : result.length);
       result.insert(insertIndex, id);
       continue;
     }
