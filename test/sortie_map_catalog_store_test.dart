@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_catalog_store.dart';
+import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_catalog_manifest.dart';
 
 void main() {
   late Directory temporary;
@@ -57,6 +58,36 @@ void main() {
       isFalse,
     );
   });
+
+  test(
+    'rejects manifest mismatch before changing the active pointer',
+    () async {
+      final store = FileSortieMapCatalogStore(root: temporary);
+      final archive = _archive(<String, List<int>>{
+        'sortie_map_catalog.json': _catalog,
+        'covers/1-1.png': _png,
+        'maps/1-1.png': _png,
+      });
+      await store.installArchive(archive);
+
+      expect(
+        () => store.installArchive(
+          archive,
+          expected: SortieMapCatalogInstallExpectation(
+            version: const SortieMapCatalogVersion(
+              label: 'different',
+              revision: 8,
+            ),
+            mapCount: 1,
+            nodeCount: 0,
+            formationCount: 0,
+          ),
+        ),
+        throwsFormatException,
+      );
+      expect((await store.loadCached())?.data.revision, 7);
+    },
+  );
 }
 
 List<int> _archive(Map<String, List<int>> files) {

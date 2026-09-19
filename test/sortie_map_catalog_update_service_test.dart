@@ -112,7 +112,10 @@ final class _Installer implements SortieMapCatalogInstaller {
   List<int>? installed;
 
   @override
-  Future<InstalledSortieMapCatalog> installArchive(List<int> bytes) async {
+  Future<InstalledSortieMapCatalog> installArchive(
+    List<int> bytes, {
+    SortieMapCatalogInstallExpectation? expected,
+  }) async {
     installed = bytes;
     return InstalledSortieMapCatalog(
       data: _catalog(8),

@@ -109,7 +109,15 @@ final class SortieMapCatalogUpdateService
         );
       }
       try {
-        final installed = await installer.installArchive(archive);
+        final installed = await installer.installArchive(
+          archive,
+          expected: SortieMapCatalogInstallExpectation(
+            version: manifest.version,
+            mapCount: manifest.mapCount,
+            nodeCount: manifest.nodeCount,
+            formationCount: manifest.formationCount,
+          ),
+        );
         if (installed.data.revision != manifest.version.revision ||
             installed.data.maps.length != manifest.mapCount ||
             installed.data.maps.fold<int>(

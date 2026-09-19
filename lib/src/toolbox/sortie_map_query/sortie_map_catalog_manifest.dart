@@ -74,7 +74,7 @@ final class SortieMapCatalogManifest {
       archiveSha256: sha,
       mapCount: _positiveInt(counts, 'maps'),
       nodeCount: _positiveInt(counts, 'nodes'),
-      formationCount: _positiveInt(counts, 'formations'),
+      formationCount: _nonNegativeInt(counts, 'formations'),
     );
   }
 
@@ -123,6 +123,14 @@ int _positiveInt(Map<String, dynamic> json, String key) {
   final value = json[key];
   if (value is! int || value <= 0) {
     throw FormatException('$key must be a positive integer.');
+  }
+  return value;
+}
+
+int _nonNegativeInt(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value is! int || value < 0) {
+    throw FormatException('$key must be a non-negative integer.');
   }
   return value;
 }

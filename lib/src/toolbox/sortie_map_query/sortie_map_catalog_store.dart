@@ -6,7 +6,22 @@ import 'package:archive/archive.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
+import 'sortie_map_catalog_manifest.dart';
 import 'sortie_map_models.dart';
+
+final class SortieMapCatalogInstallExpectation {
+  const SortieMapCatalogInstallExpectation({
+    required this.version,
+    required this.mapCount,
+    required this.nodeCount,
+    required this.formationCount,
+  });
+
+  final SortieMapCatalogVersion version;
+  final int mapCount;
+  final int nodeCount;
+  final int formationCount;
+}
 
 final class InstalledSortieMapCatalog {
   const InstalledSortieMapCatalog({required this.data, required this.root});
@@ -18,12 +33,16 @@ final class InstalledSortieMapCatalog {
 }
 
 abstract interface class SortieMapCatalogInstaller {
-  Future<InstalledSortieMapCatalog> installArchive(List<int> bytes);
+  Future<InstalledSortieMapCatalog> installArchive(
+    List<int> bytes, {
+    SortieMapCatalogInstallExpectation? expected,
+  });
 }
 
 final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
   const FileSortieMapCatalogStore({
     required this.root,
+    this.maximumArchiveBytes = 64 * 1024 * 1024,
     this.maximumFiles = 256,
     this.maximumUncompressedBytes = 96 * 1024 * 1024,
   });
@@ -36,6 +55,7 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
   }
 
   final Directory root;
+  final int maximumArchiveBytes;
   final int maximumFiles;
   final int maximumUncompressedBytes;
 
@@ -53,8 +73,16 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
   }
 
   @override
-  Future<InstalledSortieMapCatalog> installArchive(List<int> bytes) async {
+  Future<InstalledSortieMapCatalog> installArchive(
+    List<int> bytes, {
+    SortieMapCatalogInstallExpectation? expected,
+  }) async {
     if (bytes.isEmpty) throw const FormatException('Sortie archive is empty.');
+    if (bytes.length > maximumArchiveBytes) {
+      throw const FormatException(
+        'Sortie archive exceeds the safe input limit.',
+      );
+    }
     final archive = ZipDecoder().decodeBytes(bytes, verify: true);
     if (archive.isEmpty || archive.length > maximumFiles) {
       throw const FormatException('Sortie archive file count is invalid.');
@@ -75,6 +103,11 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
       if (files.containsKey(name)) {
         throw FormatException('Duplicate sortie archive path: $name');
       }
+      if (item.size < 0 || totalBytes + item.size > maximumUncompressedBytes) {
+        throw const FormatException(
+          'Sortie archive expands beyond the safe limit.',
+        );
+      }
       final content = item.readBytes();
       if (content == null) {
         throw FormatException('Cannot read sortie archive path: $name');
@@ -94,6 +127,7 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
     }
     final data = SortieMapCatalogData.fromJsonString(utf8.decode(rawCatalog));
     _validateCatalog(data, files);
+    if (expected != null) _validateExpectation(data, expected);
 
     final versionName = data.revision.toString();
     await root.create(recursive: true);
@@ -227,9 +261,40 @@ void _validateCatalog(SortieMapCatalogData data, Map<String, Uint8List> files) {
       }
       expected.add(image);
     }
+    if (map.coverAsset != 'covers/${map.id}.png' ||
+        map.mapAsset != 'maps/${map.id}.png') {
+      throw FormatException(
+        'Sortie image names do not match map id: ${map.id}',
+      );
+    }
   }
   if (files.keys.toSet().difference(expected).isNotEmpty) {
     throw const FormatException('Sortie archive contains unreferenced files.');
+  }
+}
+
+void _validateExpectation(
+  SortieMapCatalogData data,
+  SortieMapCatalogInstallExpectation expected,
+) {
+  final nodes = data.maps.fold<int>(0, (sum, map) => sum + map.nodes.length);
+  final formations = data.maps.fold<int>(
+    0,
+    (sum, map) =>
+        sum +
+        map.nodes.fold<int>(
+          0,
+          (nodeSum, node) => nodeSum + node.formations.length,
+        ),
+  );
+  if (data.versionInfo.compareTo(expected.version) != 0 ||
+      data.dataVersion != expected.version.label ||
+      data.maps.length != expected.mapCount ||
+      nodes != expected.nodeCount ||
+      formations != expected.formationCount) {
+    throw const FormatException(
+      'Sortie catalog metadata does not match the signed manifest.',
+    );
   }
 }
 
