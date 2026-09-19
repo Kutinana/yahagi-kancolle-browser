@@ -911,6 +911,7 @@ class _HeaderResourceItem extends StatelessWidget {
             spec.assetPath,
             width: isCompact ? 15 : 17,
             height: isCompact ? 15 : 17,
+            fit: BoxFit.contain,
             filterQuality: FilterQuality.medium,
           ),
           SizedBox(width: isCompact ? 3 : 4),
@@ -918,6 +919,7 @@ class _HeaderResourceItem extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
+              clipBehavior: Clip.hardEdge,
               child: Text(
                 value?.toString() ?? '—',
                 maxLines: 1,
@@ -1319,6 +1321,7 @@ class _HeaderResourceFilterRow extends StatelessWidget {
               spec.assetPath,
               width: 24,
               height: 24,
+              fit: BoxFit.contain,
               filterQuality: FilterQuality.medium,
             ),
             const SizedBox(width: 10),

@@ -3237,7 +3237,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unlockUi => '解锁界面';
 
   @override
-  String get uiLockedToast => '界面已锁定，长按不会进入自定义';
+  String get uiLockedToast => '界面已锁定，导航切换与长按自定义已禁用';
 
   @override
   String get uiUnlockedToast => '界面已解锁';
@@ -3246,13 +3246,124 @@ class AppLocalizationsZh extends AppLocalizations {
   String get uiLockTitle => '锁定界面布局';
 
   @override
-  String get uiLockDesc => '锁定后长按卡片与顶栏资源不会进入自定义编辑，防止误触';
+  String get uiLockDesc => '锁定后长按卡片与顶栏资源不会进入自定义编辑，且导航栏切换功能页被锁定，防止误触';
 
   @override
   String get filterVisibleItems => '筛选显示项目';
 
   @override
   String get selectHeaderVisibleItems => '选择顶部显示项目';
+
+  @override
+  String get expCalculator => '经验计算';
+
+  @override
+  String get expCalcShip => '舰娘';
+
+  @override
+  String get expCalcCurrentLevel => '现在等级';
+
+  @override
+  String get expCalcTargetLevel => '目标等级';
+
+  @override
+  String get expCalcMap => '海域';
+
+  @override
+  String get expCalcRank => '评价';
+
+  @override
+  String get expCalcBaseExp => '基本经验值';
+
+  @override
+  String get expCalcFlagship => '旗舰';
+
+  @override
+  String get expCalcMvp => 'MVP';
+
+  @override
+  String get expCalcMapExp => '海域经验值';
+
+  @override
+  String get expCalcRemainExp => '剩余经验值';
+
+  @override
+  String get expCalcBattle => '战斗';
+
+  @override
+  String get expCalcEmptyTrackList => '暂无练级追踪计划，点击上方 ＋ 添加';
+
+  @override
+  String get expCalcBaseExpHelpTitle => '常用海域基本经验参考';
+
+  @override
+  String get expCalcTrackAdded => '已添加到经验追踪列表';
+
+  @override
+  String get expCalcTrackDeleted => '已从经验追踪列表移除';
+
+  @override
+  String get expCalcFreeMode => '自定义计算（无舰娘）';
+
+  @override
+  String get expCalcAddNode => '增加战斗点位 (连战累计加算)';
+
+  @override
+  String get expCalcRemoveNode => '移除点';
+
+  @override
+  String get expCalcRouteTotal => '整趟总收益';
+
+  @override
+  String get expCalcNodePoint => '点位';
+
+  @override
+  String get expCalcRouteSummary => '出击海域路线';
+
+  @override
+  String get expCalcAddTrack => '加入动态追踪表格';
+
+  @override
+  String get expCalcCompletedTag => '0 次 (已达成)';
+
+  @override
+  String get expCalcCardView => '卡片';
+
+  @override
+  String get expCalcTableView => '表格';
+
+  @override
+  String get expCalcTrackListTitle => '练级追踪列表';
+
+  @override
+  String get expCalcAutoSyncHint => '母港数据变动时自动刷新剩余经验与场次';
+
+  @override
+  String get expCalcDelete => '删除';
+
+  @override
+  String get expCalcStep1Title => '阶段 1 · 舰娘与等级目标';
+
+  @override
+  String get expCalcStep2Title => '阶段 2 · 出击海域点位与战术路线编排';
+
+  @override
+  String get expCalcResultHudTitle => '出击路线综合推演结算';
+
+  @override
+  String get expCalcTargetGapLabel => '升级经验缺口';
+
+  @override
+  String get expCalcTargetAlignHint => '目标经验自动与经验表对齐';
+
+  @override
+  String get expCalcRouteSummaryPrefix => '当前路线共计';
+
+  @override
+  String get expCalcCombatNodesSuffix => '个战斗点位';
+
+  @override
+  String get expCalcAccumulatedExpLabel => '累计经验';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6489,7 +6600,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get unlockUi => '解鎖介面';
 
   @override
-  String get uiLockedToast => '介面已鎖定，長按不會進入自訂編輯';
+  String get uiLockedToast => '介面已鎖定，導覽切換與長按自訂已禁用';
 
   @override
   String get uiUnlockedToast => '介面已解鎖';
@@ -6498,11 +6609,122 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get uiLockTitle => '鎖定介面配置';
 
   @override
-  String get uiLockDesc => '鎖定後長按卡片與頂欄資源不會進入自訂編輯，防止誤觸';
+  String get uiLockDesc => '鎖定後長按卡片與頂欄資源不會進入自訂編輯，且導覽列切換功能頁被鎖定，防止誤觸';
 
   @override
   String get filterVisibleItems => '篩選顯示項目';
 
   @override
   String get selectHeaderVisibleItems => '選擇頂部顯示項目';
+
+  @override
+  String get expCalculator => '經驗計算';
+
+  @override
+  String get expCalcShip => '艦娘';
+
+  @override
+  String get expCalcCurrentLevel => '現在等級';
+
+  @override
+  String get expCalcTargetLevel => '目標等級';
+
+  @override
+  String get expCalcMap => '海域';
+
+  @override
+  String get expCalcRank => '評價';
+
+  @override
+  String get expCalcBaseExp => '基本經驗值';
+
+  @override
+  String get expCalcFlagship => '旗艦';
+
+  @override
+  String get expCalcMvp => 'MVP';
+
+  @override
+  String get expCalcMapExp => '海域經驗值';
+
+  @override
+  String get expCalcRemainExp => '剩餘經驗值';
+
+  @override
+  String get expCalcBattle => '戰鬥';
+
+  @override
+  String get expCalcEmptyTrackList => '暫無練級追蹤計劃，點擊上方 ＋ 新增';
+
+  @override
+  String get expCalcBaseExpHelpTitle => '常用海域基本經驗參考';
+
+  @override
+  String get expCalcTrackAdded => '已新增至經驗追蹤清單';
+
+  @override
+  String get expCalcTrackDeleted => '已從經驗追蹤清單移除';
+
+  @override
+  String get expCalcFreeMode => '自訂計算（無艦娘）';
+
+  @override
+  String get expCalcAddNode => '增加戰鬥點位 (連戰累計加算)';
+
+  @override
+  String get expCalcRemoveNode => '移除點';
+
+  @override
+  String get expCalcRouteTotal => '整趟總收益';
+
+  @override
+  String get expCalcNodePoint => '點位';
+
+  @override
+  String get expCalcRouteSummary => '出擊海域路線';
+
+  @override
+  String get expCalcAddTrack => '加入動態追蹤表格';
+
+  @override
+  String get expCalcCompletedTag => '0 次 (已達成)';
+
+  @override
+  String get expCalcCardView => '卡片';
+
+  @override
+  String get expCalcTableView => '表格';
+
+  @override
+  String get expCalcTrackListTitle => '練級追蹤列表';
+
+  @override
+  String get expCalcAutoSyncHint => '母港數據變動時自動更新剩餘經驗與場次';
+
+  @override
+  String get expCalcDelete => '刪除';
+
+  @override
+  String get expCalcStep1Title => '階段 1 · 艦娘與等級目標';
+
+  @override
+  String get expCalcStep2Title => '階段 2 · 出擊海域點位與戰術路線編排';
+
+  @override
+  String get expCalcResultHudTitle => '出擊路線綜合推演結算';
+
+  @override
+  String get expCalcTargetGapLabel => '升級經驗缺口';
+
+  @override
+  String get expCalcTargetAlignHint => '目標經驗自動與經驗表對齊';
+
+  @override
+  String get expCalcRouteSummaryPrefix => '目前路線共計';
+
+  @override
+  String get expCalcCombatNodesSuffix => '個戰鬥點位';
+
+  @override
+  String get expCalcAccumulatedExpLabel => '累計經驗';
 }

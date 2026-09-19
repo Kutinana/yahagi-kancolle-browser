@@ -16,7 +16,7 @@ void main() {
       SharedPreferencesLayoutSettingsStore(),
     );
     const state = GameState(
-      furnitureCoins: 88000,
+      furnitureCoins: 183854,
       hasFurnitureCoinData: true,
     );
 
@@ -48,7 +48,7 @@ void main() {
       find.byKey(const Key('header-resource-furniture-coin')),
       findsOneWidget,
     );
-    expect(find.text('88000'), findsOneWidget);
+    expect(find.text('183854'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (widget) =>
@@ -59,6 +59,17 @@ void main() {
       ),
       findsOneWidget,
     );
+    final coin = find.byKey(const Key('header-resource-furniture-coin'));
+    final coinImage = tester.widget<Image>(
+      find.descendant(of: coin, matching: find.byType(Image)),
+    );
+    final valueScaler = tester.widget<FittedBox>(
+      find.descendant(of: coin, matching: find.byType(FittedBox)),
+    );
+    expect(coinImage.fit, BoxFit.contain);
+    expect(valueScaler.fit, BoxFit.scaleDown);
+    expect(valueScaler.clipBehavior, Clip.hardEdge);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('furniture coin uses a dash before api_fcoin is captured', (

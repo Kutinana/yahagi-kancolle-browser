@@ -320,6 +320,65 @@ void main() {
     expect(const BattleContext(eventId: 6, eventKind: 2).nodeTypeLabel, '路线选择');
   });
 
+  for (final compact in [false, true]) {
+    testWidgets(
+      'submarine boss shows boss and submarine pills (compact: $compact)',
+      (tester) async {
+        final reducer = GameStateReducer();
+        var state = reducer.reduce(GameState.empty, start2Event);
+        state = reducer
+            .reduce(state, portEvent)
+            .copyWith(
+              masterShips: <int, MasterShip>{
+                ...state.masterShips,
+                1501: const MasterShip(
+                  id: 1501,
+                  name: '潜水ヨ級',
+                  shipTypeId: 13,
+                ),
+                1502: const MasterShip(
+                  id: 1502,
+                  name: '伊号潜水艦',
+                  shipTypeId: 14,
+                ),
+              },
+            );
+        final controller = BattleController(
+          gameState: () => state,
+          predictionExecutor: const _InlinePredictionExecutor(),
+        );
+        addTearDown(controller.dispose);
+        controller
+          ..accept(
+            kcsapiEvent('/kcsapi/api_req_map/start', <String, Object?>{
+              'api_maparea_id': 1,
+              'api_mapinfo_no': 1,
+              'api_no': 1,
+              'api_bosscell_no': 1,
+              'api_event_id': 5,
+              'api_event_kind': 1,
+            }, sequence: 992),
+          )
+          ..accept(
+            kcsapiEvent('/kcsapi/api_req_sortie/battle', <String, Object?>{
+              'api_deck_id': 1,
+              'api_f_nowhps': <int>[30, 15],
+              'api_f_maxhps': <int>[30, 15],
+              'api_e_nowhps': <int>[20, 10],
+              'api_e_maxhps': <int>[20, 10],
+              'api_ship_ke': <int>[1501, 1502],
+            }, sequence: 993),
+          );
+        await controller.idle;
+
+        await _pumpCard(tester, controller, compact: compact);
+
+        expect(find.text('Boss 战'), findsOneWidget);
+        expect(find.text('潜艇战'), findsOneWidget);
+      },
+    );
+  }
+
   test('battle phases use yellow except for purple night battle', () {
     expect(battlePhaseChipColor('昼战'), const Color(0xffffc95c));
     expect(battlePhaseChipColor('航空战'), const Color(0xffffc95c));
@@ -702,18 +761,14 @@ void main() {
     );
     expect(portrait.width, 52);
     expect(portrait.height, 24);
-    final portraitImage = tester.widget<Image>(
-      find.descendant(
-        of: find.byKey(const Key('official-enemy-preview-portrait-0')),
-        matching: find.byType(Image),
-      ),
+    expect(portrait.resourceType, ShipPortraitResourceType.banner);
+    final portraitUri = ShipPortraitUriBuilder.build(
+      ship: portrait.ship!,
+      serverOrigin: portrait.serverOrigin,
+      resourceType: portrait.resourceType,
     );
-    final imageProvider = portraitImage.image;
-    final networkImage = imageProvider is ResizeImage
-        ? imageProvider.imageProvider as NetworkImage
-        : imageProvider as NetworkImage;
     expect(
-      networkImage.url,
+      portraitUri.toString(),
       contains('/kcs2/resources/ship/banner/1501_2115.png'),
     );
     final portraitPosition = tester.widget<Positioned>(
@@ -724,7 +779,6 @@ void main() {
     );
     expect(portraitPosition.left, -24 * 1.6);
     expect(portraitPosition.top, closeTo(-(24 / 176) * 3, 0.001));
-    expect(portraitImage.height, closeTo((24 / 176) * 182, 0.001));
 
     await tester.tap(find.byKey(const Key('battle-mode-compact')));
     await tester.pump();
@@ -803,17 +857,18 @@ void main() {
       ),
     );
 
-    final image = tester.widget<Image>(
-      find.descendant(
-        of: find.byKey(const Key('official-enemy-preview-portrait-0')),
-        matching: find.byType(Image),
-      ),
+    final portrait = tester.widget<ShipPortrait>(
+      find.byKey(const Key('official-enemy-preview-portrait-0')),
     );
-    final imageProvider = image.image;
-    final networkImage = imageProvider is ResizeImage
-        ? imageProvider.imageProvider as NetworkImage
-        : imageProvider as NetworkImage;
-    expect(networkImage.url, contains('/kcs2/resources/ship/remodel/'));
+    expect(portrait.resourceType, ShipPortraitResourceType.remodel);
+    expect(
+      ShipPortraitUriBuilder.build(
+        ship: portrait.ship!,
+        serverOrigin: portrait.serverOrigin,
+        resourceType: portrait.resourceType,
+      ).toString(),
+      contains('/kcs2/resources/ship/remodel/'),
+    );
   });
 
   testWidgets('combined enemy preview renders escort and main in three rows', (

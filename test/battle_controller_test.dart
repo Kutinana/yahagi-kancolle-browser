@@ -405,6 +405,70 @@ void main() {
     expect(controller.current!.rank, BattleRank.unknown);
   });
 
+  test('labels an all-submarine enemy fleet as submarine battle', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer
+        .reduce(state, portEvent)
+        .copyWith(
+          masterShips: <int, MasterShip>{
+            ...state.masterShips,
+            1501: const MasterShip(id: 1501, name: '潜水ヨ級', shipTypeId: 13),
+            1502: const MasterShip(id: 1502, name: '伊号潜水艦', shipTypeId: 14),
+          },
+        );
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    controller
+      ..accept(mapStartEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_req_sortie/battle', <String, Object?>{
+          'api_deck_id': 1,
+          'api_f_nowhps': <int>[30, 15],
+          'api_f_maxhps': <int>[30, 15],
+          'api_e_nowhps': <int>[20, 10],
+          'api_e_maxhps': <int>[20, 10],
+          'api_ship_ke': <int>[1501, 1502],
+        }, sequence: 990),
+      );
+    await controller.idle;
+
+    expect(controller.current!.context.nodeTypeLabel, '潜艇战');
+  });
+
+  test('keeps the original node type for a mixed enemy fleet', () async {
+    final reducer = GameStateReducer();
+    var state = reducer.reduce(GameState.empty, start2Event);
+    state = reducer
+        .reduce(state, portEvent)
+        .copyWith(
+          masterShips: <int, MasterShip>{
+            ...state.masterShips,
+            1501: const MasterShip(id: 1501, name: '潜水ヨ級', shipTypeId: 13),
+            1601: const MasterShip(id: 1601, name: '战舰ル級', shipTypeId: 9),
+          },
+        );
+    final controller = BattleController(gameState: () => state);
+    addTearDown(controller.dispose);
+
+    controller
+      ..accept(mapStartEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_req_sortie/battle', <String, Object?>{
+          'api_deck_id': 1,
+          'api_f_nowhps': <int>[30, 15],
+          'api_f_maxhps': <int>[30, 15],
+          'api_e_nowhps': <int>[20, 90],
+          'api_e_maxhps': <int>[20, 90],
+          'api_ship_ke': <int>[1501, 1601],
+        }, sequence: 991),
+      );
+    await controller.idle;
+
+    expect(controller.current!.context.nodeTypeLabel, '普通战斗');
+  });
+
   test(
     'map response exposes at most three official enemy preview ships',
     () async {
@@ -439,6 +503,7 @@ void main() {
         EnemyPreviewShip(masterId: 1502, name: '潜水カ級'),
         EnemyPreviewShip(masterId: 1503, name: '潜水ソ級'),
       ]);
+      expect(controller.current?.context.nodeTypeLabel, '潜艇战');
     },
   );
 

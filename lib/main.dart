@@ -2602,76 +2602,87 @@ class WorkspaceNavigation extends StatelessWidget {
                       : EdgeInsets.symmetric(vertical: isCompact ? 10 : 8),
                   buildDefaultDragHandles: false,
                   itemCount: ordered.length,
-                  onReorderItem: controller.reorderWorkspaceMenu,
+                  onReorderItem: controller.uiLocked
+                      ? (_, __) {}
+                      : controller.reorderWorkspaceMenu,
                   itemBuilder: (context, index) {
                     final destination = ordered[index];
+                    void handleTap() {
+                      if (controller.uiLocked) {
+                        TopNotice.show(context, message: l10n.uiLockedToast);
+                        return;
+                      }
+                      onSelected(destination.pageIndex);
+                    }
+
                     return SizedBox(
                       key: ValueKey('workspace-nav-item-${destination.id}'),
                       width: controller.workspaceMenuHorizontal ? itemExtent : null,
                       height: controller.workspaceMenuHorizontal ? null : itemExtent,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: () => onSelected(destination.pageIndex),
+                        onTap: handleTap,
                         child: Center(
-                        child: ReorderableDelayedDragStartListener(
-                          index: index,
-                          child: _NavigationButton(
-                            key: Key('workspace-nav-${destination.id}'),
-                            icon: destination.icon,
-                            label: destination.label,
-                            horizontal: controller.workspaceMenuHorizontal,
-                            menuSize: menuSize,
-                            completedCount: switch (destination.id) {
-                              'quests' => completedQuestCount,
-                              'expedition' =>
-                                gameStateController?.state.fleets
-                                        .where(
-                                          (fleet) =>
-                                              fleet.mission.isActive &&
-                                              now.isBefore(
-                                                fleet.mission.completionTime!,
-                                              ),
-                                        )
-                                        .length ??
-                                    0,
-                              'construction' =>
-                                gameStateController?.state.constructionDocks
-                                        .where(
-                                          (dock) => dock.isCompletedAt(now),
-                                        )
-                                        .length ??
-                                    0,
-                              'repair' =>
-                                gameStateController?.state.repairDocks
-                                        .where(
-                                          (dock) =>
-                                              dock.isRepairing &&
-                                              (dock.completionTime == null ||
-                                                  now.isBefore(
-                                                    dock.completionTime!,
-                                                  )),
-                                        )
-                                        .length ??
-                                    0,
-                              _ => 0,
-                            },
-                            countKey: Key(switch (destination.id) {
-                              'repair' => 'repair-active-count',
-                              'expedition' => 'expedition-active-count',
-                              'quests' => 'quest-completion-count',
-                              _ => '${destination.id}-completion-count',
-                            }),
-                            countLabel: destination.id == 'quests'
-                                ? null
-                                : destination.label,
-                            selected: selectedIndex == destination.pageIndex,
-                            onTap: () => onSelected(destination.pageIndex),
+                          child: ReorderableDelayedDragStartListener(
+                            index: index,
+                            enabled: !controller.uiLocked,
+                            child: _NavigationButton(
+                              key: Key('workspace-nav-${destination.id}'),
+                              icon: destination.icon,
+                              label: destination.label,
+                              horizontal: controller.workspaceMenuHorizontal,
+                              menuSize: menuSize,
+                              completedCount: switch (destination.id) {
+                                'quests' => completedQuestCount,
+                                'expedition' =>
+                                  gameStateController?.state.fleets
+                                          .where(
+                                            (fleet) =>
+                                                fleet.mission.isActive &&
+                                                now.isBefore(
+                                                  fleet.mission.completionTime!,
+                                                ),
+                                          )
+                                          .length ??
+                                      0,
+                                'construction' =>
+                                  gameStateController?.state.constructionDocks
+                                          .where(
+                                            (dock) => dock.isCompletedAt(now),
+                                          )
+                                          .length ??
+                                      0,
+                                'repair' =>
+                                  gameStateController?.state.repairDocks
+                                          .where(
+                                            (dock) =>
+                                                dock.isRepairing &&
+                                                (dock.completionTime == null ||
+                                                    now.isBefore(
+                                                      dock.completionTime!,
+                                                    )),
+                                          )
+                                          .length ??
+                                      0,
+                                _ => 0,
+                              },
+                              countKey: Key(switch (destination.id) {
+                                'repair' => 'repair-active-count',
+                                'expedition' => 'expedition-active-count',
+                                'quests' => 'quest-completion-count',
+                                _ => '${destination.id}-completion-count',
+                              }),
+                              countLabel: destination.id == 'quests'
+                                  ? null
+                                  : destination.label,
+                              selected: selectedIndex == destination.pageIndex,
+                              onTap: handleTap,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
                 );
               },
             );

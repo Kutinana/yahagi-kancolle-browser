@@ -1433,6 +1433,7 @@ class GameStateReducer {
         reading: _asString(item['api_yomi'], ''),
         shipTypeId: shipTypeId,
         afterShipId: _asInt(item['api_aftershipid']),
+        afterLv: _asInt(item['api_afterlv']),
         sortNo: _asInt(item['api_sortno']),
         classTypeId: _asInt(item['api_ctype']),
         speed: _asInt(item['api_soku']),

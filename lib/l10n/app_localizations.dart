@@ -6079,7 +6079,7 @@ abstract class AppLocalizations {
   /// No description provided for @uiLockedToast.
   ///
   /// In zh, this message translates to:
-  /// **'界面已锁定，长按不会进入自定义'**
+  /// **'界面已锁定，导航切换与长按自定义已禁用'**
   String get uiLockedToast;
 
   /// No description provided for @uiUnlockedToast.
@@ -6097,7 +6097,7 @@ abstract class AppLocalizations {
   /// No description provided for @uiLockDesc.
   ///
   /// In zh, this message translates to:
-  /// **'锁定后长按卡片与顶栏资源不会进入自定义编辑，防止误触'**
+  /// **'锁定后长按卡片与顶栏资源不会进入自定义编辑，且导航栏切换功能页被锁定，防止误触'**
   String get uiLockDesc;
 
   /// No description provided for @filterVisibleItems.
@@ -6111,6 +6111,228 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'选择顶部显示项目'**
   String get selectHeaderVisibleItems;
+
+  /// No description provided for @expCalculator.
+  ///
+  /// In zh, this message translates to:
+  /// **'经验计算'**
+  String get expCalculator;
+
+  /// No description provided for @expCalcShip.
+  ///
+  /// In zh, this message translates to:
+  /// **'舰娘'**
+  String get expCalcShip;
+
+  /// No description provided for @expCalcCurrentLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在等级'**
+  String get expCalcCurrentLevel;
+
+  /// No description provided for @expCalcTargetLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标等级'**
+  String get expCalcTargetLevel;
+
+  /// No description provided for @expCalcMap.
+  ///
+  /// In zh, this message translates to:
+  /// **'海域'**
+  String get expCalcMap;
+
+  /// No description provided for @expCalcRank.
+  ///
+  /// In zh, this message translates to:
+  /// **'评价'**
+  String get expCalcRank;
+
+  /// No description provided for @expCalcBaseExp.
+  ///
+  /// In zh, this message translates to:
+  /// **'基本经验值'**
+  String get expCalcBaseExp;
+
+  /// No description provided for @expCalcFlagship.
+  ///
+  /// In zh, this message translates to:
+  /// **'旗舰'**
+  String get expCalcFlagship;
+
+  /// No description provided for @expCalcMvp.
+  ///
+  /// In zh, this message translates to:
+  /// **'MVP'**
+  String get expCalcMvp;
+
+  /// No description provided for @expCalcMapExp.
+  ///
+  /// In zh, this message translates to:
+  /// **'海域经验值'**
+  String get expCalcMapExp;
+
+  /// No description provided for @expCalcRemainExp.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余经验值'**
+  String get expCalcRemainExp;
+
+  /// No description provided for @expCalcBattle.
+  ///
+  /// In zh, this message translates to:
+  /// **'战斗'**
+  String get expCalcBattle;
+
+  /// No description provided for @expCalcEmptyTrackList.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无练级追踪计划，点击上方 ＋ 添加'**
+  String get expCalcEmptyTrackList;
+
+  /// No description provided for @expCalcBaseExpHelpTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'常用海域基本经验参考'**
+  String get expCalcBaseExpHelpTitle;
+
+  /// No description provided for @expCalcTrackAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已添加到经验追踪列表'**
+  String get expCalcTrackAdded;
+
+  /// No description provided for @expCalcTrackDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已从经验追踪列表移除'**
+  String get expCalcTrackDeleted;
+
+  /// No description provided for @expCalcFreeMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义计算（无舰娘）'**
+  String get expCalcFreeMode;
+
+  /// No description provided for @expCalcAddNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'增加战斗点位 (连战累计加算)'**
+  String get expCalcAddNode;
+
+  /// No description provided for @expCalcRemoveNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除点'**
+  String get expCalcRemoveNode;
+
+  /// No description provided for @expCalcRouteTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'整趟总收益'**
+  String get expCalcRouteTotal;
+
+  /// No description provided for @expCalcNodePoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点位'**
+  String get expCalcNodePoint;
+
+  /// No description provided for @expCalcRouteSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'出击海域路线'**
+  String get expCalcRouteSummary;
+
+  /// No description provided for @expCalcAddTrack.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入动态追踪表格'**
+  String get expCalcAddTrack;
+
+  /// No description provided for @expCalcCompletedTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'0 次 (已达成)'**
+  String get expCalcCompletedTag;
+
+  /// No description provided for @expCalcCardView.
+  ///
+  /// In zh, this message translates to:
+  /// **'卡片'**
+  String get expCalcCardView;
+
+  /// No description provided for @expCalcTableView.
+  ///
+  /// In zh, this message translates to:
+  /// **'表格'**
+  String get expCalcTableView;
+
+  /// No description provided for @expCalcTrackListTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'练级追踪列表'**
+  String get expCalcTrackListTitle;
+
+  /// No description provided for @expCalcAutoSyncHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'母港数据变动时自动刷新剩余经验与场次'**
+  String get expCalcAutoSyncHint;
+
+  /// No description provided for @expCalcDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get expCalcDelete;
+
+  /// No description provided for @expCalcStep1Title.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段 1 · 舰娘与等级目标'**
+  String get expCalcStep1Title;
+
+  /// No description provided for @expCalcStep2Title.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段 2 · 出击海域点位与战术路线编排'**
+  String get expCalcStep2Title;
+
+  /// No description provided for @expCalcResultHudTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'出击路线综合推演结算'**
+  String get expCalcResultHudTitle;
+
+  /// No description provided for @expCalcTargetGapLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'升级经验缺口'**
+  String get expCalcTargetGapLabel;
+
+  /// No description provided for @expCalcTargetAlignHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标经验自动与经验表对齐'**
+  String get expCalcTargetAlignHint;
+
+  /// No description provided for @expCalcRouteSummaryPrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前路线共计'**
+  String get expCalcRouteSummaryPrefix;
+
+  /// No description provided for @expCalcCombatNodesSuffix.
+  ///
+  /// In zh, this message translates to:
+  /// **'个战斗点位'**
+  String get expCalcCombatNodesSuffix;
+
+  /// No description provided for @expCalcAccumulatedExpLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'累计经验'**
+  String get expCalcAccumulatedExpLabel;
 }
 
 class _AppLocalizationsDelegate

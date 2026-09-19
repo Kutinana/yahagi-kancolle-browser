@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
 import '../game_state/game_state.dart';
-import 'fleet_export_page.dart';
 import 'composition_image_page.dart';
+import 'exp_calc/exp_calc_page.dart';
+import 'fleet_export_page.dart';
+import 'sortie_map_query/sortie_map_query_page.dart';
+import 'toolbox_mode.dart';
 
-enum ToolboxMode { export, composition, other }
+export 'toolbox_mode.dart' show ToolboxMode;
 
 class ToolboxPage extends StatelessWidget {
   const ToolboxPage({
@@ -22,13 +24,12 @@ class ToolboxPage extends StatelessWidget {
     index: mode.index,
     children: [
       FleetExportPage(state: state),
-      CompositionImagePage(state: state, visible: mode == ToolboxMode.composition),
-      Center(
-        child: Text(
-          AppLocalizations.of(context)!.otherToolsComingSoon,
-          style: const TextStyle(color: Color(0xff8fa5b2), fontSize: 14),
-        ),
+      CompositionImagePage(
+        state: state,
+        visible: mode == ToolboxMode.composition,
       ),
+      ExpCalcPage(state: state),
+      SortieMapQueryPage(state: state, visible: mode == ToolboxMode.mapQuery),
     ],
   );
 }

@@ -19,8 +19,9 @@ import '../quest/quest_center_page.dart';
 import '../settings/layout_settings_controller.dart';
 import '../senka/senka_page.dart' show SenkaCenterMode, senkaCenterModeLabel;
 import '../senka/senka_state.dart';
-import '../toolbox/toolbox_page.dart';
-import '../toolbox/composition_image_strings.dart';
+import '../toolbox/toolbox_mode.dart';
+import '../toolbox/toolbox_mode_tabs.dart';
+export '../toolbox/toolbox_mode_tabs.dart' show ToolboxModeTabs;
 
 class WorkspaceContextHeader extends StatelessWidget {
   const WorkspaceContextHeader({
@@ -371,31 +372,38 @@ class WorkspaceContextHeader extends StatelessWidget {
       );
     }
     if (workspaceIndex == 10) {
-      return Row(
-        children: [
-          Text(
-            l10n.toolbox,
-            key: const Key('workspace-title-tools'),
-            style: const TextStyle(
-              color: Color(0xffe0b25c),
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: ToolboxModeTabs(
-                  mode: toolboxMode,
-                  onChanged: onToolboxModeChanged ?? (_) {},
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Four toolbox tabs need 350 px; the Japanese title needs about
+          // 120 px more. Below 500 px the tabs get the entire header width so
+          // neither localized labels nor the row can overflow.
+          final compact = constraints.maxWidth < 500;
+          final tabs = ToolboxModeTabs(
+            mode: toolboxMode,
+            compact: compact,
+            onChanged: onToolboxModeChanged ?? (_) {},
+          );
+          if (compact) {
+            return SizedBox(width: constraints.maxWidth, child: tabs);
+          }
+          return Row(
+            children: [
+              Text(
+                l10n.toolbox,
+                key: const Key('workspace-title-tools'),
+                style: const TextStyle(
+                  color: Color(0xffe0b25c),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            ),
-          ),
-        ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Align(alignment: Alignment.centerRight, child: tabs),
+              ),
+            ],
+          );
+        },
       );
     }
 
@@ -609,76 +617,6 @@ class SenkaModeTabs extends StatelessWidget {
                     child: Center(
                       child: Text(
                         senkaCenterModeLabel(l10n, value),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: mode == value
-                              ? const Color(0xffffdc88)
-                              : const Color(0xff9fb3bf),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class ToolboxModeTabs extends StatelessWidget {
-  const ToolboxModeTabs({
-    super.key,
-    required this.mode,
-    required this.onChanged,
-  });
-
-  final ToolboxMode mode;
-  final ValueChanged<ToolboxMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    String label(ToolboxMode value) => switch (value) {
-      ToolboxMode.export => l10n.fleetExport,
-      ToolboxMode.composition => CompositionImageStrings.of(context).title,
-      ToolboxMode.other => l10n.otherTools,
-    };
-    return Container(
-      key: const Key('toolbox-mode-tabs'),
-      width: 270,
-      height: 38,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: const Color(0xff0b202d),
-        border: Border.all(color: const Color(0xff315064)),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          for (final value in ToolboxMode.values)
-            Expanded(
-              child: Semantics(
-                button: true,
-                selected: mode == value,
-                label: label(value),
-                excludeSemantics: true,
-                child: Material(
-                  key: Key('toolbox-tab-${value.name}'),
-                  color: mode == value
-                      ? const Color(0xff8a6628)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => onChanged(value),
-                    child: Center(
-                      child: Text(
-                        label(value),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

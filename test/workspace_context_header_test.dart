@@ -553,7 +553,7 @@ void main() {
     expect(find.text('工具箱'), findsOneWidget);
     expect(find.byKey(const Key('toolbox-mode-tabs')), findsOneWidget);
     expect(find.text('导出数据'), findsOneWidget);
-    expect(find.text('其他'), findsOneWidget);
+    expect(find.text('海域查询'), findsOneWidget);
     expect(find.text('装备开发'), findsNothing);
   });
 
@@ -578,7 +578,59 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('workspace-title-tools')), findsOneWidget);
+    expect(find.byKey(const Key('workspace-title-tools')), findsNothing);
+    final tabs = tester.getRect(find.byKey(const Key('toolbox-mode-tabs')));
+    final mapQueryTab = tester.getRect(
+      find.byKey(const Key('toolbox-tab-mapQuery')),
+    );
+    expect(tabs.height, 36);
+    expect(mapQueryTab.height, greaterThanOrEqualTo(32));
+    expect(mapQueryTab.width, greaterThanOrEqualTo(44));
+    expect(
+      tester
+          .widget<Text>(
+            find.descendant(
+              of: find.byKey(const Key('toolbox-tab-mapQuery')),
+              matching: find.byType(Text),
+            ),
+          )
+          .style
+          ?.fontSize,
+      greaterThanOrEqualTo(10),
+    );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Japanese toolbox header fits the title-tab boundary', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(477, 80);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      _localizedApp(
+        locale: const Locale('ja'),
+        home: const Scaffold(
+          body: SizedBox(
+            width: 477,
+            height: 44,
+            child: WorkspaceContextHeader(
+              workspaceIndex: 10,
+              state: state,
+              selectedFleetId: 1,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    final header = tester.getRect(find.byType(WorkspaceContextHeader));
+    final tabs = tester.getRect(find.byKey(const Key('toolbox-mode-tabs')));
+    expect(tabs.left, greaterThanOrEqualTo(header.left));
+    expect(tabs.right, lessThanOrEqualTo(header.right));
+    expect(find.byKey(const Key('workspace-title-tools')), findsNothing);
   });
 }

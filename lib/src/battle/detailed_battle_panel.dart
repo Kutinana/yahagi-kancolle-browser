@@ -211,7 +211,8 @@ class _NavigationOverview extends StatelessWidget {
                   RewardItemsPill(items: battle.rewardItems),
                 if (battle.resourceChanges.isEmpty &&
                     battle.rewardItems.isEmpty)
-                  NodeTypePill(label: battle.context.nodeTypeLabel),
+                  for (final label in battle.context.nodeTypeLabels)
+                    NodeTypePill(label: label),
               ],
             ),
           ),
@@ -239,7 +240,7 @@ class _BattleOverview extends StatelessWidget {
     final details = <(String, Color)>[
       if (battle.context.combinedFleetType != CombinedFleetType.none)
         (battle.context.combinedFleetType.label, const Color(0xff70c7bc)),
-      if (battle.phaseLabel != battle.context.nodeTypeLabel)
+      if (!battle.context.nodeTypeLabels.contains(battle.phaseLabel))
         (battle.phaseLabel, battlePhaseChipColor(battle.phaseLabel)),
       if (battle.engagement > 0)
         (
@@ -259,7 +260,8 @@ class _BattleOverview extends StatelessWidget {
         : l10n.dropLabel(dropShipNames.join('、'));
     final dropEntries = <String>[?dropShipName];
     final statusPills = <Widget>[
-      NodeTypePill(label: battle.context.nodeTypeLabel),
+      for (final label in battle.context.nodeTypeLabels)
+        NodeTypePill(label: label),
       if (battle.airSuperiority != null)
         AirSuperiorityPill(label: battle.airSuperiority!),
       for (final detail in details)

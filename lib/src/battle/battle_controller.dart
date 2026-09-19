@@ -400,6 +400,12 @@ final class BattleController extends ChangeNotifier
           ? _context.deckId
           : (sortieFleetId > 0 ? sortieFleetId : 1),
     );
+    final previewEnemyIds = <int>[
+      for (final deckValue in _list(data['api_e_deck_info']))
+        if (_optionalMap(deckValue) case final deck?)
+          for (final shipValue in _list(deck['api_ship_ids']))
+            if (_int(shipValue) > 0) _int(shipValue),
+    ];
     return BattleContext(
       mapAreaId: mapAreaId,
       mapInfoNo: mapInfoNo,
@@ -414,6 +420,9 @@ final class BattleController extends ChangeNotifier
         mapInfoNo: mapInfoNo,
         internalNodeId: node,
       ),
+      nodeTypeOverride: _isAllSubmarineEnemyIds(state, previewEnemyIds)
+          ? '潜艇战'
+          : null,
     );
   }
 
@@ -677,6 +686,18 @@ final class BattleController extends ChangeNotifier
     final rank = (_session?.isConfirmed ?? parsed.issues.isEmpty)
         ? parsed.rank
         : BattleRank.unknown;
+    _context = _context.copyWith(
+      nodeTypeOverride:
+          _isAllSubmarineEnemyIds(state, <int>[
+            for (final ship in <BattleShipSnapshot>[
+              ...parsed.enemyMain,
+              ...parsed.enemyEscort,
+            ])
+              ship.masterId,
+          ])
+          ? '潜艇战'
+          : null,
+    );
 
     _current = LiveBattle(
       context: _context,
@@ -1106,6 +1127,15 @@ final class BattleController extends ChangeNotifier
     // combined fleet; treating every sortie as combined also makes position 6
     // resolve to escort ship 1 instead of striking-force ship 7.
     return deckId == 1 ? state.combinedFleetType : CombinedFleetType.none;
+  }
+
+  bool _isAllSubmarineEnemyIds(GameState state, Iterable<int> masterIds) {
+    final effectiveIds = masterIds.where((id) => id > 0).toList();
+    return effectiveIds.isNotEmpty &&
+        effectiveIds.every((masterId) {
+          final shipTypeId = state.masterShips[masterId]?.shipTypeId;
+          return shipTypeId == 13 || shipTypeId == 14;
+        });
   }
 
   List<BattleShipSnapshot> _enemyFleet(

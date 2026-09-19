@@ -16,6 +16,7 @@ String battleEnemyFleetDisplayName(String name) {
 enum BattleDisplayStage { navigation, battle, result }
 
 const _unsetNodeDisplayLabel = Object();
+const _unsetNodeTypeOverride = Object();
 const _unsetLandBaseRaid = Object();
 const _unsetEnemyPreviewShips = Object();
 const _unsetLastFormation = Object();
@@ -57,6 +58,7 @@ class BattleContext {
     this.eventId = 0,
     this.eventKind = 0,
     this.nodeDisplayLabel,
+    this.nodeTypeOverride,
   });
 
   final int mapAreaId;
@@ -69,6 +71,7 @@ class BattleContext {
   final int eventId;
   final int eventKind;
   final String? nodeDisplayLabel;
+  final String? nodeTypeOverride;
 
   String get mapLabel => practice
       ? '演习'
@@ -91,7 +94,17 @@ class BattleContext {
     return label != null && label.isNotEmpty ? label : nodeLabel;
   }
 
-  String get nodeTypeLabel {
+  String get nodeTypeLabel => nodeTypeLabels.first;
+
+  List<String> get nodeTypeLabels {
+    final baseLabel = _baseNodeTypeLabel;
+    final override = nodeTypeOverride;
+    if (override == null) return <String>[baseLabel];
+    if (baseLabel == 'Boss 战') return <String>[baseLabel, override];
+    return <String>[override];
+  }
+
+  String get _baseNodeTypeLabel {
     if (practice) return '普通战斗';
     var kind = eventId + 1;
     if (eventId == 4) {
@@ -145,6 +158,7 @@ class BattleContext {
     int? eventId,
     int? eventKind,
     Object? nodeDisplayLabel = _unsetNodeDisplayLabel,
+    Object? nodeTypeOverride = _unsetNodeTypeOverride,
   }) {
     return BattleContext(
       mapAreaId: mapAreaId ?? this.mapAreaId,
@@ -159,6 +173,9 @@ class BattleContext {
       nodeDisplayLabel: identical(nodeDisplayLabel, _unsetNodeDisplayLabel)
           ? this.nodeDisplayLabel
           : nodeDisplayLabel as String?,
+      nodeTypeOverride: identical(nodeTypeOverride, _unsetNodeTypeOverride)
+          ? this.nodeTypeOverride
+          : nodeTypeOverride as String?,
     );
   }
 }

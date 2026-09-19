@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../game_state/game_state.dart';
+import 'ship_portrait_cache.dart';
 
 const shipCardPortraitHeight = 54.0;
 const shipCardCapsuleMinHeight = 76.0;
@@ -10,6 +14,9 @@ double shipCardPortraitWidth(BuildContext context) {
 }
 
 enum ShipPortraitResourceType { remodel, banner }
+
+typedef ShipPortraitFileImageProviderBuilder =
+    ImageProvider<Object> Function(File file, int? decodeHeight);
 
 abstract final class ShipPortraitUriBuilder {
   static const List<int> _resource = <int>[
@@ -165,6 +172,8 @@ class ShipPortrait extends StatelessWidget {
     this.height = 56,
     this.decodeHeight,
     this.resourceType = ShipPortraitResourceType.remodel,
+    this.cache,
+    this.fileImageProviderBuilder,
   });
 
   final MasterShip? ship;
@@ -173,6 +182,8 @@ class ShipPortrait extends StatelessWidget {
   final double height;
   final int? decodeHeight;
   final ShipPortraitResourceType resourceType;
+  final ShipPortraitCache? cache;
+  final ShipPortraitFileImageProviderBuilder? fileImageProviderBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -227,12 +238,15 @@ class ShipPortrait extends StatelessWidget {
                 Positioned(
                   left: -horizontalOffset,
                   top: -verticalOffset,
-                  child: Image.network(
-                    uri.toString(),
+                  child: _PersistentPortraitImage(
+                    uri: uri,
+                    cacheKey: '${ship!.id}_${resourceType.name}',
+                    cache: cache ?? ShipPortraitCache.shared,
+                    imageProviderBuilder: fileImageProviderBuilder,
                     height: imageHeight,
-                    cacheHeight: decodeHeight,
+                    decodeHeight: decodeHeight,
                     fit: BoxFit.fitHeight,
-                    errorBuilder: (context, error, stackTrace) => placeholder,
+                    placeholder: placeholder,
                   ),
                 ),
               ],
@@ -242,4 +256,121 @@ class ShipPortrait extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PersistentPortraitImage extends StatefulWidget {
+  const _PersistentPortraitImage({
+    required this.uri,
+    required this.cacheKey,
+    required this.cache,
+    required this.height,
+    required this.decodeHeight,
+    required this.fit,
+    required this.placeholder,
+    required this.imageProviderBuilder,
+  });
+
+  final Uri uri;
+  final String cacheKey;
+  final ShipPortraitCache cache;
+  final double height;
+  final int? decodeHeight;
+  final BoxFit fit;
+  final Widget placeholder;
+  final ShipPortraitFileImageProviderBuilder? imageProviderBuilder;
+
+  @override
+  State<_PersistentPortraitImage> createState() =>
+      _PersistentPortraitImageState();
+}
+
+class _PersistentPortraitImageState extends State<_PersistentPortraitImage> {
+  late Future<File?> _file;
+  int _decodeAttempt = 0;
+  int? _handledDecodeErrorAttempt;
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PersistentPortraitImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.uri != widget.uri ||
+        oldWidget.cacheKey != widget.cacheKey ||
+        oldWidget.cache != widget.cache) {
+      _generation++;
+      _decodeAttempt = 0;
+      _handledDecodeErrorAttempt = null;
+      _resolve();
+    }
+  }
+
+  void _resolve() {
+    _file = widget.cache.resolve(cacheKey: widget.cacheKey, uri: widget.uri);
+  }
+
+  void _handleDecodeError(int failedAttempt) {
+    if (failedAttempt != _decodeAttempt) return;
+    if (_handledDecodeErrorAttempt == _decodeAttempt) return;
+    _handledDecodeErrorAttempt = _decodeAttempt;
+    final failedGeneration = _generation;
+    final failedUri = widget.uri;
+    final failedCacheKey = widget.cacheKey;
+    final failedCache = widget.cache;
+    final retry = failedAttempt == 0;
+    unawaited(
+      failedCache.evict(cacheKey: failedCacheKey, uri: failedUri).then((_) {
+        scheduleMicrotask(() {
+          if (!mounted ||
+              !retry ||
+              _generation != failedGeneration ||
+              _decodeAttempt != failedAttempt ||
+              widget.uri != failedUri ||
+              widget.cacheKey != failedCacheKey ||
+              widget.cache != failedCache) {
+            return;
+          }
+          setState(() {
+            _decodeAttempt++;
+            _resolve();
+          });
+        });
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<File?>(
+    future: _file,
+    builder: (context, snapshot) {
+      final file = snapshot.data;
+      if (snapshot.connectionState != ConnectionState.done || file == null) {
+        return widget.placeholder;
+      }
+      final renderedAttempt = _decodeAttempt;
+      final imageProvider =
+          widget.imageProviderBuilder?.call(file, widget.decodeHeight) ??
+          ResizeImage.resizeIfNeeded(
+            null,
+            widget.decodeHeight,
+            FileImage(file),
+          );
+      return Image(
+        key: ValueKey<String>(
+          'ship-portrait-$_generation-$renderedAttempt-${file.path}',
+        ),
+        image: imageProvider,
+        height: widget.height,
+        fit: widget.fit,
+        errorBuilder: (context, error, stackTrace) {
+          _handleDecodeError(renderedAttempt);
+          return widget.placeholder;
+        },
+      );
+    },
+  );
 }

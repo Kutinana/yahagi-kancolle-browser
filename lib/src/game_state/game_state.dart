@@ -62,6 +62,7 @@ class MasterShip {
     required this.shipTypeId,
     this.reading = '',
     this.afterShipId = 0,
+    this.afterLv = 0,
     this.sortNo = 0,
     this.classTypeId = 0,
     this.speed = 0,
@@ -98,6 +99,7 @@ class MasterShip {
   final String reading;
   final int shipTypeId;
   final int afterShipId;
+  final int afterLv;
 
   /// api_sortno: encyclopedia number; never use this as a ship master ID.
   final int sortNo;
@@ -165,6 +167,7 @@ class MasterShip {
       reading: reading,
       shipTypeId: shipTypeId,
       afterShipId: afterShipId,
+      afterLv: afterLv,
       sortNo: sortNo,
       classTypeId: classTypeId,
       speed: speed,

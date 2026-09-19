@@ -877,7 +877,7 @@ class LayoutSettingsController extends ChangeNotifier {
   }
 
   Future<void> resetHeaderResources() async {
-    _headerResourceOrder = List<String>.from(allHeaderResourceIds);
+    _headerResourceOrder = normalizeHeaderResourceOrder(null);
     _visibleHeaderResourceIds = List<String>.from(
       defaultVisibleHeaderResourceIds,
     );

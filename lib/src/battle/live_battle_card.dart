@@ -279,7 +279,8 @@ class _CompactBattlePanel extends StatelessWidget {
                     RewardItemsPill(items: battle.rewardItems),
                   if (battle.resourceChanges.isEmpty &&
                       battle.rewardItems.isEmpty)
-                    NodeTypePill(label: battle.context.nodeTypeLabel),
+                    for (final label in battle.context.nodeTypeLabels)
+                      NodeTypePill(label: label),
                 ],
               ),
             ),
@@ -331,7 +332,8 @@ class _CompactBattlePanel extends StatelessWidget {
         battle.enemyEscort.isNotEmpty || rawEnemyName.contains('联合舰队');
     final metaChips = _compactMetaChips(battle);
     final statusPills = <Widget>[
-      NodeTypePill(label: battle.context.nodeTypeLabel),
+      for (final label in battle.context.nodeTypeLabels)
+        NodeTypePill(label: label),
       if (battle.airSuperiority != null)
         AirSuperiorityPill(label: battle.airSuperiority!),
       for (final chip in metaChips) MetaChip(label: chip.$1, color: chip.$2),
@@ -739,7 +741,7 @@ List<(String, Color)> _compactMetaChips(LiveBattle battle) {
   return <(String, Color)>[
     if (battle.context.combinedFleetType != CombinedFleetType.none)
       (battle.context.combinedFleetType.label, const Color(0xff70c7bc)),
-    if (battle.phaseLabel != battle.context.nodeTypeLabel)
+    if (!battle.context.nodeTypeLabels.contains(battle.phaseLabel))
       (battle.phaseLabel, battlePhaseChipColor(battle.phaseLabel)),
     if (battle.engagement > 0)
       (

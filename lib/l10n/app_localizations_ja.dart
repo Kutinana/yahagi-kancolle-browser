@@ -3286,4 +3286,115 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get selectHeaderVisibleItems => '上部に表示する項目を選択';
+
+  @override
+  String get expCalculator => '経験値計算';
+
+  @override
+  String get expCalcShip => '艦娘';
+
+  @override
+  String get expCalcCurrentLevel => '現在レベル';
+
+  @override
+  String get expCalcTargetLevel => '目標レベル';
+
+  @override
+  String get expCalcMap => '海域';
+
+  @override
+  String get expCalcRank => '評価';
+
+  @override
+  String get expCalcBaseExp => '基本経験値';
+
+  @override
+  String get expCalcFlagship => '旗艦';
+
+  @override
+  String get expCalcMvp => 'MVP';
+
+  @override
+  String get expCalcMapExp => '海域経験値';
+
+  @override
+  String get expCalcRemainExp => '残り経験値';
+
+  @override
+  String get expCalcBattle => '戦闘';
+
+  @override
+  String get expCalcEmptyTrackList => '育成追跡リストはありません。上の＋で追加してください';
+
+  @override
+  String get expCalcBaseExpHelpTitle => '主要海域の基本経験値の目安';
+
+  @override
+  String get expCalcTrackAdded => '経験値追跡リストに追加しました';
+
+  @override
+  String get expCalcTrackDeleted => '経験値追跡リストから削除しました';
+
+  @override
+  String get expCalcFreeMode => '自由計算（艦娘指定なし）';
+
+  @override
+  String get expCalcAddNode => '戦闘マス追加 (連戦加算)';
+
+  @override
+  String get expCalcRemoveNode => 'マス削除';
+
+  @override
+  String get expCalcRouteTotal => '1出撃合計EXP';
+
+  @override
+  String get expCalcNodePoint => 'マス';
+
+  @override
+  String get expCalcRouteSummary => '出撃ルート';
+
+  @override
+  String get expCalcAddTrack => '追跡リストに追加';
+
+  @override
+  String get expCalcCompletedTag => '0 回 (達成済み)';
+
+  @override
+  String get expCalcCardView => 'カード';
+
+  @override
+  String get expCalcTableView => 'テーブル';
+
+  @override
+  String get expCalcTrackListTitle => '育成追跡リスト';
+
+  @override
+  String get expCalcAutoSyncHint => '母港更新時に残り経験値と周回数を自動再計算します';
+
+  @override
+  String get expCalcDelete => '削除';
+
+  @override
+  String get expCalcStep1Title => 'ステップ 1 · 艦娘と目標レベル';
+
+  @override
+  String get expCalcStep2Title => 'ステップ 2 · 出撃海域マスと戦術ルート編成';
+
+  @override
+  String get expCalcResultHudTitle => '出撃ルート総合試算結果';
+
+  @override
+  String get expCalcTargetGapLabel => 'レベルアップ必要EXP';
+
+  @override
+  String get expCalcTargetAlignHint => '目標経験値はテーブルに自動同期';
+
+  @override
+  String get expCalcRouteSummaryPrefix => '現在のルート合計';
+
+  @override
+  String get expCalcCombatNodesSuffix => '戦';
+
+  @override
+  String get expCalcAccumulatedExpLabel => '累計EXP';
 }
