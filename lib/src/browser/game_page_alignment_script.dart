@@ -15,6 +15,8 @@ const String gamePageAlignmentScript = r'''
       overflow: hidden !important;
       overscroll-behavior: none !important;
       touch-action: none !important;
+      background: #000000 !important;
+      background-color: #000000 !important;
     }
 
     #w,
@@ -34,13 +36,13 @@ const String gamePageAlignmentScript = r'''
       width: 1200px !important;
       height: 720px !important;
       position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
+      top: var(--yahagi-game-top, 0px) !important;
+      left: var(--yahagi-game-left, 0px) !important;
       z-index: 2147483641 !important;
       margin: 0 !important;
       padding: 0 !important;
       border: 0 !important;
-      transform: none !important;
+      transform: scale(var(--yahagi-game-scale, 1)) !important;
       transform-origin: 0 0 !important;
       overscroll-behavior: none !important;
       touch-action: none !important;
@@ -125,12 +127,19 @@ const String gamePageAlignmentScript = r'''
     if (window.__yahagiMobileScrollLock) {
       window.removeEventListener('scroll', window.__yahagiMobileScrollLock);
     }
+    if (window.__yahagiMobileResize) {
+      window.removeEventListener('resize', window.__yahagiMobileResize);
+    }
     if (window.__yahagiMobileAlignGame) {
       window.removeEventListener('load', window.__yahagiMobileAlignGame);
     }
 
+    document.documentElement.style.removeProperty('--yahagi-game-scale');
+    document.documentElement.style.removeProperty('--yahagi-game-left');
+    document.documentElement.style.removeProperty('--yahagi-game-top');
     document.getElementById('game_frame')?.removeAttribute('scrolling');
     delete window.__yahagiMobileScrollLock;
+    delete window.__yahagiMobileResize;
     delete window.__yahagiMobileAlignGame;
   };
 
@@ -209,6 +218,45 @@ const String gamePageAlignmentScript = r'''
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
 
+      const viewportWidth =
+        window.visualViewport?.width || window.innerWidth;
+      const viewportHeight =
+        window.visualViewport?.height || window.innerHeight;
+      if (
+        viewportWidth > 0 &&
+        viewportHeight > 0 &&
+        (viewportWidth < 1200 || viewportHeight < 720)
+      ) {
+        const scale = Math.min(
+          1,
+          Math.min(viewportWidth / 1200, viewportHeight / 720),
+        );
+        const left = Math.max(0, (viewportWidth - 1200 * scale) / 2);
+        const top = Math.max(0, (viewportHeight - 720 * scale) / 2);
+        document.documentElement.style.setProperty(
+          '--yahagi-game-scale',
+          String(scale),
+        );
+        document.documentElement.style.setProperty(
+          '--yahagi-game-left',
+          `${left}px`,
+        );
+        document.documentElement.style.setProperty(
+          '--yahagi-game-top',
+          `${top}px`,
+        );
+      } else {
+        document.documentElement.style.setProperty('--yahagi-game-scale', '1');
+        document.documentElement.style.setProperty(
+          '--yahagi-game-left',
+          '0px',
+        );
+        document.documentElement.style.setProperty(
+          '--yahagi-game-top',
+          '0px',
+        );
+      }
+
       const gameFrame = document.getElementById('game_frame');
       if (gameFrame) {
         gameFrame.setAttribute('scrolling', 'no');
@@ -227,6 +275,16 @@ const String gamePageAlignmentScript = r'''
       window.__yahagiMobileAlignGame();
     };
     window.addEventListener('scroll', window.__yahagiMobileScrollLock, {
+      passive: true,
+    });
+
+    if (window.__yahagiMobileResize) {
+      window.removeEventListener('resize', window.__yahagiMobileResize);
+    }
+    window.__yahagiMobileResize = () => {
+      window.__yahagiMobileAlignGame?.();
+    };
+    window.addEventListener('resize', window.__yahagiMobileResize, {
       passive: true,
     });
 

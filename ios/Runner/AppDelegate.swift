@@ -23,6 +23,7 @@ import WebKit
   private var frameRateBridge: IOSGameFrameRateBridge?
   private var battleAlertBridge: IOSBattleDamageAlertBridge?
   private var frameReloadBridge: IOSGameFrameReloadBridge?
+  private var fixedCanvasScaleBridge: IOSFixedCanvasScaleBridge?
   private var isChannelsConfigured = false
 
   override func application(
@@ -118,13 +119,10 @@ import WebKit
     // 4. Fixed Canvas Scaling MethodChannel
     let scaleChannel = FlutterMethodChannel(
       name: Self.scaleChannel, binaryMessenger: controller.binaryMessenger)
-    scaleChannel.setMethodCallHandler { call, result in
-      if call.method == "bindFixedCanvas" {
-        // Fixed canvas scaling handled by WKWebView JavaScript viewport on iOS
-        result(nil)
-      } else {
-        result(FlutterMethodNotImplemented)
-      }
+    let scaleBridge = IOSFixedCanvasScaleBridge(viewController: controller, channel: scaleChannel)
+    self.fixedCanvasScaleBridge = scaleBridge
+    scaleChannel.setMethodCallHandler { [weak scaleBridge] call, result in
+      scaleBridge?.handle(call, result: result)
     }
 
     // 5. Gadget Bypass MethodChannel

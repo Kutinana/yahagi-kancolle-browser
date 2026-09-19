@@ -29,6 +29,7 @@ import 'browser/game_frame_rate_runtime_controller.dart';
 import 'browser/game_frame_reload_port.dart';
 
 import 'browser/game_page_alignment_script.dart';
+import 'browser/game_presentation_state.dart';
 import 'browser/game_toolbar_controller.dart';
 import 'browser/game_webview_compatibility.dart';
 import 'browser/safe_page_address.dart';
@@ -93,6 +94,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   bool _audioPortAttached = false;
   bool _capturePortAttached = false;
   bool? _lastNativeBackgroundPlaybackEnabled;
+  int _presentationSyncEpoch = 0;
 
   GameStartupState _startupState = GameStartupState.loadingSettings;
   String _startupErrorMessage = '';
@@ -139,6 +141,14 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
           }
         },
       )
+      ..addJavaScriptChannel(
+        'YahagiPresentation',
+        onMessageReceived: (message) {
+          final state = decodeGamePresentationState(message.message);
+          if (state == null || state == GamePresentationState.pending) return;
+          _synchronizeGamePresentation().catchError((Object _) {});
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: _onNavigationRequest,
@@ -161,13 +171,6 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
             await _frameRateRuntimeController?.onPageReady();
             widget.controller.onPageFinished(url);
             widget.browserController.onPageFinished(url);
-
-            if (_webViewController.platform is AndroidWebViewController) {
-              await _scaleChannel.invokeMethod<void>(
-                'bindFixedCanvas',
-                <String, Object>{'contentWidth': 1200, 'contentHeight': 720},
-              );
-            }
 
             // iOS-specific: inject AudioContext tracker again on page finish
             await _injectAudioContextTracker();
@@ -243,59 +246,48 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   }
 
   Future<void> _synchronizeGamePresentation() async {
-    await _webViewController.runJavaScript(gamePageAlignmentScript);
-    await _webViewController.runJavaScript(r'''
-      (() => {
-        const updateScale = () => {
-          const width = window.visualViewport?.width ||
-            document.documentElement.clientWidth;
-          const height = window.visualViewport?.height ||
-            document.documentElement.clientHeight;
-          if (!width || !height) return;
-          const scale = Math.min(width / 1200, height / 720);
-          const left = Math.max(0, (width - 1200 * scale) / 2);
-          const top = Math.max(0, (height - 720 * scale) / 2);
-          const target = document.querySelector('#game_frame, #game-container');
-          let style = document.getElementById('__yahagi_ios_scale__');
-          if (!style) {
-            style = document.createElement('style');
-            style.id = '__yahagi_ios_scale__';
-            document.head.appendChild(style);
-          }
-          style.textContent = `
-            html body #game_frame, html body #game-container {
-              transform: scale(${scale}) !important;
-              left: ${left}px !important;
-              top: ${top}px !important;
-            }
-          `;
-          if (target) {
-            target.style.setProperty('transform', `scale(${scale})`, 'important');
-            target.style.setProperty('transform-origin', '0 0', 'important');
-            target.style.setProperty('left', `${left}px`, 'important');
-            target.style.setProperty('top', `${top}px`, 'important');
-          }
-        };
-        if (window.__yahagiIOSResizeHandler) {
-          window.removeEventListener('resize', window.__yahagiIOSResizeHandler);
-        }
-        window.__yahagiIOSResizeHandler = updateScale;
-        window.addEventListener('resize', updateScale, { passive: true });
-        window.__yahagiIOSTargetObserver?.disconnect();
-        if (!document.querySelector('#game_frame, #game-container')) {
-          window.__yahagiIOSTargetObserver = new MutationObserver(() => {
-            if (!document.querySelector('#game_frame, #game-container')) return;
-            updateScale();
-            window.__yahagiIOSTargetObserver?.disconnect();
-          });
-          window.__yahagiIOSTargetObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-          });
-        }
-        updateScale();
-      })();
-    ''');
+    final epoch = ++_presentationSyncEpoch;
+    try {
+      final gameSurfaceResult =
+          await _webViewController.runJavaScriptReturningResult(
+            gamePageAlignmentScript,
+          );
+      if (epoch != _presentationSyncEpoch || !mounted) return;
+      await _applyGamePresentation(
+        decodeGamePresentationState(gameSurfaceResult),
+        epoch,
+      );
+    } catch (_) {
+      // Ignore presentation synchronization errors on transient page transitions.
+    }
+  }
+
+  Future<void> _applyGamePresentation(
+    GamePresentationState? state,
+    int epoch,
+  ) async {
+    if (epoch != _presentationSyncEpoch || !mounted) return;
+    final action = state?.platformAction ?? GamePresentationPlatformAction.none;
+    if (action == GamePresentationPlatformAction.none) return;
+
+    switch (action) {
+      case GamePresentationPlatformAction.bind:
+        await _scaleChannel.invokeMethod<void>(
+          'bindFixedCanvas',
+          <String, Object>{'contentWidth': 1200, 'contentHeight': 720},
+        );
+      case GamePresentationPlatformAction.release:
+        await _scaleChannel.invokeMethod<void>('releaseFixedCanvas');
+      case GamePresentationPlatformAction.none:
+        return;
+    }
+
+    if (epoch != _presentationSyncEpoch || !mounted) return;
+    if (state == GamePresentationState.game) {
+      await _webViewController.runJavaScript('''
+        if (window.__yahagiMobileAlignGame) window.__yahagiMobileAlignGame();
+      ''');
+    }
   }
 
   Future<void> _executeStartupSequence() async {
