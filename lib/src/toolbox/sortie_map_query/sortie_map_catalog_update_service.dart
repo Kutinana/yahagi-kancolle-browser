@@ -189,13 +189,33 @@ final class SortieMapCatalogUpdateService
     if (uri.scheme != 'https' || (!allowedManifest && !allowedArchive)) {
       throw FormatException('Sortie update URL is not allowed: $uri');
     }
-    final request = http.Request('GET', uri)
-      ..headers['User-Agent'] = 'Yahagi-Kancolle-Browser/$appVersion';
-    final response = await client.send(request).timeout(timeout);
+    var requestUri = uri;
+    http.StreamedResponse? response;
+    for (var redirects = 0; redirects <= 5; redirects++) {
+      final request = http.Request('GET', requestUri)
+        ..followRedirects = false
+        ..headers['User-Agent'] = 'Yahagi-Kancolle-Browser/$appVersion';
+      response = await client.send(request).timeout(timeout);
+      if (!_isRedirectStatus(response.statusCode)) break;
+      final location = response.headers['location'];
+      if (!allowedArchive || location == null || redirects == 5) {
+        throw const FormatException('Sortie update redirect is not allowed.');
+      }
+      final redirected = requestUri.resolve(location);
+      if (!_isAllowedReleaseRedirect(redirected)) {
+        throw FormatException(
+          'Sortie update redirect host is not allowed: ${redirected.host}',
+        );
+      }
+      requestUri = redirected;
+    }
+    if (response == null) {
+      throw const HttpException('Sortie update returned no response.');
+    }
     if (response.statusCode != 200) {
       throw http.ClientException(
         'Sortie update failed with HTTP ${response.statusCode}',
-        uri,
+        requestUri,
       );
     }
     final contentLength = response.contentLength;
@@ -212,3 +232,18 @@ final class SortieMapCatalogUpdateService
     return bytes;
   }
 }
+
+bool _isAllowedReleaseRedirect(Uri uri) =>
+    uri.scheme == 'https' &&
+    const <String>{
+      'github.com',
+      'release-assets.githubusercontent.com',
+      'objects.githubusercontent.com',
+    }.contains(uri.host);
+
+bool _isRedirectStatus(int statusCode) =>
+    statusCode == 301 ||
+    statusCode == 302 ||
+    statusCode == 303 ||
+    statusCode == 307 ||
+    statusCode == 308;

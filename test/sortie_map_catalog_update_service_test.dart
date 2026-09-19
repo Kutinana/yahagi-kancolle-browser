@@ -53,6 +53,65 @@ void main() {
     );
     expect(installer.installed, isNull);
   });
+
+  test('rejects release redirects to an untrusted host', () async {
+    final archive = <int>[1, 2, 3];
+    final installer = _Installer();
+    final client = MockClient((request) async {
+      if (request.url.host == 'raw.githubusercontent.com') {
+        return http.Response(_manifest(archive, revision: 8), 200);
+      }
+      return http.Response(
+        '',
+        302,
+        headers: <String, String>{'location': 'https://example.test/steal.zip'},
+      );
+    });
+
+    final result = await SortieMapCatalogUpdateService(
+      client: client,
+      installer: installer,
+      appVersion: '1.0.8',
+    ).checkAndUpdate(current: _catalog(7));
+
+    expect(result, isA<SortieMapCatalogUpdateFailed>());
+    expect(
+      (result as SortieMapCatalogUpdateFailed).kind,
+      SortieMapCatalogUpdateFailure.validation,
+    );
+    expect(installer.installed, isNull);
+  });
+
+  test('follows the HTTPS GitHub release asset redirect', () async {
+    final archive = <int>[4, 5, 6];
+    final installer = _Installer();
+    final client = MockClient((request) async {
+      if (request.url.host == 'raw.githubusercontent.com') {
+        return http.Response(_manifest(archive, revision: 8), 200);
+      }
+      if (request.url.host == 'github.com') {
+        return http.Response(
+          '',
+          302,
+          headers: <String, String>{
+            'location':
+                'https://release-assets.githubusercontent.com/signed.zip',
+          },
+        );
+      }
+      expect(request.url.host, 'release-assets.githubusercontent.com');
+      return http.Response.bytes(archive, 200);
+    });
+
+    final result = await SortieMapCatalogUpdateService(
+      client: client,
+      installer: installer,
+      appVersion: '1.0.8',
+    ).checkAndUpdate(current: _catalog(7));
+
+    expect(result, isA<SortieMapCatalogUpdated>());
+    expect(installer.installed, archive);
+  });
 }
 
 String _manifest(List<int> bytes, {required int revision}) => jsonEncode({
