@@ -1,0 +1,16 @@
+# 敌舰资料库
+
+此目录维护“海域查询”使用的独立敌舰资料库。
+
+- `source/kancolle_enemy_database.xlsx`：人工维护的开发源文件，不由 App 直接读取。
+- `../../assets/data/enemy_catalog.json`：随 App 内置、运行时读取的 JSON 快照。
+- `manifest.json`：设置页“敌舰资料”更新入口读取的版本、大小和 SHA-256。
+- `schema/`：JSON 格式约束。
+
+更新流程：替换 Excel → 运行 `tool/build_enemy_catalog.py` → 运行
+`tool/build_enemy_release.py` → 执行测试 → 创建不可变 GitHub Release 并上传
+`enemy_catalog.json` → 提交并推送 `manifest.json`。客户端会校验版本、文件大小、
+SHA-256、记录数量和别名数量，校验通过后才原子替换本地缓存；失败时继续使用原资料。
+
+地图敌舰条目中的 ID 是头像 ID，不一定是精确配置 ID。生成器使用“头像 ID + 地图配置名”
+建立别名，详情卡最终解析到资料库中的具体配置记录。

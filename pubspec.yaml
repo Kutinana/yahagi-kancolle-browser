@@ -96,6 +96,7 @@ flutter:
     - assets/data/game_resource_static_catalog.json
     - assets/data/game_resource_baseline_manifest.json.gz
     - assets/data/sortie_map_catalog.json
+    - assets/data/enemy_catalog.json
     - assets/images/sortie_maps/covers/
     - assets/images/sortie_maps/maps/
 

@@ -23,6 +23,7 @@ import 'game_frame_refresh_shortcut_settings.dart';
 import '../battle/fcd_map_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../toolbox/sortie_map_query/sortie_map_catalog_controller.dart';
+import '../toolbox/sortie_map_query/enemy_catalog_controller.dart';
 import '../improvement/improvement_planner_controller.dart';
 import 'screen_settings_page.dart';
 import 'battle_settings_page.dart';
@@ -66,6 +67,7 @@ class SettingsPage extends StatelessWidget {
     this.fcdMapController,
     this.questCatalogController,
     this.sortieMapCatalogController,
+    this.enemyCatalogController,
     this.improvementPlannerController,
     this.showTitle = true,
     this.showDeveloperDiagnostics = false,
@@ -105,6 +107,7 @@ class SettingsPage extends StatelessWidget {
   final FcdMapController? fcdMapController;
   final QuestCatalogController? questCatalogController;
   final SortieMapCatalogController? sortieMapCatalogController;
+  final EnemyCatalogController? enemyCatalogController;
   final ImprovementPlannerController? improvementPlannerController;
   final bool showDeveloperDiagnostics;
   final BattlePredictionSettingsController? battlePredictionSettingsController;
@@ -165,6 +168,7 @@ class SettingsPage extends StatelessWidget {
           fcdMapController: fcdMapController,
           questCatalogController: questCatalogController,
           sortieMapCatalogController: sortieMapCatalogController,
+          enemyCatalogController: enemyCatalogController,
           improvementPlannerController: improvementPlannerController,
           telemetryController: telemetryController,
         ),

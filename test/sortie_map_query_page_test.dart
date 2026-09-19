@@ -32,6 +32,81 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('tapping an enemy opens the enemy detail demo card', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(844, 390));
+
+    await tester.tap(find.byKey(const Key('sortie-map-enemy-tile-1-0-0')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sortie-enemy-details-card')), findsOneWidget);
+    expect(find.text('駆逐イ級'), findsWidgets);
+    expect(find.text('耐久 20'), findsOneWidget);
+    expect(find.text('5inch単装砲'), findsOneWidget);
+  });
+
+  testWidgets('enemy rows provide a phone-sized touch target', (tester) async {
+    await _pumpAt(tester, const Size(390, 844));
+
+    final tile = tester.getSize(
+      find.byKey(const Key('sortie-map-enemy-tile-1-0-0')),
+    );
+    expect(tile.height, greaterThanOrEqualTo(44));
+  });
+
+  for (final localeAndLabel in const <(Locale, String)>[
+    (Locale('ja'), '正確な編成'),
+    (Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'), '精確配置'),
+  ]) {
+    testWidgets('enemy details localize for ${localeAndLabel.$1}', (
+      tester,
+    ) async {
+      await _pumpAt(tester, const Size(390, 844), locale: localeAndLabel.$1);
+
+      await tester.tap(find.byKey(const Key('sortie-map-enemy-tile-1-0-0')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(localeAndLabel.$2), findsOneWidget);
+      expect(find.text('精确配置'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('enemy details scroll without overflow on short landscape', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(650, 240));
+
+    await tester.tap(find.byKey(const Key('sortie-map-enemy-tile-1-0-0')));
+    await tester.pumpAndSettle();
+
+    final card = tester.getRect(
+      find.byKey(const Key('sortie-enemy-details-card')),
+    );
+    expect(card.top, greaterThanOrEqualTo(16));
+    expect(card.bottom, lessThanOrEqualTo(224));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('enemy detail demo stays inside a portrait phone viewport', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(390, 844));
+
+    await tester.tap(find.byKey(const Key('sortie-map-enemy-tile-1-0-0')));
+    await tester.pumpAndSettle();
+
+    final rect = tester.getRect(
+      find.byKey(const Key('sortie-enemy-details-card')),
+    );
+    expect(rect.left, greaterThanOrEqualTo(16));
+    expect(rect.right, lessThanOrEqualTo(374));
+    expect(rect.top, greaterThanOrEqualTo(16));
+    expect(rect.bottom, lessThanOrEqualTo(828));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('phone landscape keeps the same three-column structure', (
     tester,
   ) async {

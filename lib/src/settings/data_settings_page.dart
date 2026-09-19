@@ -22,6 +22,7 @@ import '../quest/quest_catalog_controller.dart';
 import '../senka/senka_controller.dart';
 import '../telemetry/telemetry_controller.dart';
 import '../toolbox/sortie_map_query/sortie_map_catalog_controller.dart';
+import '../toolbox/sortie_map_query/enemy_catalog_controller.dart';
 import '../kcwiki_report/kcwiki_report_settings.dart';
 import '../widgets/top_notice.dart';
 import '../widgets/adaptive_input_dialog.dart';
@@ -32,6 +33,7 @@ import 'game_rendering_mode_controller.dart';
 import 'game_resource_cache_section.dart';
 import 'quest_catalog_update_section.dart';
 import 'sortie_map_catalog_update_section.dart';
+import 'enemy_catalog_update_section.dart';
 import 'settings_ui_helpers.dart';
 
 class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
@@ -51,6 +53,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.fcdMapController,
     this.questCatalogController,
     this.sortieMapCatalogController,
+    this.enemyCatalogController,
     this.improvementPlannerController,
     this.telemetryController,
   });
@@ -69,6 +72,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final FcdMapController? fcdMapController;
   final QuestCatalogController? questCatalogController;
   final SortieMapCatalogController? sortieMapCatalogController;
+  final EnemyCatalogController? enemyCatalogController;
   final ImprovementPlannerController? improvementPlannerController;
   final TelemetryController? telemetryController;
 
@@ -182,6 +186,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
             if (fcdMapController != null ||
                 questCatalogController != null ||
                 sortieMapCatalogController != null ||
+                enemyCatalogController != null ||
                 improvementPlannerController != null) ...<Widget>[
               const SizedBox(height: 24),
               buildSectionTitle(l10n.fcdMapSectionTitle),
@@ -201,9 +206,15 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                       const Divider(height: 1),
                     if (sortieMapCatalogController case final controller?)
                       SortieMapCatalogUpdateSection(controller: controller),
+                    if (sortieMapCatalogController != null &&
+                        enemyCatalogController != null)
+                      const Divider(height: 1),
+                    if (enemyCatalogController case final controller?)
+                      EnemyCatalogUpdateSection(controller: controller),
                     if ((fcdMapController != null ||
                             questCatalogController != null ||
-                            sortieMapCatalogController != null) &&
+                            sortieMapCatalogController != null ||
+                            enemyCatalogController != null) &&
                         improvementPlannerController != null)
                       const Divider(height: 1),
                     if (improvementPlannerController case final controller?)

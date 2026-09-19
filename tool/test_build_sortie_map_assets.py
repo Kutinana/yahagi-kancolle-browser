@@ -217,6 +217,7 @@ class BuildSortieMapAssetsTest(unittest.TestCase):
             ship_sheet.append(["1501", "駆逐イ級", 1])
             ship_sheet.append(["1505", "軽巡ホ級", 1])
             ship_sheet.append(["1512", "空母ヲ級", 1])
+            ship_sheet.append(["1512", "空母ヲ級flagship", 1])
             workbook.save(workbook_path)
 
             output_root = root / "assets"

@@ -154,8 +154,10 @@ def _ship_entry(value: Any, ship_names: dict[str, dict[str, str]]) -> dict[str, 
     names = ship_names.get(ship_id, {})
     return {
         "id": int(ship_id),
-        "nameJa": names.get("nameJa", fallback_name),
-        "nameZh": names.get("nameZh", fallback_name),
+        # The same portrait id is shared by multiple configurations. The
+        # per-formation label is therefore more precise than the id lookup.
+        "nameJa": fallback_name or names.get("nameJa", ""),
+        "nameZh": fallback_name or names.get("nameZh", ""),
     }
 
 

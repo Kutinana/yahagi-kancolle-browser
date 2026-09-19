@@ -9,6 +9,9 @@ import '../../game_state/game_state.dart';
 import '../../layout/adaptive_layout.dart';
 import 'sortie_map_catalog.dart';
 import 'sortie_map_catalog_controller.dart';
+import 'enemy_catalog.dart';
+import 'enemy_catalog_controller.dart';
+import 'sortie_enemy_details.dart';
 import 'sortie_map_models.dart';
 import 'sortie_map_query_strings.dart';
 import 'sortie_map_selection_store.dart';
@@ -20,6 +23,7 @@ class SortieMapQueryPage extends StatefulWidget {
     super.key,
     this.catalogLoader,
     this.catalogController,
+    this.enemyCatalogController,
     this.selectionStore,
     this.visible = true,
     this.state = const GameState(),
@@ -27,6 +31,7 @@ class SortieMapQueryPage extends StatefulWidget {
 
   final SortieMapCatalogLoader? catalogLoader;
   final SortieMapCatalogController? catalogController;
+  final EnemyCatalogController? enemyCatalogController;
   final SortieMapSelectionStore? selectionStore;
   final bool visible;
   final GameState state;
@@ -49,6 +54,7 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
         widget.selectionStore ??
         const SharedPreferencesSortieMapSelectionStore();
     widget.catalogController?.addListener(_onCatalogChanged);
+    widget.enemyCatalogController?.addListener(_onEnemyCatalogChanged);
     _restoreSelection();
     if (widget.visible) _catalogFuture = _loadCatalog();
   }
@@ -60,6 +66,10 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
       oldWidget.catalogController?.removeListener(_onCatalogChanged);
       widget.catalogController?.addListener(_onCatalogChanged);
       _onCatalogChanged();
+    }
+    if (oldWidget.enemyCatalogController != widget.enemyCatalogController) {
+      oldWidget.enemyCatalogController?.removeListener(_onEnemyCatalogChanged);
+      widget.enemyCatalogController?.addListener(_onEnemyCatalogChanged);
     }
     if (oldWidget.selectionStore != widget.selectionStore) {
       _selectionStore =
@@ -87,9 +97,14 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
     setState(() => _catalogFuture = _loadCatalog());
   }
 
+  void _onEnemyCatalogChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     widget.catalogController?.removeListener(_onCatalogChanged);
+    widget.enemyCatalogController?.removeListener(_onEnemyCatalogChanged);
     super.dispose();
   }
 
@@ -225,6 +240,7 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
           compact: compact,
           multiColumn: widePortrait,
           state: widget.state,
+          enemyCatalog: widget.enemyCatalogController?.data,
         );
 
         if (widePortrait) {
@@ -624,6 +640,7 @@ class _NodeDetailPanel extends StatelessWidget {
     required this.compact,
     required this.multiColumn,
     required this.state,
+    required this.enemyCatalog,
   });
 
   final SortieMapNode? node;
@@ -631,6 +648,7 @@ class _NodeDetailPanel extends StatelessWidget {
   final bool compact;
   final bool multiColumn;
   final GameState state;
+  final EnemyCatalogData? enemyCatalog;
 
   @override
   Widget build(BuildContext context) {
@@ -646,6 +664,7 @@ class _NodeDetailPanel extends StatelessWidget {
           strings: strings,
           compact: compact,
           state: state,
+          enemyCatalog: enemyCatalog,
           twoColumnShips: multiColumn || !compact,
         ),
     ];
@@ -892,6 +911,7 @@ class _FormationCard extends StatelessWidget {
     required this.strings,
     required this.compact,
     required this.state,
+    required this.enemyCatalog,
     required this.twoColumnShips,
   });
 
@@ -899,6 +919,7 @@ class _FormationCard extends StatelessWidget {
   final SortieMapQueryStrings strings;
   final bool compact;
   final GameState state;
+  final EnemyCatalogData? enemyCatalog;
   final bool twoColumnShips;
 
   @override
@@ -975,6 +996,7 @@ class _FormationCard extends StatelessWidget {
                   strings: strings,
                   compact: compact,
                   state: state,
+                  enemyCatalog: enemyCatalog,
                   twoColumns: twoColumnShips,
                 ),
               ],
@@ -1000,6 +1022,7 @@ class _EnemyFleetGrid extends StatelessWidget {
     required this.strings,
     required this.compact,
     required this.state,
+    required this.enemyCatalog,
     required this.twoColumns,
   });
 
@@ -1009,6 +1032,7 @@ class _EnemyFleetGrid extends StatelessWidget {
   final SortieMapQueryStrings strings;
   final bool compact;
   final GameState state;
+  final EnemyCatalogData? enemyCatalog;
   final bool twoColumns;
 
   @override
@@ -1036,6 +1060,7 @@ class _EnemyFleetGrid extends StatelessWidget {
                             label: strings.enemyShipName(ships[start + column]),
                             compact: compact,
                             state: state,
+                            enemyCatalog: enemyCatalog,
                           ),
                         )
                       : const SizedBox.shrink(),
@@ -1058,6 +1083,7 @@ class _EnemyShipTile extends StatelessWidget {
     required this.label,
     required this.compact,
     required this.state,
+    required this.enemyCatalog,
   });
 
   final int formationVariant;
@@ -1067,36 +1093,52 @@ class _EnemyShipTile extends StatelessWidget {
   final String label;
   final bool compact;
   final GameState state;
+  final EnemyCatalogData? enemyCatalog;
 
   @override
   Widget build(BuildContext context) => Tooltip(
     message: label,
-    child: Row(
-      children: [
-        ShipPortrait(
-          key: Key(
-            'sortie-map-enemy-portrait-$formationVariant-$groupIndex-$shipIndex',
-          ),
-          ship: state.masterShips[entry.id],
-          serverOrigin: state.serverOrigin,
-          width: 52,
-          height: 24,
-          decodeHeight: 48,
-          resourceType: ShipPortraitResourceType.banner,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => showSortieEnemyDetails(
+          context,
+          entry: entry,
+          state: state,
+          catalog: enemyCatalog,
         ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: const Color(0xffeef6f8),
-              fontSize: compact ? 10.5 : 12,
-            ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            children: [
+              ShipPortrait(
+                key: Key(
+                  'sortie-map-enemy-portrait-$formationVariant-$groupIndex-$shipIndex',
+                ),
+                ship: state.masterShips[entry.id],
+                serverOrigin: state.serverOrigin,
+                width: 52,
+                height: 24,
+                decodeHeight: 48,
+                resourceType: ShipPortraitResourceType.banner,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: const Color(0xffeef6f8),
+                    fontSize: compact ? 10.5 : 12,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     ),
   );
 }
