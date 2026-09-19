@@ -135,6 +135,32 @@ void main() {
     await expectLater(client.abortObserved.future, completes);
     await expectLater(client.cancelObserved.future, completes);
   });
+
+  for (final mode in _CleanupMode.values) {
+    test('cancels an unconsumed ${mode.name} response body', () async {
+      const archive = <int>[1];
+      final installer = _Installer();
+      final client = _UnconsumedResponseClient(
+        _manifest(archive, revision: 8),
+        mode,
+      );
+
+      final result = await SortieMapCatalogUpdateService(
+        client: client,
+        installer: installer,
+        appVersion: '1.0.8',
+        maximumArchiveBytes: 8,
+      ).checkAndUpdate(current: _catalog(7));
+
+      if (mode == _CleanupMode.redirect) {
+        expect(result, isA<SortieMapCatalogUpdated>());
+      } else {
+        expect(result, isA<SortieMapCatalogUpdateFailed>());
+      }
+      await expectLater(client.abortObserved.future, completes);
+      await expectLater(client.cancelObserved.future, completes);
+    });
+  }
 }
 
 String _manifest(List<int> bytes, {required int revision}) => jsonEncode({
@@ -233,5 +259,58 @@ final class _SlowArchiveClient extends http.BaseClient {
       },
     );
     return http.StreamedResponse(controller.stream, 200);
+  }
+}
+
+enum _CleanupMode { redirect, errorStatus, oversized }
+
+final class _UnconsumedResponseClient extends http.BaseClient {
+  _UnconsumedResponseClient(this.manifest, this.mode);
+
+  final String manifest;
+  final _CleanupMode mode;
+  final Completer<void> abortObserved = Completer<void>();
+  final Completer<void> cancelObserved = Completer<void>();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.host == 'raw.githubusercontent.com') {
+      return http.StreamedResponse(
+        Stream<List<int>>.value(utf8.encode(manifest)),
+        200,
+      );
+    }
+    if (mode == _CleanupMode.redirect &&
+        request.url.host == 'release-assets.githubusercontent.com') {
+      return http.StreamedResponse(
+        Stream<List<int>>.value(const <int>[1]),
+        200,
+      );
+    }
+    expect(request, isA<http.AbortableRequest>());
+    final abortable = request as http.AbortableRequest;
+    abortable.abortTrigger?.then((_) {
+      if (!abortObserved.isCompleted) abortObserved.complete();
+    });
+    final controller = StreamController<List<int>>(
+      onCancel: () {
+        if (!cancelObserved.isCompleted) cancelObserved.complete();
+      },
+    );
+    return switch (mode) {
+      _CleanupMode.redirect => http.StreamedResponse(
+        controller.stream,
+        302,
+        headers: const <String, String>{
+          'location': 'https://release-assets.githubusercontent.com/data.zip',
+        },
+      ),
+      _CleanupMode.errorStatus => http.StreamedResponse(controller.stream, 503),
+      _CleanupMode.oversized => http.StreamedResponse(
+        controller.stream,
+        200,
+        contentLength: 9,
+      ),
+    };
   }
 }

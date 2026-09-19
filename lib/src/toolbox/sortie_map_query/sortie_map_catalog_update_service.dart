@@ -223,24 +223,24 @@ final class SortieMapCatalogUpdateService
       }
       final location = response.headers['location'];
       if (!allowedArchive || location == null || redirects == 5) {
-        if (!abort.isCompleted) abort.complete();
+        await _discardResponse(response, abort);
         throw const FormatException('Sortie update redirect is not allowed.');
       }
       final redirected = requestUri.resolve(location);
       if (!_isAllowedReleaseRedirect(redirected)) {
-        if (!abort.isCompleted) abort.complete();
+        await _discardResponse(response, abort);
         throw FormatException(
           'Sortie update redirect host is not allowed: ${redirected.host}',
         );
       }
-      if (!abort.isCompleted) abort.complete();
+      await _discardResponse(response, abort);
       requestUri = redirected;
     }
     if (response == null) {
       throw const HttpException('Sortie update returned no response.');
     }
     if (response.statusCode != 200) {
-      if (!responseAbort!.isCompleted) responseAbort.complete();
+      await _discardResponse(response, responseAbort!);
       throw http.ClientException(
         'Sortie update failed with HTTP ${response.statusCode}',
         requestUri,
@@ -248,10 +248,27 @@ final class SortieMapCatalogUpdateService
     }
     final contentLength = response.contentLength;
     if (contentLength != null && contentLength > maximumBytes) {
-      if (!responseAbort!.isCompleted) responseAbort.complete();
+      await _discardResponse(response, responseAbort!);
       throw const FormatException('Sortie update response is too large.');
     }
     return _readResponse(response, maximumBytes, deadline, responseAbort!);
+  }
+}
+
+Future<void> _discardResponse(
+  http.StreamedResponse response,
+  Completer<void> abort,
+) async {
+  final subscription = response.stream.listen(
+    (_) {},
+    onError: (Object _) {},
+    cancelOnError: true,
+  );
+  if (!abort.isCompleted) abort.complete();
+  try {
+    await subscription.cancel();
+  } on Object {
+    // The response is being discarded because its request is already invalid.
   }
 }
 
