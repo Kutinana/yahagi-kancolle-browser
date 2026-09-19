@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -91,17 +92,30 @@ void main() {
   );
 
   test('bounds actual inflated bytes when central size is forged', () async {
+    var consumedCompressedBytes = 0;
+    var totalCompressedBytes = 0;
     final store = FileSortieMapCatalogStore(
       root: temporary,
       maximumUncompressedBytes: 2048,
+      inflateProgress: (consumed, total) {
+        consumedCompressedBytes = consumed;
+        totalCompressedBytes = total;
+      },
     );
+    final payload = Uint8List(64 * 1024);
+    final random = Random(0x12345678);
+    for (var index = 0; index < payload.length; index++) {
+      payload[index] = random.nextInt(256);
+    }
     final archive = _archive(<String, List<int>>{
       'sortie_map_catalog.json': _catalog,
-      'covers/1-1.png': List<int>.filled(8192, 65),
+      'covers/1-1.png': payload,
       'maps/1-1.png': _png,
     });
     _patchCentralEntry(archive, 'covers/1-1.png', uncompressedSize: 1);
-    expect(() => store.installArchive(archive), throwsFormatException);
+    await expectLater(store.installArchive(archive), throwsFormatException);
+    expect(totalCompressedBytes, greaterThan(4096));
+    expect(consumedCompressedBytes, lessThan(totalCompressedBytes));
   });
 
   test('rejects a symlink entry before reading its payload', () async {
@@ -122,6 +136,24 @@ void main() {
       '${temporary.path}${Platform.pathSeparator}versions${Platform.pathSeparator}7${Platform.pathSeparator}sortie_map_catalog.json',
     );
     await catalog.writeAsString('{}', flush: true);
+    expect(await store.loadCached(), isNull);
+  });
+
+  test('version directory links cannot escape the store root', () async {
+    final store = FileSortieMapCatalogStore(root: temporary);
+    await store.installArchive(_validArchive(7));
+    final version = Directory(
+      '${temporary.path}${Platform.pathSeparator}versions${Platform.pathSeparator}7',
+    );
+    final outside = await Directory.systemTemp.createTemp('sortie-outside-');
+    addTearDown(() async {
+      if (await outside.exists()) await outside.delete(recursive: true);
+    });
+    final moved = await version.rename(
+      '${outside.path}${Platform.pathSeparator}7',
+    );
+    await Link(version.path).create(moved.path);
+
     expect(await store.loadCached(), isNull);
   });
 

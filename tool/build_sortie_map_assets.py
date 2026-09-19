@@ -171,15 +171,16 @@ def _image_for(directory: Path, map_id: str) -> Path:
 def _copy_trimmed_png(source: Path, target: Path) -> float:
     """Copy a PNG after removing its fully transparent outer rows and columns."""
     with Image.open(source) as image:
-        rgba = image.convert("RGBA")
         if (
-            rgba.width <= 0
-            or rgba.height <= 0
-            or rgba.width > 8192
-            or rgba.height > 8192
-            or rgba.width * rgba.height > 40_000_000
+            image.format != "PNG"
+            or image.width <= 0
+            or image.height <= 0
+            or image.width > 4096
+            or image.height > 4096
+            or image.width * image.height > 8_000_000
         ):
-            raise ValueError(f"PNG dimensions exceed the safe limit: {source}")
+            raise ValueError(f"Invalid or oversized PNG: {source}")
+        rgba = image.convert("RGBA")
         alpha_bounds = rgba.getchannel("A").getbbox()
         trimmed = rgba.crop(alpha_bounds) if alpha_bounds is not None else rgba
         trimmed.save(target)
@@ -189,18 +190,17 @@ def _copy_trimmed_png(source: Path, target: Path) -> float:
 def _copy_validated_png(source: Path, target: Path) -> None:
     """Validate the complete PNG payload and copy it to the asset snapshot."""
     with Image.open(source) as image:
-        if image.format != "PNG":
-            raise ValueError(f"Expected a PNG image: {source}")
-        image.load()
         width, height = image.size
         if (
-            width <= 0
+            image.format != "PNG"
+            or width <= 0
             or height <= 0
-            or width > 8192
-            or height > 8192
-            or width * height > 40_000_000
+            or width > 4096
+            or height > 4096
+            or width * height > 8_000_000
         ):
-            raise ValueError(f"PNG dimensions exceed the safe limit: {source}")
+            raise ValueError(f"Invalid or oversized PNG: {source}")
+        image.load()
     shutil.copy2(source, target)
 
 

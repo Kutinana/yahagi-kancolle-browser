@@ -51,6 +51,7 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
     this.maximumUncompressedBytes = 96 * 1024 * 1024,
     this.currentAppVersion = '999.999.999',
     this.phaseHook,
+    this.inflateProgress,
   });
 
   static Future<FileSortieMapCatalogStore> create({
@@ -69,6 +70,7 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
   final int maximumUncompressedBytes;
   final String currentAppVersion;
   final Future<void> Function(String phase)? phaseHook;
+  final void Function(int consumedBytes, int totalBytes)? inflateProgress;
 
   File get _activeFile => File(path.join(root.path, 'active.json'));
 
@@ -77,7 +79,10 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
       final pointer = await _readActivePointer();
       if (pointer == null) return null;
       final directory = Directory(path.join(root.path, 'versions', pointer));
-      return await _readInstalled(directory);
+      return await _readInstalled(
+        directory,
+        trustedParent: Directory(path.join(root.path, 'versions')),
+      );
     } catch (_) {
       return null;
     }
@@ -98,6 +103,7 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
       bytes,
       maximumFiles: maximumFiles,
       maximumUncompressedBytes: maximumUncompressedBytes,
+      inflateProgress: inflateProgress,
     );
 
     final rawCatalog = files['sortie_map_catalog.json'];
@@ -127,7 +133,7 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
       await File(
         path.join(staging.path, '.install-metadata.json'),
       ).writeAsString(jsonEncode(metadata), flush: true);
-      await _readInstalled(staging);
+      await _readInstalled(staging, trustedParent: root);
       final target = Directory(path.join(versions.path, versionName));
       final previous = Directory('${target.path}.previous');
       if (await previous.exists()) await previous.delete(recursive: true);
@@ -136,7 +142,7 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
       try {
         await phaseHook?.call('beforeVersionRename');
         await staging.rename(target.path);
-        final installed = await _readInstalled(target);
+        final installed = await _readInstalled(target, trustedParent: versions);
         await _writeActivePointer(versionName);
         committed = true;
         try {
@@ -163,8 +169,24 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
     }
   }
 
-  Future<InstalledSortieMapCatalog> _readInstalled(Directory directory) async {
+  Future<InstalledSortieMapCatalog> _readInstalled(
+    Directory directory, {
+    required Directory trustedParent,
+  }) async {
+    final canonicalStoreRoot = await root.resolveSymbolicLinks();
+    final canonicalParent = await trustedParent.resolveSymbolicLinks();
+    if (canonicalParent != canonicalStoreRoot &&
+        !path.isWithin(canonicalStoreRoot, canonicalParent)) {
+      throw const FormatException(
+        'Cached sortie parent directory escapes the store root.',
+      );
+    }
     final canonicalRoot = await directory.resolveSymbolicLinks();
+    if (!path.isWithin(canonicalParent, canonicalRoot)) {
+      throw const FormatException(
+        'Cached sortie version directory escapes its trusted parent.',
+      );
+    }
     final metadataFile = await _resolveContainedFile(
       canonicalRoot,
       File(path.join(directory.path, '.install-metadata.json')),
@@ -312,6 +334,7 @@ Map<String, Uint8List> _decodeArchiveSafely(
   List<int> bytes, {
   required int maximumFiles,
   required int maximumUncompressedBytes,
+  void Function(int consumedBytes, int totalBytes)? inflateProgress,
 }) {
   try {
     final directory = ZipDirectory()
@@ -364,7 +387,12 @@ Map<String, Uint8List> _decodeArchiveSafely(
           'Cannot read sortie archive path: ${header.filename}',
         );
       }
-      file.decompress(output);
+      final compressed = file.getRawContent();
+      if (header.compressionMethod == ZipFile.zipCompressionDeflate) {
+        _inflateRawDeflate(compressed, output, inflateProgress);
+      } else {
+        output.writeBytes(compressed);
+      }
       final content = output.getBytes();
       if (content.length != header.uncompressedSize ||
           getCrc32(content) != header.crc32) {
@@ -380,6 +408,42 @@ Map<String, Uint8List> _decodeArchiveSafely(
     rethrow;
   } on Object catch (error) {
     throw FormatException('Sortie archive cannot be decoded.', error);
+  }
+}
+
+void _inflateRawDeflate(
+  Uint8List compressed,
+  _BoundedOutputMemoryStream output,
+  void Function(int consumedBytes, int totalBytes)? progress,
+) {
+  final sink = _BoundedConversionSink(output);
+  final decoder = ZLibCodec(raw: true).decoder.startChunkedConversion(sink);
+  const inputChunkSize = 4096;
+  for (var offset = 0; offset < compressed.length; offset += inputChunkSize) {
+    final end = offset + inputChunkSize < compressed.length
+        ? offset + inputChunkSize
+        : compressed.length;
+    progress?.call(end, compressed.length);
+    decoder.add(Uint8List.sublistView(compressed, offset, end));
+  }
+  decoder.close();
+}
+
+final class _BoundedConversionSink implements Sink<List<int>> {
+  _BoundedConversionSink(this.output);
+
+  final _BoundedOutputMemoryStream output;
+  bool _closed = false;
+
+  @override
+  void add(List<int> chunk) {
+    if (_closed) throw StateError('Cannot add to a closed ZIP output sink.');
+    output.writeBytes(chunk);
+  }
+
+  @override
+  void close() {
+    _closed = true;
   }
 }
 
@@ -573,9 +637,9 @@ void _validateCatalog(SortieMapCatalogData data, Map<String, Uint8List> files) {
       if (decoded == null ||
           decoded.width <= 0 ||
           decoded.height <= 0 ||
-          decoded.width > 8192 ||
-          decoded.height > 8192 ||
-          decoded.width * decoded.height > 40 * 1000 * 1000) {
+          decoded.width > 4096 ||
+          decoded.height > 4096 ||
+          decoded.width * decoded.height > 8 * 1000 * 1000) {
         throw FormatException('Invalid sortie PNG: $logical');
       }
       expected.add(logical);
@@ -668,7 +732,7 @@ bool _hasSafePngDimensions(List<int> bytes) {
   final height = uint32(20);
   return width > 0 &&
       height > 0 &&
-      width <= 8192 &&
-      height <= 8192 &&
-      width * height <= 40 * 1000 * 1000;
+      width <= 4096 &&
+      height <= 4096 &&
+      width * height <= 8 * 1000 * 1000;
 }

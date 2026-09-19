@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -131,6 +132,8 @@ void main() {
       SortieMapCatalogUpdateFailure.network,
     );
     expect(installer.installed, isNull);
+    await expectLater(client.abortObserved.future, completes);
+    await expectLater(client.cancelObserved.future, completes);
   });
 }
 
@@ -207,6 +210,8 @@ final class _SlowArchiveClient extends http.BaseClient {
   _SlowArchiveClient(this.manifest);
 
   final String manifest;
+  final Completer<void> abortObserved = Completer<void>();
+  final Completer<void> cancelObserved = Completer<void>();
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -216,12 +221,17 @@ final class _SlowArchiveClient extends http.BaseClient {
         200,
       );
     }
-    return http.StreamedResponse(
-      Stream<List<int>>.periodic(
-        const Duration(milliseconds: 20),
-        (_) => const <int>[1],
-      ).take(4),
-      200,
+    expect(request, isA<http.AbortableRequest>());
+    final abortable = request as http.AbortableRequest;
+    abortable.abortTrigger?.then((_) {
+      if (!abortObserved.isCompleted) abortObserved.complete();
+    });
+    late StreamController<List<int>> controller;
+    controller = StreamController<List<int>>(
+      onCancel: () {
+        if (!cancelObserved.isCompleted) cancelObserved.complete();
+      },
     );
+    return http.StreamedResponse(controller.stream, 200);
   }
 }

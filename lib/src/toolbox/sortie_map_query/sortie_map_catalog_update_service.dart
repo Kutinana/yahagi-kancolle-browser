@@ -179,10 +179,14 @@ final class SortieMapCatalogUpdateService
   }
 
   Future<List<int>> _get(Uri uri, int maximumBytes) async {
-    return _getWithRedirects(uri, maximumBytes).timeout(timeout);
+    return _getWithRedirects(uri, maximumBytes, DateTime.now().add(timeout));
   }
 
-  Future<List<int>> _getWithRedirects(Uri uri, int maximumBytes) async {
+  Future<List<int>> _getWithRedirects(
+    Uri uri,
+    int maximumBytes,
+    DateTime deadline,
+  ) async {
     final allowedManifest = sortieMapManifestSources
         .map(Uri.parse)
         .contains(uri);
@@ -197,28 +201,46 @@ final class SortieMapCatalogUpdateService
     }
     var requestUri = uri;
     http.StreamedResponse? response;
+    Completer<void>? responseAbort;
     for (var redirects = 0; redirects <= 5; redirects++) {
-      final request = http.Request('GET', requestUri)
-        ..followRedirects = false
-        ..headers['User-Agent'] = 'Yahagi-Kancolle-Browser/$appVersion';
-      response = await client.send(request);
-      if (!_isRedirectStatus(response.statusCode)) break;
+      final abort = Completer<void>();
+      final request =
+          http.AbortableRequest('GET', requestUri, abortTrigger: abort.future)
+            ..followRedirects = false
+            ..headers['User-Agent'] = 'Yahagi-Kancolle-Browser/$appVersion';
+      response = await client
+          .send(request)
+          .timeout(
+            _remaining(deadline),
+            onTimeout: () {
+              if (!abort.isCompleted) abort.complete();
+              throw TimeoutException('Sortie update request timed out.');
+            },
+          );
+      if (!_isRedirectStatus(response.statusCode)) {
+        responseAbort = abort;
+        break;
+      }
       final location = response.headers['location'];
       if (!allowedArchive || location == null || redirects == 5) {
+        if (!abort.isCompleted) abort.complete();
         throw const FormatException('Sortie update redirect is not allowed.');
       }
       final redirected = requestUri.resolve(location);
       if (!_isAllowedReleaseRedirect(redirected)) {
+        if (!abort.isCompleted) abort.complete();
         throw FormatException(
           'Sortie update redirect host is not allowed: ${redirected.host}',
         );
       }
+      if (!abort.isCompleted) abort.complete();
       requestUri = redirected;
     }
     if (response == null) {
       throw const HttpException('Sortie update returned no response.');
     }
     if (response.statusCode != 200) {
+      if (!responseAbort!.isCompleted) responseAbort.complete();
       throw http.ClientException(
         'Sortie update failed with HTTP ${response.statusCode}',
         requestUri,
@@ -226,16 +248,65 @@ final class SortieMapCatalogUpdateService
     }
     final contentLength = response.contentLength;
     if (contentLength != null && contentLength > maximumBytes) {
+      if (!responseAbort!.isCompleted) responseAbort.complete();
       throw const FormatException('Sortie update response is too large.');
     }
-    final bytes = BytesBuilder(copy: false);
-    await for (final chunk in response.stream) {
+    return _readResponse(response, maximumBytes, deadline, responseAbort!);
+  }
+}
+
+Duration _remaining(DateTime deadline) {
+  final value = deadline.difference(DateTime.now());
+  if (value <= Duration.zero) {
+    throw TimeoutException('Sortie update request timed out.');
+  }
+  return value;
+}
+
+Future<Uint8List> _readResponse(
+  http.StreamedResponse response,
+  int maximumBytes,
+  DateTime deadline,
+  Completer<void> abort,
+) async {
+  final bytes = BytesBuilder(copy: false);
+  final result = Completer<Uint8List>();
+  late StreamSubscription<List<int>> subscription;
+  final timer = Timer(_remaining(deadline), () {
+    if (!result.isCompleted) {
+      result.completeError(
+        TimeoutException('Sortie update response timed out.'),
+      );
+    }
+    if (!abort.isCompleted) abort.complete();
+    unawaited(subscription.cancel());
+  });
+  subscription = response.stream.listen(
+    (chunk) {
+      if (result.isCompleted) return;
       if (bytes.length + chunk.length > maximumBytes) {
-        throw const FormatException('Sortie update response is too large.');
+        result.completeError(
+          const FormatException('Sortie update response is too large.'),
+        );
+        if (!abort.isCompleted) abort.complete();
+        unawaited(subscription.cancel());
+        return;
       }
       bytes.add(chunk);
-    }
-    return bytes.takeBytes();
+    },
+    onError: (Object error, StackTrace stackTrace) {
+      if (!result.isCompleted) result.completeError(error, stackTrace);
+    },
+    onDone: () {
+      if (!result.isCompleted) result.complete(bytes.takeBytes());
+    },
+    cancelOnError: true,
+  );
+  try {
+    return await result.future;
+  } finally {
+    timer.cancel();
+    await subscription.cancel();
   }
 }
 
