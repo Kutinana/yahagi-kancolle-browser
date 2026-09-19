@@ -17,14 +17,40 @@
 
 首期只提供设置页中的手动检查按钮，不在应用启动时自动检查或后台下载。敌舰独立资料库不在本期实现范围内；以后可作为同一发布流水线的独立组件加入，不改变海域目录的更新边界。
 
-## 发布物
+## 项目内资料目录
 
-GitHub 仓库保存一个固定地址的更新清单和版本化 ZIP：
+海域原始资料迁入当前开发仓库，不再依赖 `G:\日常AI工作\...` 等项目外绝对路径：
 
 ```text
-dist/sortie/
-├─ manifest.json
-└─ sortie-data-2026.09.20.zip
+data/sortie/
+├─ source/
+│  ├─ kcwiki_出击_敌舰配置.xlsx
+│  └─ images/
+│     ├─ 封面/
+│     └─ 路线图/
+├─ schema/
+│  ├─ catalog.schema.json
+│  └─ manifest.schema.json
+├─ dist/
+└─ manifest.json
+```
+
+- `source/` 是人工维护的唯一源数据，Excel 和原始图片纳入 Git；
+- `schema/` 保存目录和更新清单的机器可验证格式，纳入 Git；
+- `dist/` 是本地发布暂存目录，加入 `.gitignore`，ZIP 不进入 Git 历史；
+- `manifest.json` 是用户端读取的固定更新入口，生成后纳入 Git；
+- `assets/` 中的目录和图片仍是由同一源数据生成的应用内置保底版本，不手工维护。
+
+生成脚本使用仓库相对路径，并允许测试传入临时目录；不得把维护者机器的绝对路径写入目录、清单或归档。
+
+## GitHub 发布物
+
+当前应用 GitHub 仓库保存固定地址的更新清单，版本化 ZIP 作为 GitHub Release 附件上传：
+
+```text
+仓库文件：data/sortie/manifest.json
+Release 标签：sortie-data-2026.09.20
+Release 附件：sortie-data-2026.09.20.zip
 ```
 
 ZIP 内部结构固定为：
@@ -47,7 +73,8 @@ maps/
   "publishedAt": "2026-09-20T12:00:00Z",
   "minimumAppVersion": "1.0.4",
   "archive": {
-    "path": "dist/sortie/sortie-data-2026.09.20.zip",
+    "tag": "sortie-data-2026.09.20",
+    "fileName": "sortie-data-2026.09.20.zip",
     "bytes": 1234567,
     "sha256": "64位小写十六进制摘要"
   },
@@ -59,7 +86,7 @@ maps/
 }
 ```
 
-`schemaVersion` 描述文件结构；`dataVersion` 是展示给用户的版本；`revision` 是必须递增的整数，用于可靠比较升级和降级；`minimumAppVersion` 防止旧应用加载无法理解的新格式。归档地址根据允许的 GitHub 仓库和清单中的相对路径生成，远程清单不能指定任意主机。
+`schemaVersion` 描述文件结构；`dataVersion` 是展示给用户的版本；`revision` 是必须递增的整数，用于可靠比较升级和降级；`minimumAppVersion` 防止旧应用加载无法理解的新格式。应用根据内置的 GitHub 仓库、Release 标签和文件名生成下载地址，远程清单不能指定任意主机或完整 URL。
 
 ## 数据模型与资源解析
 
@@ -77,10 +104,10 @@ maps/
 
 用户在设置页点击“检查海域资料更新”后：
 
-1. 从允许的 GitHub Raw 地址下载 `manifest.json`，失败时尝试同仓库的 jsDelivr 地址。
+1. 从当前项目仓库允许的 GitHub Raw 地址下载 `data/sortie/manifest.json`，失败时尝试同文件的 jsDelivr 地址。
 2. 验证 HTTPS、主机白名单、清单大小、JSON 结构、版本格式和最低应用版本。
 3. 将远程 `revision` 与当前最佳可用版本比较；相同则返回“已是最新版本”，更小则拒绝降级。
-4. 下载 ZIP 到应用支持目录下的临时文件，同时限制下载字节数。
+4. 根据允许的仓库、Release 标签和附件名下载 ZIP 到应用支持目录下的临时文件，同时限制下载字节数。
 5. 比较实际字节数和 SHA-256。
 6. 解压到独立暂存目录，并执行完整资料验证。
 7. 验证成功后，将暂存目录改名为版本目录，再原子更新当前版本指针。
@@ -93,7 +120,7 @@ maps/
 
 下载资料在激活前必须满足：
 
-- 清单和归档仅通过 HTTPS 从明确允许的 GitHub/jsDelivr 地址读取；
+- 清单仅通过 HTTPS 从明确允许的 GitHub Raw/jsDelivr 地址读取，归档仅从当前项目的 GitHub Releases 地址读取；
 - 清单、压缩包、解压后总大小、单文件大小和文件数量均有上限；
 - ZIP 条目不能是绝对路径、不能包含 `..`、不能是符号链接、不能重名；
 - ZIP 只能包含目录 JSON、`covers/` 和 `maps/` 下的允许图片类型；
@@ -152,14 +179,15 @@ sortie-catalog/
 
 维护者执行：
 
-1. 更新 kcwiki Excel 和 `_海域图片` 中的封面、路线图；
-2. 运行现有 `build_sortie_map_assets.py` 生成目录和裁边图片；
-3. 运行发布命令生成 ZIP、计数、文件大小、SHA-256 和 `manifest.json`；
+1. 更新仓库内 `data/sortie/source/` 的 Excel、封面和路线图；
+2. 运行现有 `build_sortie_map_assets.py` 生成目录、裁边图片和应用内置保底资料；
+3. 运行发布命令，在 `data/sortie/dist/` 生成 ZIP，并更新 `data/sortie/manifest.json` 中的计数、文件大小、SHA-256 和版本；
 4. 在本地运行结构、图片和回归测试；
-5. 将版本化 ZIP 与清单上传到指定 GitHub 仓库；
-6. 用一次真实更新检查验证 GitHub Raw 和备用 CDN 均可读取。
+5. 提交并推送源资料、Schema、内置资料和 `manifest.json`；
+6. 创建对应标签的 GitHub Release，将 `dist/` 中的版本化 ZIP 上传为附件；
+7. 用一次真实更新检查验证 GitHub Raw 清单、备用 CDN 清单和 GitHub Release 附件均可读取。
 
-发布脚本拒绝覆盖同名版本，拒绝缺图、重复海域/节点、无效版本和空资料。生成清单时使用确定性文件顺序，保证同一输入产生一致的归档摘要。
+发布脚本拒绝覆盖同名版本，拒绝缺图、重复海域/节点、无效版本和空资料。生成清单时使用确定性文件顺序，保证同一输入产生一致的归档摘要。上传 GitHub 是显式发布步骤，生成脚本本身不执行 `git push`、创建 Release 或上传附件。
 
 ## 测试与验收
 
