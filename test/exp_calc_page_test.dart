@@ -316,4 +316,45 @@ void main() {
       expect(find.byType(DataTable), findsNothing);
     },
   );
+
+  testWidgets(
+    'uses the card tracker by default throughout the single-column range',
+    (tester) async {
+      final store = FakeExpTrackerStore();
+      final state = GameState(
+        memberId: 1,
+        masterShips: {
+          546: const MasterShip(id: 546, name: '武藏改二', shipTypeId: 9),
+        },
+        ships: {
+          1: const OwnedShip(
+            id: 1,
+            masterId: 546,
+            level: 186,
+            experience: 17635281,
+          ),
+        },
+      );
+
+      tester.view.physicalSize = const Size(700, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _testableApp(ExpCalcPage(state: state, store: store)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('exp-calc-compact-workspace')),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.byKey(const Key('exp-calc-add-button')));
+      await tester.tap(find.byKey(const Key('exp-calc-add-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('exp-calc-track-list')), findsOneWidget);
+      expect(find.byType(DataTable), findsNothing);
+    },
+  );
 }

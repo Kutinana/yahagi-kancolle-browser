@@ -429,7 +429,7 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
                     SizedBox(height: isNarrow ? 10 : 16),
                     _buildTrackingTableCard(
                       l10n,
-                      isCompact: isCompact,
+                      isCompact: !isWide,
                       isNarrow: isNarrow,
                     ),
                   ],
