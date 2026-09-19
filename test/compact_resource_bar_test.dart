@@ -102,6 +102,220 @@ void main() {
     expect(find.descendant(of: coin, matching: find.text('—')), findsOneWidget);
   });
 
+  testWidgets('furniture coin toggles the theoretical total from boxes', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    await controller.toggleHeaderResourceVisible(headerFurnitureCoinId);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: const GameState(
+              furnitureCoins: 183854,
+              hasFurnitureCoinData: true,
+              useItems: <int, int>{10: 12, 11: 7, 12: 3},
+              hasUseItemData: true,
+            ),
+            settingsController: controller,
+          ),
+        ),
+      ),
+    );
+    await tester.drag(
+      find.byKey(const Key('header-resource-list')),
+      const Offset(-2000, 0),
+    );
+    await tester.pumpAndSettle();
+
+    final coin = find.byKey(const Key('header-resource-furniture-coin'));
+    expect(
+      find.descendant(of: coin, matching: find.text('183854')),
+      findsOneWidget,
+    );
+
+    await tester.tap(coin);
+    await tester.pump();
+
+    expect(
+      find.descendant(of: coin, matching: find.text('≈191154')),
+      findsOneWidget,
+    );
+    final coinIcon = tester.widget<Image>(
+      find.descendant(of: coin, matching: find.byType(Image)),
+    );
+    expect(
+      (coinIcon.image as AssetImage).assetName,
+      'assets/images/material/useitem_44.png',
+    );
+
+    await tester.tap(coin);
+    await tester.pump();
+
+    expect(
+      find.descendant(of: coin, matching: find.text('183854')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('theoretical furniture coin total waits for box data', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    await controller.toggleHeaderResourceVisible(headerFurnitureCoinId);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: const GameState(
+              furnitureCoins: 183854,
+              hasFurnitureCoinData: true,
+            ),
+            settingsController: controller,
+          ),
+        ),
+      ),
+    );
+    await tester.drag(
+      find.byKey(const Key('header-resource-list')),
+      const Offset(-2000, 0),
+    );
+    await tester.pumpAndSettle();
+
+    final coin = find.byKey(const Key('header-resource-furniture-coin'));
+    await tester.tap(coin);
+    await tester.pump();
+
+    expect(find.descendant(of: coin, matching: find.text('—')), findsOneWidget);
+    expect(find.textContaining('≈'), findsNothing);
+  });
+
+  testWidgets('furniture boxes independently toggle coin equivalents', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    for (final id in <String>['useitem-10', 'useitem-11', 'useitem-12']) {
+      await controller.toggleHeaderResourceVisible(id);
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: const GameState(
+              useItems: <int, int>{10: 999, 11: 7, 12: 3},
+              hasUseItemData: true,
+            ),
+            settingsController: controller,
+          ),
+        ),
+      ),
+    );
+    await tester.drag(
+      find.byKey(const Key('header-resource-list')),
+      const Offset(-2000, 0),
+    );
+    await tester.pumpAndSettle();
+
+    final small = find.byKey(const Key('header-resource-useitem-10'));
+    final medium = find.byKey(const Key('header-resource-useitem-11'));
+    final large = find.byKey(const Key('header-resource-useitem-12'));
+    expect(
+      find.descendant(of: small, matching: find.text('999')),
+      findsOneWidget,
+    );
+    expect(find.descendant(of: medium, matching: find.text('7')), findsOneWidget);
+    expect(find.descendant(of: large, matching: find.text('3')), findsOneWidget);
+
+    await tester.tap(small);
+    await tester.tap(medium);
+    await tester.tap(large);
+    await tester.pump();
+
+    expect(
+      find.descendant(of: small, matching: find.text('199800币')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: medium, matching: find.text('2800币')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: large, matching: find.text('2100币')),
+      findsOneWidget,
+    );
+    final smallIcon = tester.widget<Image>(
+      find.descendant(of: small, matching: find.byType(Image)),
+    );
+    expect(
+      (smallIcon.image as AssetImage).assetName,
+      'assets/images/material/10.png',
+    );
+
+    await tester.tap(small);
+    await tester.pump();
+
+    expect(
+      find.descendant(of: small, matching: find.text('999')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: medium, matching: find.text('2800币')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: large, matching: find.text('2100币')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('furniture box coin mode keeps a dash before data is captured', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final controller = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    await controller.toggleHeaderResourceVisible('useitem-10');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CompactResourceBar(
+            state: GameState.empty,
+            settingsController: controller,
+          ),
+        ),
+      ),
+    );
+    await tester.drag(
+      find.byKey(const Key('header-resource-list')),
+      const Offset(-2000, 0),
+    );
+    await tester.pumpAndSettle();
+
+    final small = find.byKey(const Key('header-resource-useitem-10'));
+    await tester.tap(small);
+    await tester.pump();
+
+    expect(find.descendant(of: small, matching: find.text('—')), findsOneWidget);
+    expect(find.textContaining('币'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('frame refresh capsule defaults hidden and becomes actionable', (
     tester,
   ) async {

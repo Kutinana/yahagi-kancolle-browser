@@ -130,7 +130,16 @@ class CompactResourceBar extends StatefulWidget {
 }
 
 class _CompactResourceBarState extends State<CompactResourceBar> {
+  static const Map<String, ({int useItemId, int rate})>
+  _furnitureBoxCoinRates = <String, ({int useItemId, int rate})>{
+    'useitem-10': (useItemId: 10, rate: 200),
+    'useitem-11': (useItemId: 11, rate: 400),
+    'useitem-12': (useItemId: 12, rate: 700),
+  };
+
   late final ScrollController _scrollController = ScrollController();
+  final Set<String> _furnitureBoxCoinModeIds = <String>{};
+  bool _showTheoreticalFurnitureCoins = false;
   bool _editing = false;
   DateTime _now = DateTime.now().toUtc();
 
@@ -164,6 +173,36 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     if (widget.settingsController?.uiLocked == true && _editing) {
       setState(() => _editing = false);
     }
+  }
+
+  void _toggleFurnitureBoxCoinMode(String id) {
+    setState(() {
+      if (!_furnitureBoxCoinModeIds.remove(id)) {
+        _furnitureBoxCoinModeIds.add(id);
+      }
+    });
+  }
+
+  void _toggleTheoreticalFurnitureCoins() {
+    setState(() {
+      _showTheoreticalFurnitureCoins = !_showTheoreticalFurnitureCoins;
+    });
+  }
+
+  int? _headerResourceValue(String id, HeaderResourceSpec spec) {
+    final value = spec.value(widget.state);
+    if (id == headerFurnitureCoinId && _showTheoreticalFurnitureCoins) {
+      if (value == null || !widget.state.hasUseItemData) return null;
+      var total = value;
+      for (final box in _furnitureBoxCoinRates.values) {
+        total += widget.state.useItemCount(box.useItemId)! * box.rate;
+      }
+      return total;
+    }
+    final box = _furnitureBoxCoinModeIds.contains(id)
+        ? _furnitureBoxCoinRates[id]
+        : null;
+    return value == null || box == null ? value : value * box.rate;
   }
 
   void _onPointerSignal(PointerSignalEvent event) {
@@ -325,13 +364,17 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                   return GestureDetector(
                     key: Key('header-resource-$id'),
                     behavior: HitTestBehavior.opaque,
-                    onTap: switch (id) {
-                      headerSenkaId => widget.onSenkaTap,
-                      headerAnchorageTimerId => widget.onAnchorageTimerTap,
-                      headerNosakiTimerId => widget.onNosakiTimerTap,
-                      headerFrameRefreshId => widget.onFrameRefreshTap,
-                      _ => null,
-                    },
+                    onTap: id == headerFurnitureCoinId
+                        ? _toggleTheoreticalFurnitureCoins
+                        : _furnitureBoxCoinRates.containsKey(id)
+                        ? () => _toggleFurnitureBoxCoinMode(id)
+                        : switch (id) {
+                            headerSenkaId => widget.onSenkaTap,
+                            headerAnchorageTimerId => widget.onAnchorageTimerTap,
+                            headerNosakiTimerId => widget.onNosakiTimerTap,
+                            headerFrameRefreshId => widget.onFrameRefreshTap,
+                            _ => null,
+                          },
                     onLongPress: () {
                       if (controller?.uiLocked == true) {
                         TopNotice.show(context, message: l10n.uiLockedToast);
@@ -353,7 +396,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                           id == headerSenkaId ||
                               id == headerAnchorageTimerId ||
                               id == headerNosakiTimerId ||
-                              id == headerFrameRefreshId
+                              id == headerFrameRefreshId ||
+                              id == headerFurnitureCoinId ||
+                              _furnitureBoxCoinRates.containsKey(id)
                           ? TooltipTriggerMode.manual
                           : TooltipTriggerMode.tap,
                       child: SizedBox(
@@ -408,7 +453,12 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     final spec = headerResourceById[id]!;
     return _HeaderResourceItem(
       spec: spec,
-      value: spec.value(widget.state),
+      value: _headerResourceValue(id, spec),
+      valuePrefix:
+          id == headerFurnitureCoinId && _showTheoreticalFurnitureCoins
+          ? '≈'
+          : '',
+      showFurnitureCoinSuffix: _furnitureBoxCoinModeIds.contains(id),
       uiSize: uiSize,
     );
   }
@@ -460,7 +510,12 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     final spec = headerResourceById[id]!;
     return _EditableHeaderResourceItem(
       spec: spec,
-      value: spec.value(widget.state),
+      value: _headerResourceValue(id, spec),
+      valuePrefix:
+          id == headerFurnitureCoinId && _showTheoreticalFurnitureCoins
+          ? '≈'
+          : '',
+      showFurnitureCoinSuffix: _furnitureBoxCoinModeIds.contains(id),
       visible: visible,
       uiSize: uiSize,
     );
@@ -887,16 +942,23 @@ class _HeaderResourceItem extends StatelessWidget {
   const _HeaderResourceItem({
     required this.spec,
     required this.value,
+    this.valuePrefix = '',
+    this.showFurnitureCoinSuffix = false,
     this.uiSize = HeaderUiSize.normal,
   });
 
   final HeaderResourceSpec spec;
   final int? value;
+  final String valuePrefix;
+  final bool showFurnitureCoinSuffix;
   final HeaderUiSize uiSize;
 
   @override
   Widget build(BuildContext context) {
     final isCompact = uiSize == HeaderUiSize.compact;
+    final suffix = showFurnitureCoinSuffix
+        ? fleetText(context, '家具コイン').replaceFirst('家具', '')
+        : '';
     return Container(
       height: isCompact ? 26 : 30,
       padding: EdgeInsets.symmetric(horizontal: isCompact ? 4 : 5),
@@ -921,7 +983,7 @@ class _HeaderResourceItem extends StatelessWidget {
               alignment: Alignment.centerLeft,
               clipBehavior: Clip.hardEdge,
               child: Text(
-                value?.toString() ?? '—',
+                value == null ? '—' : '$valuePrefix$value$suffix',
                 maxLines: 1,
                 style: TextStyle(
                   color: const Color(0xffdce6eb),
@@ -942,12 +1004,16 @@ class _EditableHeaderResourceItem extends StatelessWidget {
   const _EditableHeaderResourceItem({
     required this.spec,
     required this.value,
+    required this.valuePrefix,
+    required this.showFurnitureCoinSuffix,
     required this.visible,
     this.uiSize = HeaderUiSize.normal,
   });
 
   final HeaderResourceSpec spec;
   final int? value;
+  final String valuePrefix;
+  final bool showFurnitureCoinSuffix;
   final bool visible;
   final HeaderUiSize uiSize;
 
@@ -956,7 +1022,13 @@ class _EditableHeaderResourceItem extends StatelessWidget {
     opacity: visible ? 1 : 0.42,
     child: SizedBox(
       width: uiSize == HeaderUiSize.compact ? 74 : 82,
-      child: _HeaderResourceItem(spec: spec, value: value, uiSize: uiSize),
+      child: _HeaderResourceItem(
+        spec: spec,
+        value: value,
+        valuePrefix: valuePrefix,
+        showFurnitureCoinSuffix: showFurnitureCoinSuffix,
+        uiSize: uiSize,
+      ),
     ),
   );
 }

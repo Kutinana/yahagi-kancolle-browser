@@ -1439,7 +1439,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         widget.layoutSettingsController,
       ]),
       builder: (context, _) => GameBrowserToolbar(
-        compact: widget.layoutSettingsController.uiDisplaySize ==
+        compact:
+            widget.layoutSettingsController.uiDisplaySize ==
             UiDisplaySize.compact,
         enableBackdropBlur:
             widget.gameRenderingModeController?.mode.enablesToolbarBlur ?? true,
@@ -1492,11 +1493,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                 final tone = isSuccess
                     ? TopNoticeTone.success
                     : TopNoticeTone.error;
-                TopNotice.show(
-                  context,
-                  message: message,
-                  tone: tone,
-                );
+                TopNotice.show(context, message: message, tone: tone);
               },
         uiLocked: widget.layoutSettingsController.uiLocked,
         onToggleUiLock: () {
@@ -1525,7 +1522,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         (screenDisplayMode == DisplayMode.portrait ||
             (screenDisplayMode != DisplayMode.landscape &&
                 windowSize.height >= windowSize.width));
-    final hdWindow = screenDisplayMode != DisplayMode.portrait &&
+    final hdWindow =
+        screenDisplayMode != DisplayMode.portrait &&
         usesHdLandscape(
           windowSize,
           enabled: widget.layoutSettingsController.hdSettings.enabled,
@@ -2328,15 +2326,15 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                   offstage: _gameFullscreen,
                                                   child: HdBottomStrip(
                                                     editing: _hdEditing,
-                                                    onStartEditing: widget
+                                                    onStartEditing:
+                                                        widget
                                                             .layoutSettingsController
                                                             .uiLocked
                                                         ? null
                                                         : () => setState(
-                                                              () =>
-                                                                  _hdEditing =
-                                                                      true,
-                                                            ),
+                                                            () => _hdEditing =
+                                                                true,
+                                                          ),
                                                     controller: widget
                                                         .layoutSettingsController,
                                                     moduleBuilder: (module) =>
@@ -2645,12 +2643,8 @@ class WorkspaceNavigation extends StatelessWidget {
       now: clock,
       enabled: gameStateController != null,
       builder: (context, now, _) => Container(
-        width: controller.workspaceMenuHorizontal
-            ? null
-            : menuExtent,
-        height: controller.workspaceMenuHorizontal
-            ? menuExtent
-            : null,
+        width: controller.workspaceMenuHorizontal ? null : menuExtent,
+        height: controller.workspaceMenuHorizontal ? menuExtent : null,
         decoration: BoxDecoration(
           color: const Color(0xff0a1823),
           border: controller.workspaceMenuHorizontal
@@ -2701,8 +2695,12 @@ class WorkspaceNavigation extends StatelessWidget {
 
                     return SizedBox(
                       key: ValueKey('workspace-nav-item-${destination.id}'),
-                      width: controller.workspaceMenuHorizontal ? itemExtent : null,
-                      height: controller.workspaceMenuHorizontal ? null : itemExtent,
+                      width: controller.workspaceMenuHorizontal
+                          ? itemExtent
+                          : null,
+                      height: controller.workspaceMenuHorizontal
+                          ? null
+                          : itemExtent,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: handleTap,
@@ -2996,8 +2994,7 @@ class _InformationPanelState extends State<_InformationPanel> {
   @override
   void didUpdateWidget(covariant _InformationPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.layoutSettingsController !=
-        widget.layoutSettingsController) {
+    if (oldWidget.layoutSettingsController != widget.layoutSettingsController) {
       oldWidget.layoutSettingsController.removeListener(
         _handleLayoutSettingsChanged,
       );
@@ -3010,7 +3007,9 @@ class _InformationPanelState extends State<_InformationPanel> {
 
   @override
   void dispose() {
-    widget.layoutSettingsController.removeListener(_handleLayoutSettingsChanged);
+    widget.layoutSettingsController.removeListener(
+      _handleLayoutSettingsChanged,
+    );
     super.dispose();
   }
 
