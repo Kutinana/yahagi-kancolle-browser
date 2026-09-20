@@ -67,9 +67,9 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
             lookupAppLocalizations(const Locale('zh'));
         final modeSelector = _RepairSummaryModeSelector(
           mode: _mode,
-          dockLabel: strings.repairDockMode,
-          anchorageLabel: strings.anchorageRepairMode,
-          nosakiLabel: '野埼',
+          dockLabel: fleetText(context, '入渠修理'),
+          anchorageLabel: '泊地修理',
+          nosakiLabel: fleetText(context, '野埼刷闪'),
           onChanged: (mode) => setState(() => _mode = mode),
         );
         final content = switch (_mode) {
@@ -98,21 +98,20 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
     );
   }
 
+  bool _isDockActive(RepairDock? dock) =>
+      dock != null &&
+      dock.isRepairing &&
+      !operationIsCompleted(dock.completionTime, now: _now);
+
   Widget _buildDockGrid(GameState state, AppLocalizations strings) {
-    final docks = state.repairDocks;
+    final docks = {for (final dock in state.repairDocks) dock.id: dock};
     return ModuleSlotGrid(
       key: const Key('repair-summary-dock-grid'),
       emptyLabel: '暂无修理',
       children: [
-        for (var i = 0; i < 4; i++)
-          if (widget.visible.contains('empty') ||
-              (docks.length > i && docks[i].isRepairing))
-            _buildDockSlot(
-              i + 1,
-              docks.length > i ? docks[i] : null,
-              state,
-              strings,
-            ),
+        for (var id = 1; id <= 4; id++)
+          if (widget.visible.contains('empty') || _isDockActive(docks[id]))
+            _buildDockSlot(id, docks[id], state, strings),
       ],
     );
   }
@@ -131,7 +130,7 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
     if (dock != null) {
       if (dock.isLocked) {
         disabled = true;
-      } else if (!dock.isRepairing) {
+      } else if (!_isDockActive(dock)) {
         name = strings.idle;
         disabled = false;
       } else {
@@ -143,10 +142,6 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
       }
     }
 
-    final completed =
-        active &&
-        dock?.completionTime != null &&
-        !_now.isBefore(dock!.completionTime!);
     return _RepairCapsule(
       showPortrait: widget.visible.contains('portrait'),
       key: Key('repair-summary-dock-slot-$position'),
@@ -155,9 +150,7 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
       name: widget.visible.contains('empty') ? name : '$position · $name',
       disabled: disabled,
       fitFullName: true,
-      dotColor: active
-          ? (completed ? const Color(0xff4caf50) : const Color(0xffffc940))
-          : null,
+      dotColor: active ? const Color(0xffffc940) : null,
       detail: active && dock != null
           ? FittedBox(
               fit: BoxFit.scaleDown,

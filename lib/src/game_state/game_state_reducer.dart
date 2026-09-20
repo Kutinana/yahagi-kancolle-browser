@@ -940,7 +940,6 @@ class GameStateReducer {
       -ship.repairSteelCost,
     );
     final ships = Map<int, OwnedShip>.of(state.ships);
-    var docks = state.repairDocks;
     if (highSpeed) {
       ships[shipId] = _copyShip(ship, currentHp: ship.maxHp);
       resources = _changeResource(
@@ -948,24 +947,29 @@ class GameStateReducer {
         GameResourceType.instantRepair,
         -1,
       );
-    } else {
-      docks = <RepairDock>[
-        for (final dock in state.repairDocks)
-          if (dock.id == dockId)
-            RepairDock(
-              id: dock.id,
-              state: 1,
-              shipId: shipId,
-              completionTime: event.capturedAt.add(
-                Duration(milliseconds: ship.repairDurationMilliseconds),
-              ),
-              fuelCost: ship.repairFuelCost,
-              steelCost: ship.repairSteelCost,
-            )
-          else
-            dock,
-      ];
     }
+    // A successful start can arrive before this dock's first snapshot, or
+    // reuse a dock whose previous repair is still cached locally.
+    final updatedDock = highSpeed
+        ? RepairDock(id: dockId)
+        : RepairDock(
+            id: dockId,
+            state: 1,
+            shipId: shipId,
+            // Missing repair metadata is unknown, not an immediate completion.
+            completionTime: ship.repairDurationMilliseconds > 0
+                ? event.capturedAt.add(
+                    Duration(milliseconds: ship.repairDurationMilliseconds),
+                  )
+                : null,
+            fuelCost: ship.repairFuelCost,
+            steelCost: ship.repairSteelCost,
+          );
+    final docks = <RepairDock>[
+      for (final dock in state.repairDocks)
+        if (dock.id == dockId) updatedDock else dock,
+      if (!state.repairDocks.any((dock) => dock.id == dockId)) updatedDock,
+    ]..sort((a, b) => a.id.compareTo(b.id));
     return state.copyWith(
       ships: ships,
       repairDocks: docks,

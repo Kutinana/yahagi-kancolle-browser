@@ -43,6 +43,40 @@ Future<void> _pumpAt(WidgetTester tester, double width, Widget child) async {
 }
 
 void main() {
+  testWidgets('维修简报按渠位编号显示不完整的入渠记录', (tester) async {
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(
+        kcsapiEvent('/kcsapi/api_get_member/ndock', [
+          {
+            'api_id': 3,
+            'api_state': 1,
+            'api_ship_id': 9002,
+            'api_complete_time': DateTime.now()
+                .add(const Duration(hours: 1))
+                .millisecondsSinceEpoch,
+          },
+        ]),
+      );
+    await controller.idle;
+    await _pumpAt(
+      tester,
+      412,
+      RepairSummaryCard(
+        controller: controller,
+        collapsed: false,
+        visible: const {'portrait'},
+        onToggleCollapse: () {},
+        onOpenRepair: (_) {},
+      ),
+    );
+    expect(find.byKey(const Key('repair-summary-dock-slot-1')), findsNothing);
+    expect(find.byKey(const Key('repair-summary-dock-slot-3')), findsOneWidget);
+  });
+
   testWidgets('维修简报提供独立的入渠与泊地模式切换', (tester) async {
     final controller = GameStateController();
     addTearDown(controller.dispose);
@@ -85,7 +119,7 @@ void main() {
       closeTo(4, 0.01),
     );
     final selectorRect = tester.getRect(modeSelector);
-    for (final (index, label) in ['入渠', '泊地', '野埼'].indexed) {
+    for (final (index, label) in ['入渠修理', '泊地修理', '野埼刷闪'].indexed) {
       final labelFinder = find.descendant(
         of: modeSelector,
         matching: find.text(label),
@@ -532,7 +566,7 @@ void main() {
     expect(colors, contains(const Color(0xffffc940)));
   });
 
-  testWidgets('入渠简报圆点：完成绿色、修理中黄色', (tester) async {
+  testWidgets('入渠简报仅保留修理中的黄色圆点', (tester) async {
     final now = DateTime.now().toUtc();
     final state = GameState(
       masterShips: const <int, MasterShip>{
@@ -586,11 +620,11 @@ void main() {
         )
         .map((dot) => (dot.decoration! as BoxDecoration).color)
         .toSet();
-    expect(colors, contains(const Color(0xff4caf50)));
+    expect(colors, isNot(contains(const Color(0xff4caf50))));
     expect(colors, contains(const Color(0xffffc940)));
   });
 
-  testWidgets('入渠修理到期后圆点会随倒计时由黄色更新为绿色', (tester) async {
+  testWidgets('入渠修理到期后简报清除舰娘和倒计时', (tester) async {
     final completionTime = DateTime.now().toUtc().add(
       const Duration(milliseconds: 500),
     );
@@ -650,8 +684,9 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 600)),
     );
     await tester.pump(const Duration(seconds: 1));
-    expect(find.text('已完成'), findsOneWidget);
-    expect(dockDotColor(), const Color(0xff4caf50));
+    expect(find.text('已完成'), findsNothing);
+    expect(find.text('夕张'), findsNothing);
+    expect(find.byType(OperationCountdownText), findsNothing);
   });
 
   testWidgets('维修简报计时器只在展开期间存活', (tester) async {
@@ -751,11 +786,9 @@ void main() {
         ),
       ),
     );
-    expect(find.text('已完成'), findsOneWidget);
-    expect(
-      (dockDots.single.decoration! as BoxDecoration).color,
-      const Color(0xff4caf50),
-    );
+    expect(find.text('已完成'), findsNothing);
+    expect(find.byType(OperationCountdownText), findsNothing);
+    expect(dockDots, isEmpty);
   });
 
   testWidgets('简报单元点击触发对应跳转', (tester) async {
@@ -784,7 +817,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('吹雪').first);
+    await tester.tap(find.byKey(const Key('repair-summary-dock-slot-1')));
     expect(openedRepair?.mode, RepairCenterMode.dock);
     expect(openedRepair?.fleetId, isNull);
 

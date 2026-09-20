@@ -533,6 +533,11 @@ class _ShipIdentity extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = row.master?.name ?? fleetText(context, '未知舰娘');
+    final posLabel = row.position == 0
+        ? fleetText(context, '旗舰')
+        : (row.position == 1
+              ? fleetText(context, '2号舰')
+              : fleetText(context, '${row.position + 1}号位'));
     return Row(
       children: [
         ShipPortrait(
@@ -564,7 +569,7 @@ class _ShipIdentity extends StatelessWidget {
                 ),
               ),
               Text(
-                'Lv.${row.ship.level}',
+                'Lv.${row.ship.level} · $posLabel',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: _muted, fontSize: 9),

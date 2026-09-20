@@ -117,13 +117,25 @@ class _RepairDockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return SecondTickBuilder(
+      enabled: dock.isRepairing && dock.completionTime != null,
+      stopAt: dock.completionTime,
+      builder: (context, now, _) => _buildCard(context, now),
+    );
+  }
+
+  Widget _buildCard(BuildContext context, DateTime now) {
     if (dock.isLocked) {
       return _UnavailableCard(
         label: AppLocalizations.of(context)?.unlocked ?? '未解锁',
       );
     }
     final ship = state.ships[dock.shipId];
-    if (!dock.isRepairing || ship == null) {
+    // Project availability locally without changing the captured server state
+    // used by repair notifications and subsequent HP synchronization.
+    if (!dock.isRepairing ||
+        ship == null ||
+        operationIsCompleted(dock.completionTime, now: now)) {
       return _UnavailableCard(
         label: AppLocalizations.of(context)?.notRepairing ?? '未入渠',
       );
