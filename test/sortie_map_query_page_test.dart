@@ -42,17 +42,23 @@ void main() {
 
     expect(find.byKey(const Key('sortie-enemy-details-card')), findsOneWidget);
     expect(find.text('駆逐イ級'), findsWidgets);
-    expect(find.text('耐久 20'), findsOneWidget);
+    expect(find.byKey(const Key('sortie-enemy-vitals-grid')), findsOneWidget);
+    expect(find.text('HP'), findsOneWidget);
+    expect(find.text('20'), findsOneWidget);
+    expect(find.text('耐久 20'), findsNothing);
     expect(find.text('5inch単装砲'), findsOneWidget);
   });
 
-  testWidgets('enemy rows provide a phone-sized touch target', (tester) async {
+  testWidgets('enemy rows use compact prophet-style spacing and dividers', (
+    tester,
+  ) async {
     await _pumpAt(tester, const Size(390, 844));
 
     final tile = tester.getSize(
       find.byKey(const Key('sortie-map-enemy-tile-1-0-0')),
     );
-    expect(tile.height, greaterThanOrEqualTo(44));
+    expect(tile.height, inInclusiveRange(28, 32));
+    expect(find.byKey(const Key('sortie-map-enemy-divider-1-0-0')), findsOne);
   });
 
   for (final localeAndLabel in const <(Locale, String)>[
@@ -354,16 +360,13 @@ void main() {
     expect(find.text('经验不明'), findsOneWidget);
     expect(find.text('wiki未提供经验值'), findsNothing);
 
-    final airPower = find.byKey(const Key('sortie-map-air-power-pill-2'));
-    final airSuperiority = find.byKey(
-      const Key('sortie-map-air-superiority-pill-2'),
+    final airPower = find.byKey(
+      const Key('sortie-map-air-power-summary-pill-2'),
     );
-    final airSupremacy = find.byKey(
-      const Key('sortie-map-air-supremacy-pill-2'),
-    );
-    expect(find.text('制空值 27'), findsOneWidget);
-    expect(find.text('空优值 41'), findsOneWidget);
-    expect(find.text('空确值 81'), findsOneWidget);
+    expect(find.text('制空值27（优41/确81）'), findsOneWidget);
+    expect(find.text('制空值 27'), findsNothing);
+    expect(find.text('空优值 41'), findsNothing);
+    expect(find.text('空确值 81'), findsNothing);
     for (final key in const [
       'sortie-map-air-power-pill-1',
       'sortie-map-air-superiority-pill-1',
@@ -371,29 +374,15 @@ void main() {
     ]) {
       expect(find.byKey(Key(key)), findsNothing);
     }
-    expect(tester.widget<MetaChip>(airPower).color, const Color(0xffffc95c));
-    expect(
-      tester.widget<MetaChip>(airSuperiority).color,
-      const Color(0xff70c7bc),
-    );
-    expect(
-      tester.widget<MetaChip>(airSupremacy).color,
-      const Color(0xff70c7bc),
-    );
+    expect(tester.widget<MetaChip>(airPower).color, const Color(0xff70c7bc));
     final card = tester.getRect(
       find.byKey(const Key('sortie-map-formation-2')),
     );
     final firstPill = tester.getRect(
       find.byKey(const Key('sortie-map-formation-pill-2')),
     );
-    expect(tester.getRect(airSupremacy).top, greaterThan(firstPill.top));
-    for (final pill in [
-      finalFormation,
-      finalPill,
-      tester.getRect(airPower),
-      tester.getRect(airSuperiority),
-      tester.getRect(airSupremacy),
-    ]) {
+    expect(tester.getRect(airPower).top, greaterThan(firstPill.top));
+    for (final pill in [finalFormation, finalPill, tester.getRect(airPower)]) {
       expect(pill.right, lessThanOrEqualTo(card.right));
     }
   });
@@ -426,8 +415,8 @@ void main() {
     final portrait = tester.widget<ShipPortrait>(portraitFinder);
     expect(portrait.ship?.id, 1501);
     expect(portrait.resourceType, ShipPortraitResourceType.banner);
-    expect(portrait.width, 52);
-    expect(portrait.height, 24);
+    expect(portrait.width, 48);
+    expect(portrait.height, 22);
   });
 
   testWidgets('missing enemy master data keeps placeholder and name', (
@@ -705,9 +694,7 @@ void main() {
     await tester.pump();
     expect(find.text('敵主力艦隊'), findsOneWidget);
     expect(find.text('轻巡ホ级'), findsOneWidget);
-    expect(find.text('制空值 12'), findsOneWidget);
-    expect(find.text('空优值 18'), findsOneWidget);
-    expect(find.text('空确值 36'), findsOneWidget);
+    expect(find.text('制空值12（优18/确36）'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

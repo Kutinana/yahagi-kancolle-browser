@@ -945,22 +945,15 @@ class _FormationCard extends StatelessWidget {
           label: strings.finalConfiguration,
           color: const Color(0xffff6f68),
         ),
-      if (formation.airPower case final value?)
+      if (formation.airPower != null ||
+          formation.airSuperiority != null ||
+          formation.airSupremacy != null)
         MetaChip(
-          key: Key('sortie-map-air-power-pill-${formation.variant}'),
-          label: '${strings.airPower} $value',
-          color: const Color(0xffffc95c),
-        ),
-      if (formation.airSuperiority case final value?)
-        MetaChip(
-          key: Key('sortie-map-air-superiority-pill-${formation.variant}'),
-          label: '${strings.airSuperiority} $value',
-          color: const Color(0xff70c7bc),
-        ),
-      if (formation.airSupremacy case final value?)
-        MetaChip(
-          key: Key('sortie-map-air-supremacy-pill-${formation.variant}'),
-          label: '${strings.airSupremacy} $value',
+          key: Key('sortie-map-air-power-summary-pill-${formation.variant}'),
+          label:
+              '${strings.airPower}${formation.airPower ?? '—'}'
+              '（${strings.airSuperiorityShort}${formation.airSuperiority ?? '—'}'
+              '/${strings.airSupremacyShort}${formation.airSupremacy ?? '—'}）',
           color: const Color(0xff70c7bc),
         ),
     ];
@@ -1041,7 +1034,6 @@ class _EnemyFleetGrid extends StatelessWidget {
     return Column(
       children: [
         for (var start = 0; start < ships.length; start += columns) ...[
-          if (start > 0) const SizedBox(height: 4),
           Row(
             children: [
               for (var column = 0; column < columns; column++) ...[
@@ -1068,6 +1060,14 @@ class _EnemyFleetGrid extends StatelessWidget {
               ],
             ],
           ),
+          if (start + columns < ships.length)
+            Container(
+              key: Key(
+                'sortie-map-enemy-divider-$formationVariant-$groupIndex-$start',
+              ),
+              height: 1,
+              color: const Color(0x263f6374),
+            ),
         ],
       ],
     );
@@ -1109,7 +1109,7 @@ class _EnemyShipTile extends StatelessWidget {
           catalog: enemyCatalog,
         ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: const BoxConstraints(minHeight: 29),
           child: Row(
             children: [
               ShipPortrait(
@@ -1118,9 +1118,9 @@ class _EnemyShipTile extends StatelessWidget {
                 ),
                 ship: state.masterShips[entry.id],
                 serverOrigin: state.serverOrigin,
-                width: 52,
-                height: 24,
-                decodeHeight: 48,
+                width: 48,
+                height: 22,
+                decodeHeight: 44,
                 resourceType: ShipPortraitResourceType.banner,
               ),
               const SizedBox(width: 6),

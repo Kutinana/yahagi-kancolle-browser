@@ -31,6 +31,8 @@ class SortieMapQueryStrings {
   String get airPower => _text('制空值', '制空值', '制空値');
   String get airSuperiority => _text('空优值', '空優值', '航空優勢');
   String get airSupremacy => _text('空确值', '空確值', '制空権確保');
+  String get airSuperiorityShort => _text('优', '優', '優');
+  String get airSupremacyShort => _text('确', '確', '確');
   String get fleet => _text('敌方舰队', '敵方艦隊', '敵艦隊');
   String fleetNumber(int number) => switch (number) {
     1 => _text('敌方主力舰队', '敵方主力艦隊', '敵主力艦隊'),

@@ -75,6 +75,11 @@ void main() {
     tester,
   ) async {
     final catalog = EnemyCatalogData.fromJsonString(enemyCatalogFixture);
+    const state = GameState(
+      masterSlotItems: <int, MasterSlotItem>{
+        1: MasterSlotItem(id: 1, name: '5inch単装砲', type: <int>[0, 0, 0, 1]),
+      },
+    );
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -86,7 +91,7 @@ void main() {
                 nameJa: '軽母ヌ級elite(艦載機黒)',
                 nameZh: null,
               ),
-              state: const GameState(),
+              state: state,
               catalog: catalog,
             ),
             child: const Text('open'),
@@ -100,6 +105,19 @@ void main() {
 
     expect(find.text('ID 1777'), findsOneWidget);
     expect(find.text('軽母ヌ級elite(艦載機黒)'), findsOneWidget);
+    expect(find.byKey(const Key('sortie-enemy-primary-chips')), findsOneWidget);
+    expect(find.byKey(const Key('sortie-enemy-vitals-grid')), findsOneWidget);
+    expect(find.text('Lv. 1'), findsOneWidget);
+    expect(find.text('HP'), findsOneWidget);
+    expect(find.text('48'), findsOneWidget);
+    expect(find.text('耐久 48'), findsNothing);
+    expect(
+      find.byKey(const Key('sortie-enemy-equipment-icon-1')),
+      findsOneWidget,
+    );
+    expect(find.text('小口径主砲'), findsNothing);
+    expect(find.text('火力 1'), findsNothing);
+    expect(find.text('艦載機黒'), findsNothing);
   });
 }
 

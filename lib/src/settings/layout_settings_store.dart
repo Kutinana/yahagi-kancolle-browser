@@ -88,6 +88,8 @@ abstract interface class FleetDisplaySettingsStore {
   Future<void> saveFleetDisplayFields(List<String> fields);
   Future<FleetShipTypeLabelMode> loadFleetShipTypeLabelMode();
   Future<void> saveFleetShipTypeLabelMode(FleetShipTypeLabelMode mode);
+  Future<FleetSelectorLabelMode> loadFleetSelectorLabelMode();
+  Future<void> saveFleetSelectorLabelMode(FleetSelectorLabelMode mode);
   Future<bool> loadShowClearedMaps();
   Future<void> saveShowClearedMaps(bool show);
 }
@@ -239,6 +241,9 @@ class SharedPreferencesLayoutSettingsStore
   }
 
   static const _keyFleetShipTypeLabelMode = 'fleet_brief_ship_type_label_mode';
+  static const _keyFleetSelectorLabelMode = 'fleet_brief_selector_label_mode';
+  static const _keyRepairFleetSelectorLabelMode =
+      'repair_summary_selector_label_mode';
   static const _keyShowClearedMaps = 'pre_sortie_show_cleared_maps';
 
   @override
@@ -256,6 +261,46 @@ class SharedPreferencesLayoutSettingsStore
   Future<void> saveFleetShipTypeLabelMode(FleetShipTypeLabelMode mode) async {
     await (await SharedPreferences.getInstance()).setString(
       _keyFleetShipTypeLabelMode,
+      mode.name,
+    );
+  }
+
+  @override
+  Future<FleetSelectorLabelMode> loadFleetSelectorLabelMode() async {
+    final saved = (await SharedPreferences.getInstance()).getString(
+      _keyFleetSelectorLabelMode,
+    );
+    return FleetSelectorLabelMode.values.firstWhere(
+      (mode) => mode.name == saved,
+      orElse: () => FleetSelectorLabelMode.customName,
+    );
+  }
+
+  @override
+  Future<void> saveFleetSelectorLabelMode(FleetSelectorLabelMode mode) async {
+    await (await SharedPreferences.getInstance()).setString(
+      _keyFleetSelectorLabelMode,
+      mode.name,
+    );
+  }
+
+  @override
+  Future<FleetSelectorLabelMode> loadRepairFleetSelectorLabelMode() async {
+    final saved = (await SharedPreferences.getInstance()).getString(
+      _keyRepairFleetSelectorLabelMode,
+    );
+    return FleetSelectorLabelMode.values.firstWhere(
+      (mode) => mode.name == saved,
+      orElse: () => FleetSelectorLabelMode.customName,
+    );
+  }
+
+  @override
+  Future<void> saveRepairFleetSelectorLabelMode(
+    FleetSelectorLabelMode mode,
+  ) async {
+    await (await SharedPreferences.getInstance()).setString(
+      _keyRepairFleetSelectorLabelMode,
       mode.name,
     );
   }

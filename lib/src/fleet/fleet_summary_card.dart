@@ -89,6 +89,12 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
           final specialAttack = selectedFleet == null
               ? null
               : detectFleetSpecialAttack(state, selectedFleet);
+          final twoColumns = HdModuleColumns.of(context) > 1;
+          final fleetSwitcher = _FleetSegmentedSwitcher(
+            fleets: state.fleets,
+            selectedFleetId: _selectedFleetId,
+            onSelected: (id) => setState(() => _selectedFleetId = id),
+          );
           return DashboardCard(
             title: AppLocalizations.of(context)?.fleetBrief ?? '编队简报',
             icon: const Icon(Icons.directions_boat_filled_outlined),
@@ -113,12 +119,11 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
                     ),
                     onPressed: widget.onOpenDisplaySettings,
                   ),
-            trailing: _FleetSegmentedSwitcher(
-              fleets: state.fleets,
-              selectedFleetId: _selectedFleetId,
-              onSelected: (id) => setState(() => _selectedFleetId = id),
-            ),
+            trailing: twoColumns
+                ? SizedBox(width: 108, child: fleetSwitcher)
+                : null,
             child: _FleetSummaryBody(
+              switcher: twoColumns ? null : fleetSwitcher,
               metrics: summaryVisible.any(summaryFields.contains)
                   ? _FleetSummaryMetrics(
                       visible: summaryVisible,
@@ -180,7 +185,12 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
 
 /// Wide HD cards keep their summary in a narrow rail beside the ship grid.
 class _FleetSummaryBody extends StatelessWidget {
-  const _FleetSummaryBody({required this.metrics, required this.ships});
+  const _FleetSummaryBody({
+    this.switcher,
+    required this.metrics,
+    required this.ships,
+  });
+  final Widget? switcher;
   final Widget? metrics;
   final Widget ships;
   @override
@@ -189,10 +199,8 @@ class _FleetSummaryBody extends StatelessWidget {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (metrics != null) ...[
-            SizedBox(width: 70, child: metrics),
-            const SizedBox(width: 6),
-          ],
+          SizedBox(width: 70, child: metrics),
+          const SizedBox(width: 6),
           Expanded(child: ships),
         ],
       );
@@ -200,7 +208,12 @@ class _FleetSummaryBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (metrics != null) ...[metrics!, const SizedBox(height: 6)],
+        if (switcher != null) switcher!,
+        if (metrics != null) ...[
+          if (switcher != null) const SizedBox(height: 4),
+          metrics!,
+          const SizedBox(height: 6),
+        ],
         ships,
       ],
     );
@@ -223,8 +236,7 @@ class _FleetSegmentedSwitcher extends StatelessWidget {
     final visibleFleets = fleets.take(4).toList();
     return Container(
       key: const Key('fleet-summary-switcher'),
-      width: 108,
-      height: 22,
+      height: 28,
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: const Color(0xff102331),
@@ -246,7 +258,11 @@ class _FleetSegmentedSwitcher extends StatelessWidget {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      '${fleet.id}',
+                      fleetSelectorLabelModeSetting ==
+                                  FleetSelectorLabelMode.number ||
+                              fleet.name.trim().isEmpty
+                          ? '${fleet.id}'
+                          : fleet.name,
                       style: TextStyle(
                         color: isSelected
                             ? const Color(0xffffdc88)

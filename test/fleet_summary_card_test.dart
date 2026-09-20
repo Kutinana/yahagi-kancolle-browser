@@ -108,6 +108,23 @@ void main() {
     expect(openedFleetId, 2);
   });
 
+  testWidgets('fleet selectors can use numeric abbreviations', (tester) async {
+    final controller = await _controllerWithPortData();
+    addTearDown(controller.dispose);
+    setFleetSelectorLabelModeSetting(FleetSelectorLabelMode.number);
+    addTearDown(
+      () => setFleetSelectorLabelModeSetting(FleetSelectorLabelMode.customName),
+    );
+
+    await tester.pumpWidget(_card(controller: controller));
+    await tester.pump();
+
+    for (final label in ['1', '2', '3', '4']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('第一舰队'), findsNothing);
+  });
+
   testWidgets('selecting an empty fleet shows the empty state', (tester) async {
     final controller = await _controllerWithPortData();
     addTearDown(controller.dispose);
@@ -134,7 +151,7 @@ void main() {
     expect(find.byType(FleetShipStatusCapsule), findsNWidgets(2));
   });
 
-  testWidgets('fleet selectors share the title row and metrics fill old row', (
+  testWidgets('fleet selectors use names above metrics at matching width', (
     tester,
   ) async {
     final controller = await _controllerWithPortData();
@@ -143,25 +160,22 @@ void main() {
     await tester.pumpWidget(_card(controller: controller));
     await tester.pump();
 
-    final title = find.text('编队简报');
     final selector = find.byKey(const Key('fleet-summary-selector-1'));
     final switcher = find.byKey(const Key('fleet-summary-switcher'));
-    expect(title, findsOneWidget);
+    final metrics = find.byKey(const Key('fleet-summary-metrics'));
     expect(selector, findsOneWidget);
-    expect(tester.getSize(switcher).width, 108);
-    expect(tester.getSize(selector).width, closeTo(26, 1));
+    expect(find.text('第一舰队'), findsOneWidget);
+    expect(find.text('第二舰队'), findsOneWidget);
+    expect(find.text('第三舰队'), findsOneWidget);
+    expect(find.text('第四舰队'), findsOneWidget);
     expect(
-      tester.getCenter(title).dy,
-      closeTo(tester.getCenter(selector).dy, 1),
+      tester.getSize(switcher).width,
+      closeTo(tester.getSize(metrics).width, 1),
     );
     expect(
-      tester.getTopLeft(selector).dx - tester.getTopRight(title).dx,
-      greaterThan(100),
+      tester.getBottomLeft(switcher).dy,
+      lessThan(tester.getTopLeft(metrics).dy),
     );
-    expect(find.text('1'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
-    expect(find.text('4'), findsOneWidget);
 
     const metricIds = <String>[
       'speed',

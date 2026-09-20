@@ -13,6 +13,8 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dar
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_store.dart';
 import 'package:yahagi_kancolle_browser/src/quest/quest_store.dart';
 import 'package:yahagi_kancolle_browser/src/quest/pinned_quests_summary.dart';
+import 'package:yahagi_kancolle_browser/src/settings/fleet_display_options.dart';
+import 'package:yahagi_kancolle_browser/src/settings/module_display_settings.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
 
@@ -67,7 +69,35 @@ void main() {
       find.byKey(const Key('repair-summary-mode-anchorage')),
       findsOneWidget,
     );
-    expect(find.byKey(const Key('repair-summary-dock-grid')), findsOneWidget);
+    final modeSelector = find.byKey(const Key('repair-summary-mode-selector'));
+    final dockGrid = find.byKey(const Key('repair-summary-dock-grid'));
+    expect(dockGrid, findsOneWidget);
+    expect(
+      tester.getTopLeft(modeSelector).dy,
+      greaterThan(tester.getBottomLeft(find.text('维修简报')).dy),
+    );
+    expect(
+      tester.getSize(modeSelector).width,
+      closeTo(tester.getSize(dockGrid).width, 1),
+    );
+    expect(
+      tester.getTopLeft(dockGrid).dy - tester.getBottomLeft(modeSelector).dy,
+      closeTo(4, 0.01),
+    );
+    final selectorRect = tester.getRect(modeSelector);
+    for (final (index, label) in ['入渠', '泊地', '野埼'].indexed) {
+      final labelFinder = find.descendant(
+        of: modeSelector,
+        matching: find.text(label),
+      );
+      expect(
+        tester.getCenter(labelFinder).dx,
+        closeTo(
+          selectorRect.left + 2 + (selectorRect.width - 4) * (index + 0.5) / 3,
+          1,
+        ),
+      );
+    }
   });
 
   testWidgets('入渠胶囊维持2x2并跳转到入渠页面', (tester) async {
@@ -159,6 +189,40 @@ void main() {
     );
     expect(destination?.mode, RepairCenterMode.anchorage);
     expect(destination?.fleetId, 2);
+  });
+
+  testWidgets('维修简报舰队切换可显示1–4简称', (tester) async {
+    setRepairFleetSelectorLabelModeSetting(FleetSelectorLabelMode.number);
+    addTearDown(
+      () => setRepairFleetSelectorLabelModeSetting(
+        FleetSelectorLabelMode.customName,
+      ),
+    );
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await _pumpAt(
+      tester,
+      412,
+      RepairSummaryCard(
+        controller: controller,
+        collapsed: false,
+        onToggleCollapse: () {},
+        onOpenRepair: (_) {},
+      ),
+    );
+    await tester.tap(find.byKey(const Key('repair-summary-mode-anchorage')));
+    await tester.pump();
+
+    for (var fleetId = 1; fleetId <= 4; fleetId++) {
+      expect(find.text('$fleetId'), findsOneWidget);
+    }
+    expect(find.text('第一舰队'), findsNothing);
   });
 
   testWidgets('泊地简报实时响应游戏内换船且窄宽不溢出', (tester) async {
@@ -771,10 +835,7 @@ void main() {
     expect(
       tester
           .widget<Text>(
-            find.descendant(
-              of: expeditionItem,
-              matching: find.text('海上護衛任務'),
-            ),
+            find.descendant(of: expeditionItem, matching: find.text('海上護衛任務')),
           )
           .style
           ?.fontSize,

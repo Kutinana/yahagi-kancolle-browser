@@ -576,7 +576,7 @@ abstract class AppLocalizations {
   /// No description provided for @autoZoom.
   ///
   /// In zh, this message translates to:
-  /// **'应用推荐显示比例（游戏与菜单比例 65:35）'**
+  /// **'应用推荐显示比例（游戏与菜单比例 67:33）'**
   String get autoZoom;
 
   /// No description provided for @enhancedDamagePulse.
@@ -5901,6 +5901,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'新装备'**
   String get noticeDevDefaultName;
+
+  /// No description provided for @noticeEquipImproveSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备改修成功'**
+  String get noticeEquipImproveSuccess;
+
+  /// No description provided for @noticeEquipImproveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'装备改修失败'**
+  String get noticeEquipImproveFailed;
 
   /// No description provided for @noticeModFailed.
   ///

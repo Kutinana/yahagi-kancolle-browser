@@ -263,7 +263,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get infoPanelWidth => '情報パネルの幅（縦画面では無効）';
 
   @override
-  String get autoZoom => '推奨表示比率を適用（ゲームとメニューの比率 65:35）';
+  String get autoZoom => '推奨表示比率を適用（ゲームとメニューの比率 67:33）';
 
   @override
   String get enhancedDamagePulse => '損傷パルス表示を強化';
@@ -3162,6 +3162,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get noticeDevDefaultName => '新装備';
+
+  @override
+  String get noticeEquipImproveSuccess => '装備改修に成功しました';
+
+  @override
+  String get noticeEquipImproveFailed => '装備改修に失敗しました';
 
   @override
   String get noticeModFailed => '近代化改修に失敗しました';

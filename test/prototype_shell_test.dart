@@ -48,6 +48,8 @@ import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
 import 'package:yahagi_kancolle_browser/src/development/equipment_development_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
+import 'package:yahagi_kancolle_browser/src/quest/quest_completion_feedback.dart';
+import 'fixtures/kcsapi_fixtures.dart';
 
 Future<void> _tapWorkspaceNavigationItem(
   WidgetTester tester,
@@ -62,6 +64,93 @@ Future<void> _tapWorkspaceNavigationItem(
 }
 
 void main() {
+  testWidgets('quest listener survives navigation and orientation changes', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final timersWereDisabled = GameStateController.disableTimerForTest;
+    GameStateController.disableTimerForTest = true;
+    addTearDown(
+      () => GameStateController.disableTimerForTest = timersWereDisabled,
+    );
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final game = GameStateController();
+    final toolbar = GameToolbarController();
+    final capture = GameCaptureController();
+    final battle = BattleController(gameState: () => game.state);
+    final layout = await LayoutSettingsController.load(
+      _MemoryLayoutSettingsStore(),
+    );
+    addTearDown(game.dispose);
+    addTearDown(toolbar.dispose);
+    addTearDown(capture.dispose);
+    addTearDown(battle.dispose);
+    addTearDown(layout.dispose);
+    await tester.pumpWidget(
+      YahagiApp(
+        layoutSettingsController: layout,
+        networkSettingsController: NetworkSettingsController(
+          store: _MemoryNetworkSettingsStore(),
+        ),
+        gadgetBypassController: GadgetBypassController(
+          store: _MemoryGadgetBypassStore(),
+          port: _FakeGadgetBypassPort(),
+        ),
+        safetySettingsController: await SafetySettingsController.load(
+          MemorySafetySettingsStore(),
+        ),
+        displayModeController: await DisplayModeController.load(
+          MemoryDisplayModeStore(),
+        ),
+        controller: PrototypeStatusController(),
+        browserController: GameBrowserController(port: _NoopBrowserPort()),
+        captureModeController: await CaptureModeController.load(
+          _MemoryModeStore(),
+        ),
+        gameCaptureController: capture,
+        gameStateController: game,
+        battleController: battle,
+        audioController: await GameAudioController.load(_MemoryAudioStore()),
+        toolbarController: toolbar,
+        gameSurface: const SizedBox.expand(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final listener = tester.state(find.byType(QuestCompletionFeedback));
+    game.accept(
+      kcsapiEvent('/kcsapi/api_get_member/questlist', {
+        'api_count': 1,
+        'api_page_count': 1,
+        'api_exec_count': 1,
+        'api_list': [
+          {
+            'api_no': 9001,
+            'api_title': '切页同时完成',
+            'api_detail': '',
+            'api_category': 1,
+            'api_type': 4,
+            'api_state': 3,
+            'api_progress_flag': 0,
+          },
+        ],
+      }, capturedAt: DateTime.now().toUtc()),
+    );
+    await game.idle;
+    tester
+        .widget<WorkspaceNavigation>(find.byType(WorkspaceNavigation))
+        .onSelected(5);
+    await tester.pumpAndSettle();
+    expect(find.text('任务达成：切页同时完成'), findsOneWidget);
+    expect(tester.state(find.byType(QuestCompletionFeedback)), same(listener));
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pumpAndSettle();
+    expect(tester.state(find.byType(QuestCompletionFeedback)), same(listener));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets(
     'HD is opt-in, keeps a single row and preserves game across toggles and rotation',
     (tester) async {
@@ -171,7 +260,7 @@ void main() {
         }
         await layout.setAutoZoom(true);
         await tester.pumpAndSettle();
-        expect(layout.effectiveInformationPanelRatio, .35);
+        expect(layout.effectiveInformationPanelRatio, .33);
         expect(
           tester
               .getSize(find.byKey(const Key('workspace-information-panel')))
@@ -179,7 +268,7 @@ void main() {
           closeTo(
             (tester.getSize(find.byKey(const Key('game-workspace'))).width -
                     1) *
-                .35,
+                .33,
             .01,
           ),
         );
@@ -530,6 +619,70 @@ void main() {
     );
   });
 
+  testWidgets('auto zoom keeps the information panel compact', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final layout = await LayoutSettingsController.load(
+      _MemoryLayoutSettingsStore(),
+    );
+    final capture = GameCaptureController();
+    final state = GameStateController();
+    final battle = BattleController(gameState: () => state.state);
+    final toolbar = GameToolbarController();
+    addTearDown(layout.dispose);
+    addTearDown(capture.dispose);
+    addTearDown(state.dispose);
+    addTearDown(battle.dispose);
+    addTearDown(toolbar.dispose);
+    await layout.setAutoZoom(true);
+
+    await tester.pumpWidget(
+      YahagiApp(
+        layoutSettingsController: layout,
+        networkSettingsController: NetworkSettingsController(
+          store: _MemoryNetworkSettingsStore(),
+        ),
+        gadgetBypassController: GadgetBypassController(
+          store: _MemoryGadgetBypassStore(),
+          port: _FakeGadgetBypassPort(),
+        ),
+        safetySettingsController: await SafetySettingsController.load(
+          MemorySafetySettingsStore(),
+        ),
+        displayModeController: await DisplayModeController.load(
+          MemoryDisplayModeStore(),
+        ),
+        controller: PrototypeStatusController(),
+        browserController: GameBrowserController(port: _NoopBrowserPort()),
+        captureModeController: await CaptureModeController.load(
+          _MemoryModeStore(),
+        ),
+        gameCaptureController: capture,
+        gameStateController: state,
+        battleController: battle,
+        audioController: await GameAudioController.load(_MemoryAudioStore()),
+        toolbarController: toolbar,
+        gameSurface: const SizedBox.expand(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final workspace = find.byKey(const Key('game-workspace'));
+    final panel = find.byKey(const Key('workspace-information-panel'));
+    expect(
+      tester.getSize(panel).width / tester.getSize(workspace).width,
+      closeTo(0.33, 0.015),
+    );
+    expect(
+      tester.getRect(find.byType(FleetSummaryCard)).left -
+          tester.getRect(panel).left,
+      closeTo(11, 0.01),
+    );
+  });
+
   testWidgets('shows the game surface, information panel, and capture modes', (
     tester,
   ) async {
@@ -734,7 +887,7 @@ void main() {
       tester.getTopLeft(find.byKey(const Key('settings-auto-zoom-label'))).dx,
       closeTo(settingsLabelX, 0.1),
     );
-    expect(find.text('应用推荐显示比例（游戏与菜单比例 65:35）'), findsOneWidget);
+    expect(find.text('应用推荐显示比例（游戏与菜单比例 67:33）'), findsOneWidget);
     expect(find.text('游戏声音'), findsOneWidget);
     expect(find.text('后台播放声音'), findsOneWidget);
     await tester.tap(find.byKey(const Key('settings-tab-1')));
@@ -1739,6 +1892,26 @@ void main() {
       expect(deactivations, 0, reason: 'PlatformView must not deactivate on portrait switch');
       expect(disposals, 0, reason: 'PlatformView must not dispose on portrait switch');
       expect(tester.element(find.byKey(probeKey)), same(originalElement));
+
+      for (final position in ['top', 'bottom']) {
+        await layout.setWorkspaceMenuPosition(position);
+        await tester.pumpAndSettle();
+
+        final gameRect = tester.getRect(find.byKey(probeKey));
+        final navigationRect = tester.getRect(find.byType(WorkspaceNavigation));
+        expect(
+          gameRect.bottom,
+          lessThanOrEqualTo(navigationRect.top + 0.01),
+          reason:
+              '$position menu must reduce the game viewport instead of clipping its bottom edge',
+        );
+        expect(gameRect.width / gameRect.height, closeTo(1200 / 720, 0.001));
+        expect(tester.element(find.byKey(probeKey)), same(originalElement));
+        expect(deactivations, 0);
+        expect(disposals, 0);
+      }
+      await layout.setWorkspaceMenuPosition('left');
+      await tester.pumpAndSettle();
 
       // 3. Tall split-screen window (400 x 800)
       tester.view.physicalSize = const Size(400, 800);

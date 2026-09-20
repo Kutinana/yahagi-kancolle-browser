@@ -183,6 +183,9 @@ class LayoutSettingsController extends ChangeNotifier {
       );
       controller._fleetShipTypeLabelMode = await fleetDisplayStore
           .loadFleetShipTypeLabelMode();
+      setFleetSelectorLabelModeSetting(
+        await fleetDisplayStore.loadFleetSelectorLabelMode(),
+      );
       controller._showClearedMaps = await fleetDisplayStore
           .loadShowClearedMaps();
       if (saved == null &&
@@ -193,6 +196,10 @@ class LayoutSettingsController extends ChangeNotifier {
       }
     }
     if (store is ModuleDisplaySettingsStore) {
+      setRepairFleetSelectorLabelModeSetting(
+        await (store as ModuleDisplaySettingsStore)
+            .loadRepairFleetSelectorLabelMode(),
+      );
       final savedHd = await (store as ModuleDisplaySettingsStore)
           .loadModuleDisplayFields('fleet-hd-summary');
       controller._hdFleetSummaryFields = savedHd
@@ -374,6 +381,19 @@ class LayoutSettingsController extends ChangeNotifier {
     }
   }
 
+  FleetSelectorLabelMode get fleetSelectorLabelMode =>
+      fleetSelectorLabelModeSetting;
+  Future<void> setFleetSelectorLabelMode(FleetSelectorLabelMode mode) async {
+    if (fleetSelectorLabelModeSetting == mode) return;
+    setFleetSelectorLabelModeSetting(mode);
+    notifyListeners();
+    if (_store is FleetDisplaySettingsStore) {
+      await (_store as FleetDisplaySettingsStore).saveFleetSelectorLabelMode(
+        mode,
+      );
+    }
+  }
+
   bool _showClearedMaps = false;
   bool get showClearedMaps => _showClearedMaps;
   Future<void> setShowClearedMaps(bool show) async {
@@ -439,6 +459,21 @@ class LayoutSettingsController extends ChangeNotifier {
         module,
         show,
       );
+    }
+  }
+
+  FleetSelectorLabelMode get repairFleetSelectorLabelMode =>
+      repairFleetSelectorLabelModeSetting;
+
+  Future<void> setRepairFleetSelectorLabelMode(
+    FleetSelectorLabelMode mode,
+  ) async {
+    if (repairFleetSelectorLabelModeSetting == mode) return;
+    setRepairFleetSelectorLabelModeSetting(mode);
+    notifyListeners();
+    if (_store is ModuleDisplaySettingsStore) {
+      await (_store as ModuleDisplaySettingsStore)
+          .saveRepairFleetSelectorLabelMode(mode);
     }
   }
 
@@ -718,7 +753,7 @@ class LayoutSettingsController extends ChangeNotifier {
 
   double get gameAreaRatio => _gameAreaRatio;
   double get effectiveInformationPanelRatio =>
-      _autoZoom ? 0.35 : 1.0 - _gameAreaRatio;
+      _autoZoom ? 0.33 : 1.0 - _gameAreaRatio;
   bool get canAdjustInformationPanelRatio => !_autoZoom;
   double get informationPanelWidth => _informationPanelWidth;
   bool get autoZoom => _autoZoom;

@@ -62,7 +62,7 @@ class TimerMechanicsService {
 
     switch (event.path) {
       case '/kcsapi/api_port/port':
-        onPortRefresh(nextState, capturedAt);
+        onPortRefresh(nextState, capturedAt, previousState: previousState);
         break;
 
       case '/kcsapi/api_req_hensei/change':
@@ -179,12 +179,20 @@ class TimerMechanicsService {
     }
   }
 
-  void onPortRefresh(GameState portState, DateTime now) {
-    evaluateNozaki(portState, now);
+  void onPortRefresh(
+    GameState portState,
+    DateTime now, {
+    GameState? previousState,
+  }) {
+    evaluateNozaki(portState, now, previousState: previousState);
     evaluateAkashi(portState, now);
   }
 
-  void evaluateNozaki(GameState portState, DateTime now) {
+  void evaluateNozaki(
+    GameState portState,
+    DateTime now, {
+    GameState? previousState,
+  }) {
     if (nozakiTimer.anchorAt == null) {
       nozakiTimer.reset(
         now,
@@ -200,9 +208,16 @@ class TimerMechanicsService {
       return;
     }
 
+    // The port response already includes this refresh's morale gains. Check
+    // those before treating an all-54 fleet as a fatigue-blocked failure.
+    final sparkleObserved =
+        previousState != null &&
+        _hasObservedNozakiSparkle(previousState, portState);
+
     // Refresh node reached (elapsed >= 15 min)!
     // Special rule (NGA V1.1): Fatigue-blocked failure retains READY without resetting.
-    if (NosakiSparkleCalculator.isBlockedOnlyByFatigue(portState)) {
+    if (!sparkleObserved &&
+        NosakiSparkleCalculator.isBlockedOnlyByFatigue(portState)) {
       nozakiTimer.observe(now);
       return;
     }
@@ -212,13 +227,43 @@ class TimerMechanicsService {
     final String reason;
     if (!NosakiSparkleCalculator.hasNosakiInWorkPosition(portState)) {
       reason = NozakiResetReason.portRefreshNoNozaki.name;
-    } else if (NosakiSparkleCalculator.hasEligibleSparkleTarget(portState)) {
+    } else if (sparkleObserved ||
+        NosakiSparkleCalculator.hasEligibleSparkleTarget(portState)) {
       reason = NozakiResetReason.portRefreshSuccess.name;
     } else {
       reason = NozakiResetReason.portRefreshOtherFailure.name;
     }
 
     nozakiTimer.reset(now, reason: reason);
+  }
+
+  bool _hasObservedNozakiSparkle(GameState previousState, GameState portState) {
+    if (previousState.memberId != portState.memberId) return false;
+    for (final fleet in portState.fleets) {
+      final projection = NosakiSparkleCalculator.project(
+        state: portState,
+        fleetId: fleet.id,
+        elapsed: Duration.zero,
+      );
+      if (!projection.isReady) continue;
+      for (final row in projection.rows) {
+        if (row.status != NosakiSparkleShipStatus.completed &&
+            row.status != NosakiSparkleShipStatus.sparkling) {
+          continue;
+        }
+        final before = previousState.ships[row.ship.id];
+        // Natural recovery stops at 49; a gain above that in a working
+        // Nozaki fleet is evidence of settlement, including the final tick.
+        if (before != null &&
+            before.masterId == row.ship.masterId &&
+            row.currentCond > NosakiSparkleCalculator.nosakiBaseCondThreshold &&
+            row.currentCond <= NosakiSparkleCalculator.targetCond &&
+            row.currentCond > before.condition) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   void evaluateAkashi(GameState portState, DateTime now) {

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../fleet/equipment_type_icon.dart';
 import '../../fleet/ship_portrait.dart';
 import '../../game_state/game_state.dart';
 import 'enemy_catalog.dart';
@@ -81,9 +82,14 @@ class _SortieEnemyDetailsDialog extends StatelessWidget {
                 _Header(entry: entry, details: details, state: state),
                 const SizedBox(height: 8),
                 Wrap(
+                  key: const Key('sortie-enemy-primary-chips'),
                   spacing: 6,
                   runSpacing: 6,
                   children: [
+                    _InfoChip(
+                      label: 'Lv. ${_number(details.level)}',
+                      color: const Color(0xffffc95c),
+                    ),
                     _InfoChip(
                       label: 'ID ${details.id}',
                       color: const Color(0xffff907e),
@@ -95,20 +101,6 @@ class _SortieEnemyDetailsDialog extends StatelessWidget {
                     _InfoChip(
                       label: strings.preciseConfiguration,
                       color: const Color(0xff70c7bc),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 9),
-                Wrap(
-                  spacing: 14,
-                  runSpacing: 5,
-                  children: [
-                    Text('Lv. ${_number(details.level)}'),
-                    Text('${strings.hp} ${_number(details.hp)}'),
-                    Text('${strings.speed} ${details.speed ?? '—'}'),
-                    Text('${strings.range} ${details.range ?? '—'}'),
-                    Text(
-                      '${strings.aircraftCapacity} ${_number(details.aircraftCapacity)}',
                     ),
                   ],
                 ),
@@ -133,17 +125,7 @@ class _SortieEnemyDetailsDialog extends StatelessWidget {
                   )
                 else
                   for (final item in details.equipment)
-                    _EquipmentRow(item: item),
-                if (details.note case final note?) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    note,
-                    style: const TextStyle(
-                      color: Color(0xff93aab8),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
+                    _EquipmentRow(item: item, state: state),
               ],
             ),
           ),
@@ -207,6 +189,10 @@ class _StatsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = _EnemyDetailsStrings.of(context);
     final stats = <(String, String)>[
+      (strings.hp, _number(details.hp)),
+      (strings.speed, details.speed ?? '—'),
+      (strings.range, details.range ?? '—'),
+      (strings.aircraftCapacity, _number(details.aircraftCapacity)),
       (strings.firepower, _stat(details.firepower)),
       (strings.torpedo, _stat(details.torpedo)),
       (strings.antiAir, _stat(details.antiAir)),
@@ -224,6 +210,7 @@ class _StatsGrid extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
         child: GridView.count(
+          key: const Key('sortie-enemy-vitals-grid'),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 4,
@@ -266,67 +253,72 @@ class _StatsGrid extends StatelessWidget {
 }
 
 class _EquipmentRow extends StatelessWidget {
-  const _EquipmentRow({required this.item});
+  const _EquipmentRow({required this.item, required this.state});
 
   final EnemyEquipment item;
+  final GameState state;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
+    padding: const EdgeInsets.symmetric(vertical: 1),
     child: Row(
       children: [
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: const Color(0xff284858),
-            borderRadius: BorderRadius.circular(5),
-          ),
-          child: const Icon(Icons.settings, size: 14, color: Color(0xffffc95c)),
+        EquipmentTypeIconImage(
+          iconId: _equipmentIconId(item, state),
+          width: 20,
+          height: 20,
+          imageKey: Key('sortie-enemy-equipment-icon-${item.slot}'),
         ),
         const SizedBox(width: 7),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(item.name, style: const TextStyle(fontSize: 12)),
-              Text(
-                item.type ?? _EnemyDetailsStrings.of(context).unknownType,
-                style: const TextStyle(color: Color(0xff93aab8), fontSize: 9.5),
-              ),
-            ],
+          child: Text(
+            item.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12),
           ),
         ),
-        if (_equipmentSummary(context, item.stats) case final summary?)
-          Text(
-            summary,
-            style: const TextStyle(color: Color(0xff70c7bc), fontSize: 10),
-          ),
       ],
     ),
   );
-
-  static String? _equipmentSummary(
-    BuildContext context,
-    EnemyEquipmentStats? stats,
-  ) {
-    if (stats == null) return null;
-    final strings = _EnemyDetailsStrings.of(context);
-    final values = <String>[
-      if (stats.firepower case final value? when value != 0)
-        '${strings.firepower} $value',
-      if (stats.torpedo case final value? when value != 0)
-        '${strings.torpedo} $value',
-      if (stats.bombing case final value? when value != 0)
-        '${strings.bombing} $value',
-      if (stats.antiAir case final value? when value != 0)
-        '${strings.antiAir} $value',
-      if (stats.antiSub case final value? when value != 0)
-        '${strings.antiSub} $value',
-    ];
-    return values.isEmpty ? null : values.join('  ');
-  }
 }
+
+int _equipmentIconId(EnemyEquipment item, GameState state) {
+  final normalizedName = normalizeEnemyName(item.name);
+  for (final master in state.masterSlotItems.values) {
+    if (normalizeEnemyName(master.name) == normalizedName &&
+        master.type.length > 3) {
+      return master.type[3];
+    }
+  }
+  return _equipmentTypeIconIds[item.type] ?? -1;
+}
+
+const _equipmentTypeIconIds = <String, int>{
+  '小口径主砲': 1,
+  '中口径主砲': 2,
+  '大口径主砲': 3,
+  '副砲': 4,
+  '魚雷': 5,
+  '艦上戦闘機': 6,
+  '艦上爆撃機': 7,
+  '艦上攻撃機': 8,
+  '水上偵察機': 10,
+  '水上爆撃機': 11,
+  '小型電探': 12,
+  '大型電探': 13,
+  'ソナー': 14,
+  '爆雷投射機': 15,
+  '特殊潜航艇': 17,
+  '対空機銃': 18,
+  '回転翼機': 20,
+  '探照灯': 23,
+  '航空要員': 29,
+  '潜水艦装備': 43,
+  '陸上攻撃機': 47,
+  '対艦強化弾': 53,
+  '艦載発煙装置': 56,
+};
 
 final class _EnemyDetailsStrings {
   const _EnemyDetailsStrings._(this._ja, this._traditional);
@@ -351,7 +343,7 @@ final class _EnemyDetailsStrings {
       _pick('未找到该敌舰的精确配置资料', '未找到該敵艦的精確配置資料', 'この敵艦の正確な編成データはありません');
   String get enemyShip => _pick('敌舰', '敵艦', '敵艦');
   String get preciseConfiguration => _pick('精确配置', '精確配置', '正確な編成');
-  String get hp => _pick('耐久', '耐久', '耐久');
+  String get hp => 'HP';
   String get speed => _pick('速力', '速力', '速力');
   String get range => _pick('射程', '射程', '射程');
   String get aircraftCapacity => _pick('搭载', '搭載', '搭載');

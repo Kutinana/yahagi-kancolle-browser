@@ -9,10 +9,12 @@ import '../game_state/game_api_decoder.dart';
 import '../game_state/game_api_event_pipeline.dart';
 import '../game_state/game_state.dart';
 import '../settings/layout_settings_controller.dart';
+import '../toolbox/exp_calc/ship_exp_table.dart';
 import '../widgets/top_notice.dart';
 
 /// Intercepts game events and dispatches unified top bar notices for:
 /// - Equipment development (single & 3-batch with slot-by-slot status)
+/// - Equipment improvement (success and failure)
 /// - Ship modernization (increases, MAX flags, failure)
 /// - Marriage (luck bonus and remaining to cap)
 /// - Sortie safety checks (ship/equipment capacity warnings)
@@ -36,6 +38,7 @@ class GameInfoNoticeController implements GameApiEventConsumer {
   @override
   bool supportsPath(String path) {
     return path == '/kcsapi/api_req_kousyou/createitem' ||
+        path == '/kcsapi/api_req_kousyou/remodel_slot' ||
         path == '/kcsapi/api_req_kaisou/powerup' ||
         path == '/kcsapi/api_req_kaisou/marriage' ||
         path == '/kcsapi/api_get_member/mapinfo' ||
@@ -60,6 +63,9 @@ class GameInfoNoticeController implements GameApiEventConsumer {
         switch (event.path) {
           case '/kcsapi/api_req_kousyou/createitem':
             _handleDevelopment(rawData, stateBefore);
+            break;
+          case '/kcsapi/api_req_kousyou/remodel_slot':
+            _handleEquipmentImprovement(rawData);
             break;
           case '/kcsapi/api_req_kaisou/powerup':
             _handleModernization(rawData, event, stateBefore);
@@ -87,6 +93,8 @@ class GameInfoNoticeController implements GameApiEventConsumer {
     required TopNoticeTone tone,
     IconData? icon,
     Color? color,
+    Duration appendWithin = const Duration(milliseconds: 500),
+    String? replacementKey,
   }) {
     if (!layoutSettingsController.topNoticeEnabled) return;
     topNoticeController.show(
@@ -97,6 +105,8 @@ class GameInfoNoticeController implements GameApiEventConsumer {
       duration: Duration(
         seconds: layoutSettingsController.topNoticeDurationSeconds,
       ),
+      appendWithin: appendWithin,
+      replacementKey: replacementKey,
     );
   }
 
@@ -130,21 +140,27 @@ class GameInfoNoticeController implements GameApiEventConsumer {
       final results = <String>[];
       var successCount = 0;
       for (final item in rawGetItems) {
+        Map? slotItem;
         if (item is Map) {
-          final flag = _asInt(item['api_create_flag']);
-          if (flag == 1) {
-            successCount++;
-            final slotItem = item['api_slot_item'];
-            final masterId = slotItem is Map
-                ? _asInt(slotItem['api_slotitem_id'])
-                : 0;
-            final name =
-                state.masterSlotItems[masterId]?.name ??
-                l10n.noticeDevDefaultName;
-            results.add(name);
-          } else {
-            results.add(l10n.noticeDevSlotFailed);
+          final nestedSlotItem = item['api_slot_item'];
+          if (nestedSlotItem is Map && _asInt(item['api_create_flag']) == 1) {
+            slotItem = nestedSlotItem;
+          } else if (item.containsKey('api_slotitem_id')) {
+            slotItem = item;
           }
+        }
+
+        final masterId = slotItem == null
+            ? 0
+            : _asInt(slotItem['api_slotitem_id']);
+        if (masterId > 0) {
+          successCount++;
+          final name =
+              state.masterSlotItems[masterId]?.name ??
+              l10n.noticeDevDefaultName;
+          results.add(name);
+        } else {
+          results.add(l10n.noticeDevSlotFailed);
         }
       }
 
@@ -154,10 +170,7 @@ class GameInfoNoticeController implements GameApiEventConsumer {
           tone: TopNoticeTone.warning,
         );
       } else {
-        postNotice(
-          message: results.join(' / '),
-          tone: TopNoticeTone.success,
-        );
+        postNotice(message: results.join(' / '), tone: TopNoticeTone.success);
       }
       return;
     }
@@ -176,11 +189,20 @@ class GameInfoNoticeController implements GameApiEventConsumer {
         tone: TopNoticeTone.success,
       );
     } else {
-      postNotice(
-        message: l10n.noticeDevFailed,
-        tone: TopNoticeTone.warning,
-      );
+      postNotice(message: l10n.noticeDevFailed, tone: TopNoticeTone.warning);
     }
+  }
+
+  void _handleEquipmentImprovement(Map<String, Object?> data) {
+    final l10n = _getL10n();
+    final succeeded = _asInt(data['api_remodel_flag']) == 1;
+    postNotice(
+      message: succeeded
+          ? l10n.noticeEquipImproveSuccess
+          : l10n.noticeEquipImproveFailed,
+      tone: succeeded ? TopNoticeTone.success : TopNoticeTone.warning,
+      appendWithin: const Duration(milliseconds: 500),
+    );
   }
 
   void _handleModernization(
@@ -191,29 +213,20 @@ class GameInfoNoticeController implements GameApiEventConsumer {
     final l10n = _getL10n();
     final flag = _asInt(data['api_powerup_flag']);
     if (flag == 0) {
-      postNotice(
-        message: l10n.noticeModFailed,
-        tone: TopNoticeTone.warning,
-      );
+      postNotice(message: l10n.noticeModFailed, tone: TopNoticeTone.warning);
       return;
     }
 
     final rawShip = data['api_ship'];
     if (rawShip is! Map) {
-      postNotice(
-        message: l10n.noticeModSuccess,
-        tone: TopNoticeTone.success,
-      );
+      postNotice(message: l10n.noticeModSuccess, tone: TopNoticeTone.success);
       return;
     }
 
     final shipId = _asInt(rawShip['api_id']);
     final oldShip = state.ships[shipId];
     if (oldShip == null) {
-      postNotice(
-        message: l10n.noticeModSuccess,
-        tone: TopNoticeTone.success,
-      );
+      postNotice(message: l10n.noticeModSuccess, tone: TopNoticeTone.success);
       return;
     }
 
@@ -403,7 +416,8 @@ class GameInfoNoticeController implements GameApiEventConsumer {
           ? (kyoukaList[5] - oldKyouka[5])
           : (newHp - oldShip.maxHp);
       final remaining = master?.remainingModernization(5, kyoukaList[5]);
-      isHpMax = (remaining != null ? remaining <= 0 : kyoukaList[5] >= 2) ||
+      isHpMax =
+          (remaining != null ? remaining <= 0 : kyoukaList[5] >= 2) ||
           isMasterHpCap ||
           (maxHp > 0 && newHp >= maxHp);
     } else {
@@ -422,9 +436,7 @@ class GameInfoNoticeController implements GameApiEventConsumer {
           ? (kyoukaList[6] - oldKyouka[6])
           : (newAsw - oldShip.antiSub);
       final remaining = master?.remainingModernization(6, kyoukaList[6]);
-      isAswMax = remaining != null
-          ? remaining <= 0
-          : kyoukaList[6] >= 9;
+      isAswMax = remaining != null ? remaining <= 0 : kyoukaList[6] >= 9;
     } else {
       aswDelta = newAsw - oldShip.antiSub;
       isAswMax = maxAsw > 0 && newAsw >= maxAsw;
@@ -434,8 +446,27 @@ class GameInfoNoticeController implements GameApiEventConsumer {
     }
 
     if (parts.isEmpty) {
+      // No observed increase is not proof of a cap (partial responses and
+      // already-maxed individual stats are both possible).
+      // Equipment can inflate total stats to their displayed maxima. Require
+      // actual modernization values and master caps for the ordinary stats.
+      final allStatsMax =
+          master != null &&
+          kyoukaList != null &&
+          kyoukaList.length >= 7 &&
+          List.generate(5, (index) => index).every((index) {
+            final remaining = master.remainingModernization(
+              index,
+              kyoukaList[index],
+            );
+            return remaining != null && remaining <= 0;
+          }) &&
+          isHpMax &&
+          isAswMax;
       postNotice(
-        message: l10n.noticeModSuccessMaxCap,
+        message: allStatsMax
+            ? l10n.noticeModSuccessMaxCap
+            : l10n.noticeModSuccess,
         tone: TopNoticeTone.success,
       );
     } else {
@@ -510,17 +541,11 @@ class GameInfoNoticeController implements GameApiEventConsumer {
       return;
     }
     if (shipFull) {
-      postNotice(
-        message: l10n.noticeSortieShipFull,
-        tone: TopNoticeTone.error,
-      );
+      postNotice(message: l10n.noticeSortieShipFull, tone: TopNoticeTone.error);
       return;
     }
     if (itemFull) {
-      postNotice(
-        message: l10n.noticeSortieItemFull,
-        tone: TopNoticeTone.error,
-      );
+      postNotice(message: l10n.noticeSortieItemFull, tone: TopNoticeTone.error);
       return;
     }
 
@@ -532,7 +557,10 @@ class GameInfoNoticeController implements GameApiEventConsumer {
 
     if (shipLow && itemLow) {
       postNotice(
-        message: l10n.noticeSortieShipAndItemLow(remainingShips, remainingItems),
+        message: l10n.noticeSortieShipAndItemLow(
+          remainingShips,
+          remainingItems,
+        ),
         tone: TopNoticeTone.warning,
       );
       return;
@@ -554,12 +582,19 @@ class GameInfoNoticeController implements GameApiEventConsumer {
   }
 
   void _handlePracticeEnemyInfo(Map<String, Object?> data, GameState state) {
+    const noticeKey = 'practice-experience';
     final l10n = _getL10n();
     final rawDeck = data['api_deck'];
-    if (rawDeck is! Map) return;
+    if (rawDeck is! Map) {
+      topNoticeController.removeByKey(noticeKey);
+      return;
+    }
 
     final rawShips = rawDeck['api_ships'];
-    if (rawShips is! List || rawShips.isEmpty) return;
+    if (rawShips is! List || rawShips.isEmpty) {
+      topNoticeController.removeByKey(noticeKey);
+      return;
+    }
 
     final firstShip = rawShips[0];
     final secondShip = rawShips.length > 1 ? rawShips[1] : null;
@@ -567,10 +602,16 @@ class GameInfoNoticeController implements GameApiEventConsumer {
     final l1 = firstShip is Map ? _asInt(firstShip['api_level']) : 0;
     final l2 = secondShip is Map ? _asInt(secondShip['api_level']) : 0;
 
-    if (l1 <= 0) return;
+    if (l1 <= 0) {
+      topNoticeController.removeByKey(noticeKey);
+      return;
+    }
 
     final baseExp = calculatePracticeBaseExp(l1, l2);
-    if (baseExp <= 0) return;
+    if (baseExp <= 0) {
+      topNoticeController.removeByKey(noticeKey);
+      return;
+    }
 
     final sExp = (baseExp * 1.2).round();
     final aExp = baseExp;
@@ -583,13 +624,19 @@ class GameInfoNoticeController implements GameApiEventConsumer {
       final boostedAExp = (baseExp * multiplier).round();
       final bonusStr = ctBonus % 1 == 0 ? '${ctBonus.toInt()}%' : '$ctBonus%';
       postNotice(
-        message: l10n.noticePracticeExpCtBonus(boostedSExp, boostedAExp, bonusStr),
+        message: l10n.noticePracticeExpCtBonus(
+          boostedSExp,
+          boostedAExp,
+          bonusStr,
+        ),
         tone: TopNoticeTone.info,
+        replacementKey: noticeKey,
       );
     } else {
       postNotice(
         message: l10n.noticePracticeExp(sExp, aExp),
         tone: TopNoticeTone.info,
+        replacementKey: noticeKey,
       );
     }
   }
@@ -616,7 +663,8 @@ class GameInfoNoticeController implements GameApiEventConsumer {
       final ship = state.ships[shipId];
       if (ship == null) continue;
       final master = state.masterShips[ship.masterId];
-      final isCt = master?.shipTypeId == 21 ||
+      final isCt =
+          master?.shipTypeId == 21 ||
           (master?.name.contains('香取') ?? false) ||
           (master?.name.contains('鹿島') ?? false);
 
@@ -681,44 +729,13 @@ class GameInfoNoticeController implements GameApiEventConsumer {
   /// - Returns 0 for 0-ship/empty opponent (L1 <= 0).
   static int calculatePracticeBaseExp(int l1, int l2) {
     if (l1 <= 0) return 0;
-    final exp1 = _shipExpForLevel(l1);
-    final exp2 = l2 > 0 ? _shipExpForLevel(l2) : 0;
+    final exp1 = shipCumulativeExp(l1);
+    final exp2 = l2 > 0 ? shipCumulativeExp(l2) : 0;
     final total = (exp1 / 100.0) + (exp2 / 300.0);
     if (total <= 0) return 10;
     if (total > 500) {
       return (500.0 + math.sqrt(total - 500.0)).floor();
     }
     return total.floor();
-  }
-
-  static int _shipExpForLevel(int level) {
-    if (level <= 1) return 0;
-    if (level > 180) level = 180;
-    // Standard cumulative experience for level L (KanColle)
-    const cumulativeTable = <int>[
-      0, 0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500,
-      5500, 6600, 7800, 9100, 10500, 12000, 13600, 15300, 17100, 19000,
-      21000, 23100, 25300, 27600, 30000, 32500, 35100, 37800, 40600, 43500,
-      46500, 49600, 52800, 56100, 59500, 63000, 66600, 70300, 74100, 78000,
-      82000, 86100, 90300, 94600, 99000, 103500, 108100, 112800, 117600, 122500,
-      127500, 132600, 137800, 143100, 148500, 154000, 159600, 165300, 171100, 177000,
-      183000, 189100, 195300, 201600, 208000, 214500, 221100, 227800, 234600, 241500,
-      248500, 255600, 262800, 270100, 277500, 285000, 292600, 300300, 308100, 316000,
-      324000, 332100, 340300, 348600, 357000, 365500, 374100, 382800, 391600, 400500,
-      409500, 418600, 427800, 437100, 446500, 456000, 465600, 475300, 485100, 495000,
-      // 100+
-      505000, 516000, 528000, 541000, 555000, 570000, 586000, 603000, 621000, 640000,
-      660000, 681000, 703000, 726000, 750000, 775000, 801000, 828000, 856000, 885000,
-      915000, 946000, 978000, 1011000, 1045000, 1080000, 1116000, 1153000, 1191000, 1230000,
-      1270000, 1311000, 1353000, 1396000, 1440000, 1485000, 1531000, 1578000, 1626000, 1675000,
-      1725000, 1776000, 1828000, 1881000, 1935000, 1990000, 2046000, 2103000, 2161000, 2220000,
-      2280000, 2341000, 2403000, 2466000, 2530000, 2595000, 2661000, 2728000, 2796000, 2865000,
-      2935000, 3006000, 3078000, 3151000, 3225000, 3300000, 3376000, 3453000, 3531000, 3610000,
-      3690000, 3771000, 3853000, 3936000, 4020000, 4105000, 4191000, 4278000, 4366000, 4455000,
-    ];
-    if (level < cumulativeTable.length) {
-      return cumulativeTable[level];
-    }
-    return 4455000 + (level - 180) * 100000;
   }
 }

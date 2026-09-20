@@ -235,7 +235,7 @@ void main() {
     );
   });
 
-  test('recommended ratio locks the information panel at 35 percent', () async {
+  test('recommended ratio locks the information panel at 33 percent', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'layout_game_area_ratio': 0.58,
       'layout_auto_zoom': true,
@@ -244,7 +244,7 @@ void main() {
       SharedPreferencesLayoutSettingsStore(),
     );
 
-    expect(controller.effectiveInformationPanelRatio, 0.35);
+    expect(controller.effectiveInformationPanelRatio, 0.33);
     expect(controller.canAdjustInformationPanelRatio, isFalse);
 
     await controller.setAutoZoom(false);

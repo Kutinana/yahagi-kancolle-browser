@@ -261,7 +261,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get infoPanelWidth => '信息面板宽度（竖屏模式无效）';
 
   @override
-  String get autoZoom => '应用推荐显示比例（游戏与菜单比例 65:35）';
+  String get autoZoom => '应用推荐显示比例（游戏与菜单比例 67:33）';
 
   @override
   String get enhancedDamagePulse => '加强受损呼吸提示';
@@ -3132,6 +3132,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noticeDevDefaultName => '新装备';
 
   @override
+  String get noticeEquipImproveSuccess => '装备改修成功';
+
+  @override
+  String get noticeEquipImproveFailed => '装备改修失败';
+
+  @override
   String get noticeModFailed => '近代化改修失败';
 
   @override
@@ -3623,7 +3629,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get infoPanelWidth => '資訊面板寬度（直向模式無效）';
 
   @override
-  String get autoZoom => '套用建議顯示比例（遊戲與選單比例 65:35）';
+  String get autoZoom => '套用建議顯示比例（遊戲與選單比例 67:33）';
 
   @override
   String get enhancedDamagePulse => '加強受損呼吸提示';
@@ -6493,6 +6499,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get noticeDevDefaultName => '新裝備';
+
+  @override
+  String get noticeEquipImproveSuccess => '裝備改修成功';
+
+  @override
+  String get noticeEquipImproveFailed => '裝備改修失敗';
 
   @override
   String get noticeModFailed => '近代化改修失敗';

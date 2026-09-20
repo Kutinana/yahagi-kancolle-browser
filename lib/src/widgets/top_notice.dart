@@ -15,6 +15,7 @@ class TopNoticeData {
     required this.tone,
     this.customIcon,
     this.customColor,
+    this.replacementKey,
   });
 
   final int id;
@@ -22,12 +23,15 @@ class TopNoticeData {
   final TopNoticeTone tone;
   final IconData? customIcon;
   final Color? customColor;
+  final String? replacementKey;
 }
 
 class TopNoticeController extends ChangeNotifier {
-  TopNoticeData? get current => _current;
+  TopNoticeData? get current => _notices.isEmpty ? null : _notices.last;
+  List<TopNoticeData> get notices => List.unmodifiable(_notices);
 
-  TopNoticeData? _current;
+  final List<TopNoticeData> _notices = [];
+  DateTime? _batchStartedAt;
   Timer? _timer;
   int _nextId = 0;
 
@@ -37,34 +41,72 @@ class TopNoticeController extends ChangeNotifier {
     Duration duration = const Duration(seconds: 4),
     IconData? customIcon,
     Color? customColor,
+    Duration appendWithin = Duration.zero,
+    String? replacementKey,
   }) {
     _timer?.cancel();
+    final now = DateTime.now();
+    final append =
+        _notices.isNotEmpty &&
+        (replacementKey != null ||
+            (appendWithin > Duration.zero &&
+                _batchStartedAt != null &&
+                now.difference(_batchStartedAt!) <= appendWithin));
     final id = _nextId++;
-    _current = TopNoticeData(
+    final notice = TopNoticeData(
       id: id,
       message: message,
       tone: tone,
       customIcon: customIcon,
       customColor: customColor,
+      replacementKey: replacementKey,
     );
+    if (append) {
+      if (replacementKey != null) {
+        _notices.removeWhere(
+          (notice) => notice.replacementKey == replacementKey,
+        );
+      }
+      _notices.add(notice);
+    } else {
+      _notices
+        ..clear()
+        ..add(notice);
+      _batchStartedAt = now;
+    }
     notifyListeners();
     _timer = Timer(duration, () {
-      if (_current?.id != id) {
+      if (_notices.isEmpty || _nextId != id + 1) {
         return;
       }
       _timer = null;
-      _current = null;
+      _notices.clear();
+      _batchStartedAt = null;
       notifyListeners();
     });
+  }
+
+  /// Removes a live-updating notice without dismissing unrelated messages.
+  void removeByKey(String replacementKey) {
+    final oldLength = _notices.length;
+    _notices.removeWhere((notice) => notice.replacementKey == replacementKey);
+    if (_notices.length == oldLength) return;
+    if (_notices.isEmpty) {
+      _timer?.cancel();
+      _timer = null;
+      _batchStartedAt = null;
+    }
+    notifyListeners();
   }
 
   void hide() {
     _timer?.cancel();
     _timer = null;
-    if (_current == null) {
+    if (_notices.isEmpty) {
       return;
     }
-    _current = null;
+    _notices.clear();
+    _batchStartedAt = null;
     notifyListeners();
   }
 

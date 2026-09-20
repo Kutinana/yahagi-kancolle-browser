@@ -10,6 +10,7 @@ import 'anchorage_repair_view.dart';
 import 'dashboard_card.dart';
 import '../layout/hd_dashboard_content.dart';
 import '../settings/module_display_settings.dart';
+import '../settings/fleet_display_options.dart';
 import 'nosaki_sparkle_calculator.dart';
 import 'operation_progress.dart';
 import 'ship_portrait.dart';
@@ -64,6 +65,18 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
         final strings =
             AppLocalizations.of(context) ??
             lookupAppLocalizations(const Locale('zh'));
+        final modeSelector = _RepairSummaryModeSelector(
+          mode: _mode,
+          dockLabel: strings.repairDockMode,
+          anchorageLabel: strings.anchorageRepairMode,
+          nosakiLabel: '野埼',
+          onChanged: (mode) => setState(() => _mode = mode),
+        );
+        final content = switch (_mode) {
+          RepairCenterMode.dock => _buildDockGrid(state, strings),
+          RepairCenterMode.anchorage => _buildAnchorageSummary(state, strings),
+          RepairCenterMode.nosaki => _buildNosakiSummary(state, strings),
+        };
         return DashboardCard(
           headerAction: moduleDisplayGear(
             context,
@@ -76,21 +89,10 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
           onToggleCollapse: widget.onToggleCollapse,
           showLogo: widget.showLogo,
           showTitle: widget.showTitle,
-          trailing: _RepairSummaryModeSelector(
-            mode: _mode,
-            dockLabel: strings.repairDockMode,
-            anchorageLabel: strings.anchorageRepairMode,
-            nosakiLabel: '野埼',
-            onChanged: (mode) => setState(() => _mode = mode),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [modeSelector, const SizedBox(height: 4), content],
           ),
-          child: switch (_mode) {
-            RepairCenterMode.dock => _buildDockGrid(state, strings),
-            RepairCenterMode.anchorage => _buildAnchorageSummary(
-              state,
-              strings,
-            ),
-            RepairCenterMode.nosaki => _buildNosakiSummary(state, strings),
-          },
         );
       },
     );
@@ -480,25 +482,30 @@ class _RepairSummaryModeSelector extends StatelessWidget {
         border: Border.all(color: const Color(0xff294052)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          _ModeButton(
-            key: const Key('repair-summary-mode-dock'),
-            label: dockLabel,
-            selected: mode == RepairCenterMode.dock,
-            onTap: () => onChanged(RepairCenterMode.dock),
+          Expanded(
+            child: _ModeButton(
+              key: const Key('repair-summary-mode-dock'),
+              label: dockLabel,
+              selected: mode == RepairCenterMode.dock,
+              onTap: () => onChanged(RepairCenterMode.dock),
+            ),
           ),
-          _ModeButton(
-            key: const Key('repair-summary-mode-anchorage'),
-            label: anchorageLabel,
-            selected: mode == RepairCenterMode.anchorage,
-            onTap: () => onChanged(RepairCenterMode.anchorage),
+          Expanded(
+            child: _ModeButton(
+              key: const Key('repair-summary-mode-anchorage'),
+              label: anchorageLabel,
+              selected: mode == RepairCenterMode.anchorage,
+              onTap: () => onChanged(RepairCenterMode.anchorage),
+            ),
           ),
-          _ModeButton(
-            key: const Key('repair-summary-mode-nosaki'),
-            label: nosakiLabel,
-            selected: mode == RepairCenterMode.nosaki,
-            onTap: () => onChanged(RepairCenterMode.nosaki),
+          Expanded(
+            child: _ModeButton(
+              key: const Key('repair-summary-mode-nosaki'),
+              label: nosakiLabel,
+              selected: mode == RepairCenterMode.nosaki,
+              onTap: () => onChanged(RepairCenterMode.nosaki),
+            ),
           ),
         ],
       ),
@@ -526,16 +533,18 @@ class _ModeButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(5),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected
-                  ? const Color(0xffffcf67)
-                  : const Color(0xff8197a5),
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected
+                    ? const Color(0xffffcf67)
+                    : const Color(0xff8197a5),
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
@@ -610,7 +619,10 @@ class _AnchorageFleetSelector extends StatelessWidget {
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        fleet.name,
+                        repairFleetSelectorLabelModeSetting ==
+                                FleetSelectorLabelMode.number
+                            ? '${fleet.id}'
+                            : fleet.displayName,
                         maxLines: 1,
                         style: TextStyle(
                           color: fleet.id == selectedFleetId
