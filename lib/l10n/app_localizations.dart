@@ -6091,7 +6091,7 @@ abstract class AppLocalizations {
   /// No description provided for @uiLockedToast.
   ///
   /// In zh, this message translates to:
-  /// **'界面已锁定，导航切换与长按自定义已禁用'**
+  /// **'界面已锁定，布局自定义已禁用，功能切换不受影响'**
   String get uiLockedToast;
 
   /// No description provided for @uiUnlockedToast.
@@ -6109,7 +6109,7 @@ abstract class AppLocalizations {
   /// No description provided for @uiLockDesc.
   ///
   /// In zh, this message translates to:
-  /// **'锁定后长按卡片与顶栏资源不会进入自定义编辑，且导航栏切换功能页被锁定，防止误触'**
+  /// **'锁定后禁止长按卡片与顶栏资源进入自定义编辑，并禁止拖拽导航栏排序；功能页仍可正常切换'**
   String get uiLockDesc;
 
   /// No description provided for @filterVisibleItems.

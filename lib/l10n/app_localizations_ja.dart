@@ -3276,7 +3276,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get unlockUi => 'レイアウトのロックを解除';
 
   @override
-  String get uiLockedToast => '画面レイアウトがロックされました（長押し編集を無効化）';
+  String get uiLockedToast => '画面レイアウトがロックされました（編集は無効、機能の切り替えは可能）';
 
   @override
   String get uiUnlockedToast => '画面レイアウトのロックを解除しました';
@@ -3285,7 +3285,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get uiLockTitle => '画面レイアウトをロック';
 
   @override
-  String get uiLockDesc => 'ロック中はカードや上部バーを長押ししても編集モードに入りません';
+  String get uiLockDesc =>
+      'ロック中はカードや上部リソースバーの長押し編集とナビゲーションのドラッグ並べ替えを無効にします。機能ページは通常どおり切り替えられます';
 
   @override
   String get filterVisibleItems => '表示項目の絞り込み';

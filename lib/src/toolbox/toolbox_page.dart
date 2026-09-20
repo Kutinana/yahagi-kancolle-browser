@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 
 import '../game_state/game_state.dart';
+import '../widgets/lazy_indexed_stack.dart';
 import 'composition_image_page.dart';
 import 'exp_calc/exp_calc_page.dart';
 import 'fleet_export_page.dart';
@@ -27,7 +28,7 @@ class ToolboxPage extends StatelessWidget {
   final EnemyCatalogController? enemyCatalogController;
 
   @override
-  Widget build(BuildContext context) => IndexedStack(
+  Widget build(BuildContext context) => LazyIndexedStack(
     index: mode.index,
     children: [
       FleetExportPage(state: state),

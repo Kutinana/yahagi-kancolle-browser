@@ -3243,7 +3243,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unlockUi => '解锁界面';
 
   @override
-  String get uiLockedToast => '界面已锁定，导航切换与长按自定义已禁用';
+  String get uiLockedToast => '界面已锁定，布局自定义已禁用，功能切换不受影响';
 
   @override
   String get uiUnlockedToast => '界面已解锁';
@@ -3252,7 +3252,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get uiLockTitle => '锁定界面布局';
 
   @override
-  String get uiLockDesc => '锁定后长按卡片与顶栏资源不会进入自定义编辑，且导航栏切换功能页被锁定，防止误触';
+  String get uiLockDesc => '锁定后禁止长按卡片与顶栏资源进入自定义编辑，并禁止拖拽导航栏排序；功能页仍可正常切换';
 
   @override
   String get filterVisibleItems => '筛选显示项目';
@@ -6612,7 +6612,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get unlockUi => '解鎖介面';
 
   @override
-  String get uiLockedToast => '介面已鎖定，導覽切換與長按自訂已禁用';
+  String get uiLockedToast => '介面已鎖定，版面自訂已禁用，功能切換不受影響';
 
   @override
   String get uiUnlockedToast => '介面已解鎖';
@@ -6621,7 +6621,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get uiLockTitle => '鎖定介面配置';
 
   @override
-  String get uiLockDesc => '鎖定後長按卡片與頂欄資源不會進入自訂編輯，且導覽列切換功能頁被鎖定，防止誤觸';
+  String get uiLockDesc => '鎖定後禁止長按卡片與頂欄資源進入自訂編輯，並禁止拖曳導覽列排序；功能頁仍可正常切換';
 
   @override
   String get filterVisibleItems => '篩選顯示項目';

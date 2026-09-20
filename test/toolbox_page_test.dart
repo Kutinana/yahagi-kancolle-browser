@@ -6,10 +6,25 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/external_fleet_tool_launcher.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/fleet_export_page.dart';
+import 'package:yahagi_kancolle_browser/src/toolbox/exp_calc/exp_calc_page.dart';
+import 'package:yahagi_kancolle_browser/src/toolbox/composition_image_page.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/toolbox_page.dart';
 import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
+  testWidgets('opening export does not initialize unrelated toolbox pages', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_testApp(const ToolboxPage(state: GameState())));
+    expect(find.byType(ExpCalcPage, skipOffstage: false), findsNothing);
+    expect(find.byType(CompositionImagePage, skipOffstage: false), findsNothing);
+    final exportState = tester.state(find.byType(FleetExportPage));
+    await tester.pumpWidget(_testApp(const ToolboxPage(
+      state: GameState(), mode: ToolboxMode.other,
+    )));
+    await tester.pumpWidget(_testApp(const ToolboxPage(state: GameState())));
+    expect(tester.state(find.byType(FleetExportPage)), same(exportState));
+  });
   testWidgets('a pending ship refresh disables export until its stats arrive', (
     tester,
   ) async {

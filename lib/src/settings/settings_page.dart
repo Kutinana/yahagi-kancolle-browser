@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/lazy_indexed_stack.dart';
 
 import '../audio/game_audio_controller.dart';
 import '../browser/gadget_bypass_controller.dart';
@@ -121,7 +122,7 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IndexedStack(
+    return LazyIndexedStack(
       index: selectedIndex,
       children: [
         ScreenSettingsPage(

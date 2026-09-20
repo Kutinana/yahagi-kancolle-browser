@@ -1741,9 +1741,20 @@ void main() {
       final emptyController = GameStateController();
       addTearDown(readyController.dispose);
       addTearDown(emptyController.dispose);
+      // This test exercises active docks; the fixture's July 2026 deadlines
+      // must not make it silently turn into a completion test later on.
+      final activePort = (jsonDecode(portEvent.responseBody) as Map)['api_data']
+          as Map<String, dynamic>;
+      for (final dock in activePort['api_ndock'] as List) {
+        if (dock['api_state'] == 1) {
+          dock['api_complete_time'] = DateTime.now()
+              .add(const Duration(hours: 1))
+              .millisecondsSinceEpoch;
+        }
+      }
       readyController
         ..accept(start2Event)
-        ..accept(portEvent);
+        ..accept(kcsapiEvent('/kcsapi/api_port/port', activePort));
       await readyController.idle;
 
       await tester.pumpWidget(

@@ -2736,10 +2736,6 @@ class WorkspaceNavigation extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final destination = ordered[index];
                     void handleTap() {
-                      if (controller.uiLocked) {
-                        TopNotice.show(context, message: l10n.uiLockedToast);
-                        return;
-                      }
                       onSelected(destination.pageIndex);
                     }
 

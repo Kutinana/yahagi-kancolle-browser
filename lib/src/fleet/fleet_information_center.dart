@@ -111,6 +111,8 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
   Widget build(BuildContext context) {
     return SecondTickBuilder(
       now: widget.clock,
+      // Other pages own their countdowns; only the fleet view consumes `now`.
+      enabled: widget.page == FleetInformationPage.fleet,
       builder: (context, now, _) => ColoredBox(
         color: const Color(0xff081521),
         child: AnimatedBuilder(

@@ -62,40 +62,39 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
 
   @override
   Widget build(BuildContext context) {
-    return SecondTickBuilder(
-      now: widget.clock,
-      builder: (context, now, _) => AnimatedBuilder(
-        animation: Listenable.merge([
-          widget.controller,
-          if (widget.moraleRecoveryTimerController != null)
-            widget.moraleRecoveryTimerController!,
-        ]),
-        builder: (context, _) {
-          final state = widget.controller.state;
-          final summaryVisible = HdModuleColumns.of(context) == 2
-              ? widget.twoColumnVisible ??
-                    {...widget.visible, 'firepower', 'anti-sub'}
-              : widget.visible;
-          final fleetIndex = state.fleets.indexWhere(
-            (fleet) => fleet.id == _selectedFleetId,
-          );
-          final selectedFleet = fleetIndex < 0
-              ? null
-              : state.fleets[fleetIndex];
-          final ships = state.shipsForFleet(_selectedFleetId);
-          final metrics = selectedFleet == null
-              ? null
-              : FleetMetrics.fromState(state, selectedFleet);
-          final specialAttack = selectedFleet == null
-              ? null
-              : detectFleetSpecialAttack(state, selectedFleet);
-          final twoColumns = HdModuleColumns.of(context) > 1;
-          final fleetSwitcher = _FleetSegmentedSwitcher(
-            fleets: state.fleets,
-            selectedFleetId: _selectedFleetId,
-            onSelected: (id) => setState(() => _selectedFleetId = id),
-          );
-          return DashboardCard(
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        widget.controller,
+        if (widget.moraleRecoveryTimerController != null)
+          widget.moraleRecoveryTimerController!,
+      ]),
+      builder: (context, _) {
+        final state = widget.controller.state;
+        final summaryVisible = HdModuleColumns.of(context) == 2
+            ? widget.twoColumnVisible ??
+                  {...widget.visible, 'firepower', 'anti-sub'}
+            : widget.visible;
+        final fleetIndex = state.fleets.indexWhere(
+          (fleet) => fleet.id == _selectedFleetId,
+        );
+        final selectedFleet = fleetIndex < 0 ? null : state.fleets[fleetIndex];
+        final ships = state.shipsForFleet(_selectedFleetId);
+        final metrics = selectedFleet == null
+            ? null
+            : FleetMetrics.fromState(state, selectedFleet);
+        final specialAttack = selectedFleet == null
+            ? null
+            : detectFleetSpecialAttack(state, selectedFleet);
+        final twoColumns = HdModuleColumns.of(context) > 1;
+        final fleetSwitcher = _FleetSegmentedSwitcher(
+          fleets: state.fleets,
+          selectedFleetId: _selectedFleetId,
+          onSelected: (id) => setState(() => _selectedFleetId = id),
+        );
+        // Fleet metrics depend on captured state, not the ticking clock.
+        return SecondTickBuilder(
+          now: widget.clock,
+          builder: (context, now, _) => DashboardCard(
             title: AppLocalizations.of(context)?.fleetBrief ?? '编队简报',
             icon: const Icon(Icons.directions_boat_filled_outlined),
             collapsed: widget.collapsed,
@@ -176,9 +175,9 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
                       ],
                     ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
