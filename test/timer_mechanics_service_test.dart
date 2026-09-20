@@ -166,13 +166,13 @@ void main() {
       expect(service.nozakiTimer.anchorAt, portTime);
     });
 
-    // N08: 疲劳失败 30 分钟不累计
-    test('N08: Fatigue-blocked state past 30 minutes still yields single boost (+3) on next success', () {
+    // N08: 满闪回港也重置，不属于疲劳不足例外
+    test('N08: Already sparkling companions do not prevent port timer reset', () {
       final service = TimerMechanicsService();
       final startTime = DateTime.utc(2026, 8, 20, 10, 0);
       service.nozakiTimer.reset(startTime);
 
-      // At 15 min: all ships already cond 54 (blocked by fatigue)
+      // At 15 min: all ships already cond 54 (completed, not fatigued)
       final fullCondState = buildNosakiTestState(
         flagshipMasterId: 1002,
         companionConds: const [54, 54, 54, 54, 54],
@@ -183,7 +183,7 @@ void main() {
         nextState: fullCondState,
         event: event('/kcsapi/api_port/port', portAt15),
       );
-      expect(service.nozakiTimer.anchorAt, startTime);
+      expect(service.nozakiTimer.anchorAt, portAt15);
 
       // At 30 min: ships now have cond 40
       final readyState = buildNosakiTestState(

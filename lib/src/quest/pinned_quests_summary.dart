@@ -132,7 +132,11 @@ class PinnedQuestsSummary extends StatelessWidget {
                                   Expanded(
                                     child: Text(
                                       q.title,
-                                      style: const TextStyle(fontSize: 12),
+                                      style: const TextStyle(
+                                        color: Color(0xffecf3f5),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),

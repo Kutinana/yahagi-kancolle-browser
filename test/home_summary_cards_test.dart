@@ -893,6 +893,8 @@ void main() {
     expect(effectiveStyle.fontFamilyFallback, const <String>[
       'HarmonyOS_Sans_TC',
     ]);
+    expect(effectiveStyle.color, const Color(0xffecf3f5));
+    expect(effectiveStyle.fontWeight, FontWeight.w700);
     await tester.tap(find.text('测试任务'));
     expect(openedQuestId, 101);
   });

@@ -31,7 +31,8 @@ void main() {
     );
 
     expect(find.text('海域资料'), findsOneWidget);
-    expect(find.text('版本：2026.09.20'), findsOneWidget);
+    expect(find.text('数据版本：2026-09-20'), findsOneWidget);
+    expect(find.text('上次检查：尚未检查'), findsOneWidget);
     expect(
       find.byKey(const Key('sortie-map-catalog-check-button')),
       findsOneWidget,

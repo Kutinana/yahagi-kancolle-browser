@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'data_update_metadata.dart';
+
 import '../../l10n/app_localizations.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../quest/quest_catalog_update_service.dart';
@@ -12,7 +14,6 @@ final class QuestCatalogUpdateSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    const metadataStyle = TextStyle(color: Color(0xff8197a5));
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) => Padding(
@@ -33,27 +34,9 @@ final class QuestCatalogUpdateSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 2,
-                    children: [
-                      Text(
-                        l10n.questCatalogDataVersion(
-                          controller.version.shortLabel,
-                        ),
-                        style: metadataStyle,
-                      ),
-                      Text(
-                        controller.lastCheckedAt == null
-                            ? l10n.questCatalogNeverChecked
-                            : l10n.questCatalogLastChecked(
-                                _formatTime(
-                                  controller.lastCheckedAt!.toLocal(),
-                                ),
-                              ),
-                        style: metadataStyle,
-                      ),
-                    ],
+                  DataUpdateMetadata(
+                    version: controller.version.shortLabel,
+                    lastCheckedAt: controller.lastCheckedAt,
                   ),
                 ],
               ),
@@ -107,12 +90,4 @@ final class QuestCatalogUpdateSection extends StatelessWidget {
       ),
     );
   }
-
-  String _formatTime(DateTime value) =>
-      '${value.year.toString().padLeft(4, '0')}-'
-      '${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')} '
-      '${value.hour.toString().padLeft(2, '0')}:'
-      '${value.minute.toString().padLeft(2, '0')}:'
-      '${value.second.toString().padLeft(2, '0')}';
 }

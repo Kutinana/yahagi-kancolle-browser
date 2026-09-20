@@ -43,12 +43,16 @@ class LogbookPage extends StatefulWidget {
     this.database,
     this.selectedTabIndex = 0,
     this.onTabChanged,
+    this.occupiedInsets = EdgeInsets.zero,
   });
 
   final BattleController battleController;
   final LogbookDatabase? database;
   final int selectedTabIndex;
   final ValueChanged<int>? onTabChanged;
+
+  /// Space already occupied by surrounding workspace chrome at screen edges.
+  final EdgeInsets occupiedInsets;
 
   @override
   State<LogbookPage> createState() => _LogbookPageState();
@@ -103,9 +107,27 @@ class _LogbookPageState extends State<LogbookPage>
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: LogbookDatabase.accountSession,
-      builder: (context, _) => _buildAccountLogbook(context),
+    final media = MediaQuery.of(context);
+    EdgeInsets remaining(EdgeInsets insets) => EdgeInsets.fromLTRB(
+      (insets.left - widget.occupiedInsets.left).clamp(0.0, double.infinity),
+      (insets.top - widget.occupiedInsets.top).clamp(0.0, double.infinity),
+      (insets.right - widget.occupiedInsets.right).clamp(0.0, double.infinity),
+      (insets.bottom - widget.occupiedInsets.bottom).clamp(
+        0.0,
+        double.infinity,
+      ),
+    );
+    // Insets describe screen edges, not the inner edge of the navigation dock.
+    // Keep only the part extending beyond the surrounding workspace chrome.
+    return MediaQuery(
+      data: media.copyWith(
+        padding: remaining(media.padding),
+        viewPadding: remaining(media.viewPadding),
+      ),
+      child: ListenableBuilder(
+        listenable: LogbookDatabase.accountSession,
+        builder: (context, _) => _buildAccountLogbook(context),
+      ),
     );
   }
 

@@ -1514,6 +1514,14 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         widget.layoutSettingsController.workspaceMenuHorizontal;
     final menuTop =
         widget.layoutSettingsController.workspaceMenuPosition == 'top';
+    final logbookMenuExtent = workspaceNavigationExtent(
+      widget.layoutSettingsController.uiDisplaySize,
+    );
+    final logbookOccupiedInsets = menuHorizontal
+        ? EdgeInsets.only(bottom: menuTop ? 0 : logbookMenuExtent)
+        : widget.layoutSettingsController.workspaceMenuOnRight
+        ? EdgeInsets.only(right: logbookMenuExtent)
+        : EdgeInsets.only(left: logbookMenuExtent);
     final hdPortrait =
         widget.layoutSettingsController.hdSettings.enabled &&
         (screenDisplayMode == DisplayMode.portrait ||
@@ -2516,6 +2524,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                 if (_workspaceIndex == 6)
                                   LogbookPage(
                                     battleController: widget.battleController,
+                                    occupiedInsets: logbookOccupiedInsets,
                                     selectedTabIndex: _logbookTabIndex,
                                     onTabChanged: (value) {
                                       setState(() => _logbookTabIndex = value);

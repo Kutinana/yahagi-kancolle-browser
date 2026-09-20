@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'data_update_metadata.dart';
+
 import '../toolbox/sortie_map_query/sortie_map_catalog_controller.dart';
 import '../toolbox/sortie_map_query/sortie_map_catalog_update_service.dart';
 
@@ -11,7 +13,6 @@ final class SortieMapCatalogUpdateSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final japanese = Localizations.localeOf(context).languageCode == 'ja';
-    const metadataStyle = TextStyle(color: Color(0xff8197a5));
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) => Padding(
@@ -31,21 +32,9 @@ final class SortieMapCatalogUpdateSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 2,
-                    children: <Widget>[
-                      Text(
-                        '${japanese ? 'バージョン' : '版本'}：${controller.data.dataVersion}',
-                        style: metadataStyle,
-                      ),
-                      Text(
-                        controller.usesCachedData
-                            ? (japanese ? '更新済みデータを使用中' : '正在使用已更新资料')
-                            : (japanese ? '内蔵データを使用中' : '正在使用内置资料'),
-                        style: metadataStyle,
-                      ),
-                    ],
+                  DataUpdateMetadata(
+                    version: controller.data.dataVersion,
+                    lastCheckedAt: controller.lastCheckedAt,
                   ),
                 ],
               ),

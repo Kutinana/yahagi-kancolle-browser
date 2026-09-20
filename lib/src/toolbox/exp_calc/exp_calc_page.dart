@@ -5,7 +5,16 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../game_state/game_state.dart';
 import '../../widgets/top_notice.dart';
+import '../../theme/app_fonts.dart';
+import '../../quest/quest_completion_badge.dart';
+import '../sortie_map_query/sortie_map_catalog.dart';
+import '../sortie_map_query/sortie_map_catalog_controller.dart';
+import '../sortie_map_query/sortie_map_models.dart';
+import 'exp_calc_catalog.dart';
+import 'exp_calc_strings.dart';
 import 'exp_calc_models.dart';
+import 'exp_calc_panel_row.dart';
+import 'exp_calc_ship_picker.dart';
 import 'exp_tracker_store.dart';
 import 'ship_exp_table.dart';
 
@@ -15,18 +24,13 @@ abstract final class _ExpCalcPalette {
   static const surfaceRaised = Color(0xff16333f);
   static const surfaceInset = Color(0xff0c202b);
   static const border = Color(0xff284553);
-  static const borderStrong = Color(0xff3a5967);
   static const gold = Color(0xffd7b56d);
   static const goldSoft = Color(0xffffdc88);
   static const goldDark = Color(0xffa98545);
   static const goldSurface = Color(0xff332d22);
-  static const data = Color(0xff76c6df);
   static const text = Color(0xffecf3f5);
   static const textMuted = Color(0xff91aab8);
   static const textFaint = Color(0xff6f8a98);
-  static const success = Color(0xff63c59b);
-  static const danger = Color(0xffe66e68);
-  static const target = Color(0xffe5a95f);
 }
 
 /// Single planned battle node in a multi-node sortie route.
@@ -35,11 +39,10 @@ class _RouteNodeState {
     required this.id,
     required this.mapId,
     required this.nodeId,
-    required int baseExp,
     this.rank = BattleRank.s,
     this.isFlagship = true,
     this.isMvp = false,
-  }) : baseExpController = TextEditingController(text: '$baseExp');
+  }) : baseExpController = TextEditingController();
 
   final String id;
   String mapId;
@@ -49,17 +52,35 @@ class _RouteNodeState {
   bool isFlagship;
   bool isMvp;
 
-  int get baseExp {
-    final val = int.tryParse(baseExpController.text.trim());
-    return (val != null && val > 0) ? val : 1;
+  bool manual = false;
+  bool expanded = false;
+  num? automaticExp;
+
+  num? get baseExp {
+    if (!manual) return automaticExp;
+    final value = num.tryParse(baseExpController.text.trim());
+    return value != null && value.isFinite && value >= 0 && value <= 1000000000
+        ? value
+        : null;
   }
 
-  int computeExp() => computeMapExp(
-    baseExp: baseExp,
-    rank: rank,
-    isFlagship: isFlagship,
-    isMvp: isMvp,
-  );
+  void usePreset(MapNodePreset point) {
+    nodeId = point.id;
+    manual = false;
+    automaticExp = point.baseExp;
+    baseExpController.text = point.baseExp == null
+        ? ''
+        : formatExperience(point.baseExp!);
+  }
+
+  int computeExp() => baseExp == null
+      ? 0
+      : computeMapExp(
+          baseExp: baseExp!,
+          rank: rank,
+          isFlagship: isFlagship,
+          isMvp: isMvp,
+        );
 
   void dispose() {
     baseExpController.dispose();
@@ -67,10 +88,18 @@ class _RouteNodeState {
 }
 
 class ExpCalcPage extends StatefulWidget {
-  const ExpCalcPage({super.key, required this.state, this.store});
+  const ExpCalcPage({
+    super.key,
+    required this.state,
+    this.store,
+    this.catalogController,
+    this.catalogLoader,
+  });
 
   final GameState state;
   final ExpTrackerStore? store;
+  final SortieMapCatalogController? catalogController;
+  final Future<SortieMapCatalogData> Function()? catalogLoader;
 
   @override
   State<ExpCalcPage> createState() => _ExpCalcPageState();
@@ -78,6 +107,80 @@ class ExpCalcPage extends StatefulWidget {
 
 class _ExpCalcPageState extends State<ExpCalcPage> {
   late final ExpTrackerStore _store;
+  BattleRank _routeRank = BattleRank.s;
+  bool _routeFlagship = true;
+  bool _routeMvp = true;
+  List<SortieMapPreset> _catalogMaps = [];
+  SortieMapCatalogData? _catalogData;
+  bool _catalogLoading = true;
+  bool _catalogFailed = false;
+  int _catalogGeneration = 0;
+  ExpCalcStrings get _strings => ExpCalcStrings(context);
+
+  List<SortieMapPreset> get _maps => [
+    ..._catalogMaps,
+    SortieMapPreset(
+      id: 'pvp',
+      name: _strings.exercise,
+      nodes: const [MapNodePreset(id: 'manual', name: '—', baseExp: null)],
+    ),
+    SortieMapPreset(
+      id: 'custom',
+      name: _strings.custom,
+      nodes: const [MapNodePreset(id: 'manual', name: '—', baseExp: null)],
+    ),
+  ];
+
+  void _onCatalogChanged() {
+    final data = widget.catalogController?.data;
+    if (data != null && !identical(data, _catalogData)) _loadCatalog();
+  }
+
+  Future<void> _loadCatalog() async {
+    final generation = ++_catalogGeneration;
+    try {
+      final data =
+          widget.catalogController?.data ??
+          await (widget.catalogLoader ?? SortieMapCatalog.loadAsset)();
+      if (!mounted || generation != _catalogGeneration) return;
+      setState(() {
+        _catalogData = data;
+        _catalogMaps = experienceMaps(data);
+        _catalogLoading = false;
+        _catalogFailed = false;
+        for (final node in _routeNodes) {
+          final maps = _catalogMaps.where((map) => map.id == node.mapId);
+          final points = maps.isEmpty
+              ? <MapNodePreset>[]
+              : maps.first.nodes
+                    .where((point) => point.id == node.nodeId)
+                    .toList();
+          if (points.isNotEmpty) {
+            if (!node.manual) node.usePreset(points.first);
+          } else if (node.mapId != 'custom' && node.mapId != 'pvp') {
+            // A removed catalog point must not silently become a different battle.
+            node.mapId = 'custom';
+            node.nodeId = 'manual';
+            if (!node.manual) {
+              node.usePreset(
+                const MapNodePreset(id: 'manual', name: '', baseExp: null),
+              );
+            }
+          }
+        }
+      });
+    } catch (_) {
+      if (!mounted || generation != _catalogGeneration) return;
+      setState(() {
+        _catalogLoading = false;
+        _catalogFailed = true;
+      });
+    }
+  }
+
+  bool get _hasValidRoute => _routeNodes.every((node) => node.baseExp != null);
+  bool get _canEstimate =>
+      _hasValidRoute && (_totalSortieExp > 0 || _remainExp == 0);
 
   // Selected ship state
   int? _selectedShipInstanceId;
@@ -88,7 +191,6 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
   int _targetExp = 100;
 
   // User preference for card vs table view in tracker list
-  bool? _preferCardView;
 
   // Controllers for level inputs
   final TextEditingController _curLevelController = TextEditingController(
@@ -115,13 +217,14 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
         id: 'node_init',
         mapId: '5-2',
         nodeId: 'C',
-        baseExp: 150,
         rank: BattleRank.s,
         isFlagship: true,
         isMvp: true,
       ),
     );
 
+    widget.catalogController?.addListener(_onCatalogChanged);
+    _loadCatalog();
     _initShipSelection();
     _loadTrackItems();
   }
@@ -129,6 +232,12 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
   @override
   void didUpdateWidget(covariant ExpCalcPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.catalogController != widget.catalogController ||
+        oldWidget.catalogLoader != widget.catalogLoader) {
+      oldWidget.catalogController?.removeListener(_onCatalogChanged);
+      widget.catalogController?.addListener(_onCatalogChanged);
+      _loadCatalog();
+    }
     if (oldWidget.state.memberId != widget.state.memberId) {
       _loadTrackItems();
     }
@@ -154,7 +263,16 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
   }
 
   @override
+  void reassemble() {
+    super.reassemble();
+    // Refresh derived catalog values when calculation rules change in debug.
+    _loadCatalog();
+  }
+
+  @override
   void dispose() {
+    widget.catalogController?.removeListener(_onCatalogChanged);
+    _catalogGeneration++;
     _curLevelController.dispose();
     _targetLevelController.dispose();
     for (final node in _routeNodes) {
@@ -267,21 +385,31 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
     }
   }
 
-  void _addRouteNode() {
-    final defaultMap = kPresetMapDatabase.first;
-    final defaultNode = defaultMap.nodes.first;
+  void _addRouteNode(MapNodePreset point) {
+    final node = _RouteNodeState(
+      id: 'node_${DateTime.now().microsecondsSinceEpoch}',
+      mapId: _routeNodes.first.mapId,
+      nodeId: point.id,
+      rank: _routeRank,
+      isFlagship: _routeFlagship,
+      isMvp: _routeMvp,
+    )..usePreset(point);
+    setState(() => _routeNodes.add(node));
+  }
+
+  void _changeRouteMap(SortieMapPreset map) {
     setState(() {
-      _routeNodes.add(
-        _RouteNodeState(
-          id: 'node_${DateTime.now().microsecondsSinceEpoch}',
-          mapId: defaultMap.id,
-          nodeId: defaultNode.id,
-          baseExp: defaultNode.baseExp,
-          rank: BattleRank.s,
-          isFlagship: true,
-          isMvp: false,
-        ),
-      );
+      for (final node in _routeNodes.skip(1)) {
+        node.dispose();
+      }
+      _routeNodes.removeRange(1, _routeNodes.length);
+      final first = _routeNodes.first;
+      first.mapId = map.id;
+      first.usePreset(map.nodes.first);
+      first.rank = _routeRank;
+      first.isFlagship = _routeFlagship;
+      first.isMvp = _routeMvp;
+      first.expanded = false;
     });
   }
 
@@ -301,10 +429,12 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
   int get _sortieCount =>
       computeBattleCount(remainExp: _remainExp, mapExp: _totalSortieExp);
 
-  String get _routeSummary =>
-      _routeNodes.map((n) => '${n.mapId}(${n.nodeId})').join(' + ');
+  String get _routeSummary => compactRouteSummary(
+    _routeNodes.map((n) => '${n.mapId}(${n.nodeId})').join(' + '),
+  );
 
   Future<void> _addTrackItem() async {
+    if (!_canEstimate) return;
     final l10n = AppLocalizations.of(context)!;
     final shipName = _selectedShipInstanceId != null
         ? _selectedShipName
@@ -351,87 +481,68 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
     TopNotice.show(context, message: l10n.expCalcTrackDeleted);
   }
 
+  String get _fontFamily =>
+      AppFonts.forLocale(Localizations.localeOf(context).toString());
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final sortedShips = _getSortedOwnedShips();
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        textTheme: theme.textTheme.apply(fontFamily: _fontFamily),
+        primaryTextTheme: theme.primaryTextTheme.apply(fontFamily: _fontFamily),
+      ),
+      child: DefaultTextStyle.merge(
+        style: TextStyle(fontFamily: _fontFamily),
+        child: _buildPage(context),
+      ),
+    );
+  }
 
+  Widget _buildPage(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: _ExpCalcPalette.background,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isCompact = constraints.maxWidth < 640;
-          final isNarrow = constraints.maxWidth < 420;
-          final isWide = constraints.maxWidth >= 760;
-          final setupIsCompact = isWide
-              ? constraints.maxWidth < 1120
-              : isCompact;
-
-          final setupColumn = Column(
+          final wide = constraints.maxWidth >= 760;
+          final setup = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildStep1Card(
-                l10n,
-                sortedShips,
-                isCompact: setupIsCompact,
-                isNarrow: isNarrow,
-              ),
-              SizedBox(height: isNarrow ? 10 : 16),
-              _buildStep2Card(
-                l10n,
-                isCompact: setupIsCompact,
-                isNarrow: isNarrow,
-              ),
+              _targetPanel(l10n),
+              const SizedBox(height: 12),
+              _routePanel(l10n),
             ],
           );
-
-          final resultCard = _buildResultHudCard(
-            l10n,
-            isCompact: isWide || isCompact,
-            isNarrow: isNarrow,
-          );
-
-          final workspace = isWide
-              ? Row(
-                  key: const Key('exp-calc-wide-workspace'),
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 3, child: setupColumn),
-                    const SizedBox(width: 16),
-                    Expanded(flex: 2, child: resultCard),
-                  ],
-                )
-              : Column(
-                  key: const Key('exp-calc-compact-workspace'),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    setupColumn,
-                    SizedBox(height: isNarrow ? 10 : 16),
-                    resultCard,
-                  ],
-                );
-
           return SingleChildScrollView(
-            padding: EdgeInsets.all(isNarrow ? 10 : 16),
+            padding: const EdgeInsets.all(12),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1120),
+                constraints: const BoxConstraints(maxWidth: 1400),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildHeaderBanner(
-                      l10n,
-                      isCompact: isCompact,
-                      isNarrow: isNarrow,
-                    ),
-                    SizedBox(height: isNarrow ? 10 : 16),
-                    workspace,
-                    SizedBox(height: isNarrow ? 10 : 16),
-                    _buildTrackingTableCard(
-                      l10n,
-                      isCompact: !isWide,
-                      isNarrow: isNarrow,
-                    ),
+                    if (wide)
+                      ExpCalcPanelRow(
+                        key: const Key('exp-calc-wide-workspace'),
+                        children: [
+                          _targetPanel(l10n),
+                          _routePanel(l10n),
+                          _resultPanel(l10n),
+                        ],
+                      )
+                    else
+                      Column(
+                        key: const Key('exp-calc-compact-workspace'),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          setup,
+                          const SizedBox(height: 12),
+                          _resultPanel(l10n),
+                        ],
+                      ),
+                    const SizedBox(height: 12),
+                    _buildTrackingTable(l10n),
                   ],
                 ),
               ),
@@ -442,1900 +553,943 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
     );
   }
 
-  Widget _buildHeaderBanner(
-    AppLocalizations l10n, {
-    required bool isCompact,
-    required bool isNarrow,
-  }) {
-    return Container(
-      padding: const EdgeInsets.only(bottom: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: _ExpCalcPalette.border)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: isNarrow ? 32 : 38,
-            height: isNarrow ? 32 : 38,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_ExpCalcPalette.gold, _ExpCalcPalette.goldDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '矢',
-              style: TextStyle(
-                color: _ExpCalcPalette.surfaceInset,
-                fontWeight: FontWeight.w900,
-                fontSize: isNarrow ? 16 : 18,
-              ),
-            ),
+  Widget _panel(String title, List<Widget> children) => Container(
+    key: ValueKey('exp-calc-panel-$title'),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: _ExpCalcPalette.surface,
+      border: Border.all(color: _ExpCalcPalette.border),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: _ExpCalcPalette.text,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 6,
-                  runSpacing: 2,
-                  children: [
-                    Text(
-                      l10n.expCalculator,
-                      style: TextStyle(
-                        color: _ExpCalcPalette.text,
-                        fontSize: isNarrow ? 16 : 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _ExpCalcPalette.goldSurface,
-                        border: Border.all(color: _ExpCalcPalette.goldDark),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        'Yahagi Route Planner',
-                        style: TextStyle(
-                          color: _ExpCalcPalette.goldSoft,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isNarrow
-                      ? '海域预设 · 多点加算 · 动态追踪'
-                      : '海域点位字库预设 · 多战斗点路线加算 · 动态追踪表格',
-                  style: TextStyle(
-                    color: _ExpCalcPalette.textMuted,
-                    fontSize: isNarrow ? 10 : 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          if (!isNarrow)
-            const Text(
-              'Lv.1 ~ Lv.188',
-              style: TextStyle(
-                color: _ExpCalcPalette.textFaint,
-                fontSize: 12,
-                fontFamily: 'monospace',
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(height: 10),
+        ...children,
+      ],
+    ),
+  );
 
-  Widget _buildStep1Card(
-    AppLocalizations l10n,
-    List<OwnedShip> sortedShips, {
-    required bool isCompact,
-    required bool isNarrow,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(isNarrow ? 12 : 16),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _ExpCalcPalette.border),
+  Widget _label(String text, {Color color = _ExpCalcPalette.textMuted}) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(text, style: TextStyle(color: color, fontSize: 11)),
+      );
+
+  InputDecoration _inputDecoration({String? prefix, String? suffix}) =>
+      InputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: _ExpCalcPalette.surfaceInset,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 12,
+        ),
+        prefixText: prefix,
+        suffixText: suffix,
+        prefixStyle: const TextStyle(color: _ExpCalcPalette.text, fontSize: 12),
+        suffixStyle: const TextStyle(
+          color: _ExpCalcPalette.textMuted,
+          fontSize: 10,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: _ExpCalcPalette.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: _ExpCalcPalette.gold),
+        ),
+      );
+
+  Widget _dropdown<T>({
+    required Key key,
+    required T value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+    bool compact = false,
+  }) => Container(
+    height: 44,
+    padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 10),
+    decoration: BoxDecoration(
+      color: _ExpCalcPalette.surfaceInset,
+      border: Border.all(color: _ExpCalcPalette.border),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<T>(
+        key: key,
+        value: value,
+        items: items,
+        onChanged: onChanged,
+        isExpanded: true,
+        isDense: true,
+        menuMaxHeight: 380,
+        dropdownColor: _ExpCalcPalette.surface,
+        icon: Icon(
+          Icons.expand_more,
+          color: _ExpCalcPalette.textMuted,
+          size: compact ? 14 : 18,
+        ),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontFamily: _fontFamily,
+          color: _ExpCalcPalette.text,
+          fontSize: 12,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    ),
+  );
+
+  Widget _targetPanel(AppLocalizations l10n) => _panel(_strings.target, [
+    ExpCalcShipPicker(
+      state: widget.state,
+      ships: _getSortedOwnedShips(),
+      selectedId: _selectedShipInstanceId,
+      onSelected: _selectShip,
+    ),
+    const SizedBox(height: 10),
+    LayoutBuilder(
+      builder: (context, constraints) => Wrap(
+        spacing: 12,
+        runSpacing: 8,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: _ExpCalcPalette.gold,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  l10n.expCalcStep1Title,
+          SizedBox(
+            width: constraints.maxWidth < 280
+                ? constraints.maxWidth
+                : (constraints.maxWidth - 12) / 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _label(l10n.expCalcCurrentLevel, color: _ExpCalcPalette.text),
+                TextField(
+                  key: const Key('exp-calc-current-level'),
+                  controller: _curLevelController,
+                  readOnly: _selectedShipInstanceId != null,
+                  keyboardType: TextInputType.number,
                   style: const TextStyle(
-                    color: _ExpCalcPalette.gold,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                    color: _ExpCalcPalette.text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  overflow: TextOverflow.ellipsis,
+                  decoration: _inputDecoration(prefix: 'Lv. '),
+                  onChanged: _onCurLevelInput,
                 ),
-              ),
-              if (!isNarrow) ...[
-                const SizedBox(width: 8),
-                const Text(
-                  'STEP 01',
-                  style: TextStyle(
-                    color: _ExpCalcPalette.textFaint,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
+                const SizedBox(height: 6),
+                Text(
+                  '$_currentExp EXP',
+                  style: const TextStyle(
+                    color: _ExpCalcPalette.goldSoft,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
                   ),
                 ),
               ],
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Ship picker Dropdown
-          Container(
-            height: 42,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: _ExpCalcPalette.surfaceRaised,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _ExpCalcPalette.borderStrong),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int?>(
-                key: const Key('exp-calc-ship-selector'),
-                value: _selectedShipInstanceId,
-                dropdownColor: _ExpCalcPalette.surfaceRaised,
-                isExpanded: true,
-                icon: const Icon(
-                  Icons.arrow_drop_down,
-                  color: _ExpCalcPalette.textMuted,
-                ),
-                items: [
-                  DropdownMenuItem<int?>(
-                    value: null,
-                    child: Text(
-                      l10n.expCalcFreeMode,
-                      style: const TextStyle(
-                        color: _ExpCalcPalette.textMuted,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                  for (final s in sortedShips)
-                    DropdownMenuItem<int?>(
-                      value: s.id,
-                      child: Text(
-                        '[Lv.${s.level}] ${widget.state.masterShips[s.masterId]?.name ?? 'Ship #${s.id}'}',
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.text,
-                          fontSize: 13,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (newId) {
-                  if (newId == null) {
-                    _selectShip(null);
-                  } else {
-                    _selectShip(widget.state.ships[newId]);
-                  }
-                },
-              ),
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Level transition card with stepper
-          Container(
-            padding: EdgeInsets.all(isNarrow ? 10 : 14),
-            decoration: BoxDecoration(
-              color: _ExpCalcPalette.surfaceInset,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _ExpCalcPalette.border),
-            ),
+          SizedBox(
+            width: constraints.maxWidth < 280
+                ? constraints.maxWidth
+                : (constraints.maxWidth - 12) / 2,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (!isCompact)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Current Level
-                      Expanded(child: _buildCurrentLevelBox(l10n)),
-
-                      // Arrow
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: _ExpCalcPalette.goldSurface,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: _ExpCalcPalette.goldDark),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 14,
-                            color: _ExpCalcPalette.data,
-                          ),
-                        ),
-                      ),
-
-                      // Target Level with Stepper
-                      Expanded(child: _buildTargetLevelBox(l10n)),
-                    ],
-                  )
-                else
-                  Column(
-                    children: [
-                      _buildCurrentLevelBox(l10n),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            color: _ExpCalcPalette.goldSurface,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: _ExpCalcPalette.goldDark),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.arrow_downward_rounded,
-                            size: 14,
-                            color: _ExpCalcPalette.data,
-                          ),
-                        ),
-                      ),
-                      _buildTargetLevelBox(l10n),
-                    ],
-                  ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.only(top: 8),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: _ExpCalcPalette.border),
-                    ),
-                  ),
-                  child: Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${l10n.expCalcTargetGapLabel}: ',
-                            style: const TextStyle(
-                              color: _ExpCalcPalette.textMuted,
-                              fontSize: 11,
-                            ),
-                          ),
-                          Text(
-                            '$_remainExp EXP',
-                            style: const TextStyle(
-                              color: _ExpCalcPalette.data,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'monospace',
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        l10n.expCalcTargetAlignHint,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textFaint,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCurrentLevelBox(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surface.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.expCalcCurrentLevel,
-            style: const TextStyle(
-              color: _ExpCalcPalette.textMuted,
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 4),
-          if (_selectedShipInstanceId == null)
-            TextField(
-              key: const Key('exp-calc-current-level'),
-              controller: _curLevelController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(
-                color: _ExpCalcPalette.text,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-              decoration: const InputDecoration(
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-                border: InputBorder.none,
-                prefixText: 'Lv. ',
-                prefixStyle: TextStyle(
-                  color: _ExpCalcPalette.data,
-                  fontSize: 14,
-                ),
-              ),
-              onChanged: _onCurLevelInput,
-            )
-          else
-            Text(
-              key: const Key('exp-calc-current-level'),
-              'Lv. $_currentLevel',
-              style: const TextStyle(
-                color: _ExpCalcPalette.text,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '$_currentExp EXP',
-              style: const TextStyle(
-                color: _ExpCalcPalette.data,
-                fontSize: 11,
-                fontFamily: 'monospace',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTargetLevelBox(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surface.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.expCalcTargetLevel,
-            style: const TextStyle(color: _ExpCalcPalette.target, fontSize: 11),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              InkWell(
-                key: const Key('exp-calc-target-level-decrease'),
-                onTap: () => _stepTargetLevel(-1),
-                borderRadius: BorderRadius.circular(4),
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: _ExpCalcPalette.surfaceRaised,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: _ExpCalcPalette.border),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    '－',
-                    style: TextStyle(
-                      color: _ExpCalcPalette.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
+                _label(l10n.expCalcTargetLevel, color: _ExpCalcPalette.text),
+                TextField(
                   key: const Key('exp-calc-target-level'),
                   controller: _targetLevelController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(
-                    color: _ExpCalcPalette.target,
+                    color: _ExpCalcPalette.text,
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    border: InputBorder.none,
-                    prefixText: 'Lv. ',
-                    prefixStyle: TextStyle(
-                      color: _ExpCalcPalette.target,
-                      fontSize: 14,
+                  decoration: _inputDecoration(prefix: 'Lv. ').copyWith(
+                    suffixIconConstraints: const BoxConstraints(
+                      minWidth: 52,
+                      minHeight: 40,
+                    ),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          key: const Key('exp-calc-target-level-decrease'),
+                          style: IconButton.styleFrom(
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: _targetLevel > 1
+                              ? () => _stepTargetLevel(-1)
+                              : null,
+                          tooltip: '${l10n.expCalcTargetLevel} −1',
+                          icon: const Icon(Icons.remove, size: 16),
+                          color: _ExpCalcPalette.textMuted,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 26,
+                            minHeight: 40,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          key: const Key('exp-calc-target-level-increase'),
+                          style: IconButton.styleFrom(
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: _targetLevel < kShipMaxLevel
+                              ? () => _stepTargetLevel(1)
+                              : null,
+                          tooltip: '${l10n.expCalcTargetLevel} +1',
+                          icon: const Icon(Icons.add, size: 16),
+                          color: _ExpCalcPalette.textMuted,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 26,
+                            minHeight: 40,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
                     ),
                   ),
                   onChanged: _onTargetLevelInput,
                 ),
-              ),
-              InkWell(
-                key: const Key('exp-calc-target-level-increase'),
-                onTap: () => _stepTargetLevel(1),
-                borderRadius: BorderRadius.circular(4),
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: _ExpCalcPalette.surfaceRaised,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: _ExpCalcPalette.border),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    '＋',
-                    style: TextStyle(
-                      color: _ExpCalcPalette.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '$_targetExp EXP',
-              style: const TextStyle(
-                color: _ExpCalcPalette.target,
-                fontSize: 11,
-                fontFamily: 'monospace',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep2Card(
-    AppLocalizations l10n, {
-    required bool isCompact,
-    required bool isNarrow,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(isNarrow ? 12 : 16),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: _ExpCalcPalette.target,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  l10n.expCalcStep2Title,
+                const SizedBox(height: 6),
+                Text(
+                  '$_targetExp EXP',
                   style: const TextStyle(
-                    color: _ExpCalcPalette.target,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (!isNarrow) ...[
-                const SizedBox(width: 8),
-                const Text(
-                  'STEP 02',
-                  style: TextStyle(
-                    color: _ExpCalcPalette.textFaint,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
+                    color: _ExpCalcPalette.goldSoft,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
                   ),
                 ),
               ],
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-
-          // Nodes list
-          for (var i = 0; i < _routeNodes.length; i++) ...[
-            _buildRouteNodeCard(
-              l10n,
-              _routeNodes[i],
-              i,
-              isCompact: isCompact,
-              isNarrow: isNarrow,
-            ),
-            if (i < _routeNodes.length - 1) const SizedBox(height: 10),
-          ],
-          const SizedBox(height: 12),
-
-          // Actions & Summary row
-          if (!isCompact)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildAddNodeButton(l10n),
-                _buildRouteSummaryBanner(l10n),
-              ],
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildRouteSummaryBanner(l10n),
-                const SizedBox(height: 8),
-                _buildAddNodeButton(l10n),
-              ],
-            ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAddNodeButton(AppLocalizations l10n) {
-    return ElevatedButton.icon(
-      key: const Key('exp-calc-add-node-button'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _ExpCalcPalette.surfaceRaised,
-        foregroundColor: _ExpCalcPalette.goldSoft,
-        side: const BorderSide(color: _ExpCalcPalette.goldDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
-      icon: const Icon(Icons.add, size: 16),
-      label: Text(
-        l10n.expCalcAddNode,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-      ),
-      onPressed: _addRouteNode,
-    );
-  }
-
-  Widget _buildRouteSummaryBanner(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surfaceInset,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 4,
-        children: [
-          Text(
-            '${l10n.expCalcRouteSummaryPrefix}: ',
+    ),
+    const SizedBox(height: 10),
+    Row(
+      children: [
+        Expanded(
+          child: Text(
+            '${l10n.expCalcTargetGapLabel}  $_remainExp EXP',
             style: const TextStyle(
-              color: _ExpCalcPalette.textMuted,
+              color: _ExpCalcPalette.goldSoft,
+              fontWeight: FontWeight.w700,
               fontSize: 11,
             ),
           ),
+        ),
+      ],
+    ),
+  ]);
+
+  Widget _routePanel(AppLocalizations l10n) {
+    final maps = _maps;
+    final first = _routeNodes.first;
+    if (!maps.any((map) => map.id == first.mapId)) {
+      maps.insert(
+        0,
+        SortieMapPreset(
+          id: first.mapId,
+          name: first.mapId,
+          nodes: [
+            MapNodePreset(id: first.nodeId, name: first.nodeId, baseExp: null),
+          ],
+        ),
+      );
+    }
+    final map = maps.firstWhere((map) => map.id == first.mapId);
+    return _panel(_strings.route, [
+      if (_catalogLoading) _label(_strings.loading),
+      if (_catalogFailed)
+        Row(
+          children: [
+            Expanded(child: _label(_strings.loadFailed)),
+            TextButton(onPressed: _loadCatalog, child: Text(_strings.retry)),
+          ],
+        ),
+      _dropdown<String>(
+        key: const Key('exp-calc-map-selector'),
+        value: first.mapId,
+        items: [
+          for (final m in maps)
+            DropdownMenuItem(
+              value: m.id,
+              child: Text(m.name, overflow: TextOverflow.ellipsis),
+            ),
+        ],
+        onChanged: (id) {
+          if (id != null) _changeRouteMap(maps.firstWhere((m) => m.id == id));
+        },
+      ),
+      const SizedBox(height: 8),
+      _battleOptions(l10n),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          SizedBox(
+            width: 54,
+            child: _label(l10n.expCalcNodePoint, color: _ExpCalcPalette.text),
+          ),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 58,
+            child: Tooltip(
+              message: _strings.roundedHint,
+              child: _label(_strings.base, color: _ExpCalcPalette.text),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: _label(_strings.subtotal, color: _ExpCalcPalette.text),
+              ),
+            ),
+          ),
+          const SizedBox(width: 24),
+          if (_routeNodes.length > 1) const SizedBox(width: 24),
+        ],
+      ),
+      for (var i = 0; i < _routeNodes.length; i++) ...[
+        if (i > 0) const SizedBox(height: 6),
+        _compactPoint(l10n, map, _routeNodes[i], i),
+      ],
+      const SizedBox(height: 8),
+      PopupMenuButton<String>(
+        key: const Key('exp-calc-add-node-button'),
+        tooltip: _strings.addNode,
+        color: _ExpCalcPalette.surface,
+        onSelected: (id) =>
+            _addRouteNode(map.nodes.firstWhere((point) => point.id == id)),
+        itemBuilder: (context) => [
+          for (final point in map.nodes)
+            PopupMenuItem(
+              key: Key('exp-calc-add-point-${point.id}'),
+              value: point.id,
+              child: Text(
+                '${point.name}   ·   ${point.baseExp == null ? '—' : formatExperience(point.baseExp!)} EXP',
+                style: const TextStyle(
+                  color: _ExpCalcPalette.text,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+        ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            border: Border.all(color: _ExpCalcPalette.border),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add, size: 16, color: _ExpCalcPalette.textMuted),
+              const SizedBox(width: 6),
+              Text(
+                _strings.addNode,
+                style: const TextStyle(
+                  color: _ExpCalcPalette.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        spacing: 10,
+        runSpacing: 4,
+        children: [
           Text(
             '${_routeNodes.length} ${l10n.expCalcCombatNodesSuffix}',
-            style: const TextStyle(
-              color: _ExpCalcPalette.target,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(color: _ExpCalcPalette.text, fontSize: 11),
           ),
           Text(
-            ' · ${l10n.expCalcAccumulatedExpLabel}: ',
+            '${_strings.perSortie}  ${_hasValidRoute ? _totalSortieExp : '—'} EXP',
             style: const TextStyle(
-              color: _ExpCalcPalette.textMuted,
-              fontSize: 11,
-            ),
-          ),
-          Text(
-            '$_totalSortieExp EXP',
-            style: const TextStyle(
-              color: _ExpCalcPalette.data,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
+              color: _ExpCalcPalette.goldSoft,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
-    );
+    ]);
   }
 
-  Widget _buildRouteNodeCard(
-    AppLocalizations l10n,
-    _RouteNodeState node,
-    int index, {
-    required bool isCompact,
-    required bool isNarrow,
-  }) {
-    final currentMap = kPresetMapDatabase.firstWhere(
-      (m) => m.id == node.mapId,
-      orElse: () => kPresetMapDatabase.first,
-    );
-
-    return Container(
-      padding: EdgeInsets.all(isNarrow ? 10 : 12),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surfaceInset,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (!isCompact)
-            // Wide Screen: Single compact row for Map, Point, Base EXP, Subtotal, and Delete
-            Row(
-              children: [
-                _buildNodeIndexBadge(index),
-                const SizedBox(width: 8),
-                Expanded(flex: 3, child: _buildMapDropdown(node, index)),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3,
-                  child: _buildPointDropdown(node, currentMap, index),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 76,
-                  height: 36,
-                  child: _buildBaseExpField(node, index),
-                ),
-                const SizedBox(width: 8),
-                _buildSubtotalText(node),
-                if (_routeNodes.length > 1) ...[
-                  const SizedBox(width: 8),
-                  _buildRemoveNodeButton(l10n, index),
-                ],
-              ],
-            )
-          else ...[
-            // Compact Mode (HD Portrait / Narrow window / Mobile)
-            // Sub-row 1: Index + Map + Point
-            Row(
-              children: [
-                _buildNodeIndexBadge(index),
-                const SizedBox(width: 8),
-                Expanded(flex: 1, child: _buildMapDropdown(node, index)),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 1,
-                  child: _buildPointDropdown(node, currentMap, index),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Sub-row 2: Base EXP + Subtotal + Remove
-            Row(
-              children: [
-                SizedBox(
-                  width: 84,
-                  height: 34,
-                  child: _buildBaseExpField(node, index),
-                ),
-                const SizedBox(width: 8),
-                _buildSubtotalText(node),
-                const Spacer(),
-                if (_routeNodes.length > 1) _buildRemoveNodeButton(l10n, index),
-              ],
-            ),
-          ],
-          const SizedBox(height: 10),
-
-          // Tactical buffs (Rank, Flagship, MVP)
-          if (!isNarrow)
-            Row(
-              children: [
-                Expanded(flex: 4, child: _buildRankSegmented(node, index)),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3,
-                  child: _buildFlagshipToggle(l10n, node, index),
-                ),
-                const SizedBox(width: 8),
-                Expanded(flex: 3, child: _buildMvpToggle(l10n, node, index)),
-              ],
-            )
-          else ...[
-            // Extremely narrow (< 420px): split into 2 clean sub-rows
-            _buildRankSegmented(node, index),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Expanded(child: _buildFlagshipToggle(l10n, node, index)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildMvpToggle(l10n, node, index)),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNodeIndexBadge(int index) {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.goldSurface,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _ExpCalcPalette.goldDark),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '${index + 1}',
-        style: const TextStyle(
-          color: _ExpCalcPalette.goldSoft,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'monospace',
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMapDropdown(_RouteNodeState node, int index) {
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surfaceRaised,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _ExpCalcPalette.borderStrong),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          key: index == 0
-              ? const Key('exp-calc-map-selector')
-              : Key('exp-calc-map-selector-$index'),
-          value: node.mapId,
-          dropdownColor: _ExpCalcPalette.surfaceRaised,
-          isExpanded: true,
-          items: [
-            for (final m in kPresetMapDatabase)
-              DropdownMenuItem<String>(
-                value: m.id,
-                child: Text(
-                  m.name,
-                  style: const TextStyle(
-                    color: _ExpCalcPalette.text,
-                    fontSize: 12,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-          ],
-          onChanged: (newMapId) {
-            if (newMapId == null) return;
-            setState(() {
-              node.mapId = newMapId;
-              final newMap = kPresetMapDatabase.firstWhere(
-                (m) => m.id == newMapId,
-              );
-              final firstPoint = newMap.nodes.first;
-              node.nodeId = firstPoint.id;
-              node.baseExpController.text = '${firstPoint.baseExp}';
-            });
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPointDropdown(
-    _RouteNodeState node,
-    SortieMapPreset currentMap,
-    int index,
-  ) {
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surfaceRaised,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _ExpCalcPalette.borderStrong),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          key: Key('exp-calc-point-selector-$index'),
-          value: node.nodeId,
-          dropdownColor: _ExpCalcPalette.surfaceRaised,
-          isExpanded: true,
-          items: [
-            for (final p in currentMap.nodes)
-              DropdownMenuItem<String>(
-                value: p.id,
-                child: Text(
-                  p.name,
-                  style: const TextStyle(
-                    color: _ExpCalcPalette.data,
-                    fontSize: 12,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-          ],
-          onChanged: (newPointId) {
-            if (newPointId == null) return;
-            setState(() {
-              node.nodeId = newPointId;
-              final pt = currentMap.nodes.firstWhere((p) => p.id == newPointId);
-              node.baseExpController.text = '${pt.baseExp}';
-            });
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBaseExpField(_RouteNodeState node, int index) {
-    return TextField(
-      key: index == 0
-          ? const Key('exp-calc-base-exp-input')
-          : Key('exp-calc-base-exp-input-$index'),
-      controller: node.baseExpController,
-      keyboardType: TextInputType.number,
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-        color: _ExpCalcPalette.text,
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-      ),
-      decoration: InputDecoration(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        filled: true,
-        fillColor: _ExpCalcPalette.surfaceRaised,
-        suffixText: 'EXP',
-        suffixStyle: const TextStyle(color: _ExpCalcPalette.data, fontSize: 9),
-        enabledBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: _ExpCalcPalette.borderStrong),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: _ExpCalcPalette.gold),
-          borderRadius: BorderRadius.circular(6),
-        ),
-      ),
-      onChanged: (_) => setState(() {}),
-    );
-  }
-
-  Widget _buildSubtotalText(_RouteNodeState node) {
-    return Text(
-      '${node.computeExp()} EXP',
-      style: const TextStyle(
-        color: _ExpCalcPalette.data,
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        fontFamily: 'monospace',
-      ),
-    );
-  }
-
-  Widget _buildRemoveNodeButton(AppLocalizations l10n, int index) {
-    return InkWell(
-      key: Key('exp-calc-remove-node-$index'),
-      onTap: () => _removeRouteNode(index),
-      borderRadius: BorderRadius.circular(4),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Text(
-          l10n.expCalcRemoveNode,
-          style: const TextStyle(color: _ExpCalcPalette.danger, fontSize: 11),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRankSegmented(_RouteNodeState node, int index) {
-    return Container(
-      height: 34,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Row(
-        children: [
-          for (final r in BattleRank.values)
-            Expanded(
-              child: InkWell(
-                key: Key('exp-calc-rank-${r.name}-$index'),
-                onTap: () => setState(() => node.rank = r),
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: node.rank == r
-                        ? _ExpCalcPalette.gold
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    r.label,
-                    style: TextStyle(
-                      color: node.rank == r
-                          ? _ExpCalcPalette.surfaceInset
-                          : _ExpCalcPalette.textMuted,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFlagshipToggle(
-    AppLocalizations l10n,
-    _RouteNodeState node,
-    int index,
-  ) {
-    return InkWell(
-      key: index == 0
-          ? const Key('exp-calc-flagship-checkbox')
-          : Key('exp-calc-flagship-$index'),
-      onTap: () => setState(() => node.isFlagship = !node.isFlagship),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: node.isFlagship
-              ? _ExpCalcPalette.success.withValues(alpha: 0.5)
-              : _ExpCalcPalette.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: node.isFlagship
-                ? _ExpCalcPalette.success.withValues(alpha: 0.6)
-                : _ExpCalcPalette.border,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                '🎖️ ${l10n.expCalcFlagship}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: node.isFlagship
-                      ? _ExpCalcPalette.success
-                      : _ExpCalcPalette.textFaint,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: _ExpCalcPalette.success.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text(
-                '1.5x',
-                style: TextStyle(
-                  color: _ExpCalcPalette.success,
-                  fontSize: 9,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMvpToggle(
-    AppLocalizations l10n,
-    _RouteNodeState node,
-    int index,
-  ) {
-    return InkWell(
-      key: index == 0
-          ? const Key('exp-calc-mvp-checkbox')
-          : Key('exp-calc-mvp-$index'),
-      onTap: () => setState(() => node.isMvp = !node.isMvp),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: node.isMvp
-              ? _ExpCalcPalette.target.withValues(alpha: 0.5)
-              : _ExpCalcPalette.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: node.isMvp
-                ? _ExpCalcPalette.target.withValues(alpha: 0.6)
-                : _ExpCalcPalette.border,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                '👑 ${l10n.expCalcMvp}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: node.isMvp
-                      ? _ExpCalcPalette.goldSoft
-                      : _ExpCalcPalette.textFaint,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: _ExpCalcPalette.target.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text(
-                '2.0x',
-                style: TextStyle(
-                  color: _ExpCalcPalette.goldSoft,
-                  fontSize: 9,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResultHudCard(
+  Widget _battleOptions(
     AppLocalizations l10n, {
-    required bool isCompact,
-    required bool isNarrow,
+    _RouteNodeState? node,
+    int index = 0,
   }) {
-    final formulaBreakdowns = _routeNodes
-        .map((n) => '${n.mapId}-${n.nodeId}(${n.computeExp()})')
-        .join(' + ');
-
-    return Container(
-      padding: EdgeInsets.all(isNarrow ? 12 : 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_ExpCalcPalette.surfaceRaised, _ExpCalcPalette.surface],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _ExpCalcPalette.goldDark),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Top formula bar
-          if (!isCompact)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.insights,
-                      size: 16,
-                      color: _ExpCalcPalette.gold,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      l10n.expCalcResultHudTitle,
-                      style: const TextStyle(
-                        color: _ExpCalcPalette.goldSoft,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                Flexible(
-                  child: Text(
-                    '路线综合: $formulaBreakdowns = $_totalSortieExp EXP/出击',
-                    style: const TextStyle(
-                      color: _ExpCalcPalette.textMuted,
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.insights,
-                      size: 16,
-                      color: _ExpCalcPalette.gold,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      l10n.expCalcResultHudTitle,
-                      style: const TextStyle(
-                        color: _ExpCalcPalette.goldSoft,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _ExpCalcPalette.goldSurface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: _ExpCalcPalette.goldDark),
-                  ),
-                  child: Text(
-                    '路线综合: $formulaBreakdowns = $_totalSortieExp EXP/出击',
-                    style: const TextStyle(
-                      color: _ExpCalcPalette.data,
-                      fontSize: 10,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          const SizedBox(height: 12),
-
-          // Stats columns
-          if (!isNarrow)
-            Row(
-              children: [
-                Expanded(child: _buildRemainExpStatCard(l10n)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildRouteTotalStatCard(l10n)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildSortieCountStatCard(l10n)),
-              ],
-            )
-          else ...[
-            Row(
-              children: [
-                Expanded(child: _buildRemainExpStatCard(l10n)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildRouteTotalStatCard(l10n)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _buildSortieCountStatCard(l10n, isFullWidth: true),
-          ],
-          const SizedBox(height: 12),
-
-          // Add to Track List Action Button
-          if (!isCompact)
-            Align(
-              alignment: Alignment.centerRight,
-              child: _buildAddTrackButton(l10n),
-            )
-          else
-            SizedBox(
-              width: double.infinity,
-              height: 42,
-              child: _buildAddTrackButton(l10n),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRemainExpStatCard(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surfaceInset.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.expCalcRemainExp,
-            style: const TextStyle(
-              color: _ExpCalcPalette.textMuted,
-              fontSize: 11,
-            ),
+    final rank = node?.rank ?? _routeRank;
+    final flagship = node?.isFlagship ?? _routeFlagship;
+    final mvp = node?.isMvp ?? _routeMvp;
+    final suffix = node == null ? '0' : 'detail-$index';
+    void update({BattleRank? rank, bool? flagship, bool? mvp}) => setState(() {
+      if (node == null) {
+        if (rank != null) _routeRank = rank;
+        if (flagship != null) _routeFlagship = flagship;
+        if (mvp != null) _routeMvp = mvp;
+      }
+      for (final target in node == null ? _routeNodes : [node]) {
+        if (rank != null) target.rank = rank;
+        if (flagship != null) target.isFlagship = flagship;
+        if (mvp != null) target.isMvp = mvp;
+      }
+    });
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final ranks = Container(
+          height: 38,
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: const Color(0xff0b202d),
+            border: Border.all(color: const Color(0xff315064)),
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '$_remainExp',
-              style: const TextStyle(
-                color: _ExpCalcPalette.data,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRouteTotalStatCard(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surfaceInset.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.expCalcRouteTotal,
-            style: const TextStyle(
-              color: _ExpCalcPalette.textMuted,
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '$_totalSortieExp',
-              style: const TextStyle(
-                color: _ExpCalcPalette.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSortieCountStatCard(
-    AppLocalizations l10n, {
-    bool isFullWidth = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.danger.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _ExpCalcPalette.danger.withValues(alpha: 0.3),
-        ),
-      ),
-      child: isFullWidth
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.military_tech_rounded,
-                      color: _ExpCalcPalette.danger,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      l10n.expCalcBattle,
-                      style: const TextStyle(
-                        color: _ExpCalcPalette.danger,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '$_sortieCount 次出击',
-                      style: const TextStyle(
-                        color: _ExpCalcPalette.danger,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.expCalcBattle,
-                  style: const TextStyle(
-                    color: _ExpCalcPalette.danger,
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '$_sortieCount',
-                    style: const TextStyle(
-                      color: _ExpCalcPalette.danger,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildAddTrackButton(AppLocalizations l10n) {
-    return ElevatedButton.icon(
-      key: const Key('exp-calc-add-button'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _ExpCalcPalette.gold,
-        foregroundColor: _ExpCalcPalette.surfaceInset,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        elevation: 4,
-      ),
-      icon: const Icon(Icons.playlist_add, size: 18),
-      label: Text(
-        l10n.expCalcAddTrack,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-      ),
-      onPressed: _addTrackItem,
-    );
-  }
-
-  Widget _buildTrackingTableCard(
-    AppLocalizations l10n, {
-    required bool isCompact,
-    required bool isNarrow,
-  }) {
-    final showCardView = _preferCardView ?? isCompact;
-
-    return Container(
-      padding: EdgeInsets.all(isNarrow ? 12 : 16),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _ExpCalcPalette.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Row(
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        l10n.expCalcTrackListTitle,
-                        style: TextStyle(
-                          color: _ExpCalcPalette.text,
-                          fontSize: isNarrow ? 13 : 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _ExpCalcPalette.surfaceRaised,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${_trackItems.length}',
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.data,
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // View mode switch pills
-              Container(
-                height: 28,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: _ExpCalcPalette.surfaceRaised,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: _ExpCalcPalette.borderStrong),
-                ),
-                child: Row(
-                  children: [
-                    InkWell(
-                      key: const Key('exp-calc-view-table'),
-                      onTap: () => setState(() => _preferCardView = false),
-                      borderRadius: BorderRadius.circular(4),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: !showCardView
-                              ? _ExpCalcPalette.gold
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          l10n.expCalcTableView,
-                          style: TextStyle(
-                            color: !showCardView
-                                ? _ExpCalcPalette.surfaceInset
-                                : _ExpCalcPalette.textMuted,
-                            fontSize: 11,
-                            fontWeight: !showCardView
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+              for (final value in BattleRank.values)
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: rank == value,
+                    child: Material(
+                      color: rank == value
+                          ? const Color(0xff8a6628)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        key: Key('exp-calc-rank-${value.name}-$suffix'),
+                        onTap: () => update(rank: value),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Center(
+                          child: Text(
+                            value.label,
+                            style: TextStyle(
+                              color: rank == value
+                                  ? const Color(0xffffdc88)
+                                  : const Color(0xff9fb3bf),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                    InkWell(
-                      key: const Key('exp-calc-view-card'),
-                      onTap: () => setState(() => _preferCardView = true),
-                      borderRadius: BorderRadius.circular(4),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: showCardView
-                              ? _ExpCalcPalette.gold
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          l10n.expCalcCardView,
-                          style: TextStyle(
-                            color: showCardView
-                                ? _ExpCalcPalette.surfaceInset
-                                : _ExpCalcPalette.textMuted,
-                            fontSize: 11,
-                            fontWeight: showCardView
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
             ],
           ),
-          if (!isNarrow) ...[
-            const SizedBox(height: 4),
-            Text(
-              l10n.expCalcAutoSyncHint,
-              style: const TextStyle(
-                color: _ExpCalcPalette.textFaint,
-                fontSize: 11,
+        );
+        final buffs = Row(
+          children: [
+            Expanded(
+              child: _option(
+                Key(
+                  node == null
+                      ? 'exp-calc-flagship-checkbox'
+                      : 'exp-calc-flagship-detail-$index',
+                ),
+                '${l10n.expCalcFlagship} ×1.5',
+                flagship,
+                () => update(flagship: !flagship),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _option(
+                Key(
+                  node == null
+                      ? 'exp-calc-mvp-checkbox'
+                      : 'exp-calc-mvp-detail-$index',
+                ),
+                'MVP ×2',
+                mvp,
+                () => update(mvp: !mvp),
               ),
             ),
           ],
-          const SizedBox(height: 12),
-
-          if (_trackItems.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text(
-                  l10n.expCalcEmptyTrackList,
-                  style: const TextStyle(
-                    color: _ExpCalcPalette.textFaint,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            )
-          else if (showCardView)
-            KeyedSubtree(
-              key: const Key('exp-calc-track-list'),
-              child: _buildTrackingCardList(l10n),
-            )
-          else
-            SingleChildScrollView(
-              key: const Key('exp-calc-track-list'),
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 700),
-                child: DataTable(
-                  horizontalMargin: 8,
-                  columnSpacing: 16,
-                  headingRowHeight: 36,
-                  dataRowMinHeight: 38,
-                  dataRowMaxHeight: 44,
-                  columns: [
-                    DataColumn(
-                      label: Text(
-                        l10n.expCalcShip,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        l10n.expCalcCurrentLevel,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        l10n.expCalcTargetLevel,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        l10n.expCalcRouteSummary,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        l10n.expCalcRouteTotal,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        l10n.expCalcRemainExp,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        l10n.expCalcBattle,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        l10n.expCalcDelete,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
+        );
+        return Tooltip(
+          message: node == null ? _strings.shared : _strings.details,
+          child: constraints.maxWidth >= 420
+              ? Row(
+                  children: [
+                    Expanded(child: ranks),
+                    const SizedBox(width: 8),
+                    Expanded(child: buffs),
                   ],
-                  rows: [
-                    for (final item in _trackItems)
-                      _buildTrackDataRow(l10n, item),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
+                )
+              : Column(children: [ranks, const SizedBox(height: 6), buffs]),
+        );
+      },
     );
   }
 
-  Widget _buildTrackingCardList(AppLocalizations l10n) {
+  Widget _compactPoint(
+    AppLocalizations l10n,
+    SortieMapPreset map,
+    _RouteNodeState node,
+    int index,
+  ) {
+    final point = map.nodes.firstWhere(
+      (point) => point.id == node.nodeId,
+      orElse: () => map.nodes.first,
+    );
+    final overridden =
+        node.rank != _routeRank ||
+        node.isFlagship != _routeFlagship ||
+        node.isMvp != _routeMvp;
     return Column(
+      key: ValueKey(node.id),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final item in _trackItems) _buildTrackItemCard(l10n, item),
+        Row(
+          children: [
+            SizedBox(
+              key: Key('exp-calc-point-capsule-$index'),
+              width: 54,
+              height: 44,
+              child: _dropdown<String>(
+                key: Key('exp-calc-point-selector-$index'),
+                compact: true,
+                value: point.id,
+                items: [
+                  for (final p in map.nodes)
+                    DropdownMenuItem(
+                      value: p.id,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(p.id, maxLines: 1),
+                      ),
+                    ),
+                ],
+                onChanged: (id) {
+                  if (id != null) {
+                    setState(
+                      () => node.usePreset(
+                        map.nodes.firstWhere((p) => p.id == id),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 58,
+              height: 44,
+              child: Tooltip(
+                message: node.manual ? _strings.manual : _strings.roundedHint,
+                child: TextField(
+                  key: Key(
+                    index == 0
+                        ? 'exp-calc-base-exp-input'
+                        : 'exp-calc-base-exp-input-$index',
+                  ),
+                  controller: node.baseExpController,
+                  expands: true,
+                  maxLines: null,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.center,
+                  textAlignVertical: TextAlignVertical.center,
+                  style: const TextStyle(
+                    color: _ExpCalcPalette.text,
+                    fontSize: 13,
+                  ),
+                  decoration: _inputDecoration().copyWith(
+                    constraints: const BoxConstraints.tightFor(height: 44),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                  ),
+                  onChanged: (_) => setState(() => node.manual = true),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  key: Key('exp-calc-point-yield-$index'),
+                  maxLines: 1,
+                  softWrap: false,
+                  node.baseExp == null ? '—' : '${node.computeExp()} EXP',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: _ExpCalcPalette.goldSoft,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 24,
+              child: IconButton(
+                key: Key('exp-calc-details-$index'),
+                tooltip: _strings.details,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 24, minHeight: 40),
+                onPressed: () => setState(() => node.expanded = !node.expanded),
+                icon: Icon(
+                  node.expanded ? Icons.expand_less : Icons.tune,
+                  size: 16,
+                ),
+                color: overridden
+                    ? _ExpCalcPalette.gold
+                    : _ExpCalcPalette.textMuted,
+              ),
+            ),
+            if (_routeNodes.length > 1)
+              SizedBox(
+                width: 24,
+                child: IconButton(
+                  key: Key('exp-calc-remove-node-$index'),
+                  tooltip: l10n.expCalcRemoveNode,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 24,
+                    minHeight: 40,
+                  ),
+                  onPressed: () => _removeRouteNode(index),
+                  icon: const Icon(Icons.close, size: 16),
+                  color: _ExpCalcPalette.textMuted,
+                ),
+              ),
+          ],
+        ),
+        if (node.baseExp == null)
+          _label(node.manual ? _strings.invalid : _strings.unknown),
+        if (point.knownCount > 0 && point.knownCount < point.totalCount)
+          _label(_strings.incomplete),
+        if (overridden && !node.expanded)
+          _label(
+            '${node.rank.label} · ${node.isFlagship ? l10n.expCalcFlagship : '—'} · ${node.isMvp ? 'MVP' : '—'}',
+          ),
+        if (node.expanded)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _label(_strings.details),
+                _battleOptions(l10n, node: node, index: index),
+                const SizedBox(height: 6),
+                Text(
+                  '${_strings.roundedHint} · ${_strings.coverage(point.knownCount, point.totalCount)}',
+                  style: const TextStyle(
+                    color: _ExpCalcPalette.textFaint,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
 
-  Widget _buildTrackItemCard(AppLocalizations l10n, ExpCalcTrackItem item) {
-    final liveLv = item.resolveCurrentLevel(widget.state);
-    final remain = item.resolveRemainExp(widget.state);
-    final battles = item.resolveBattleCount(widget.state);
-    final isDone = remain == 0;
-    final routeText = item.routeSummary ?? '${item.map} (基准 ${item.baseExp})';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _ExpCalcPalette.surfaceInset,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDone
-              ? _ExpCalcPalette.success.withValues(alpha: 0.5)
-              : _ExpCalcPalette.border,
+  Widget _option(
+    Key key,
+    String label,
+    bool selected,
+    VoidCallback onTap,
+  ) => Semantics(
+    selected: selected,
+    button: true,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1),
+      child: Material(
+        color: selected
+            ? _ExpCalcPalette.goldSurface
+            : _ExpCalcPalette.surfaceInset,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: BorderSide(
+            color: selected ? _ExpCalcPalette.goldDark : _ExpCalcPalette.border,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Row 1: Ship name + Level badge + Delete button
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        item.shipName,
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.text,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _ExpCalcPalette.goldSurface,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: _ExpCalcPalette.goldDark),
-                      ),
-                      child: Text(
-                        'Lv.$liveLv → Lv.${item.targetLevel}',
-                        style: const TextStyle(
-                          color: _ExpCalcPalette.data,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              InkWell(
-                key: Key('exp-calc-delete-button-${item.id}'),
-                onTap: () => _deleteTrackItem(item.id),
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 4,
-                  ),
-                  child: Text(
-                    l10n.expCalcDelete,
-                    style: const TextStyle(
-                      color: _ExpCalcPalette.danger,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Row 2: Route summary
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _ExpCalcPalette.surface,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.alt_route_rounded,
-                  size: 14,
-                  color: _ExpCalcPalette.textFaint,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    routeText,
-                    style: const TextStyle(
-                      color: _ExpCalcPalette.text,
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Text(
-                  '${item.effectiveSortieExp} EXP/出击',
-                  style: const TextStyle(
-                    color: _ExpCalcPalette.data,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Row 3: Remain EXP + Sortie count
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '剩 $remain EXP',
+        child: InkWell(
+          key: key,
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
+            child: Center(
+              child: Text(
+                label,
                 style: TextStyle(
-                  color: isDone
-                      ? _ExpCalcPalette.success
+                  color: selected
+                      ? _ExpCalcPalette.goldSoft
                       : _ExpCalcPalette.textMuted,
                   fontSize: 12,
-                  fontFamily: 'monospace',
-                  fontWeight: isDone ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isDone
-                      ? _ExpCalcPalette.success.withValues(alpha: 0.5)
-                      : _ExpCalcPalette.danger.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isDone
-                        ? _ExpCalcPalette.success
-                        : _ExpCalcPalette.danger.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Text(
-                  isDone ? l10n.expCalcCompletedTag : '$battles 次',
-                  style: TextStyle(
-                    color: isDone
-                        ? _ExpCalcPalette.success
-                        : _ExpCalcPalette.danger,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ],
+        ),
       ),
-    );
-  }
+    ),
+  );
+
+  Widget _resultPanel(AppLocalizations l10n) => _panel(_strings.result, [
+    Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _stat(
+            _strings.estimated,
+            _canEstimate ? '$_sortieCount' : '—',
+            emphasis: true,
+            unit: _strings.times,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _stat(
+            _strings.perSortie,
+            _hasValidRoute ? '$_totalSortieExp' : '—',
+            emphasis: true,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 1,
+          child: _stat(l10n.expCalcRemainExp, '$_remainExp', emphasis: true),
+        ),
+      ],
+    ),
+    const SizedBox(height: 10),
+    Text(
+      _routeSummary,
+      style: const TextStyle(
+        color: _ExpCalcPalette.text,
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    if (!_canEstimate) ...[
+      const SizedBox(height: 8),
+      Text(
+        _hasValidRoute ? _strings.zero : _strings.unavailable,
+        style: const TextStyle(color: _ExpCalcPalette.textMuted, fontSize: 11),
+      ),
+    ],
+    const SizedBox(height: 10),
+    FilledButton.icon(
+      key: const Key('exp-calc-add-button'),
+      onPressed: _canEstimate ? _addTrackItem : null,
+      style: FilledButton.styleFrom(
+        backgroundColor: _ExpCalcPalette.gold,
+        foregroundColor: _ExpCalcPalette.background,
+        disabledBackgroundColor: _ExpCalcPalette.surfaceRaised,
+        disabledForegroundColor: _ExpCalcPalette.textFaint,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+      ),
+      icon: const Icon(Icons.playlist_add, size: 18),
+      label: Text(_strings.addTrack),
+    ),
+  ]);
+
+  Widget _stat(
+    String label,
+    String value, {
+    bool emphasis = false,
+    String unit = 'EXP',
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: SizedBox(
+          height: 16,
+          width: double.infinity,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                color: emphasis
+                    ? _ExpCalcPalette.goldSoft
+                    : _ExpCalcPalette.textMuted,
+                fontSize: 11,
+                fontWeight: emphasis ? FontWeight.w700 : FontWeight.normal,
+              ),
+            ),
+          ),
+        ),
+      ),
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          value,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            color: emphasis ? _ExpCalcPalette.goldSoft : _ExpCalcPalette.text,
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      const SizedBox(height: 3),
+      Text(
+        unit,
+        style: const TextStyle(color: _ExpCalcPalette.text, fontSize: 10),
+      ),
+    ],
+  );
+
+  Widget _buildTrackingTable(AppLocalizations l10n) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: _ExpCalcPalette.surface,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: _ExpCalcPalette.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                l10n.expCalcTrackListTitle,
+                style: const TextStyle(
+                  color: _ExpCalcPalette.text,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: QuestCompletionBadge(
+                inline: true,
+                count: _trackItems.length,
+                countKey: const Key('exp-calc-track-count'),
+                semanticLabel:
+                    '${l10n.expCalcTrackListTitle} ${_trackItems.length}',
+                child: const SizedBox(width: 12, height: 14),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (_trackItems.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                l10n.expCalcEmptyTrackList,
+                style: const TextStyle(
+                  color: _ExpCalcPalette.textFaint,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) => ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SingleChildScrollView(
+                key: const Key('exp-calc-track-list'),
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: math.max(760, constraints.maxWidth),
+                  ),
+                  child: DataTable(
+                    horizontalMargin: 12,
+                    columnSpacing: 18,
+                    headingRowHeight: 36,
+                    dataRowMinHeight: 36,
+                    dataRowMaxHeight: 38,
+                    headingRowColor: const WidgetStatePropertyAll(
+                      Color(0xff244352),
+                    ),
+                    headingTextStyle: const TextStyle(
+                      color: Color(0xffc0d2dc),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    border: TableBorder.all(
+                      color: const Color(0xff315064),
+                      width: 0.5,
+                    ),
+                    columns: [
+                      for (final label in [
+                        l10n.expCalcShip,
+                        l10n.expCalcCurrentLevel,
+                        l10n.expCalcTargetLevel,
+                        l10n.expCalcRouteSummary,
+                        _strings.total,
+                        l10n.expCalcRemainExp,
+                        l10n.expCalcBattle,
+                        '',
+                      ])
+                        DataColumn(label: Text(label)),
+                    ],
+                    rows: [
+                      for (final item in _trackItems)
+                        _buildTrackDataRow(l10n, item),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 
   DataRow _buildTrackDataRow(AppLocalizations l10n, ExpCalcTrackItem item) {
     final liveLv = item.resolveCurrentLevel(widget.state);
     final remain = item.resolveRemainExp(widget.state);
     final battles = item.resolveBattleCount(widget.state);
     final isDone = remain == 0;
-    final routeText = item.routeSummary ?? '${item.map} (基准 ${item.baseExp})';
+    final routeText = compactRouteSummary(
+      item.routeSummary ?? '${item.map} (基准 ${item.baseExp})',
+    );
 
     return DataRow(
+      color: const WidgetStatePropertyAll(Color(0xff14313f)),
       cells: [
         DataCell(
           Text(
             item.shipName,
             style: const TextStyle(
               color: _ExpCalcPalette.text,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
           ),
@@ -2344,9 +1498,9 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
           Text(
             'Lv. $liveLv',
             style: const TextStyle(
-              color: _ExpCalcPalette.data,
+              color: _ExpCalcPalette.text,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
-              fontFamily: 'monospace',
             ),
           ),
         ),
@@ -2354,10 +1508,9 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
           Text(
             'Lv. ${item.targetLevel}',
             style: const TextStyle(
-              color: _ExpCalcPalette.target,
-              fontWeight: FontWeight.bold,
+              color: _ExpCalcPalette.text,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
-              fontFamily: 'monospace',
             ),
           ),
         ),
@@ -2366,8 +1519,8 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
             routeText,
             style: const TextStyle(
               color: _ExpCalcPalette.text,
-              fontSize: 11,
-              fontFamily: 'monospace',
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
             ),
           ),
         ),
@@ -2375,47 +1528,40 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
           Text(
             '${item.effectiveSortieExp} EXP',
             style: const TextStyle(
-              color: _ExpCalcPalette.data,
+              color: _ExpCalcPalette.text,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
-              fontFamily: 'monospace',
             ),
           ),
         ),
         DataCell(
           Text(
             '$remain',
-            style: TextStyle(
-              color: isDone ? _ExpCalcPalette.success : _ExpCalcPalette.text,
+            style: const TextStyle(
+              color: _ExpCalcPalette.text,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
-              fontFamily: 'monospace',
             ),
           ),
         ),
         DataCell(
           Text(
             isDone ? l10n.expCalcCompletedTag : '$battles 次',
-            style: TextStyle(
-              color: isDone ? _ExpCalcPalette.success : _ExpCalcPalette.danger,
-              fontWeight: FontWeight.bold,
+            style: const TextStyle(
+              color: _ExpCalcPalette.text,
+              fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
           ),
         ),
         DataCell(
-          InkWell(
+          IconButton(
             key: Key('exp-calc-delete-button-${item.id}'),
-            onTap: () => _deleteTrackItem(item.id),
-            borderRadius: BorderRadius.circular(4),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              child: Text(
-                l10n.expCalcDelete,
-                style: const TextStyle(
-                  color: _ExpCalcPalette.danger,
-                  fontSize: 11,
-                ),
-              ),
-            ),
+            tooltip: l10n.expCalcDelete,
+            onPressed: () => _deleteTrackItem(item.id),
+            icon: const Icon(Icons.cancel_outlined, size: 20),
+            color: const Color(0xffff7b82),
+            visualDensity: VisualDensity.compact,
           ),
         ),
       ],

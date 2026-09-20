@@ -5179,7 +5179,7 @@ abstract class AppLocalizations {
   /// No description provided for @otherToolsComingSoon.
   ///
   /// In zh, this message translates to:
-  /// **'其他功能陆续开发中'**
+  /// **'其他功能正在开发中'**
   String get otherToolsComingSoon;
 
   /// No description provided for @otherToolsHint.

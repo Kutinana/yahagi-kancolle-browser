@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../game_state/game_state.dart';
 import 'composition_image_page.dart';
@@ -34,12 +35,22 @@ class ToolboxPage extends StatelessWidget {
         state: state,
         visible: mode == ToolboxMode.composition,
       ),
-      ExpCalcPage(state: state),
+      ExpCalcPage(state: state, catalogController: sortieMapCatalogController),
       SortieMapQueryPage(
         state: state,
         visible: mode == ToolboxMode.mapQuery,
         catalogController: sortieMapCatalogController,
         enemyCatalogController: enemyCatalogController,
+      ),
+      ColoredBox(
+        key: const Key('toolbox-other-page'),
+        color: const Color(0xff091923),
+        child: Center(
+          child: Text(
+            AppLocalizations.of(context)!.otherToolsComingSoon,
+            style: const TextStyle(color: Color(0xffecf3f5), fontSize: 14),
+          ),
+        ),
       ),
     ],
   );

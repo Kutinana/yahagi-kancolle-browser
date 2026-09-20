@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'data_update_metadata.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../battle/fcd_map_controller.dart';
@@ -12,7 +14,6 @@ final class FcdMapUpdateSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    const metadataStyle = TextStyle(color: Color(0xff8197a5));
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) => Padding(
@@ -33,25 +34,9 @@ final class FcdMapUpdateSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 2,
-                    children: [
-                      Text(
-                        l10n.fcdMapDataVersion(controller.version.toString()),
-                        style: metadataStyle,
-                      ),
-                      Text(
-                        controller.lastCheckedAt == null
-                            ? l10n.fcdMapNeverChecked
-                            : l10n.fcdMapLastChecked(
-                                _formatTime(
-                                  controller.lastCheckedAt!.toLocal(),
-                                ),
-                              ),
-                        style: metadataStyle,
-                      ),
-                    ],
+                  DataUpdateMetadata(
+                    version: controller.version.toString(),
+                    lastCheckedAt: controller.lastCheckedAt,
                   ),
                 ],
               ),
@@ -107,12 +92,4 @@ final class FcdMapUpdateSection extends StatelessWidget {
       ),
     );
   }
-
-  String _formatTime(DateTime value) =>
-      '${value.year.toString().padLeft(4, '0')}-'
-      '${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')} '
-      '${value.hour.toString().padLeft(2, '0')}:'
-      '${value.minute.toString().padLeft(2, '0')}:'
-      '${value.second.toString().padLeft(2, '0')}';
 }

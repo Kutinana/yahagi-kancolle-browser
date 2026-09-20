@@ -14,6 +14,66 @@ import 'package:yahagi_kancolle_browser/src/widgets/frozen_data_table.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  for (final occupied in [
+    const EdgeInsets.only(left: 41),
+    const EdgeInsets.only(right: 41),
+    const EdgeInsets.only(bottom: 41),
+  ]) {
+    testWidgets('logbook deducts occupied screen edges $occupied', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(915, 412);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final database = await LogbookDatabase.openForTesting();
+      addTearDown(database.close);
+      final controller = BattleController(gameState: () => GameState.empty);
+      addTearDown(controller.dispose);
+
+      // Exercise changing system insets without recreating the logbook state.
+      for (final inset in [0.0, 36.0, 60.0, 0.0]) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MediaQuery(
+                data: MediaQueryData(
+                  size: const Size(915, 412),
+                  padding: EdgeInsets.all(inset),
+                  viewPadding: EdgeInsets.all(inset),
+                ),
+                child: Padding(
+                  padding: occupied,
+                  child: LogbookPage(
+                    battleController: controller,
+                    database: database,
+                    occupiedInsets: occupied,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final bounds = tester.getRect(find.byType(TabBarView));
+        expect(bounds.left, inset > occupied.left ? inset : occupied.left);
+        expect(
+          bounds.right,
+          915 - (inset > occupied.right ? inset : occupied.right),
+        );
+        expect(
+          bounds.bottom,
+          412 - (inset > occupied.bottom ? inset : occupied.bottom),
+        );
+        final table = tester.getRect(
+          find.byKey(const Key('logbook-table-sortie')),
+        );
+        expect(table.left, bounds.left + 12);
+        expect(tester.takeException(), isNull);
+      }
+    });
+  }
+
   for (final inset in [0.0, 36.0]) {
     for (final parentSafeArea in [false, true]) {
       testWidgets(

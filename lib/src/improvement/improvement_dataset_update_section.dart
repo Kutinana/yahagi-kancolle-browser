@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../settings/data_update_metadata.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import 'improvement_dataset_update_service.dart';
@@ -31,25 +33,9 @@ class ImprovementDatasetUpdateSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 2,
-                    children: [
-                      Text(
-                        l10n.improvementDatasetVersion(
-                          controller.dataset.version.dataVersion,
-                        ),
-                        style: const TextStyle(color: Color(0xff8197a5)),
-                      ),
-                      Text(
-                        controller.lastCheckedAt == null
-                            ? l10n.improvementDatasetNeverChecked
-                            : l10n.improvementDatasetLastChecked(
-                                _time(controller.lastCheckedAt!.toLocal()),
-                              ),
-                        style: const TextStyle(color: Color(0xff8197a5)),
-                      ),
-                    ],
+                  DataUpdateMetadata(
+                    version: controller.dataset.version.dataVersion,
+                    lastCheckedAt: controller.lastCheckedAt,
                   ),
                 ],
               ),
@@ -104,11 +90,4 @@ class ImprovementDatasetUpdateSection extends StatelessWidget {
       ),
     );
   }
-
-  static String _time(DateTime value) =>
-      '${value.year.toString().padLeft(4, '0')}-'
-      '${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')} '
-      '${value.hour.toString().padLeft(2, '0')}:'
-      '${value.minute.toString().padLeft(2, '0')}';
 }

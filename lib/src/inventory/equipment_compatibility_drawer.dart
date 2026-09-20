@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
+import '../fleet/equipment_display.dart';
 import '../fleet/equipment_type_icon.dart';
+import '../fleet/fleet_ui_strings.dart';
 import '../fleet/ship_portrait.dart';
 import '../game_state/game_state.dart';
 import '../widgets/standalone_text_input_dialog.dart';
@@ -115,14 +117,17 @@ class _EquipmentCompatibilityDrawerState
                               onClose: widget.onClose,
                             ),
                           ),
+                          SliverToBoxAdapter(
+                            child: _EquipmentStats(equipment: widget.equipment),
+                          ),
                           if (widget.state.hasEquipmentCompatibilityData)
                             SliverToBoxAdapter(
                               child: Padding(
                                 padding: const EdgeInsets.fromLTRB(
                                   14,
-                                  2,
+                                  0,
                                   14,
-                                  10,
+                                  6,
                                 ),
                                 child: Column(
                                   children: [
@@ -169,7 +174,7 @@ class _EquipmentCompatibilityDrawerState
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 4),
                                     _SlotFilters(
                                       selected: _slotFilter,
                                       onChanged: (value) =>
@@ -233,6 +238,83 @@ class _EquipmentCompatibilityDrawerState
     );
     if (value == null || !mounted) return;
     setState(() => _query = value.trim());
+  }
+}
+
+class _EquipmentStats extends StatelessWidget {
+  const _EquipmentStats({required this.equipment});
+
+  final MasterSlotItem equipment;
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = equipmentStatDisplays(equipment);
+    if (stats.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+      child: Column(
+        children: [
+          for (var start = 0; start < stats.length; start += 4)
+            Padding(
+              padding: EdgeInsets.only(top: start == 0 ? 0 : 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var column = 0; column < 4; column++)
+                    Expanded(
+                      child: start + column >= stats.length
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: EdgeInsets.only(
+                                right: column == 3 ? 0 : 6,
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xff173546),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text:
+                                              '${fleetText(context, stats[start + column].label)} ',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: fleetText(
+                                            context,
+                                            stats[start + column].value,
+                                          ),
+                                          style: const TextStyle(
+                                            color: Color(0xff70d5cd),
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -519,7 +601,7 @@ class _ScopeTab extends StatelessWidget {
     excludeSemantics: true,
     onTap: onTap,
     child: Material(
-      color: selected ? const Color(0xff2b7180) : Colors.transparent,
+      color: selected ? const Color(0xff8a6628) : Colors.transparent,
       borderRadius: BorderRadius.circular(15),
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
@@ -529,8 +611,8 @@ class _ScopeTab extends StatelessWidget {
             label,
             style: TextStyle(
               color: selected
-                  ? const Color(0xfff2f7f9)
-                  : const Color(0xff8ba2af),
+                  ? const Color(0xffffdc88)
+                  : const Color(0xff9fb3bf),
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
@@ -552,71 +634,37 @@ class _SlotFilters extends StatelessWidget {
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
-    return Row(
-      children: [
-        for (final value in EquipmentCompatibilitySlotFilter.values) ...[
-          _FilterChip(
-            key: Key('equipment-compatibility-filter-${value.name}'),
-            selected: selected == value,
-            label: switch (value) {
-              EquipmentCompatibilitySlotFilter.all =>
-                l10n.equipmentCompatibilityAllSlots,
-              EquipmentCompatibilitySlotFilter.regular =>
-                l10n.equipmentCompatibilityRegularSlot,
-              EquipmentCompatibilitySlotFilter.expansion =>
-                l10n.equipmentCompatibilityExpansionSlot,
-            },
-            onTap: () => onChanged(value),
-          ),
-          if (value != EquipmentCompatibilitySlotFilter.values.last)
-            const SizedBox(width: 6),
+    return Container(
+      key: const Key('equipment-compatibility-slot-tabs'),
+      height: 32,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xff081923),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xff315064)),
+      ),
+      child: Row(
+        children: [
+          for (final value in EquipmentCompatibilitySlotFilter.values)
+            Expanded(
+              child: _ScopeTab(
+                key: Key('equipment-compatibility-filter-${value.name}'),
+                selected: selected == value,
+                label: switch (value) {
+                  EquipmentCompatibilitySlotFilter.all =>
+                    l10n.equipmentCompatibilityAllSlots,
+                  EquipmentCompatibilitySlotFilter.regular =>
+                    l10n.equipmentCompatibilityRegularSlot,
+                  EquipmentCompatibilitySlotFilter.expansion =>
+                    l10n.equipmentCompatibilityExpansionSlot,
+                },
+                onTap: () => onChanged(value),
+              ),
+            ),
         ],
-      ],
+      ),
     );
   }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    super.key,
-    required this.selected,
-    required this.label,
-    required this.onTap,
-  });
-
-  final bool selected;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    selected: selected,
-    label: label,
-    excludeSemantics: true,
-    onTap: onTap,
-    child: Material(
-      color: selected ? const Color(0xff173f4c) : const Color(0xff102a38),
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected
-                  ? const Color(0xff69d2cf)
-                  : const Color(0xff9bb0bb),
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 class _CompatibilityList extends StatelessWidget {
@@ -719,9 +767,9 @@ class _ShipRow extends StatelessWidget {
           ShipPortrait(
             ship: row.shipMaster,
             serverOrigin: state.serverOrigin,
-            width: 74,
-            height: 48,
-            decodeHeight: (50 * MediaQuery.devicePixelRatioOf(context)).ceil(),
+            width: 51.8,
+            height: 33.6,
+            decodeHeight: (35 * MediaQuery.devicePixelRatioOf(context)).ceil(),
           ),
           const SizedBox(width: 8),
           Expanded(

@@ -2729,7 +2729,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openInSystemBrowser => '使用系统默认浏览器打开';
 
   @override
-  String get otherToolsComingSoon => '其他功能陆续开发中';
+  String get otherToolsComingSoon => '其他功能正在开发中';
 
   @override
   String get otherToolsHint => '后续辅助工具会集中放在这里。';

@@ -428,10 +428,22 @@ abstract final class NosakiSparkleCalculator {
   }
 
   static bool isBlockedOnlyByFatigue(GameState state) {
-    if (!hasBaseEligibleFleet(state)) {
-      return false;
+    var hasFatiguedTarget = false;
+    for (final fleet in state.fleets) {
+      final projection = project(
+        state: state,
+        fleetId: fleet.id,
+        elapsed: Duration.zero,
+      );
+      if (!projection.isReady) continue;
+      if (projection.eligibleShipCount > 0) return false;
+      // Completed (cond >= 54), docked, or absent companions are not
+      // fatigue-blocked targets. Only an actual low-cond target qualifies.
+      hasFatiguedTarget |= projection.rows.any(
+        (row) => row.status == NosakiSparkleShipStatus.unable,
+      );
     }
-    return !hasEligibleSparkleTarget(state);
+    return hasFatiguedTarget;
   }
 
   static int preferredNosakiSparkleFleetId({

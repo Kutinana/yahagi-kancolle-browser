@@ -209,7 +209,7 @@ class TimerMechanicsService {
     }
 
     // The port response already includes this refresh's morale gains. Check
-    // those before treating an all-54 fleet as a fatigue-blocked failure.
+    // those before applying the fatigue exception to remaining low-cond targets.
     final sparkleObserved =
         previousState != null &&
         _hasObservedNozakiSparkle(previousState, portState);

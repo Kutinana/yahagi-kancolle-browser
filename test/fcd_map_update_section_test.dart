@@ -50,7 +50,7 @@ void main() {
 
     await tester.pumpWidget(_app(controller));
 
-    final versionFinder = find.textContaining('数据版本：2026/07/01/01');
+    final versionFinder = find.textContaining('数据版本：2026-07-01');
     final checkedFinder = find.textContaining('上次检查：2026-08-05 14:30');
     expect(versionFinder, findsOneWidget);
     expect(checkedFinder, findsOneWidget);
@@ -83,7 +83,7 @@ void main() {
 
     await tester.pumpWidget(_app(controller));
 
-    expect(find.textContaining('数据版本：2026/07/01/01'), findsOneWidget);
+    expect(find.textContaining('数据版本：2026-07-01'), findsOneWidget);
     expect(find.textContaining('上次检查：2026-08-05 14:30'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -99,7 +99,7 @@ void main() {
     addTearDown(controller.dispose);
     await tester.pumpWidget(_app(controller));
 
-    expect(find.textContaining('2026/07/01/01'), findsOneWidget);
+    expect(find.textContaining('数据版本：2026-07-01'), findsOneWidget);
     await tester.tap(find.byKey(const Key('fcd-map-check-button')));
     await tester.pump();
 

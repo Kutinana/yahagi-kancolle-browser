@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'data_update_metadata.dart';
+
 import '../toolbox/sortie_map_query/enemy_catalog_controller.dart';
 import '../toolbox/sortie_map_query/enemy_catalog_update_service.dart';
 
@@ -29,11 +31,9 @@ final class EnemyCatalogUpdateSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    '${japanese ? 'バージョン' : '版本'}：${controller.data.dataVersion} · '
-                    '${controller.data.ships.length}${japanese ? '件' : ' 条配置'} · '
-                    '${controller.usesCachedData ? (japanese ? '更新済み' : '已更新') : (japanese ? '内蔵' : '内置')}',
-                    style: const TextStyle(color: Color(0xff8197a5)),
+                  DataUpdateMetadata(
+                    version: controller.data.dataVersion,
+                    lastCheckedAt: controller.lastCheckedAt,
                   ),
                 ],
               ),

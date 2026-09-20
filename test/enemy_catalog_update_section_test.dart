@@ -25,12 +25,15 @@ void main() {
     );
 
     expect(find.text('敌舰资料'), findsOneWidget);
-    expect(find.textContaining('2026.09.20'), findsOneWidget);
+    expect(find.text('数据版本：2026-09-20'), findsOneWidget);
+    expect(find.text('上次检查：尚未检查'), findsOneWidget);
     expect(find.byKey(const Key('enemy-catalog-check-button')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('enemy-catalog-check-button')));
     await tester.pumpAndSettle();
     expect(find.textContaining('已是最新版本'), findsOneWidget);
+    expect(controller.lastCheckedAt, isNotNull);
+    expect(find.text('上次检查：尚未检查'), findsNothing);
   });
 }
 

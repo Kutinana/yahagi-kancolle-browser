@@ -18,6 +18,9 @@ final class EnemyCatalogController extends ChangeNotifier {
   Future<EnemyCatalogUpdateResult>? _activeCheck;
   EnemyCatalogUpdateResult? _lastResult;
   bool _disposed = false;
+  DateTime? _lastCheckedAt;
+
+  DateTime? get lastCheckedAt => _lastCheckedAt;
 
   EnemyCatalogData get data => _data;
   bool get isChecking => _activeCheck != null;
@@ -37,6 +40,7 @@ final class EnemyCatalogController extends ChangeNotifier {
     try {
       final result = await _updater.checkAndUpdate(current: _data);
       _lastResult = result;
+      _lastCheckedAt = DateTime.now().toUtc();
       if (result is EnemyCatalogUpdated) {
         _data = result.catalog;
         usesCachedData = true;

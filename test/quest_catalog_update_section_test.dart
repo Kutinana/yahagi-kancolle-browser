@@ -24,7 +24,7 @@ void main() {
     await tester.pumpWidget(_app(controller));
 
     expect(find.text('任务资料'), findsOneWidget);
-    expect(find.textContaining(controller.version.shortLabel), findsOneWidget);
+    expect(find.text('数据版本：2026-08-01'), findsOneWidget);
     await tester.tap(find.byKey(const Key('quest-catalog-check-button')));
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
