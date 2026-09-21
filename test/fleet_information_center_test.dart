@@ -1018,6 +1018,58 @@ void main() {
     expect(find.byKey(const Key('fleet-focus-ship-9002')), findsOneWidget);
   });
 
+  for (final scenario in [
+    (next: 103, level: 75, target: true, text: '夕張改二 · Lv.75'),
+    (next: 0, level: 0, target: false, text: '无后续改造'),
+    (next: 103, level: 75, target: false, text: '数据未齐'),
+    (next: 103, level: 0, target: true, text: '数据未齐'),
+  ]) {
+    testWidgets('remodel capsule ${scenario.text} ${scenario.level}', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1180, 720);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final data =
+          (jsonDecode(start2Event.responseBody)
+                  as Map<String, dynamic>)['api_data']
+              as Map<String, dynamic>;
+      final ships = data['api_mst_ship'] as List<dynamic>;
+      (ships.first as Map<String, dynamic>)
+        ..['api_aftershipid'] = '${scenario.next}'
+        ..['api_afterlv'] = scenario.level;
+      if (scenario.target) {
+        ships.add({
+          'api_id': 103,
+          'api_name': '夕張改二',
+          'api_stype': 2,
+          'api_aftershipid': '101',
+          'api_afterlv': 80,
+        });
+      }
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(kcsapiEvent('/kcsapi/api_start2/getData', data))
+        ..accept(portEvent);
+      await controller.idle;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: FleetInformationCenter(controller: controller)),
+        ),
+      );
+      final capsule = find.byKey(const Key('fleet-remodel-capsule'));
+      expect(capsule, findsOneWidget);
+      expect(find.text('改造：${scenario.text}'), findsOneWidget);
+      expect(
+        tester.getTopLeft(capsule).dy,
+        lessThan(tester.getTopLeft(find.text('耐久')).dy),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('ship detail panel keeps only the parameter grid', (
     tester,
   ) async {
@@ -1743,8 +1795,9 @@ void main() {
       addTearDown(emptyController.dispose);
       // This test exercises active docks; the fixture's July 2026 deadlines
       // must not make it silently turn into a completion test later on.
-      final activePort = (jsonDecode(portEvent.responseBody) as Map)['api_data']
-          as Map<String, dynamic>;
+      final activePort =
+          (jsonDecode(portEvent.responseBody) as Map)['api_data']
+              as Map<String, dynamic>;
       for (final dock in activePort['api_ndock'] as List) {
         if (dock['api_state'] == 1) {
           dock['api_complete_time'] = DateTime.now()

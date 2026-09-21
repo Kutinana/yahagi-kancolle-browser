@@ -513,53 +513,52 @@ class _ShipSparkleLayer extends StatelessWidget {
   final Animation<double> animation;
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: animation,
-    builder: (context, child) {
-      final phase = animation.value;
-      final opacity = switch (phase) {
-        < 0.16 => 0.0,
-        < 0.24 => (phase - 0.16) / 0.08,
-        < 0.31 => 1.0,
-        < 0.38 => 1 - (phase - 0.31) / 0.07,
-        _ => 0.0,
-      };
-      final scale = 0.55 + opacity * 0.7;
-      return LayoutBuilder(
-        builder: (context, constraints) => Stack(
-          key: Key('fleet-morale-stars-$shipId'),
-          fit: StackFit.expand,
-          children: [
-            for (var index = 0; index < points.length; index++)
-              Positioned(
-                left:
-                    constraints.maxWidth * points[index].x -
-                    points[index].size / 2,
-                top:
-                    constraints.maxHeight * points[index].y -
-                    points[index].size / 2,
-                child: Transform.scale(
-                  key: Key('fleet-sparkle-$shipId-$index'),
-                  scale: scale,
-                  child: Opacity(
-                    opacity: opacity,
-                    child: Icon(
-                      index.isEven
-                          ? Icons.auto_awesome_rounded
-                          : Icons.star_rounded,
-                      size: points[index].size,
-                      color: const Color(0xfffff7a4),
-                      shadows: const [
-                        Shadow(color: Colors.white, blurRadius: 3),
-                        Shadow(color: Color(0xffffcf3f), blurRadius: 8),
-                      ],
-                    ),
-                  ),
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: LayoutBuilder(
+      builder: (context, constraints) => Stack(
+        key: Key('fleet-morale-stars-$shipId'),
+        fit: StackFit.expand,
+        children: [
+          for (var index = 0; index < points.length; index++)
+            Positioned(
+              left:
+                  constraints.maxWidth * points[index].x -
+                  points[index].size / 2,
+              top:
+                  constraints.maxHeight * points[index].y -
+                  points[index].size / 2,
+              child: AnimatedBuilder(
+                animation: animation,
+                child: Icon(
+                  index.isEven
+                      ? Icons.auto_awesome_rounded
+                      : Icons.star_rounded,
+                  size: points[index].size,
+                  color: const Color(0xfffff7a4),
+                  shadows: const [
+                    Shadow(color: Colors.white, blurRadius: 3),
+                    Shadow(color: Color(0xffffcf3f), blurRadius: 8),
+                  ],
                 ),
+                builder: (context, child) {
+                  final phase = animation.value;
+                  final opacity = switch (phase) {
+                    < 0.16 => 0.0,
+                    < 0.24 => (phase - 0.16) / 0.08,
+                    < 0.31 => 1.0,
+                    < 0.38 => 1 - (phase - 0.31) / 0.07,
+                    _ => 0.0,
+                  };
+                  return Transform.scale(
+                    key: Key('fleet-sparkle-$shipId-$index'),
+                    scale: 0.55 + opacity * 0.7,
+                    child: Opacity(opacity: opacity, child: child),
+                  );
+                },
               ),
-          ],
-        ),
-      );
-    },
+            ),
+        ],
+      ),
+    ),
   );
 }

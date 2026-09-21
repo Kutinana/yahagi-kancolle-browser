@@ -276,14 +276,14 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byTooltip('折叠未卜先知'));
+    await tester.tap(find.bySemanticsLabel('折叠未卜先知'));
     await tester.pumpAndSettle();
 
     expect(find.text('未卜先知'), findsOneWidget);
     expect(find.text('待机'), findsNothing);
     expect(find.text('等待出击数据'), findsNothing);
 
-    await tester.tap(find.byTooltip('展开未卜先知'));
+    await tester.tap(find.bySemanticsLabel('展开未卜先知'));
     await tester.pumpAndSettle();
 
     expect(find.text('待机'), findsOneWidget);

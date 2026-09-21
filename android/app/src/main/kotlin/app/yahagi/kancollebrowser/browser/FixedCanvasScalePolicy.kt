@@ -30,6 +30,10 @@ class FixedCanvasScalePolicy {
             ) * 100f
         ).toInt()
 
+        // Android interprets 0 as automatic/default zoom, not a tiny scale.
+        // Ignore transitional slivers and wait for a usable layout instead.
+        if (scalePercent <= 0) return null
+
         if (!force && scalePercent == previousScalePercent) {
             return null
         }

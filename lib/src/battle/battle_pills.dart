@@ -334,35 +334,39 @@ class ResourceChangesPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xff2f7469)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          for (var index = 0; index < changes.length; index++) ...<Widget>[
-            if (index > 0)
-              Container(
-                width: 1,
-                height: 10,
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                color: const Color(0x4d83d5c8),
+      child: SingleChildScrollView(
+        key: const PageStorageKey('battle-resource-changes-scroll'),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (var index = 0; index < changes.length; index++) ...<Widget>[
+              if (index > 0)
+                Container(
+                  width: 1,
+                  height: 10,
+                  margin: const EdgeInsets.symmetric(horizontal: 5),
+                  color: const Color(0x4d83d5c8),
+                ),
+              Image.asset(
+                'assets/images/material/${changes[index].type.apiId.toString().padLeft(2, '0')}.png',
+                key: Key('battle-resource-icon-${changes[index].type.apiId}'),
+                width: 15,
+                height: 15,
+                fit: BoxFit.contain,
               ),
-            Image.asset(
-              'assets/images/material/${changes[index].type.apiId.toString().padLeft(2, '0')}.png',
-              key: Key('battle-resource-icon-${changes[index].type.apiId}'),
-              width: 15,
-              height: 15,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(width: 2),
-            Text(
-              _signed(changes[index].amount),
-              style: _battlePillTextStyle.copyWith(
-                color: changes[index].amount < 0
-                    ? const Color(0xffff8c78)
-                    : const Color(0xff83d5c8),
+              const SizedBox(width: 2),
+              Text(
+                _signed(changes[index].amount),
+                style: _battlePillTextStyle.copyWith(
+                  color: changes[index].amount < 0
+                      ? const Color(0xffff8c78)
+                      : const Color(0xff83d5c8),
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -387,6 +391,8 @@ class RewardItemsPill extends StatelessWidget {
           border: Border.all(color: const Color(0xff2f7469)),
         ),
         child: SingleChildScrollView(
+          // Keep the offset separate from LiveBattleCard's saved panel mode.
+          key: const PageStorageKey('battle-reward-items-scroll'),
           scrollDirection: Axis.horizontal,
           child: Row(
             mainAxisSize: MainAxisSize.min,

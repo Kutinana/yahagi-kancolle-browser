@@ -8,6 +8,33 @@ import org.junit.Test
 
 class NativeGameWebViewConfiguratorTest {
     @Test
+    fun navigationAndExplicitRecoveryRemainIndependentDuringRepeatedTransitions() {
+        val states = mutableListOf<Boolean>()
+        val bridge = NativeGamePresentationBridge(states::add)
+        repeat(200) {
+            bridge.postMessage("web")
+            bridge.postMessage("pending")
+            bridge.postMessage("pending")
+            bridge.postMessage("game")
+            repeat(10) { bridge.postMessage("game") }
+            bridge.postMessage("game-fit")
+            bridge.postMessage("game-fit")
+        }
+        assertEquals(List(200) { listOf(false, true, true, true) }.flatten(), states)
+    }
+
+    @Test
+    fun explicitFitReappliesEvenWhenTheDocumentIsStillAGame() {
+        val states = mutableListOf<Boolean>()
+        val bridge = NativeGamePresentationBridge(states::add)
+        bridge.postMessage("game")
+        bridge.postMessage("game-fit")
+        bridge.postMessage("game-fit")
+        bridge.postMessage("game")
+        assertEquals(listOf(true, true, true), states)
+    }
+
+    @Test
     fun delayedGameSurfaceMessageReappliesNativePresentation() {
         val presentationStates = mutableListOf<Boolean>()
         val bridge = NativeGamePresentationBridge(presentationStates::add)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'fleet_ui_strings.dart';
+import 'ship_remodel_capsule.dart';
 
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
@@ -387,17 +388,12 @@ class _FleetViewState extends State<_FleetView> {
       return const _WaitingState();
     }
     final ships = state.shipsForFleet(fleet.id);
-    final repairStatuses = <int, ShipRepairStatus>{};
-    for (final ship in ships) {
-      final status = shipRepairStatusFor(
-        state: state,
-        shipId: ship.id,
-        anchorageRepairStartedAt: widget.anchorageRepairStartedAt,
-        nosakiSparkleStartedAt: widget.nosakiSparkleStartedAt,
-        now: widget.now,
-      );
-      if (status != null) repairStatuses[ship.id] = status;
-    }
+    final repairStatuses = shipRepairStatusesFor(
+      state: state,
+      anchorageRepairStartedAt: widget.anchorageRepairStartedAt,
+      nosakiSparkleStartedAt: widget.nosakiSparkleStartedAt,
+      now: widget.now,
+    );
     final metrics = _metricsFor(state, fleet);
     final specialAttack = detectFleetSpecialAttack(state, fleet);
     if (_lastButtonsState != state) {
@@ -421,7 +417,7 @@ class _FleetViewState extends State<_FleetView> {
         ? _selectedEquipmentIndex
         : null;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 12, 14, 14),
+      padding: const EdgeInsets.fromLTRB(8, 6, 14, 14),
       child: Column(
         children: [
           if (widget.showContextHeader) ...[
@@ -433,7 +429,7 @@ class _FleetViewState extends State<_FleetView> {
                   : null,
               onFleetSelected: widget.onFleetSelected,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
           ],
           _MetricsBar(
             state: state,
@@ -444,7 +440,7 @@ class _FleetViewState extends State<_FleetView> {
             moraleMetricMode: widget.moraleMetricMode,
             onToggleMoraleMetricMode: widget.onToggleMoraleMetricMode,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 5),
           Expanded(
             child: ships.isEmpty
                 ? Center(
@@ -921,14 +917,11 @@ class _FleetFocusPanel extends StatelessWidget {
                                                 'Next ${ship.nextExperience}',
                                                 maxLines: 1,
                                                 softWrap: false,
-                                                style: TextStyle(
-                                                  color: const Color(
-                                                    0xff8197a5,
-                                                  ),
-                                                  fontSize: narrow
-                                                      ? 7
-                                                      : (compact ? 9 : 10),
-                                                  fontFeatures: const [
+                                                style: const TextStyle(
+                                                  color: Color(0xffa9bac4),
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontFeatures: [
                                                     FontFeature.tabularFigures(),
                                                   ],
                                                 ),
@@ -1026,7 +1019,7 @@ class _FleetFocusPanel extends StatelessWidget {
                                         for (final mechanism in mechanisms) ...[
                                           const SizedBox(width: 4),
                                           _MiniBadge(
-                                            text: mechanism.effectiveShortLabel,
+                                            text: mechanism.detailedShortLabel,
                                             color: switch (mechanism.tone) {
                                               MechanismTone.antiAir =>
                                                 const Color(0xffffc861),
@@ -1044,7 +1037,7 @@ class _FleetFocusPanel extends StatelessWidget {
                                           const SizedBox(width: 4),
                                           _MiniBadge(
                                             text: specialAttack!
-                                                .effectiveShortLabel,
+                                                .detailedShortLabel,
                                             color: const Color(0xffff8b88),
                                           ),
                                         ],
@@ -1410,95 +1403,110 @@ class _ShipParameterDetails extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(10),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 2.6,
-              crossAxisSpacing: 6,
-              mainAxisSpacing: 6,
-            ),
-            itemCount: totalCount,
-            itemBuilder: (context, index) {
-              if (index < stats.length) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff102331),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          fleetText(context, stats[index].$1),
-                          style: const TextStyle(
-                            color: Color(0xff8197a5),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        fleetText(context, stats[index].$2),
-                        style: const TextStyle(
-                          color: Color(0xffe1e9ed),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              final mech = allMechanisms[index - stats.length];
-              final valueText = mech.rate != null
-                  ? '${(mech.rate! * 100).round()}%'
-                  : fleetText(context, '有效');
-              final labelColor = switch (mech.tone) {
-                MechanismTone.antiAir => const Color(0xffffc861),
-                MechanismTone.specialAttack => const Color(0xffff8b88),
-                MechanismTone.nightAttack => const Color(0xffbfa4ff),
-                MechanismTone.neutral ||
-                MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
-              };
-
-              return Material(
-                color: const Color(0xff102331),
-                borderRadius: BorderRadius.circular(7),
-                child: InkWell(
-                  onTap: () => _showMechanismDetails(context, mech),
-                  borderRadius: BorderRadius.circular(7),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            fleetText(context, mech.shortLabel ?? mech.label),
-                            style: TextStyle(
-                              color: labelColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          valueText,
-                          style: const TextStyle(
-                            color: Color(0xffe1e9ed),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            fontFeatures: [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+                sliver: SliverToBoxAdapter(
+                  child: ShipRemodelCapsule(state: state, ship: ship),
                 ),
-              );
-            },
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 2.6,
+                    crossAxisSpacing: 6,
+                    mainAxisSpacing: 6,
+                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    if (index < stats.length) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xff102331),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                fleetText(context, stats[index].$1),
+                                style: const TextStyle(
+                                  color: Color(0xffa9bac4),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              fleetText(context, stats[index].$2),
+                              style: const TextStyle(
+                                color: Color(0xffe1e9ed),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final mech = allMechanisms[index - stats.length];
+                    final valueText = mech.rate != null
+                        ? '${(mech.rate! * 100).round()}%'
+                        : fleetText(context, '有效');
+                    final labelColor = switch (mech.tone) {
+                      MechanismTone.antiAir => const Color(0xffffc861),
+                      MechanismTone.specialAttack => const Color(0xffff8b88),
+                      MechanismTone.nightAttack => const Color(0xffbfa4ff),
+                      MechanismTone.neutral ||
+                      MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
+                    };
+
+                    return Material(
+                      color: const Color(0xff102331),
+                      borderRadius: BorderRadius.circular(7),
+                      child: InkWell(
+                        onTap: () => _showMechanismDetails(context, mech),
+                        borderRadius: BorderRadius.circular(7),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  fleetText(
+                                    context,
+                                    mech.shortLabel ?? mech.label,
+                                  ),
+                                  style: TextStyle(
+                                    color: labelColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                valueText,
+                                style: const TextStyle(
+                                  color: Color(0xffe1e9ed),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }, childCount: totalCount),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -1673,8 +1681,9 @@ class _SelectedEquipmentDetails extends StatelessWidget {
                     child: Text(
                       fleetText(context, stats[index].label),
                       style: const TextStyle(
-                        color: Color(0xff8197a5),
+                        color: Color(0xffa9bac4),
                         fontSize: 11,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -1684,7 +1693,7 @@ class _SelectedEquipmentDetails extends StatelessWidget {
                       style: const TextStyle(
                         color: Color(0xffe1e9ed),
                         fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   if (kShowEquipmentVisibleBonuses &&
@@ -1855,8 +1864,9 @@ class _MetricsBar extends StatelessWidget {
                     fleetText(context, label),
                     maxLines: 1,
                     style: TextStyle(
-                      color: const Color(0xff8197a5),
+                      color: const Color(0xffa9bac4),
                       fontSize: compact ? 9 : 11,
+                      fontWeight: FontWeight.w700,
                       height: 1,
                     ),
                   ),
@@ -2604,7 +2614,7 @@ class _ShipRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        mechanism.effectiveShortLabel,
+        mechanism.detailedShortLabel,
         maxLines: 1,
         softWrap: false,
         style: TextStyle(
@@ -2762,7 +2772,7 @@ class _MechanismChip extends StatelessWidget {
   const _MechanismChip({
     required this.mechanism,
     this.isSpecialAttack = false,
-    this.showRate = false,
+    this.showRate = true,
   });
 
   final EquipmentMechanismDisplay mechanism;

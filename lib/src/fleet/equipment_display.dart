@@ -37,7 +37,7 @@ class EquipmentMechanismDisplay {
     final base = shortLabel ?? label;
     if (rate != null) {
       final percent = (rate! * 100).round();
-      return '$base $percent%';
+      return '$base：$percent%';
     }
     return base;
   }

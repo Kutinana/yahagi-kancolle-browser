@@ -170,7 +170,7 @@ void main() {
     expect(gamePageAlignmentScript, contains('YahagiPresentation.postMessage'));
     expect(
       gamePageAlignmentScript,
-      contains("notifyPresentationState('game')"),
+      contains("notifyPresentationState('game', forceFit)"),
     );
     expect(gamePageAlignmentScript, contains("notifyPresentationState('web')"));
   });

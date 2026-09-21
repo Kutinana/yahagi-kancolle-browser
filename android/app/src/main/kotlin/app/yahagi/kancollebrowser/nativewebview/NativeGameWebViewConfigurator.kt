@@ -100,6 +100,13 @@ internal class NativeGamePresentationBridge(
 
     @JavascriptInterface
     fun postMessage(message: String) {
+        // A fit request is an action, not a state transition. Page finish,
+        // fullscreen and window recovery must reapply even for game -> game.
+        if (message == "game-fit") {
+            lastPresentationState = "game"
+            onPresentationStateChanged(true)
+            return
+        }
         if (message != "game" && message != "web" && message != "pending") return
         if (message == lastPresentationState) return
         lastPresentationState = message

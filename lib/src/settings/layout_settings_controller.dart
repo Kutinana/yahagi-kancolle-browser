@@ -217,30 +217,36 @@ class LayoutSettingsController extends ChangeNotifier {
       }
       for (final module in LayoutSettingsStore.defaultDashboardCardOrder) {
         controller._moduleShowLogo[module] =
-            await (store as ModuleDisplaySettingsStore).loadModuleShowLogo(module);
+            await (store as ModuleDisplaySettingsStore).loadModuleShowLogo(
+              module,
+            );
         controller._moduleShowName[module] =
-            await (store as ModuleDisplaySettingsStore).loadModuleShowName(module);
+            await (store as ModuleDisplaySettingsStore).loadModuleShowName(
+              module,
+            );
       }
     }
     if (store is TopNoticeSettingsStore) {
       final topNoticeStore = store as TopNoticeSettingsStore;
-      controller._topNoticeEnabled = await topNoticeStore.loadTopNoticeEnabled();
-      controller._topNoticeDurationSeconds =
-          await topNoticeStore.loadTopNoticeDurationSeconds();
+      controller._topNoticeEnabled = await topNoticeStore
+          .loadTopNoticeEnabled();
+      controller._topNoticeDurationSeconds = await topNoticeStore
+          .loadTopNoticeDurationSeconds();
     }
     if (store is UiDisplaySizeSettingsStore) {
-      controller._uiDisplaySize =
-          await (store as UiDisplaySizeSettingsStore).loadUiDisplaySize();
+      controller._uiDisplaySize = await (store as UiDisplaySizeSettingsStore)
+          .loadUiDisplaySize();
     } else if (store is HeaderUiSizeSettingsStore) {
-      controller._uiDisplaySize =
-          await (store as HeaderUiSizeSettingsStore).loadHeaderUiSize();
+      controller._uiDisplaySize = await (store as HeaderUiSizeSettingsStore)
+          .loadHeaderUiSize();
     } else if (store is WorkspaceMenuSizeSettingsStore) {
       controller._uiDisplaySize =
-          await (store as WorkspaceMenuSizeSettingsStore).loadWorkspaceMenuSize();
+          await (store as WorkspaceMenuSizeSettingsStore)
+              .loadWorkspaceMenuSize();
     }
     if (store is UiLockSettingsStore) {
-      controller._uiLocked =
-          await (store as UiLockSettingsStore).loadUiLocked();
+      controller._uiLocked = await (store as UiLockSettingsStore)
+          .loadUiLocked();
     }
     controller._expeditionCountdownConfigured = true;
     controller._fleetDisplayFieldsLoaded = true;
@@ -282,7 +288,9 @@ class LayoutSettingsController extends ChangeNotifier {
         await (_store as HeaderUiSizeSettingsStore).saveHeaderUiSize(size);
       }
       if (_store is WorkspaceMenuSizeSettingsStore) {
-        await (_store as WorkspaceMenuSizeSettingsStore).saveWorkspaceMenuSize(size);
+        await (_store as WorkspaceMenuSizeSettingsStore).saveWorkspaceMenuSize(
+          size,
+        );
       }
     }
   }
@@ -314,7 +322,9 @@ class LayoutSettingsController extends ChangeNotifier {
     _topNoticeDurationSeconds = seconds;
     notifyListeners();
     if (_store is TopNoticeSettingsStore) {
-      await (_store as TopNoticeSettingsStore).saveTopNoticeDurationSeconds(seconds);
+      await (_store as TopNoticeSettingsStore).saveTopNoticeDurationSeconds(
+        seconds,
+      );
     }
   }
 
@@ -514,6 +524,11 @@ class LayoutSettingsController extends ChangeNotifier {
 
   Future<void> setHdEnabled(bool enabled) =>
       _setHdSettings(_hdSettings.copyWith(enabled: enabled));
+
+  Future<void> setHdExtensionPosition(String position) async {
+    if (position != 'top' && position != 'bottom') return;
+    await _setHdSettings(_hdSettings.copyWith(extensionPosition: position));
+  }
 
   // Kept for earlier callers; the home editor uses insertion and span APIs.
   Future<void> setHdSplit(bool split) => _setHdSettings(

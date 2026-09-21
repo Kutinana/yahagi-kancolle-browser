@@ -188,7 +188,7 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
                         child: Text(
                           mission,
                           key: Key('expedition-summary-name-$fleetId'),
-                          style: const TextStyle(fontSize: 12),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

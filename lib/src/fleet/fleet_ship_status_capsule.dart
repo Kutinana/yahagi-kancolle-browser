@@ -59,7 +59,7 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
       show('portrait') ? widget.damagePulseFilter : DamagePulseFilter.off;
 
   void _syncSparkleAnimation() {
-    if (effectiveSparkleEnabled) {
+    if (effectiveSparkleEnabled && widget.ship.condition >= 50) {
       if (!_sparklePulse.isAnimating) _sparklePulse.repeat();
     } else {
       _sparklePulse.stop();
@@ -738,7 +738,7 @@ class _FleetShipStatusCapsuleState extends State<FleetShipStatusCapsule>
         if (show('mechanisms'))
           badge(
             i == 0 ? 'mechanism' : 'mechanism-$i',
-            mechanisms[i].effectiveShortLabel,
+            mechanisms[i].detailedShortLabel,
             _mechanismColor(mechanisms[i].tone),
           ),
     ];

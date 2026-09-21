@@ -128,7 +128,7 @@ final class _BoundsRecoveringNativeActivityGameWebViewPort
   });
 
   final NativeActivityGameWebViewPort delegate;
-  final Future<void> Function() recoverBounds;
+  final Future<bool> Function() recoverBounds;
 
   @override
   Stream<NativeGameWebViewEvent> get events => delegate.events;
@@ -167,7 +167,7 @@ final class _BoundsRecoveringNativeActivityGameWebViewPort
 
   @override
   Future<void> fitGameScreen() async {
-    await recoverBounds();
+    if (!await recoverBounds()) return;
     await delegate.fitGameScreen();
   }
 
@@ -464,19 +464,24 @@ final class _NativeActivityGameSurfaceState
     }
   }
 
-  Future<void> _synchronizeNativeBounds() async {
-    if (!_active || !mounted) return;
+  Future<bool> _synchronizeNativeBounds() async {
+    if (!_active || !mounted) return false;
+    final port = _port;
+    final operationEpoch = _operationEpoch;
+    final generationId = _generationId;
+    if (port == null || generationId == null) return false;
     setState(() {});
     await WidgetsBinding.instance.endOfFrame;
-    if (!_active || !mounted) return;
+    if (!_matchesGeneration(port, generationId, operationEpoch)) return false;
     final slotContext = _surfaceSlotKey.currentContext;
-    if (slotContext == null || !slotContext.mounted) return;
+    if (slotContext == null || !slotContext.mounted) return false;
     final bounds = readNativeGameSurfaceBounds(
       slotContext.findRenderObject(),
       devicePixelRatio: View.of(slotContext).devicePixelRatio,
     );
-    if (bounds == null) return;
+    if (bounds == null) return false;
     await _onBoundsChanged(bounds);
+    return _matchesGeneration(port, generationId, operationEpoch);
   }
 
   bool _startupDependenciesChanged(

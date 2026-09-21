@@ -18,6 +18,7 @@ import 'game_frame_refresh_shortcut_settings.dart';
 import 'header_resource_settings.dart';
 import 'settings_ui_helpers.dart';
 import 'hd_layout_settings_section.dart';
+import '../fleet/fleet_ui_strings.dart';
 
 class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
   const ScreenSettingsPage({
@@ -126,7 +127,9 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                               children: [
                                 Text(
                                   l10n.uiDisplaySizeTitle,
-                                  key: const Key('settings-ui-display-size-label'),
+                                  key: const Key(
+                                    'settings-ui-display-size-label',
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
@@ -160,7 +163,9 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                             ],
                             onChanged: (value) {
                               if (value != null) {
-                                layoutSettingsController.setUiDisplaySize(value);
+                                layoutSettingsController.setUiDisplaySize(
+                                  value,
+                                );
                               }
                             },
                           ),
@@ -275,21 +280,96 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                       ),
                     ),
                     const Divider(color: Color(0xff294052), height: 1),
-                    buildSwitchTile(
-                      title: l10n.informationPanelOnLeft,
+                    buildActionTile(
+                      title: fleetText(context, '功能区位置'),
                       titleKey: const Key('settings-information-panel-left'),
-                      subtitle: l10n.informationPanelOnLeftDesc,
-                      value: layoutSettingsController.informationPanelOnLeft,
-                      onChanged:
-                          layoutSettingsController.setInformationPanelOnLeft,
-                      trailingBeforeSwitch: OutlinedButton.icon(
-                        key: const Key('settings-reset-dashboard-card-order'),
-                        onPressed:
-                            layoutSettingsController.resetDashboardCardOrder,
-                        icon: const Icon(Icons.restore, size: 18),
-                        label: Text(l10n.restoreDefaultOrder),
+                      subtitle: fleetText(context, '选择功能区显示在左侧或右侧，竖屏保持上下布局。'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton.icon(
+                            key: const Key(
+                              'settings-reset-dashboard-card-order',
+                            ),
+                            onPressed: layoutSettingsController
+                                .resetDashboardCardOrder,
+                            icon: const Icon(Icons.restore, size: 18),
+                            label: Text(l10n.restoreDefaultOrder),
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 60,
+                            child: DropdownButton<String>(
+                              key: const Key(
+                                'settings-information-panel-position',
+                              ),
+                              isExpanded: true,
+                              padding: const EdgeInsets.only(left: 14),
+                              underline: const SizedBox.shrink(),
+                              value:
+                                  layoutSettingsController
+                                      .informationPanelOnLeft
+                                  ? 'left'
+                                  : 'right',
+                              items: [
+                                DropdownMenuItem(
+                                  value: 'left',
+                                  child: Text(l10n.menuPositionLeft),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'right',
+                                  child: Text(l10n.menuPositionRight),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  layoutSettingsController
+                                      .setInformationPanelOnLeft(
+                                        value == 'left',
+                                      );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    if (layoutSettingsController.hdSettings.enabled) ...[
+                      const Divider(color: Color(0xff294052), height: 1),
+                      buildActionTile(
+                        title: fleetText(context, '拓展功能区位置'),
+                        titleKey: const Key(
+                          'settings-hd-extension-position-title',
+                        ),
+                        trailing: DropdownButton<String>(
+                          key: const Key('settings-hd-extension-position'),
+                          underline: const SizedBox.shrink(),
+                          value:
+                              layoutSettingsController
+                                  .hdSettings
+                                  .extensionAboveGame
+                              ? 'top'
+                              : 'bottom',
+                          items: [
+                            DropdownMenuItem(
+                              value: 'bottom',
+                              child: Text(l10n.menuPositionBottom),
+                            ),
+                            DropdownMenuItem(
+                              value: 'top',
+                              child: Text(l10n.menuPositionTop),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              layoutSettingsController.setHdExtensionPosition(
+                                value,
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                     const Divider(color: Color(0xff294052), height: 1),
                     buildSwitchTile(
                       title: l10n.uiLockTitle,
@@ -318,7 +398,9 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                     ),
                     const Divider(color: Color(0xff294052), height: 1),
                     Opacity(
-                      opacity: layoutSettingsController.topNoticeEnabled ? 1.0 : 0.45,
+                      opacity: layoutSettingsController.topNoticeEnabled
+                          ? 1.0
+                          : 0.45,
                       child: IgnorePointer(
                         ignoring: !layoutSettingsController.topNoticeEnabled,
                         child: Padding(
@@ -354,16 +436,23 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                               const SizedBox(width: 12),
                               DropdownButtonHideUnderline(
                                 child: DropdownButton<int>(
-                                  key: const Key('settings-top-notice-duration-dropdown'),
-                                  value: const [5, 10, 15].contains(
-                                    layoutSettingsController.topNoticeDurationSeconds,
-                                  )
-                                      ? layoutSettingsController.topNoticeDurationSeconds
+                                  key: const Key(
+                                    'settings-top-notice-duration-dropdown',
+                                  ),
+                                  value:
+                                      const [5, 10, 15].contains(
+                                        layoutSettingsController
+                                            .topNoticeDurationSeconds,
+                                      )
+                                      ? layoutSettingsController
+                                            .topNoticeDurationSeconds
                                       : 5,
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: layoutSettingsController.topNoticeEnabled
+                                    color:
+                                        layoutSettingsController
+                                            .topNoticeEnabled
                                         ? const Color(0xffd4a85f)
                                         : const Color(0xff526776),
                                   ),
@@ -381,11 +470,14 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                                       child: Text(l10n.topNoticeDuration15s),
                                     ),
                                   ],
-                                  onChanged: layoutSettingsController.topNoticeEnabled
+                                  onChanged:
+                                      layoutSettingsController.topNoticeEnabled
                                       ? (value) {
                                           if (value != null) {
                                             layoutSettingsController
-                                                .setTopNoticeDurationSeconds(value);
+                                                .setTopNoticeDurationSeconds(
+                                                  value,
+                                                );
                                           }
                                         }
                                       : null,
@@ -411,9 +503,7 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
               const SizedBox(height: 24),
               buildSectionTitle(l10n.mouseWheelCompatibility),
               buildCard(
-                child: GameMouseWheelSettingsSection(
-                  controller: wheel,
-                ),
+                child: GameMouseWheelSettingsSection(controller: wheel),
               ),
             ],
             if (gameFrameRateSettingsController != null) ...<Widget>[

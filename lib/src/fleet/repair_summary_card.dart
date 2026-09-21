@@ -48,53 +48,73 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.collapsed) {
-      return _buildCard(context, DateTime.now().toUtc());
-    }
-    return SecondTickBuilder(
-      builder: (context, now, _) => _buildCard(context, now),
+    return AnimatedBuilder(
+      animation: widget.controller,
+      builder: (context, _) {
+        final state = widget.controller.state;
+        // Locale changes must invalidate the cached labels as well.
+        Localizations.localeOf(context);
+        Widget? dockCard;
+        int? previousDockMask;
+        return SecondTickBuilder(
+          enabled: !widget.collapsed,
+          builder: (context, now, _) {
+            _now = now;
+            // Countdown texts tick independently. Rebuild the dock card only
+            // when a dock completes; captured data and preferences reset this
+            // local cache through the enclosing builder.
+            if (_mode == RepairCenterMode.dock) {
+              var mask = 0;
+              for (var i = 0; i < state.repairDocks.length; i++) {
+                if (_isDockActive(state.repairDocks[i])) mask |= 1 << i;
+              }
+              if (dockCard != null && previousDockMask == mask) {
+                return dockCard!;
+              }
+              previousDockMask = mask;
+              return dockCard = _buildCard(context, now);
+            }
+            return _buildCard(context, now);
+          },
+        );
+      },
     );
   }
 
   Widget _buildCard(BuildContext context, DateTime now) {
     _now = now;
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        final state = widget.controller.state;
-        final strings =
-            AppLocalizations.of(context) ??
-            lookupAppLocalizations(const Locale('zh'));
-        final modeSelector = _RepairSummaryModeSelector(
-          mode: _mode,
-          dockLabel: fleetText(context, '入渠修理'),
-          anchorageLabel: '泊地修理',
-          nosakiLabel: fleetText(context, '野埼刷闪'),
-          onChanged: (mode) => setState(() => _mode = mode),
-        );
-        final content = switch (_mode) {
-          RepairCenterMode.dock => _buildDockGrid(state, strings),
-          RepairCenterMode.anchorage => _buildAnchorageSummary(state, strings),
-          RepairCenterMode.nosaki => _buildNosakiSummary(state, strings),
-        };
-        return DashboardCard(
-          headerAction: moduleDisplayGear(
-            context,
-            'repair',
-            widget.onOpenDisplaySettings,
-          ),
-          title: strings.repairBrief,
-          icon: const Icon(Icons.build_circle_outlined),
-          collapsed: widget.collapsed,
-          onToggleCollapse: widget.onToggleCollapse,
-          showLogo: widget.showLogo,
-          showTitle: widget.showTitle,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [modeSelector, const SizedBox(height: 4), content],
-          ),
-        );
-      },
+    final state = widget.controller.state;
+    final strings =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    final modeSelector = _RepairSummaryModeSelector(
+      mode: _mode,
+      dockLabel: fleetText(context, '入渠修理'),
+      anchorageLabel: '泊地修理',
+      nosakiLabel: fleetText(context, '野埼刷闪'),
+      onChanged: (mode) => setState(() => _mode = mode),
+    );
+    final content = switch (_mode) {
+      RepairCenterMode.dock => _buildDockGrid(state, strings),
+      RepairCenterMode.anchorage => _buildAnchorageSummary(state, strings),
+      RepairCenterMode.nosaki => _buildNosakiSummary(state, strings),
+    };
+    return DashboardCard(
+      headerAction: moduleDisplayGear(
+        context,
+        'repair',
+        widget.onOpenDisplaySettings,
+      ),
+      title: strings.repairBrief,
+      icon: const Icon(Icons.build_circle_outlined),
+      collapsed: widget.collapsed,
+      onToggleCollapse: widget.onToggleCollapse,
+      showLogo: widget.showLogo,
+      showTitle: widget.showTitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [modeSelector, const SizedBox(height: 4), content],
+      ),
     );
   }
 
@@ -474,33 +494,55 @@ class _RepairSummaryModeSelector extends StatelessWidget {
         borderRadius: BorderRadius.circular(7),
         border: Border.all(color: const Color(0xff294052)),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _ModeButton(
-              key: const Key('repair-summary-mode-dock'),
-              label: dockLabel,
-              selected: mode == RepairCenterMode.dock,
-              onTap: () => onChanged(RepairCenterMode.dock),
-            ),
-          ),
-          Expanded(
-            child: _ModeButton(
-              key: const Key('repair-summary-mode-anchorage'),
-              label: anchorageLabel,
-              selected: mode == RepairCenterMode.anchorage,
-              onTap: () => onChanged(RepairCenterMode.anchorage),
-            ),
-          ),
-          Expanded(
-            child: _ModeButton(
-              key: const Key('repair-summary-mode-nosaki'),
-              label: nosakiLabel,
-              selected: mode == RepairCenterMode.nosaki,
-              onTap: () => onChanged(RepairCenterMode.nosaki),
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final labelWidth = constraints.maxWidth / 3 - 14;
+          final style = DefaultTextStyle.of(context).style.merge(
+            const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+          );
+          final useShortLabels = [dockLabel, anchorageLabel, nosakiLabel].any((
+            label,
+          ) {
+            final painter = TextPainter(
+              text: TextSpan(text: label, style: style),
+              textDirection: Directionality.of(context),
+              textScaler: MediaQuery.textScalerOf(context),
+              locale: Localizations.maybeLocaleOf(context),
+              maxLines: 1,
+            )..layout();
+            final tooWide = painter.width > labelWidth;
+            painter.dispose();
+            return tooWide;
+          });
+          return Row(
+            children: [
+              Expanded(
+                child: _ModeButton(
+                  key: const Key('repair-summary-mode-dock'),
+                  label: useShortLabels ? '入渠' : dockLabel,
+                  selected: mode == RepairCenterMode.dock,
+                  onTap: () => onChanged(RepairCenterMode.dock),
+                ),
+              ),
+              Expanded(
+                child: _ModeButton(
+                  key: const Key('repair-summary-mode-anchorage'),
+                  label: useShortLabels ? '泊地' : anchorageLabel,
+                  selected: mode == RepairCenterMode.anchorage,
+                  onTap: () => onChanged(RepairCenterMode.anchorage),
+                ),
+              ),
+              Expanded(
+                child: _ModeButton(
+                  key: const Key('repair-summary-mode-nosaki'),
+                  label: useShortLabels ? '野崎' : nosakiLabel,
+                  selected: mode == RepairCenterMode.nosaki,
+                  onTap: () => onChanged(RepairCenterMode.nosaki),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -531,6 +573,8 @@ class _ModeButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             child: Text(
               label,
+              maxLines: 1,
+              softWrap: false,
               style: TextStyle(
                 color: selected
                     ? const Color(0xffffcf67)

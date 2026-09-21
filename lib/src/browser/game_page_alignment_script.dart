@@ -185,7 +185,13 @@ const String gamePageAlignmentScript = r'''
         isVisibleElement(canvas),
     );
 
-  const notifyPresentationState = (nextState) => {
+  const notifyPresentationState = (nextState, forceFit = false) => {
+    // Explicit fits must survive both JS and native state deduplication.
+    if (forceFit && nextState === 'game') {
+      window.__yahagiMobilePresentationState = nextState;
+      window.YahagiPresentation?.postMessage('game-fit');
+      return;
+    }
     if (window.__yahagiMobilePresentationState === nextState) return;
     window.__yahagiMobilePresentationState = nextState;
     if (window.YahagiPresentation) {
@@ -204,6 +210,11 @@ const String gamePageAlignmentScript = r'''
       style.textContent = fixedCanvasCss;
     }
 
+    // Slow pages can be synchronized repeatedly before load. Replace the
+    // pending listener as well as the scroll listener instead of accumulating it.
+    if (window.__yahagiMobileAlignGame) {
+      window.removeEventListener('load', window.__yahagiMobileAlignGame);
+    }
     window.__yahagiMobileAlignGame = () => {
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
@@ -300,7 +311,7 @@ const String gamePageAlignmentScript = r'''
     window.__yahagiMobileOoiAlignGame();
   };
 
-  window.__yahagiMobileSyncPresentation = () => {
+  window.__yahagiMobileSyncPresentation = (forceFit = false) => {
     const hasOoiBrowserSurface = Boolean(
       document.querySelector('#ooi-page #ooi-game > iframe#externalswf'),
     );
@@ -328,7 +339,7 @@ const String gamePageAlignmentScript = r'''
     }
 
     applyGamePresentation();
-    notifyPresentationState('game');
+    notifyPresentationState('game', forceFit);
     return 'game';
   };
 
@@ -345,6 +356,6 @@ const String gamePageAlignmentScript = r'''
     });
   }
 
-  return window.__yahagiMobileSyncPresentation();
+  return window.__yahagiMobileSyncPresentation(true);
 })();
 ''';

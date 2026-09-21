@@ -33,9 +33,12 @@ void main() {
     );
     final label = find.byKey(const Key('settings-information-panel-left'));
     await tester.ensureVisible(label);
-    final row = find.ancestor(of: label, matching: find.byType(Row)).first;
-    await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
-    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('settings-information-panel-position')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('左').last);
+    await tester.pumpAndSettle();
     expect(controller.informationPanelOnLeft, isTrue);
     expect(controller.workspaceMenuOnRight, isFalse);
     await tester.tap(
@@ -56,6 +59,20 @@ void main() {
       LayoutSettingsStore.defaultDashboardCardOrder,
     );
     expect(reloaded.informationPanelOnLeft, isTrue);
+    final extension = find.byKey(const Key('settings-hd-extension-position'));
+    expect(extension, findsNothing);
+    await controller.setHdEnabled(true);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(extension);
+    expect(extension, findsOneWidget);
+    await tester.tap(extension);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('上').last);
+    await tester.pumpAndSettle();
+    expect(controller.hdSettings.extensionAboveGame, isTrue);
+    await controller.setHdEnabled(false);
+    await tester.pumpAndSettle();
+    expect(extension, findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -234,47 +251,47 @@ void main() {
     },
   );
 
-  testWidgets('screen settings expose UI display size dropdown and switch size', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final layoutController = await LayoutSettingsController.load(
-      SharedPreferencesLayoutSettingsStore(),
-    );
-    final displayController = await DisplayModeController.load(
-      MemoryDisplayModeStore(),
-    );
+  testWidgets(
+    'screen settings expose UI display size dropdown and switch size',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final layoutController = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      final displayController = await DisplayModeController.load(
+        MemoryDisplayModeStore(),
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ScreenSettingsPage(
-          layoutSettingsController: layoutController,
-          displayModeController: displayController,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ScreenSettingsPage(
+            layoutSettingsController: layoutController,
+            displayModeController: displayController,
+          ),
         ),
-      ),
-    );
+      );
 
-    final rowFinder = find.byKey(const Key('settings-ui-display-size-row'));
-    await tester.ensureVisible(rowFinder);
-    expect(rowFinder, findsOneWidget);
-    expect(layoutController.uiDisplaySize, UiDisplaySize.normal);
+      final rowFinder = find.byKey(const Key('settings-ui-display-size-row'));
+      await tester.ensureVisible(rowFinder);
+      expect(rowFinder, findsOneWidget);
+      expect(layoutController.uiDisplaySize, UiDisplaySize.normal);
 
-    final dropdown = find.descendant(
-      of: rowFinder,
-      matching: find.byType(DropdownButton<UiDisplaySize>),
-    );
-    expect(dropdown, findsOneWidget);
+      final dropdown = find.descendant(
+        of: rowFinder,
+        matching: find.byType(DropdownButton<UiDisplaySize>),
+      );
+      expect(dropdown, findsOneWidget);
 
-    await tester.tap(dropdown);
-    await tester.pumpAndSettle();
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
 
-    final compactItem = find.text('紧凑').last;
-    await tester.tap(compactItem);
-    await tester.pumpAndSettle();
+      final compactItem = find.text('紧凑').last;
+      await tester.tap(compactItem);
+      await tester.pumpAndSettle();
 
-    expect(layoutController.uiDisplaySize, UiDisplaySize.compact);
-    expect(layoutController.headerUiSize, UiDisplaySize.compact);
-    expect(layoutController.workspaceMenuSize, UiDisplaySize.compact);
-  });
+      expect(layoutController.uiDisplaySize, UiDisplaySize.compact);
+      expect(layoutController.headerUiSize, UiDisplaySize.compact);
+      expect(layoutController.workspaceMenuSize, UiDisplaySize.compact);
+    },
+  );
 }
-

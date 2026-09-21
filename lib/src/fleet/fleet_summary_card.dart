@@ -1,5 +1,6 @@
 import '../settings/fleet_display_options.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../game_state/fleet_metrics.dart';
 import '../game_state/game_state_controller.dart';
 import '../game_state/game_state.dart';
@@ -91,91 +92,105 @@ class _FleetSummaryCardState extends State<FleetSummaryCard> {
           selectedFleetId: _selectedFleetId,
           onSelected: (id) => setState(() => _selectedFleetId = id),
         );
+        // Keep the ship subtree until captured data, preferences, locale, or
+        // repair badges change. Only morale/countdown metrics need every tick.
+        Localizations.localeOf(context);
+        Widget? cachedShips;
+        Map<int, ShipRepairStatus>? cachedRepairStatuses;
         // Fleet metrics depend on captured state, not the ticking clock.
         return SecondTickBuilder(
           now: widget.clock,
-          builder: (context, now, _) => DashboardCard(
-            title: AppLocalizations.of(context)?.fleetBrief ?? '编队简报',
-            icon: const Icon(Icons.directions_boat_filled_outlined),
-            collapsed: widget.collapsed,
-            onToggleCollapse: widget.onToggleCollapse,
-            showLogo: widget.showLogo,
-            showTitle: widget.showTitle,
-            headerAction: widget.onOpenDisplaySettings == null
-                ? null
-                : IconButton(
-                    key: const Key('fleet-display-settings-button'),
-                    tooltip: fleetText(context, '编队简报显示内容'),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(
-                      Icons.settings_outlined,
-                      size: 19,
-                      color: Color(0xffd4a85f),
-                    ),
-                    onPressed: widget.onOpenDisplaySettings,
-                  ),
-            trailing: twoColumns
-                ? SizedBox(width: 108, child: fleetSwitcher)
-                : null,
-            child: _FleetSummaryBody(
-              switcher: twoColumns ? null : fleetSwitcher,
-              metrics: summaryVisible.any(summaryFields.contains)
-                  ? _FleetSummaryMetrics(
-                      visible: summaryVisible,
-                      state: state,
-                      fleetId: _selectedFleetId,
-                      metrics: metrics,
-                      now: now,
-                      moraleRecoveryTimerController:
-                          widget.moraleRecoveryTimerController,
-                    )
-                  : null,
-              ships: ships.isEmpty
-                  ? Container(
-                      padding: const EdgeInsets.all(16),
-                      alignment: Alignment.center,
-                      child: Text(
-                        fleetText(context, '无数据'),
-                        style: TextStyle(color: Color(0xff8197a5)),
+          enabled: !widget.collapsed,
+          builder: (context, now, _) {
+            final repairStatuses = widget.collapsed
+                ? const <int, ShipRepairStatus>{}
+                : shipRepairStatusesFor(
+                    state: state,
+                    anchorageRepairStartedAt:
+                        widget.controller.anchorageRepairStartedAt,
+                    nosakiSparkleStartedAt:
+                        widget.controller.nosakiSparkleStartedAt,
+                    now: now,
+                  );
+            if (!mapEquals(cachedRepairStatuses, repairStatuses)) {
+              cachedShips = null;
+              cachedRepairStatuses = repairStatuses;
+            }
+            return DashboardCard(
+              title: AppLocalizations.of(context)?.fleetBrief ?? '编队简报',
+              icon: const Icon(Icons.directions_boat_filled_outlined),
+              collapsed: widget.collapsed,
+              onToggleCollapse: widget.onToggleCollapse,
+              showLogo: widget.showLogo,
+              showTitle: widget.showTitle,
+              headerAction: widget.onOpenDisplaySettings == null
+                  ? null
+                  : IconButton(
+                      key: const Key('fleet-display-settings-button'),
+                      tooltip: fleetText(context, '编队简报显示内容'),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
                       ),
-                    )
-                  : HdDashboardItems(
-                      children: [
-                        for (final ship in ships)
-                          FleetShipStatusCapsule(
-                            state: state,
-                            ship: ship,
-                            visible: widget.visible,
-                            shipTypeLabelMode: widget.shipTypeLabelMode,
-                            damagePulseFilter:
-                                widget.visible.contains('portrait')
-                                ? widget.damagePulseFilter
-                                : DamagePulseFilter.off,
-                            moraleSparkleEnabled:
-                                widget.visible.contains('portrait') &&
-                                widget.moraleSparkleEnabled,
-                            repairStatus: shipRepairStatusFor(
-                              state: state,
-                              shipId: ship.id,
-                              anchorageRepairStartedAt:
-                                  widget.controller.anchorageRepairStartedAt,
-                              nosakiSparkleStartedAt:
-                                  widget.controller.nosakiSparkleStartedAt,
-                              now: now,
-                            ),
-                            specialAttack: ship == ships.first
-                                ? specialAttack
-                                : null,
-                            onTap: () => widget.onOpenFleet(_selectedFleetId),
-                          ),
-                      ],
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(
+                        Icons.settings_outlined,
+                        size: 19,
+                        color: Color(0xffd4a85f),
+                      ),
+                      onPressed: widget.onOpenDisplaySettings,
                     ),
-            ),
-          ),
+              trailing: twoColumns
+                  ? SizedBox(width: 108, child: fleetSwitcher)
+                  : null,
+              child: _FleetSummaryBody(
+                switcher: twoColumns ? null : fleetSwitcher,
+                metrics: summaryVisible.any(summaryFields.contains)
+                    ? _FleetSummaryMetrics(
+                        visible: summaryVisible,
+                        state: state,
+                        fleetId: _selectedFleetId,
+                        metrics: metrics,
+                        now: now,
+                        moraleRecoveryTimerController:
+                            widget.moraleRecoveryTimerController,
+                      )
+                    : null,
+                ships: cachedShips ??= ships.isEmpty
+                    ? Container(
+                        padding: const EdgeInsets.all(16),
+                        alignment: Alignment.center,
+                        child: Text(
+                          fleetText(context, '无数据'),
+                          style: TextStyle(color: Color(0xff8197a5)),
+                        ),
+                      )
+                    : HdDashboardItems(
+                        children: [
+                          for (final ship in ships)
+                            FleetShipStatusCapsule(
+                              state: state,
+                              ship: ship,
+                              visible: widget.visible,
+                              shipTypeLabelMode: widget.shipTypeLabelMode,
+                              damagePulseFilter:
+                                  widget.visible.contains('portrait')
+                                  ? widget.damagePulseFilter
+                                  : DamagePulseFilter.off,
+                              moraleSparkleEnabled:
+                                  widget.visible.contains('portrait') &&
+                                  widget.moraleSparkleEnabled,
+                              repairStatus: repairStatuses[ship.id],
+                              specialAttack: ship == ships.first
+                                  ? specialAttack
+                                  : null,
+                              onTap: () => widget.onOpenFleet(_selectedFleetId),
+                            ),
+                        ],
+                      ),
+              ),
+            );
+          },
         );
       },
     );

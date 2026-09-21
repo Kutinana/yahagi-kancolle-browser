@@ -20,13 +20,29 @@ ShipRepairStatus? shipRepairStatusFor({
   DateTime? nosakiSparkleStartedAt,
   required DateTime now,
 }) {
-  if (state.combatState.escapedShipIds.contains(shipId)) {
-    return ShipRepairStatus.retreat;
-  }
-  if (state.repairDocks.any(
-    (dock) => dock.isRepairing && dock.shipId == shipId,
-  )) {
-    return ShipRepairStatus.dock;
+  return shipRepairStatusesFor(
+    state: state,
+    anchorageRepairStartedAt: anchorageRepairStartedAt,
+    nosakiSparkleStartedAt: nosakiSparkleStartedAt,
+    now: now,
+  )[shipId];
+}
+
+/// Compute each fleet projection once per refresh, not once per displayed ship.
+Map<int, ShipRepairStatus> shipRepairStatusesFor({
+  required GameState state,
+  required DateTime? anchorageRepairStartedAt,
+  DateTime? nosakiSparkleStartedAt,
+  required DateTime now,
+}) {
+  final statuses = <int, ShipRepairStatus>{
+    for (final id in state.combatState.escapedShipIds)
+      id: ShipRepairStatus.retreat,
+  };
+  for (final dock in state.repairDocks) {
+    if (dock.isRepairing) {
+      statuses.putIfAbsent(dock.shipId, () => ShipRepairStatus.dock);
+    }
   }
 
   final startedAt = anchorageRepairStartedAt;
@@ -40,12 +56,10 @@ ShipRepairStatus? shipRepairStatusFor({
         fleetId: fleet.id,
         elapsed: elapsed,
       );
-      if (projection.rows.any(
-        (row) =>
-            row.ship.id == shipId &&
-            row.status == AnchorageRepairShipStatus.repairing,
-      )) {
-        return ShipRepairStatus.anchorage;
+      for (final row in projection.rows) {
+        if (row.status == AnchorageRepairShipStatus.repairing) {
+          statuses.putIfAbsent(row.ship.id, () => ShipRepairStatus.anchorage);
+        }
       }
     }
   }
@@ -61,15 +75,16 @@ ShipRepairStatus? shipRepairStatusFor({
         fleetId: fleet.id,
         elapsed: elapsed,
       );
-      if (projection.rows.any(
-        (row) =>
-            row.ship.id == shipId &&
-            row.status == NosakiSparkleShipStatus.sparkling,
-      )) {
-        return ShipRepairStatus.nosakiSparkle;
+      for (final row in projection.rows) {
+        if (row.status == NosakiSparkleShipStatus.sparkling) {
+          statuses.putIfAbsent(
+            row.ship.id,
+            () => ShipRepairStatus.nosakiSparkle,
+          );
+        }
       }
     }
   }
 
-  return null;
+  return statuses;
 }

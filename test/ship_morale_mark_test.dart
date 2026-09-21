@@ -3,6 +3,45 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/ship_status_visuals.dart';
 
 void main() {
+  testWidgets('sparkle animation reuses star glyphs while changing phase', (
+    tester,
+  ) async {
+    final animation = AnimationController(
+      vsync: tester,
+      duration: const Duration(seconds: 1),
+    );
+    addTearDown(animation.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 160,
+          height: 72,
+          child: ShipMoraleMark(shipId: 40, value: 80, sparklePulse: animation),
+        ),
+      ),
+    );
+    final finder = find.byIcon(Icons.auto_awesome_rounded);
+    final before = tester.widgetList<Icon>(finder).toList();
+    animation.value = .2;
+    await tester.pump();
+    final after = tester.widgetList<Icon>(finder).toList();
+    for (var i = 0; i < before.length; i++) {
+      expect(identical(before[i], after[i]), isTrue);
+    }
+    final star = find.byKey(const Key('fleet-sparkle-40-0'));
+    expect(
+      tester.widget<Transform>(star).transform.entry(0, 0),
+      closeTo(.9, .001),
+    );
+    final opacity = find.descendant(of: star, matching: find.byType(Opacity));
+    expect(tester.widget<Opacity>(opacity).opacity, closeTo(.5, .001));
+    animation.value = .28;
+    await tester.pump();
+    expect(tester.widget<Opacity>(opacity).opacity, 1);
+    animation.value = .5;
+    await tester.pump();
+    expect(tester.widget<Opacity>(opacity).opacity, 0);
+  });
   testWidgets('sparkle switch hides only stars and keeps fatigue visuals', (
     tester,
   ) async {

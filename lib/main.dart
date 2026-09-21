@@ -2065,6 +2065,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                           Widget buildInfo({
                                             String? module,
                                           }) => _InformationPanel(
+                                            questCatalogController: widget.questCatalogController,
                                             hdEditing: _hdEditing,
                                             onHdEditingChanged: (editing) =>
                                                 setState(
@@ -2186,8 +2187,16 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                           final topMenuExtent = menuTop
                                               ? menuNavigationExtent
                                               : 0.0;
+                                          final extensionAboveGame = widget
+                                              .layoutSettingsController
+                                              .hdSettings
+                                              .extensionAboveGame;
                                           final topMenuY =
-                                              hdGeometry?.gameHeight ??
+                                              (hdGeometry == null
+                                                  ? null
+                                                  : (extensionAboveGame
+                                                        ? 0.0
+                                                        : hdGeometry.gameHeight)) ??
                                               (isLandscape
                                                   ? constraints.maxHeight -
                                                         topMenuExtent
@@ -2202,7 +2211,11 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                     ? infoPanelExtent +
                                                           dividerExtent
                                                     : 0,
-                                                top: 0,
+                                                top: !_gameFullscreen &&
+                                                        hdGeometry != null &&
+                                                        extensionAboveGame
+                                                    ? hdGeometry.bottomHeight
+                                                    : 0,
                                                 width: _gameFullscreen
                                                     ? actualConstraints.maxWidth
                                                     : (isLandscape
@@ -2349,7 +2362,9 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                             dividerExtent
                                                       : 0,
                                                   top:
-                                                      hdGeometry.gameHeight +
+                                                      (extensionAboveGame
+                                                          ? 0.0
+                                                          : hdGeometry.gameHeight) +
                                                       topMenuExtent,
                                                   width: hdGeometry.gameWidth,
                                                   height: math.max(
@@ -2976,6 +2991,7 @@ class _NavigationButton extends StatelessWidget {
 
 class _InformationPanel extends StatefulWidget {
   const _InformationPanel({
+    this.questCatalogController,
     required this.layoutSettingsController,
     required this.safetySettingsController,
     required this.controller,
@@ -3001,6 +3017,7 @@ class _InformationPanel extends StatefulWidget {
   });
 
   final bool hd;
+  final QuestCatalogController? questCatalogController;
   final bool hdPortrait;
   final bool hdEditing;
   final ValueChanged<bool>? onHdEditingChanged;
@@ -3273,6 +3290,8 @@ class _InformationPanelState extends State<_InformationPanel> {
                 onOpenConstruction: widget.onOpenConstruction,
               ),
               'quests' => PinnedQuestsSummary(
+                catalogController: widget.questCatalogController,
+                visible: widget.layoutSettingsController.moduleDisplayFields('quests'),
                 showLogo: widget.layoutSettingsController.moduleShowLogo(
                   'quests',
                 ),

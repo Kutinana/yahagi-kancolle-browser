@@ -554,7 +554,7 @@ void main() {
       ).singleWhere((item) => item.label == '对空喷进弹幕');
       expect(rocketMech.shortLabel, '喷2');
       expect(rocketMech.effectiveShortLabel, '喷2');
-      expect(rocketMech.detailedShortLabel, startsWith('喷2 '));
+      expect(rocketMech.detailedShortLabel, startsWith('喷2：'));
       expect(rocketMech.rate, isNotNull);
       expect(
         detectShipCombatMechanisms(
@@ -604,7 +604,7 @@ void main() {
       final detailedLabels = mechanisms
           .map((m) => m.detailedShortLabel)
           .toList();
-      expect(detailedLabels.any((s) => s.startsWith('喷2 ')), isTrue);
+      expect(detailedLabels.any((s) => s.startsWith('喷2：')), isTrue);
     });
 
     test(
@@ -707,7 +707,7 @@ void main() {
     expect(result?.label, 'Nelson Touch');
     expect(result?.shortLabel, '特攻');
     expect(result?.effectiveShortLabel, '特攻');
-    expect(result?.detailedShortLabel, startsWith('特攻 '));
+    expect(result?.detailedShortLabel, startsWith('特攻：'));
     expect(result?.rate, isNotNull);
     expect(result?.label, isNot(contains('可发动')));
   });

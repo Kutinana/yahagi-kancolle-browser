@@ -6,6 +6,34 @@ void main() {
   group('shipRepairStatusFor', () {
     final startedAt = DateTime.utc(2026, 8, 9, 12);
 
+    test('batch statuses refresh without retaining old dock state', () {
+      final state = _anchorageState();
+      final dockState = state.copyWith(
+        repairDocks: const [RepairDock(id: 1, state: 1, shipId: 2)],
+      );
+      final dockStatuses = shipRepairStatusesFor(
+        state: dockState,
+        anchorageRepairStartedAt: startedAt,
+        now: startedAt,
+      );
+      expect(dockStatuses[2], ShipRepairStatus.dock);
+      final statuses = shipRepairStatusesFor(
+        state: state,
+        anchorageRepairStartedAt: startedAt,
+        now: startedAt.add(const Duration(minutes: 26)),
+      );
+      expect(statuses[2], ShipRepairStatus.anchorage);
+      expect(statuses[3], isNull);
+      expect(
+        shipRepairStatusesFor(
+          state: state,
+          anchorageRepairStartedAt: null,
+          now: startedAt,
+        ),
+        isEmpty,
+      );
+    });
+
     test('returns dock for a ship in an active repair dock', () {
       final state = _anchorageState().copyWith(
         repairDocks: const <RepairDock>[RepairDock(id: 1, state: 1, shipId: 2)],

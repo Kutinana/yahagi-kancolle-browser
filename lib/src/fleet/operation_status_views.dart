@@ -46,6 +46,7 @@ class ExpeditionStatusView extends StatelessWidget {
         final start = masterMission?.startedAt(fleet.mission.completionTime);
         return _OperationCard(
           key: Key('expedition-row-${fleet.id}'),
+          expandIdentity: true,
           portrait: ShipPortrait(
             key: Key('expedition-portrait-${fleet.id}'),
             ship: flagshipMaster,
@@ -375,12 +376,14 @@ class _OperationCard extends StatelessWidget {
     required this.identity,
     required this.body,
     required this.trailing,
+    this.expandIdentity = false,
   });
 
   final Widget portrait;
   final Widget identity;
   final Widget body;
   final Widget trailing;
+  final bool expandIdentity;
 
   @override
   Widget build(BuildContext context) {
@@ -427,9 +430,33 @@ class _OperationCard extends StatelessWidget {
                   children: [
                     portrait,
                     SizedBox(width: compact ? 10 : 14),
-                    SizedBox(width: compact ? 145 : 210, child: identity),
-                    SizedBox(width: gap),
-                    Expanded(child: body),
+                    if (expandIdentity)
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, available) {
+                            final baseWidth = compact ? 145.0 : 210.0;
+                            final progressWidth =
+                                (available.maxWidth - baseWidth - gap).clamp(
+                                  0.0,
+                                  double.infinity,
+                                );
+                            final nameWidth = (baseWidth + progressWidth * 0.3)
+                                .clamp(0.0, available.maxWidth - gap);
+                            return Row(
+                              children: [
+                                SizedBox(width: nameWidth, child: identity),
+                                SizedBox(width: gap),
+                                Expanded(child: body),
+                              ],
+                            );
+                          },
+                        ),
+                      )
+                    else ...[
+                      SizedBox(width: compact ? 145 : 210, child: identity),
+                      SizedBox(width: gap),
+                      Expanded(child: body),
+                    ],
                     SizedBox(width: gap),
                     SizedBox(width: compact ? 82 : 100, child: trailing),
                   ],

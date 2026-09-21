@@ -211,6 +211,46 @@ void main() {
     );
   });
 
+  testWidgets('fit waiting for layout cannot run after surface disposal', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.calls.clear();
+    final operation = fixture.browserController.fitGameScreen();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await operation;
+    expect(fixture.port.calls, isNot(contains('fit')));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'fit waiting for native bounds cannot run after render process loss',
+    (tester) async {
+      final fixture = _SurfaceFixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester);
+      await tester.pump();
+      fixture.port.calls.clear();
+      final pendingBounds = Completer<void>();
+      fixture.port.boundsCompleter = pendingBounds;
+      final operation = fixture.browserController.fitGameScreen();
+      await tester.pump();
+      expect(fixture.port.calls, contains('bounds'));
+      fixture.port.addEvent(
+        _event('renderProcessGone', generationId: 7, didCrash: true),
+      );
+      await tester.pump();
+      pendingBounds.complete();
+      await tester.pump();
+      await operation;
+      expect(fixture.port.calls, isNot(contains('fit')));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('resuming the app resynchronizes native game bounds', (
     tester,
   ) async {
@@ -2753,6 +2793,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   Object? loadFailure;
   int successfulReloadCalls = 0;
   final List<Completer<void>> fitCompleters = <Completer<void>>[];
+  Completer<void>? boundsCompleter;
   final List<Object> fitFailures = <Object>[];
   final List<Completer<void>> visibilityCompleters = <Completer<void>>[];
   int visibilityFailuresRemaining = 0;
@@ -2780,6 +2821,7 @@ final class _FakeNativePort implements NativeActivityGameWebViewPort {
   @override
   Future<void> setBounds(NativeGameWebViewBounds bounds) async {
     calls.add('bounds');
+    await boundsCompleter?.future;
   }
 
   @override

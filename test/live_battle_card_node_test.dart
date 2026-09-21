@@ -115,6 +115,7 @@ Future<void> _pumpCard(
         body: SizedBox(
           width: width,
           child: LiveBattleCard(
+            key: const PageStorageKey('dashboard-live-battle'),
             controller: controller,
             collapsed: false,
             onToggleCollapse: () {},
@@ -132,6 +133,45 @@ Future<void> _pumpCard(
 }
 
 void main() {
+  for (final compact in [false, true]) {
+    testWidgets(
+      'extra-map medal after mode switch keeps reward layout valid ($compact)',
+      (tester) async {
+        final controller = _createController();
+        addTearDown(controller.dispose);
+        controller
+          ..accept(mapStartEvent)
+          ..accept(dayBattleEvent);
+        await controller.idle;
+        await _pumpCard(tester, controller, width: 320, compact: true);
+        if (!compact) {
+          await tester.tap(find.byKey(const Key('battle-mode-detailed')));
+          await tester.pump();
+        }
+        expect(tester.takeException(), isNull);
+
+        controller.accept(
+          kcsapiEvent('/kcsapi/api_req_sortie/battleresult', <String, Object?>{
+            'api_win_rank': 'S',
+            'api_get_ship': <String, Object?>{'api_ship_id': 1},
+            'api_get_exmap_useitem_id': 57,
+          }, sequence: 8803),
+        );
+        await controller.idle;
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(ErrorWidget), findsNothing);
+        expect(find.text('勋章 ×1'), findsOneWidget);
+        expect(find.byKey(const Key('battle-drop-pill')), findsOneWidget);
+        expect(
+          tester.getSize(find.byKey(const Key('battle-reward-items-pill'))).height,
+          lessThan(40),
+        );
+      },
+    );
+  }
   for (final compact in [false, true]) {
     for (final screenWidth in [390.0, 1000.0]) {
       testWidgets(

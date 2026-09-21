@@ -283,6 +283,17 @@ void main() {
           closeTo(tester.getRect(bottom).top, .01),
         );
         final left = tester.getRect(find.byKey(const Key('hd-slot-left')));
+        final previousGameSize = tester.getSize(game);
+        await layout.setHdExtensionPosition('top');
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(bottom).bottom,
+          closeTo(tester.getRect(game).top, .01),
+        );
+        expect(tester.getSize(game), previousGameSize);
+        expect(tester.element(game), same(originalElement));
+        await layout.setHdExtensionPosition('bottom');
+        await tester.pumpAndSettle();
         final right = tester.getRect(find.byKey(const Key('hd-slot-right')));
         expect(left.top, right.top);
         expect(left.bottom, right.bottom);
@@ -1889,8 +1900,16 @@ void main() {
       expect(find.byType(Divider), findsOneWidget);
       expect(find.byType(VerticalDivider), findsNothing);
       expect(browserPort.fitGameScreenCalls, greaterThan(initialFitCalls));
-      expect(deactivations, 0, reason: 'PlatformView must not deactivate on portrait switch');
-      expect(disposals, 0, reason: 'PlatformView must not dispose on portrait switch');
+      expect(
+        deactivations,
+        0,
+        reason: 'PlatformView must not deactivate on portrait switch',
+      );
+      expect(
+        disposals,
+        0,
+        reason: 'PlatformView must not dispose on portrait switch',
+      );
       expect(tester.element(find.byKey(probeKey)), same(originalElement));
 
       for (final position in ['top', 'bottom']) {
@@ -1934,9 +1953,20 @@ void main() {
       // Layout switches to landscape layout (VerticalDivider)
       expect(find.byType(VerticalDivider), findsOneWidget);
       expect(find.byType(Divider), findsNothing);
-      expect(browserPort.fitGameScreenCalls, greaterThan(fitCallsBeforeLandscape));
-      expect(deactivations, 0, reason: 'PlatformView must not deactivate on landscape switch');
-      expect(disposals, 0, reason: 'PlatformView must not dispose on landscape switch');
+      expect(
+        browserPort.fitGameScreenCalls,
+        greaterThan(fitCallsBeforeLandscape),
+      );
+      expect(
+        deactivations,
+        0,
+        reason: 'PlatformView must not deactivate on landscape switch',
+      );
+      expect(
+        disposals,
+        0,
+        reason: 'PlatformView must not dispose on landscape switch',
+      );
       expect(tester.element(find.byKey(probeKey)), same(originalElement));
 
       // 5. Continuous rapid switching in split-screen (portrait -> auto -> landscape -> auto)
@@ -1951,8 +1981,18 @@ void main() {
         await displayController.setDisplayMode(mode);
         await tester.pumpAndSettle();
 
-        expect(deactivations, 0, reason: 'Continuous switching to $mode must never deactivate PlatformView');
-        expect(disposals, 0, reason: 'Continuous switching to $mode must never dispose PlatformView');
+        expect(
+          deactivations,
+          0,
+          reason:
+              'Continuous switching to $mode must never deactivate PlatformView',
+        );
+        expect(
+          disposals,
+          0,
+          reason:
+              'Continuous switching to $mode must never dispose PlatformView',
+        );
         expect(tester.element(find.byKey(probeKey)), same(originalElement));
         expect(browserPort.fitGameScreenCalls, greaterThan(previousCalls));
       }
