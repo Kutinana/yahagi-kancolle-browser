@@ -26,7 +26,7 @@
 
 ## 生成与复核
 
-数据集由 `tool/akashi_bonus/` 下的 Dart 工具生成，执行四轮数据检查与一轮代码审查后方可发布。详见 `docs/superpowers/plans/2026-08-04-wiki-equipment-bonus-dataset.md`。
+数据集由 `tool/akashi_bonus/` 下的 Dart 工具生成，执行四轮数据检查与一轮代码审查后方可发布。
 
 ## 改修规划资料
 
