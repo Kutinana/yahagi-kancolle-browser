@@ -2188,7 +2188,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get gameResourceCacheFullDesc =>
-      '固定の基本リソース一覧に含まれるファイル（約 5.49 GB）を事前ダウンロードします。新しいコンテンツはプレイ中に自動でキャッシュします。';
+      '固定の基本リソース一覧に含まれるファイル（約 5.73 GB）を事前ダウンロードします。新しいコンテンツはプレイ中に自動でキャッシュします。';
 
   @override
   String get gameResourceCacheStart => 'ダウンロード開始';
@@ -2269,6 +2269,18 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get gameResourceCacheActionFailed =>
       'キャッシュ操作を完了できませんでした。しばらくしてからお試しください。';
+
+  @override
+  String get gameResourceCacheUnsupported =>
+      '現在の Android WebView はゲームリソースのローカルキャッシュに対応していません。WebView を更新してください。';
+
+  @override
+  String get gameResourceCacheUnavailable =>
+      'ローカルキャッシュの初期化または整理に失敗しました。空き容量を確認してアプリを再起動してください。ゲームの閲覧は続けられます。';
+
+  @override
+  String get gameResourceCacheManifestFailed =>
+      '事前ダウンロード用リストの読み込みに失敗しました。ゲームに入ると再試行できます。';
 
   @override
   String get confirmGameRefreshTitle => 'ゲームを更新しますか？';

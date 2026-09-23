@@ -177,6 +177,29 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     @Test
+    fun `failed mode configuration retains previous manifest and progress`() {
+        val stateFile = temporaryFolder.newFile("failed-mode-state.json")
+        val fixture = fixture(stateFile = stateFile)
+        fixture.coordinator.setManifest(
+            "light", listOf(official("/kcs2/resources/a.png")), 123,
+        )
+        val manifest = File(stateFile.parentFile, "${stateFile.name}.manifest.json")
+        assertTrue(manifest.isFile)
+        assertTrue(stateFile.delete())
+        assertTrue(stateFile.mkdir())
+        File(stateFile, "block-replacement").writeText("keep directory nonempty")
+
+        val failed = runCatching {
+            fixture.coordinator.configureModeChange("full", false) { true }
+        }
+
+        assertTrue(failed.isFailure)
+        assertEquals(123, fixture.coordinator.status().targetBytes)
+        assertTrue(manifest.isFile)
+        fixture.coordinator.dispose()
+    }
+
+    @Test
     fun `mode change does not revive an old backup manifest after restart`() {
         val stateFile = temporaryFolder.newFile("mode-change-state.json")
         val fixture = fixture(stateFile = stateFile)
@@ -634,6 +657,36 @@ class GameResourceDownloadCoordinatorTest {
         assertEquals(GameResourceDownloadState.IDLE, fixture.coordinator.status().state)
         assertTrue(fixture.coordinator.startDownload())
         awaitState(fixture.coordinator, GameResourceDownloadState.COMPLETE)
+        fixture.coordinator.dispose()
+    }
+
+    @Test
+    fun `worker persist failure becomes error without restart loop`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val calls = AtomicInteger()
+        val stateFile = temporaryFolder.newFile("worker-error-state.json")
+        val fixture = fixture(
+            stateFile = stateFile,
+            fetcher = GameResourceFetcher { _, _, _ ->
+                calls.incrementAndGet()
+                entered.countDown()
+                release.await(5, TimeUnit.SECONDS)
+                response(byteArrayOf(1))
+            },
+        )
+        fixture.coordinator.setManifest("full",
+            listOf(official("/kcs2/resources/a.png")), 1, expectedLengths = listOf(1))
+        assertTrue(fixture.coordinator.startDownload())
+        assertTrue(entered.await(5, TimeUnit.SECONDS))
+        assertTrue(stateFile.delete())
+        assertTrue(stateFile.mkdir())
+        File(stateFile, "block-replacement").writeText("nonempty")
+        release.countDown()
+
+        awaitState(fixture.coordinator, GameResourceDownloadState.ERROR)
+        Thread.sleep(100)
+        assertEquals(1, calls.get())
         fixture.coordinator.dispose()
     }
 

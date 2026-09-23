@@ -2169,7 +2169,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameResourceCacheFullDesc =>
-      '预下载基础资源（约 5.49 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。';
+      '预下载基础资源（约 5.73 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。';
 
   @override
   String get gameResourceCacheStart => '开始下载';
@@ -2247,6 +2247,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameResourceCacheActionFailed => '缓存操作未完成，请稍后重试。';
+
+  @override
+  String get gameResourceCacheUnsupported =>
+      '当前 Android WebView 不支持游戏资源本地缓存，请更新 WebView。';
+
+  @override
+  String get gameResourceCacheUnavailable =>
+      '本地缓存初始化或清理失败，请检查存储空间并重启应用。游戏浏览不受影响。';
+
+  @override
+  String get gameResourceCacheManifestFailed => '预载资源清单加载失败，进入游戏后可重试。';
 
   @override
   String get confirmGameRefreshTitle => '确认刷新游戏？';
@@ -5538,7 +5549,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameResourceCacheFullDesc =>
-      '預先下載固定基礎資源清單（約 5.49 GB）；新內容會在遊玩時自動快取。';
+      '預先下載固定基礎資源清單（約 5.73 GB）；新內容會在遊玩時自動快取。';
 
   @override
   String get gameResourceCacheStart => '開始下載';
@@ -5616,6 +5627,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameResourceCacheActionFailed => '快取操作未完成，請稍後重試。';
+
+  @override
+  String get gameResourceCacheUnsupported =>
+      '目前的 Android WebView 不支援遊戲資源本機快取，請更新 WebView。';
+
+  @override
+  String get gameResourceCacheUnavailable =>
+      '本機快取初始化或清理失敗，請檢查儲存空間並重新啟動應用程式。遊戲瀏覽不受影響。';
+
+  @override
+  String get gameResourceCacheManifestFailed => '預載資源清單載入失敗，進入遊戲後可重試。';
 
   @override
   String get confirmGameRefreshTitle => '確定要重新整理遊戲嗎？';

@@ -17,6 +17,42 @@ import 'package:yahagi_kancolle_browser/src/widgets/filter_controls.dart';
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  testWidgets('unfolded square screen keeps quest list beside details', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController(
+      questStore: _QuestFixtureStore(<int, GameQuest>{
+        201: const GameQuest(
+          id: 201,
+          title: '敵艦隊を撃破せよ！',
+          detail: '敵艦隊を捕捉、これを撃破せよ！',
+          category: 2,
+          type: 2,
+          state: 2,
+          progressFlag: 0,
+        ),
+      }),
+    );
+    addTearDown(controller.dispose);
+    await controller.idle;
+
+    for (final size in const [Size(673, 841), Size(841, 673), Size(720, 720)]) {
+      tester.view.physicalSize = size;
+      await tester.pumpWidget(
+        MaterialApp(home: QuestCenterPage(controller: controller)),
+      );
+      final card = tester.getRect(find.byKey(const Key('quest-card-201')));
+      final detail = tester.getRect(
+        find.byKey(const Key('quest-detail-panel')),
+      );
+      expect(detail.left, greaterThan(card.right), reason: '$size');
+      expect(tester.takeException(), isNull, reason: '$size');
+    }
+  });
+
   testWidgets('shows accepted quest cards and selected quest details', (
     tester,
   ) async {

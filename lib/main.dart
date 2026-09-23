@@ -1189,6 +1189,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
       DevelopmentWorkbenchMode.calculator;
   SenkaCenterMode _senkaCenterMode = SenkaCenterMode.info;
   ToolboxMode _toolboxMode = ToolboxMode.export;
+  CompositionImageDraftController? _compositionDraftController;
   final DevelopmentRepository _developmentRepository = DevelopmentRepository();
   BackgroundGameRetentionCoordinator? _backgroundGameRetentionCoordinator;
 
@@ -2654,6 +2655,9 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     builder: (context, _) => ToolboxPage(
                                       state: widget.gameStateController.state,
                                       mode: _toolboxMode,
+                                      compositionDraftController:
+                                          _compositionDraftController ??=
+                                              CompositionImageDraftController(),
                                       sortieMapCatalogController:
                                           widget.sortieMapCatalogController,
                                       enemyCatalogController:
@@ -2746,7 +2750,7 @@ class WorkspaceNavigation extends StatelessWidget {
                   buildDefaultDragHandles: false,
                   itemCount: ordered.length,
                   onReorderItem: controller.uiLocked
-                      ? (_, __) {}
+                      ? (_, _) {}
                       : controller.reorderWorkspaceMenu,
                   itemBuilder: (context, index) {
                     final destination = ordered[index];

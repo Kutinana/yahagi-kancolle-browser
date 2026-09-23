@@ -13,7 +13,7 @@ class GameResourceCacheRulesTest {
 
         assertTrue(GameResourceCacheRules.shouldCache(url, "GET"))
         assertEquals(
-            "/kcs2/resources/ship/full/a.png?version=21",
+            "https://w17k.kancolle-server.com/kcs2/resources/ship/full/a.png?version=21",
             GameResourceCacheKey.from(url)?.value,
         )
     }
@@ -138,7 +138,7 @@ class GameResourceCacheRulesTest {
     }
 
     @Test
-    fun `cache key ignores official server host but preserves query`() {
+    fun `cache key includes official server host and preserves query`() {
         val first = GameResourceCacheKey.from(
             "https://w01k.kancolle-server.com/kcs2/resources/a.png?version=1&x=2",
         )
@@ -146,9 +146,18 @@ class GameResourceCacheRulesTest {
             "https://w49k.kancolle-server.com/kcs2/resources/a.png?version=1&x=2",
         )
 
-        assertEquals(first, second)
-        assertEquals("/kcs2/resources/a.png?version=1&x=2", first?.value)
+        assertFalse(first == second)
+        assertEquals("https://w01k.kancolle-server.com/kcs2/resources/a.png?version=1&x=2", first?.value)
         assertNull(GameResourceCacheKey.from("https://example.com/kcs2/resources/a.png"))
+    }
+
+    @Test
+    fun `boot scripts remain separated by request identity`() {
+        val url = "https://w00g.kancolle-server.com/gadget_html5/js/kcs_const.js"
+        val first = GameResourceCacheKey.from(url, mapOf("Cookie" to "account=A"))
+        val second = GameResourceCacheKey.from(url, mapOf("Cookie" to "account=B"))
+        assertFalse(first == second)
+        assertFalse(first?.value.orEmpty().contains("account=A"))
     }
 
     @Test

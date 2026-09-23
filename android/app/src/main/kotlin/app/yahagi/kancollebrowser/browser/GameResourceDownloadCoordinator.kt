@@ -126,7 +126,9 @@ class GameResourceDownloadCoordinator(
         val filteredExpectedLengths = linkedMapOf<String, Long>()
         val seen = hashSetOf<String>()
         candidates.forEachIndexed { index, url ->
-            if (GameResourceCacheRules.shouldCache(url, "GET") && seen.add(url)) {
+            if (GameResourceCacheRules.shouldCache(url, "GET") &&
+                (profile != "full" || GameResourceCacheRules.isShareableStaticUri(java.net.URI(url))) &&
+                seen.add(url)) {
                 filteredUrls += url
                 if (expectedLengths.isNotEmpty()) {
                     filteredExpectedLengths[url] = expectedLengths[index].coerceAtLeast(0L)
@@ -146,7 +148,10 @@ class GameResourceDownloadCoordinator(
                 GameResourceInspectionState.OUTDATED -> outdated++
             }
         }
-        val effectiveTargetBytes = if (
+        val effectiveTargetBytes = if (profile == "full" &&
+            filteredUrls.size != candidates.size && filteredExpectedLengths.isNotEmpty()) {
+            filteredExpectedLengths.values.sum()
+        } else if (
             filteredExpectedLengths.isEmpty() &&
             filteredUrls.isNotEmpty() &&
             missing == 0 &&
@@ -245,35 +250,45 @@ class GameResourceDownloadCoordinator(
         isCurrent: () -> Boolean,
     ): Boolean {
         if (disposed.get() || !isCurrent()) return false
+        val previous = snapshotState()
+        val profileChanged = this.profile != profile
         generation.incrementAndGet()
-        if (this.profile != profile) {
-            this.profile = profile
-            manifestFile.delete()
-            manifestBackupFile.delete()
-            urls = emptyList()
-            manifestLoaded = true
-            targetBytes = 0L
-            cachedBytesSnapshot = 0L
-            downloadedBytes = 0L
-            startedAt = 0L
-            missingCount = 0
-            damagedCount = 0
-            outdatedCount = 0
-            validByteLengths.clear()
-            expectedByteLengths.clear()
-            preloadAuthorized = false
-            userPaused = isDisabled
+        try {
+            if (profileChanged) {
+                this.profile = profile
+                urls = emptyList()
+                manifestLoaded = true
+                targetBytes = 0L
+                cachedBytesSnapshot = 0L
+                downloadedBytes = 0L
+                startedAt = 0L
+                missingCount = 0
+                damagedCount = 0
+                outdatedCount = 0
+                validByteLengths = linkedMapOf()
+                expectedByteLengths = linkedMapOf()
+                preloadAuthorized = false
+                userPaused = isDisabled
+            }
+            pauseRequested = true
+            networkPaused = false
+            if (isDisabled) {
+                userPaused = true
+                state = GameResourceDownloadState.PAUSED
+            } else {
+                state = GameResourceDownloadState.IDLE
+            }
+            persist()
+            if (profileChanged) {
+                manifestFile.delete()
+                manifestBackupFile.delete()
+            }
+            return true
+        } catch (error: Exception) {
+            generation.incrementAndGet()
+            restoreState(previous)
+            throw error
         }
-        pauseRequested = true
-        networkPaused = false
-        if (isDisabled) {
-            userPaused = true
-            state = GameResourceDownloadState.PAUSED
-        } else {
-            state = GameResourceDownloadState.IDLE
-        }
-        persist()
-        return true
     }
 
     @Synchronized
@@ -481,6 +496,14 @@ class GameResourceDownloadCoordinator(
                     persist()
                 }
             }
+        } catch (_: Exception) {
+            synchronized(this) {
+                if (!disposed.get() && workerGeneration == generation.get()) {
+                    pauseRequested = true
+                    state = GameResourceDownloadState.ERROR
+                    runCatching { persist() }
+                }
+            }
         } finally {
             workerRunning.set(false)
             if (!disposed.get() && !pauseRequested && state == GameResourceDownloadState.DOWNLOADING && workerRunning.compareAndSet(false, true)) {
@@ -563,7 +586,10 @@ class GameResourceDownloadCoordinator(
             val seen = hashSetOf<String>()
             for (index in 0 until array.length()) {
                 val url = array.getString(index)
-                if (!GameResourceCacheRules.shouldCache(url, "GET") || !seen.add(url)) continue
+                if (!GameResourceCacheRules.shouldCache(url, "GET") ||
+                    (profile == "full" &&
+                        !GameResourceCacheRules.isShareableStaticUri(java.net.URI(url))) ||
+                    !seen.add(url)) continue
                 loadedUrls += url
                 if (lengths != null && index < lengths.length() && !lengths.isNull(index)) {
                     loadedLengths[url] = lengths.getLong(index).coerceAtLeast(0L)
@@ -571,7 +597,12 @@ class GameResourceDownloadCoordinator(
             }
             urls = loadedUrls
             expectedByteLengths = loadedLengths
-            targetBytes = json.optLong("targetBytes", targetBytes).coerceAtLeast(0L)
+            targetBytes = if (profile == "full" && loadedUrls.size != array.length() &&
+                loadedLengths.isNotEmpty()) {
+                loadedLengths.values.sum()
+            } else {
+                json.optLong("targetBytes", targetBytes).coerceAtLeast(0L)
+            }
             true
         }.getOrDefault(false)
     }
@@ -665,6 +696,7 @@ class GameResourceDownloadCoordinator(
         targetBytes = targetBytes,
         cachedBytesSnapshot = cachedBytesSnapshot,
         downloadedBytes = downloadedBytes,
+        startedAt = startedAt,
         missingCount = missingCount,
         damagedCount = damagedCount,
         outdatedCount = outdatedCount,
@@ -685,6 +717,7 @@ class GameResourceDownloadCoordinator(
         targetBytes = snapshot.targetBytes
         cachedBytesSnapshot = snapshot.cachedBytesSnapshot
         downloadedBytes = snapshot.downloadedBytes
+        startedAt = snapshot.startedAt
         missingCount = snapshot.missingCount
         damagedCount = snapshot.damagedCount
         outdatedCount = snapshot.outdatedCount
@@ -763,6 +796,7 @@ class GameResourceDownloadCoordinator(
         val targetBytes: Long,
         val cachedBytesSnapshot: Long,
         val downloadedBytes: Long,
+        val startedAt: Long,
         val missingCount: Int,
         val damagedCount: Int,
         val outdatedCount: Int,

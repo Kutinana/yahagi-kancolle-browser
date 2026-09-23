@@ -65,6 +65,7 @@ final class GameResourceBaselineCatalog {
     final urls = <String>[];
     final expectedLengths = <int>[];
     var targetBytes = 0;
+    var sourceBytes = 0;
     for (final rawEntry in rawEntries) {
       if (rawEntry is! List || rawEntry.length != 3) {
         throw const FormatException('Malformed baseline manifest entry.');
@@ -80,6 +81,10 @@ final class GameResourceBaselineCatalog {
           (version.isNotEmpty && !version.startsWith('?'))) {
         throw const FormatException('Invalid baseline manifest entry.');
       }
+      sourceBytes += length;
+      // Preload only files whose native cache keys can be reused by a browser
+      // request carrying login headers. Boot documents are cached on demand.
+      if (!_isPreloadable(path)) continue;
       final origin = path.startsWith('/kcs/') || path.startsWith('/kcs2/')
           ? resourceBase
           : gadgetOrigin;
@@ -87,7 +92,7 @@ final class GameResourceBaselineCatalog {
       expectedLengths.add(length);
       targetBytes += length;
     }
-    if (_integer(manifest['targetBytes']) != targetBytes) {
+    if (_integer(manifest['targetBytes']) != sourceBytes) {
       throw const FormatException('Baseline manifest byte total mismatch.');
     }
     return GameResourceManifest(
@@ -107,6 +112,33 @@ final class GameResourceBaselineCatalog {
       '/kcs2/',
       '/kcscontents/',
     ].any(path.startsWith);
+  }
+
+  static bool _isPreloadable(String path) {
+    final lower = path.toLowerCase();
+    if (lower.startsWith('/kcs2/resources/')) return true;
+    if (!const <String>[
+      '/kcs2/img/',
+      '/kcs/sound/',
+      '/kcscontents/',
+    ].any(lower.startsWith)) {
+      return false;
+    }
+    return const <String>{
+      'png',
+      'jpg',
+      'jpeg',
+      'gif',
+      'webp',
+      'woff',
+      'woff2',
+      'ttf',
+      'mp3',
+      'ogg',
+      'wav',
+      'mp4',
+      'wasm',
+    }.contains(lower.split('.').last);
   }
 
   static int? _integer(Object? value) => switch (value) {

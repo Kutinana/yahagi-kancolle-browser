@@ -209,6 +209,41 @@ void main() {
     expect(find.text('改修'), findsOneWidget);
   });
 
+  testWidgets('expedition tabs fit beside the title in a narrow header', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 280,
+              height: 48,
+              child: WorkspaceContextHeader(
+                workspaceIndex: 2,
+                state: state,
+                selectedFleetId: 1,
+                onExpeditionModeChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('远征进度'), findsOneWidget);
+    expect(find.text('远征检查'), findsOneWidget);
+    final title = tester.getRect(
+      find.byKey(const Key('workspace-title-expedition')),
+    );
+    final tabs = tester.getRect(
+      find.byKey(const Key('expedition-summary-mode-selector')),
+    );
+    expect(tabs.left, greaterThan(title.right));
+    expect(tabs.right, lessThanOrEqualTo(title.left + 280));
+  });
+
   testWidgets(
     'construction workspace only shows development calculator and formula tabs when in development mode',
     (tester) async {

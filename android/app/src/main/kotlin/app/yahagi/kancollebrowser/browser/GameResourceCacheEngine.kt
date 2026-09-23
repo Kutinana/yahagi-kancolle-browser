@@ -2,6 +2,7 @@ package app.yahagi.kancollebrowser.browser
 
 import java.net.HttpURLConnection
 import java.net.URI
+import java.util.concurrent.atomic.AtomicBoolean
 
 enum class GameResourceResponseSource { CACHE, NETWORK }
 
@@ -22,18 +23,39 @@ class GameResourceCacheEngine(
     private val modeProvider: () -> GameResourceCacheMode,
 ) {
     private val locks = Array(64) { Any() }
+    private val legacyMigrationDone = AtomicBoolean(false)
+
+    private fun ensureLegacyMigration() {
+        if (legacyMigrationDone.get()) return
+        synchronized(legacyMigrationDone) {
+            if (legacyMigrationDone.get()) return
+            // Index loading and migration run on the caller's background I/O path.
+            store.removeLegacyHostlessEntries()
+            legacyMigrationDone.set(true)
+        }
+    }
 
     fun fetch(
         url: String,
         requestHeaders: Map<String, String> = emptyMap(),
+        method: String = "GET",
         expectedLength: Long? = null,
         shouldStore: () -> Boolean = { true },
     ): GameResourceResponse? {
         val mode = modeProvider()
-        if (!mode.readsCache || !GameResourceCacheRules.shouldCache(url, "GET")) return null
-        val key = GameResourceCacheKey.from(url) ?: return null
+        if (!mode.readsCache || !GameResourceCacheRules.shouldCache(url, method) ||
+            requestHeaders.keys.any { name -> BYPASS_REQUEST_HEADERS.any { it.equals(name, true) } ||
+                (name.startsWith("X-", ignoreCase = true) &&
+                    !name.equals("X-Requested-With", ignoreCase = true)) } ||
+            requestHeaders.keys.any { name ->
+                name.equals("Cache-Control", true) || name.equals("Pragma", true)
+            }
+        ) return null
+        ensureLegacyMigration()
+        val key = GameResourceCacheKey.from(url, requestHeaders) ?: return null
         val lock = locks[(key.hashCode() and Int.MAX_VALUE) % locks.size]
         synchronized(lock) {
+            val storeGeneration = store.generation()
             val cached = store.read(key)
             val cachedLengthMismatch = cached != null && expectedLength != null &&
                 cached.entry.byteLength != expectedLength
@@ -46,18 +68,34 @@ class GameResourceCacheEngine(
 
             val validationEntry = cached?.entry?.takeUnless { cachedLengthMismatch }
             val fetched = runCatching { fetcher.fetch(url, requestHeaders, validationEntry) }.getOrNull()
-                ?: return if (strictValidation || cachedLengthMismatch) null else cached?.toResponse()
+                ?: return if (strictValidation || cachedLengthMismatch ||
+                    store.generation() != storeGeneration) null else cached?.toResponse()
             if (fetched.statusCode == HttpURLConnection.HTTP_NOT_MODIFIED) {
                 if (cachedLengthMismatch) return null
-                store.markValidated(key)
-                return store.read(key)?.toResponse() ?: cached?.toResponse()
+                if (!fetched.headers.isCacheableResponse()) {
+                    store.removeIfGeneration(key, storeGeneration)
+                    return null
+                }
+                val updatedHeaders = fetched.headers.filterKeys { name ->
+                    name.lowercase() !in HOP_BY_HOP_HEADERS &&
+                        !name.equals("Content-Length", ignoreCase = true)
+                }
+                if (!store.markValidated(key, updatedHeaders, storeGeneration)) return null
+                return store.read(key)?.toResponse()
             }
-            if (fetched.statusCode !in 200..299) {
-                return if (strictValidation || cachedLengthMismatch) null else cached?.toResponse()
+            if (fetched.statusCode != HttpURLConnection.HTTP_OK) {
+                if (fetched.statusCode == HttpURLConnection.HTTP_PARTIAL) return null
+                return if (strictValidation || cachedLengthMismatch ||
+                    store.generation() != storeGeneration) null else cached?.toResponse()
+            }
+            if (!fetched.headers.isCacheableResponse()) {
+                store.removeIfGeneration(key, storeGeneration)
+                return null
             }
             val declaredLength = fetched.headers.value("Content-Length")?.toLongOrNull()
             if (declaredLength != null && declaredLength != fetched.bytes.size.toLong()) {
-                return if (strictValidation) null else cached?.toResponse()
+                return if (strictValidation || store.generation() != storeGeneration) null
+                    else cached?.toResponse()
             }
 
             val mimeInfo = GameResourceCacheRules.mimeTypeFor(url)
@@ -76,6 +114,10 @@ class GameResourceCacheEngine(
                     mimeType = mimeType,
                     etag = fetched.headers.value("ETag"),
                     lastModified = fetched.headers.value("Last-Modified"),
+                    responseHeaders = fetched.headers.filterKeys { name ->
+                        name.lowercase() !in HOP_BY_HOP_HEADERS
+                    },
+                    expectedGeneration = storeGeneration,
                 )
             }
             return GameResourceResponse(
@@ -91,7 +133,13 @@ class GameResourceCacheEngine(
     }
 
     fun status(): GameResourceCacheStatus {
+        ensureLegacyMigration()
         store.enforcePolicy()
+        return statusSnapshot()
+    }
+
+    fun statusSnapshot(): GameResourceCacheStatus {
+        ensureLegacyMigration()
         return GameResourceCacheStatus(
             usedBytes = store.totalBytes(),
             maxBytes = store.maxBytes,
@@ -103,7 +151,10 @@ class GameResourceCacheEngine(
 
     fun clear() = store.clear()
 
-    fun entries(): List<GameResourceCacheEntry> = store.entries()
+    fun entries(): List<GameResourceCacheEntry> {
+        ensureLegacyMigration()
+        return store.entries()
+    }
 
     fun hasCached(url: String): Boolean {
         return inspect(url).state == GameResourceInspectionState.VALID
@@ -124,6 +175,7 @@ class GameResourceCacheEngine(
         verifyChecksum: Boolean,
         expectedLength: Long?,
     ): GameResourceInspection {
+        ensureLegacyMigration()
         val key = GameResourceCacheKey.from(url)
             ?: return GameResourceInspection(GameResourceInspectionState.MISSING)
         val stored = if (verifyChecksum) store.inspect(key) else store.inspectMetadata(key)
@@ -151,8 +203,12 @@ class GameResourceCacheEngine(
             mimeType = mime,
             encoding = encoding,
             headers = buildMap {
-                entry.etag?.let { put("ETag", it) }
-                entry.lastModified?.let { put("Last-Modified", it) }
+                putAll(entry.responseHeaders)
+                if (keys.none { it.equals("ETag", true) }) entry.etag?.let { put("ETag", it) }
+                if (keys.none { it.equals("Last-Modified", true) }) {
+                    entry.lastModified?.let { put("Last-Modified", it) }
+                }
+                keys.filter { it.equals("Content-Length", true) }.forEach(::remove)
                 put("Content-Length", entry.byteLength.toString())
             },
             source = GameResourceResponseSource.CACHE,
@@ -162,8 +218,24 @@ class GameResourceCacheEngine(
     private fun Map<String, String>.value(name: String): String? =
         entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
 
+    private fun Map<String, String>.isCacheableResponse(): Boolean {
+        if (value("Set-Cookie") != null || value("Set-Cookie2") != null ||
+            value("Vary") != null || value("Pragma")?.contains("no-cache", true) == true
+        ) return false
+        val directives = value("Cache-Control")?.split(',')?.map { it.trim().substringBefore('=').lowercase() }.orEmpty()
+        return directives.none { it == "private" || it == "no-store" || it == "no-cache" }
+    }
+
     companion object {
         const val UNVERSIONED_TTL_MS: Long = 6L * 60L * 60L * 1000L
+        private val HOP_BY_HOP_HEADERS = setOf(
+            "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
+            "te", "trailer", "transfer-encoding", "upgrade", "set-cookie",
+        )
+        private val BYPASS_REQUEST_HEADERS = setOf(
+            "Range", "If-Range", "If-None-Match", "If-Modified-Since",
+            "If-Match", "If-Unmodified-Since", "Authorization", "Proxy-Authorization",
+        )
     }
 }
 

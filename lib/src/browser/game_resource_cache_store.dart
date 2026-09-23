@@ -34,6 +34,8 @@ final class SharedPreferencesGameResourceCacheStore
   @override
   Future<void> save(GameResourceCacheMode value) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(preferenceKey, value.wireName);
+    if (!await preferences.setString(preferenceKey, value.wireName)) {
+      throw StateError('Could not persist game resource cache mode');
+    }
   }
 }

@@ -37,6 +37,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.ViewCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import androidx.webkit.WebSettingsCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterShellArgs
@@ -385,6 +386,10 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
             { gameResourceCacheMode },
             ::onGameResourceCacheModeChanged,
             resourceNetworkMonitor,
+            {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                    WebViewFeature.isFeatureSupported(WebViewFeature.COOKIE_INTERCEPT)
+            },
         )
         resourceNetworkMonitor.start(resourceCoordinator::onNetworkChanged)
         gameResourceCacheManager = resourceManager
@@ -927,6 +932,14 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
         val current = webView.webViewClient ?: return
         if (current is GadgetBypassWebViewClient) return
 
+        val cookieInterceptSupported = runCatching {
+            if (!WebViewFeature.isFeatureSupported(WebViewFeature.COOKIE_INTERCEPT)) false
+            else {
+                WebSettingsCompat.setCookiesIncludedInShouldInterceptRequest(webView.settings, true)
+                true
+            }
+        }.getOrDefault(false)
+
         Log.d("GadgetBypass", "wrapping WebViewClient")
         webView.setWebViewClient(
             GadgetBypassWebViewClient(
@@ -935,6 +948,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
                 isEnabled = { manager.enabled },
                 endpoint = { manager.endpoint },
                 gameResourceEngine = gameResourceCacheEngine,
+                cookiesIncludedInRequestHeaders = cookieInterceptSupported,
             ),
         )
     }

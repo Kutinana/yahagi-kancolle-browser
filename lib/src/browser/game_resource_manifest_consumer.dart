@@ -66,10 +66,11 @@ final class GameResourceManifestConsumer implements GameApiEventConsumer {
     _activeBuildIsolate?.kill(priority: Isolate.immediate);
     _activeBuildIsolate = null;
     final generation = ++_generation;
-    _queue = _queue.then(
-      (_) => _rebuild(generation),
-      onError: (_) => _rebuild(generation),
-    );
+    _queue = _queue.then((_) => _rebuild(generation)).catchError((Object _) {
+      if (!_disposed && generation == _generation) {
+        controller.reportManifestFailure();
+      }
+    });
   }
 
   Future<void> _rebuild(int generation) async {
@@ -116,11 +117,14 @@ final class GameResourceManifestConsumer implements GameApiEventConsumer {
     if (_disposed || generation != _generation || controller.mode != mode) {
       return;
     }
-    await controller.submitManifest(
+    final submitted = await controller.submitManifest(
       manifest,
       shouldContinue: () =>
           !_disposed && generation == _generation && controller.mode == mode,
     );
+    if (!submitted && !_disposed && generation == _generation) {
+      controller.reportManifestFailure();
+    }
   }
 
   static Map<String, Object?>? _map(Object? value) =>

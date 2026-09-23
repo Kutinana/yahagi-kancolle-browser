@@ -184,6 +184,53 @@ void main() {
       controller.dispose();
     },
   );
+
+  test(
+    'baseline loading failure is reported and a later event can recover',
+    () async {
+      final port = RecordingPort();
+      final controller = GameResourceCacheController(
+        store: MemoryStore(GameResourceCacheMode.full),
+        port: port,
+      );
+      await controller.initialize();
+      var fail = true;
+      final consumer = GameResourceManifestConsumer(
+        controller: controller,
+        ownedShipMasterIds: () => const <int>{},
+        ownedSlotItemMasterIds: () => const <int>{},
+        staticUrlsLoader: () async => const <String>[],
+        baselineLoader: () async {
+          if (fail) throw StateError('asset unavailable');
+          return _baselineBytes();
+        },
+      );
+      final event = CapturedApiEvent(
+        path: '/kcsapi/api_start2/getData',
+        responseBody: '{}',
+        decodedEnvelope: const <String, Object?>{
+          'api_result': 1,
+          'api_data': <String, Object?>{},
+        },
+        source: CaptureSource.xhr,
+        sourceOrigin: 'https://w17k.kancolle-server.com',
+        capturedAt: DateTime.utc(2026),
+      );
+
+      consumer.accept(event);
+      await consumer.idle;
+      expect(controller.manifestError, isTrue);
+      expect(port.manifests, isEmpty);
+
+      fail = false;
+      consumer.accept(event);
+      await consumer.idle;
+      expect(controller.manifestError, isFalse);
+      expect(port.manifests, hasLength(1));
+      consumer.dispose();
+      controller.dispose();
+    },
+  );
 }
 
 Uint8List _baselineBytes() {

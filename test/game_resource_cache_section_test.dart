@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_channel.dart';
 import 'package:yahagi_kancolle_browser/src/browser/game_resource_cache_controller.dart';
@@ -28,7 +29,7 @@ void main() {
     expect(find.byKey(const Key('cache-mode-light')), findsNothing);
     expect(find.byKey(const Key('cache-mode-full')), findsOneWidget);
     expect(find.text('本地缓存'), findsOneWidget);
-    expect(find.textContaining('固定基础资源清单（约 5.49 GB）'), findsOneWidget);
+    expect(find.textContaining('预下载基础资源（约 5.73 GB）'), findsOneWidget);
     expect(find.textContaining('游玩时自动缓存'), findsOneWidget);
     expect(find.text('已缓存 6.84 GB'), findsOneWidget);
     expect(find.textContaining('/ 8.12 GB'), findsNothing);
@@ -70,6 +71,25 @@ void main() {
     expect(find.byKey(const Key('cache-check-integrity')), findsNothing);
     expect(find.byKey(const Key('cache-repair')), findsNothing);
     expect(find.byKey(const Key('cache-clear')), findsOneWidget);
+  });
+
+  testWidgets('unavailable cache shows warning and disables mode controls', (
+    tester,
+  ) async {
+    final port = _FakePort();
+    final controller = GameResourceCacheController(
+      store: _MemoryStore(GameResourceCacheMode.temporary),
+      port: port,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(app(controller));
+
+    expect(find.textContaining('本地缓存初始化或清理失败'), findsOneWidget);
+    expect(find.byIcon(Icons.radio_button_checked), findsNothing);
+    await tester.tap(find.byKey(const Key('cache-mode-full')));
+    await tester.pump();
+    expect(port.mode, GameResourceCacheMode.light);
   });
 
   testWidgets('integrity check distinguishes retained pending resources', (
@@ -163,6 +183,25 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('native clear exception shows an error notice', (tester) async {
+    final port = _FakePort()..failClear = true;
+    final controller = GameResourceCacheController(
+      store: _MemoryStore(GameResourceCacheMode.temporary),
+      port: port,
+    );
+    await controller.initialize();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(app(controller));
+
+    await tester.tap(find.byKey(const Key('cache-clear')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('清除本地缓存').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('缓存操作未完成，请稍后重试。'), findsOneWidget);
+  });
 }
 
 final class _MemoryStore implements GameResourceCacheStore {
@@ -183,6 +222,7 @@ final class _FakePort implements GameResourceCachePort {
   bool metered = false;
   bool allowedMetered = false;
   bool failStartDownload = false;
+  bool failClear = false;
 
   GameResourceCacheStatus get value => GameResourceCacheStatus(
     mode: mode,
@@ -237,6 +277,7 @@ final class _FakePort implements GameResourceCachePort {
   @override
   Future<bool> clear() async {
     clearCalls++;
+    if (failClear) throw PlatformException(code: 'clear_failed');
     return true;
   }
 }

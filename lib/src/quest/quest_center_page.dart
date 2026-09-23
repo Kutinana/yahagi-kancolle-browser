@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
 import '../game_state/quest_text_normalizer.dart';
+import '../layout/adaptive_layout.dart';
 import '../widgets/filter_controls.dart';
 import '../widgets/adaptive_input_dialog.dart';
 import 'quest_catalog.dart';
@@ -675,7 +676,13 @@ class _QuestCenterPageState extends State<QuestCenterPage> {
                               : selected.detail,
                           onRelationSelected: _selectRelation,
                         );
-                        if (constraints.maxWidth < 760) {
+                        final unfoldedSquare =
+                            constraints.maxWidth >= compactWindowShortestSide &&
+                            classifyAdaptiveWindow(
+                                  MediaQuery.sizeOf(context),
+                                ) ==
+                                AdaptiveWindowClass.nearSquareLarge;
+                        if (constraints.maxWidth < 760 && !unfoldedSquare) {
                           final detailMin = _mode == QuestCenterMode.all
                               ? 310.0
                               : 330.0;

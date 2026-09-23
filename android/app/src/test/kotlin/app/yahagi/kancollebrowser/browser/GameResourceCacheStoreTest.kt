@@ -11,6 +11,8 @@ import org.junit.rules.TemporaryFolder
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.json.JSONArray
+import org.json.JSONObject
 
 class GameResourceCacheStoreTest {
     @get:Rule
@@ -19,6 +21,114 @@ class GameResourceCacheStoreTest {
     @Test
     fun `default capacity is fifty decimal gigabytes`() {
         assertEquals(50_000_000_000L, GameResourceCacheStore.DEFAULT_MAX_BYTES)
+    }
+
+    @Test
+    fun `clear rejects a write started before clear`() {
+        val root = temporaryFolder.newFolder("clear-generation")
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 10)
+        val generation = store.generation()
+        store.clear()
+
+        assertNull(store.commitWithEviction(
+            GameResourceCacheKey("/kcs2/resources/a.png"),
+            byteArrayOf(1),
+            mimeType = "image/png",
+            expectedGeneration = generation,
+        ))
+        assertEquals(0, store.totalBytes())
+    }
+
+    @Test
+    fun `clear reports undeleted files instead of claiming success`() {
+        val root = temporaryFolder.newFolder("clear-failure")
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 10)
+        val blocked = root.resolve("files/blocked")
+        assertTrue(blocked.mkdir())
+        blocked.resolve("child").writeText("busy")
+
+        assertTrue(runCatching { store.clear() }.isFailure)
+        assertTrue(blocked.isDirectory)
+        blocked.resolve("child").delete()
+        blocked.delete()
+        store.clear()
+        assertTrue(root.resolve("files").listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun `failed eviction keeps index entry until physical removal succeeds`() {
+        val root = temporaryFolder.newFolder("eviction-failure")
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 10)
+        val key = GameResourceCacheKey("/kcs2/resources/a.png")
+        val entry = store.commit(key, byteArrayOf(1), mimeType = "image/png")
+        val file = root.resolve("files/${entry.fileName}")
+        assertTrue(file.delete())
+        assertTrue(file.mkdir())
+        file.resolve("child").writeText("nonempty")
+
+        assertTrue(runCatching { store.remove(key) }.isFailure)
+        assertEquals(1L, store.totalBytes())
+        assertEquals(1, store.entries().size)
+        assertTrue(runCatching {
+            store.commitWithEviction(GameResourceCacheKey("/kcs2/resources/new.png"),
+                ByteArray(10) { 2 }, mimeType = "image/png")
+        }.isFailure)
+        assertTrue(root.resolve("tmp").listFiles().orEmpty().isEmpty())
+
+        file.resolve("child").delete()
+        file.delete()
+        assertTrue(store.remove(key))
+        assertEquals(0L, store.totalBytes())
+    }
+
+    @Test
+    fun `journal write failure removes new unindexed file and temporary part`() {
+        val root = temporaryFolder.newFolder("index-write-failure")
+        val journal = root.resolve("index.json.journal")
+        assertTrue(journal.mkdir())
+        journal.resolve("block").writeText("nonempty")
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 10)
+
+        assertTrue(runCatching {
+            store.commitWithEviction(GameResourceCacheKey("/kcs2/resources/a.png"),
+                byteArrayOf(1), mimeType = "image/png")
+        }.isFailure)
+
+        assertTrue(root.resolve("tmp").listFiles().orEmpty().isEmpty())
+        assertTrue(root.resolve("files").listFiles().orEmpty().isEmpty())
+        assertEquals(0L, store.totalBytes())
+    }
+
+    @Test
+    fun `ten thousand entries shrink under a temporary policy within a bounded time`() {
+        val root = temporaryFolder.newFolder("large-shrink")
+        val entries = JSONArray()
+        repeat(10_000) { number ->
+            entries.put(JSONObject()
+                .put("key", "https://w17k.kancolle-server.com/kcs2/resources/$number.png")
+                .put("fileName", "shared.cache")
+                .put("version", JSONObject.NULL)
+                .put("mimeType", "image/png")
+                .put("byteLength", 1)
+                .put("etag", JSONObject.NULL)
+                .put("lastModified", JSONObject.NULL)
+                .put("lastAccessedAt", number)
+                .put("lastValidatedAt", number)
+                .put("sha256", "hash"))
+        }
+        root.resolve("index.json").writeText(JSONObject().put("entries", entries).toString())
+        var capacity = 10_000L
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")),
+            policyProvider = { GameResourceCachePolicy(capacity) })
+        assertEquals(10_000L, store.totalBytes())
+        capacity = 0L
+
+        val started = System.nanoTime()
+        store.enforcePolicy()
+
+        assertEquals(0L, store.totalBytes())
+        assertTrue("large mode shrink exceeded 30 seconds",
+            TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started) < 30_000)
     }
 
     @Test

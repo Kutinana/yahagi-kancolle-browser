@@ -3,6 +3,7 @@ package app.yahagi.kancollebrowser.browser
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -17,10 +18,13 @@ data class GameResourceCacheEntry(
     val lastAccessedAt: Long,
     val lastValidatedAt: Long,
     val sha256: String,
+    val responseHeaders: Map<String, String> = emptyMap(),
 )
 
 class GameResourceCacheIndex(private val indexFile: File) {
     private val entries = linkedMapOf<String, GameResourceCacheEntry>()
+    private val fileReferenceCounts = hashMapOf<String, Int>()
+    private var cachedTotalBytes = 0L
     private val journalFile = File(indexFile.parentFile, "${indexFile.name}.journal")
     private var loaded = false
 
@@ -37,67 +41,177 @@ class GameResourceCacheIndex(private val indexFile: File) {
     }
 
     @Synchronized
+    fun totalBytes(): Long {
+        ensureLoaded()
+        return cachedTotalBytes
+    }
+
+    @Synchronized
     fun put(entry: GameResourceCacheEntry) {
         ensureLoaded()
+        appendJournalRecord(JSONObject().put("op", "put").put("entry", entry.toJson()))
+        entries[entry.key]?.let {
+            decrementFileReference(it.fileName)
+            cachedTotalBytes -= it.byteLength
+        }
         entries[entry.key] = entry
-        appendJournal(JSONObject().put("op", "put").put("entry", entry.toJson()))
+        incrementFileReference(entry.fileName)
+        cachedTotalBytes += entry.byteLength
+        compactJournalIfNeeded()
     }
 
     @Synchronized
     fun remove(key: GameResourceCacheKey): GameResourceCacheEntry? {
         ensureLoaded()
-        val removed = entries.remove(key.value) ?: return null
-        appendJournal(JSONObject().put("op", "remove").put("key", key.value))
+        val removed = entries[key.value] ?: return null
+        appendJournalRecord(JSONObject().put("op", "remove").put("key", key.value))
+        entries.remove(key.value)
+        decrementFileReference(removed.fileName)
+        cachedTotalBytes -= removed.byteLength
+        compactJournalIfNeeded()
+        return removed
+    }
+
+    @Synchronized
+    fun isFileReferenced(fileName: String): Boolean {
+        ensureLoaded()
+        return (fileReferenceCounts[fileName] ?: 0) > 0
+    }
+
+    @Synchronized
+    fun fileReferenceCount(fileName: String): Int {
+        ensureLoaded()
+        return fileReferenceCounts[fileName] ?: 0
+    }
+
+    @Synchronized
+    fun removePrefix(prefix: String): List<GameResourceCacheEntry> {
+        ensureLoaded()
+        val removed = entries.values.filter { it.key.startsWith(prefix) }
+        if (removed.isEmpty()) return emptyList()
+        appendJournalRecord(JSONObject().put("op", "removePrefix").put("prefix", prefix))
+        removed.forEach {
+            entries.remove(it.key)
+            decrementFileReference(it.fileName)
+            cachedTotalBytes -= it.byteLength
+        }
+        compactJournalIfNeeded()
         return removed
     }
 
     @Synchronized
     fun clear() {
         ensureLoaded()
-        journalFile.parentFile?.mkdirs()
-        journalFile.appendText(JSONObject().put("op", "clear").toString() + "\n")
+        appendJournalRecord(JSONObject().put("op", "clear"))
         entries.clear()
-        if (journalFile.length() >= MAX_JOURNAL_BYTES) {
-            save()
-            journalFile.delete()
-        }
+        fileReferenceCounts.clear()
+        cachedTotalBytes = 0L
+        compactJournalIfNeeded()
     }
 
     private fun ensureLoaded() {
         if (loaded) return
-        loaded = true
-        if (indexFile.isFile) {
-            runCatching {
-                val array = JSONObject(indexFile.readText()).optJSONArray("entries") ?: JSONArray()
-                for (index in 0 until array.length()) {
-                    val entry = array.getJSONObject(index).toEntry()
-                    entries[entry.key] = entry
+        try {
+            if (indexFile.isFile) {
+                val source = indexFile.readText()
+                runCatching {
+                    val array = JSONObject(source).optJSONArray("entries") ?: JSONArray()
+                    for (index in 0 until array.length()) {
+                        val entry = array.getJSONObject(index).toEntry()
+                        entries[entry.key] = entry
+                    }
+                }.onFailure {
+                    entries.clear()
                 }
-            }.onFailure {
-                entries.clear()
             }
+            if (journalFile.isFile) replayJournal()
+            rebuildFileReferences()
+            loaded = true
+        } catch (error: Exception) {
+            loaded = false
+            entries.clear()
+            fileReferenceCounts.clear()
+            cachedTotalBytes = 0L
+            throw error
         }
-        if (!journalFile.isFile) return
-        journalFile.forEachLine { line ->
-            runCatching {
+    }
+
+    private fun replayJournal() {
+        val bytes = journalFile.readBytes()
+        var offset = 0
+        while (offset < bytes.size) {
+            val end = bytes.indexOf('\n'.code.toByte(), offset)
+            if (end < 0) break
+            val line = String(bytes, offset, end - offset, Charsets.UTF_8)
+            val applied = runCatching {
                 val operation = JSONObject(line)
-                when (operation.optString("op")) {
+                when (operation.getString("op")) {
                     "put" -> operation.getJSONObject("entry").toEntry().also {
                         entries[it.key] = it
                     }
                     "remove" -> entries.remove(operation.getString("key"))
+                    "removePrefix" -> {
+                        val prefix = operation.getString("prefix")
+                        entries.keys.removeAll { it.startsWith(prefix) }
+                    }
                     "clear" -> entries.clear()
+                    else -> error("Unknown resource cache journal operation")
                 }
+            }.isSuccess
+            if (!applied) break
+            offset = end + 1
+        }
+        if (offset != bytes.size) {
+            RandomAccessFile(journalFile, "rw").use { it.setLength(offset.toLong()) }
+        }
+    }
+
+    private fun ByteArray.indexOf(value: Byte, fromIndex: Int): Int {
+        for (index in fromIndex until size) {
+            if (this[index] == value) return index
+        }
+        return -1
+    }
+
+    private fun appendJournalRecord(operation: JSONObject) {
+        try {
+            journalFile.parentFile?.mkdirs()
+            journalFile.appendText(operation.toString() + "\n")
+        } catch (error: Exception) {
+            // Reload on the next call so a partial tail is truncated before retry.
+            loaded = false
+            entries.clear()
+            fileReferenceCounts.clear()
+            cachedTotalBytes = 0L
+            throw error
+        }
+    }
+
+    private fun compactJournalIfNeeded() {
+        if (journalFile.length() >= MAX_JOURNAL_BYTES) {
+            save()
+            if (!journalFile.delete()) {
+                throw IllegalStateException("Cannot compact resource cache journal")
             }
         }
     }
 
-    private fun appendJournal(operation: JSONObject) {
-        journalFile.parentFile?.mkdirs()
-        journalFile.appendText(operation.toString() + "\n")
-        if (journalFile.length() >= MAX_JOURNAL_BYTES) {
-            save()
-            journalFile.delete()
+    private fun incrementFileReference(fileName: String) {
+        fileReferenceCounts[fileName] = (fileReferenceCounts[fileName] ?: 0) + 1
+    }
+
+    private fun decrementFileReference(fileName: String) {
+        val count = fileReferenceCounts[fileName] ?: return
+        if (count <= 1) fileReferenceCounts.remove(fileName)
+        else fileReferenceCounts[fileName] = count - 1
+    }
+
+    private fun rebuildFileReferences() {
+        fileReferenceCounts.clear()
+        cachedTotalBytes = 0L
+        entries.values.forEach {
+            incrementFileReference(it.fileName)
+            cachedTotalBytes += it.byteLength
         }
     }
 
@@ -124,6 +238,9 @@ class GameResourceCacheIndex(private val indexFile: File) {
         lastAccessedAt = getLong("lastAccessedAt"),
         lastValidatedAt = optLong("lastValidatedAt", 0L),
         sha256 = getString("sha256"),
+        responseHeaders = optJSONObject("responseHeaders")?.let { headers ->
+            headers.keys().asSequence().associateWith(headers::getString)
+        }.orEmpty(),
     )
 
     private fun GameResourceCacheEntry.toJson() = JSONObject()
@@ -137,6 +254,7 @@ class GameResourceCacheIndex(private val indexFile: File) {
         .put("lastAccessedAt", lastAccessedAt)
         .put("lastValidatedAt", lastValidatedAt)
         .put("sha256", sha256)
+        .put("responseHeaders", JSONObject(responseHeaders))
 
     private fun atomicReplace(source: File, target: File) {
         try {

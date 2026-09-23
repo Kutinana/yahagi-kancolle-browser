@@ -28,6 +28,7 @@ class GadgetBypassWebViewClient(
     private val isEnabled: () -> Boolean,
     private val endpoint: () -> String,
     private val gameResourceEngine: GameResourceCacheEngine? = null,
+    private val cookiesIncludedInRequestHeaders: Boolean = false,
 ) : WebViewClient() {
 
     private companion object {
@@ -45,7 +46,7 @@ class GadgetBypassWebViewClient(
         if (isEnabled() && GadgetBypassRules.shouldIntercept(url, request.method)) {
             return serveFromBypass(url) ?: original.shouldInterceptRequest(view, request)
         }
-        serveFromGameCache(url, request.requestHeaders)?.let { return it }
+        serveFromGameCache(url, request.requestHeaders, request.method)?.let { return it }
         return original.shouldInterceptRequest(view, request)
     }
 
@@ -58,7 +59,6 @@ class GadgetBypassWebViewClient(
         if (isEnabled() && GadgetBypassRules.shouldIntercept(url, "GET")) {
             return serveFromBypass(url) ?: original.shouldInterceptRequest(view, url)
         }
-        serveFromGameCache(url)?.let { return it }
         return original.shouldInterceptRequest(view, url)
     }
 
@@ -77,8 +77,10 @@ class GadgetBypassWebViewClient(
     private fun serveFromGameCache(
         url: String,
         requestHeaders: Map<String, String> = emptyMap(),
+        method: String = "GET",
     ): WebResourceResponse? = try {
-        val response = gameResourceEngine?.fetch(url, requestHeaders) ?: return null
+        if (!cookiesIncludedInRequestHeaders || !method.equals("GET", true)) return null
+        val response = gameResourceEngine?.fetch(url, requestHeaders, method = method) ?: return null
         WebResourceResponse(
             response.mimeType,
             response.encoding,

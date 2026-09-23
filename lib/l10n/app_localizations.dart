@@ -4178,7 +4178,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheFullDesc.
   ///
   /// In zh, this message translates to:
-  /// **'预下载基础资源（约 5.49 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。'**
+  /// **'预下载基础资源（约 5.73 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。'**
   String get gameResourceCacheFullDesc;
 
   /// No description provided for @gameResourceCacheStart.
@@ -4316,6 +4316,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'缓存操作未完成，请稍后重试。'**
   String get gameResourceCacheActionFailed;
+
+  /// No description provided for @gameResourceCacheUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前 Android WebView 不支持游戏资源本地缓存，请更新 WebView。'**
+  String get gameResourceCacheUnsupported;
+
+  /// No description provided for @gameResourceCacheUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地缓存初始化或清理失败，请检查存储空间并重启应用。游戏浏览不受影响。'**
+  String get gameResourceCacheUnavailable;
+
+  /// No description provided for @gameResourceCacheManifestFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'预载资源清单加载失败，进入游戏后可重试。'**
+  String get gameResourceCacheManifestFailed;
 
   /// No description provided for @confirmGameRefreshTitle.
   ///

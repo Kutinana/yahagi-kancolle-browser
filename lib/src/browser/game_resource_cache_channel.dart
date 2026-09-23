@@ -46,6 +46,8 @@ final class GameResourceCacheStatus {
     required this.capacityBlocked,
     this.isMetered = false,
     this.waitingForWifi = false,
+    this.supported = true,
+    this.policyError = false,
   });
 
   static const empty = GameResourceCacheStatus(
@@ -81,6 +83,8 @@ final class GameResourceCacheStatus {
   final bool capacityBlocked;
   final bool isMetered;
   final bool waitingForWifi;
+  final bool supported;
+  final bool policyError;
 
   bool get isRunning =>
       state == GameResourceCacheState.downloading ||
@@ -110,6 +114,8 @@ final class GameResourceCacheStatus {
       capacityBlocked: map['capacityBlocked'] as bool? ?? false,
       isMetered: map['isMetered'] as bool? ?? false,
       waitingForWifi: map['waitingForWifi'] as bool? ?? false,
+      supported: map['supported'] as bool? ?? true,
+      policyError: map['policyError'] as bool? ?? false,
     );
   }
 }

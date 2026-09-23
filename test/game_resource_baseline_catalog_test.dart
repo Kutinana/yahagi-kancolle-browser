@@ -27,13 +27,11 @@ void main() {
       );
 
       expect(manifest.profile, 'full');
-      expect(manifest.targetBytes, 28);
-      expect(manifest.expectedLengths, <int>[2, 3, 5, 7, 11]);
+      expect(manifest.targetBytes, 16);
+      expect(manifest.expectedLengths, <int>[2, 3, 11]);
       expect(manifest.urls, <String>[
         'https://w17k.kancolle-server.com/kcs2/img/a.png?version=1',
         'https://w17k.kancolle-server.com/kcs/sound/a.mp3',
-        'https://w00g.kancolle-server.com/gadget_html5/js/a.js?version=2',
-        'https://w00g.kancolle-server.com/html/a.html',
         'https://w00g.kancolle-server.com/kcscontents/a.png',
       ]);
     },
@@ -86,8 +84,8 @@ void main() {
       resourceOrigin: 'https://w17k.kancolle-server.com',
     );
 
-    expect(manifest.urls, hasLength(63434));
-    expect(manifest.targetBytes, 5744880702);
+    expect(manifest.urls, hasLength(63258));
+    expect(manifest.targetBytes, 5731130671);
   });
 }
 

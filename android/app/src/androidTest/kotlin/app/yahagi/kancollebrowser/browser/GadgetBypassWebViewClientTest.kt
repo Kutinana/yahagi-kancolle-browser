@@ -1,11 +1,15 @@
 package app.yahagi.kancollebrowser.browser
 
 import android.webkit.WebResourceResponse
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
@@ -14,6 +18,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -28,6 +33,16 @@ class GadgetBypassWebViewClientTest {
     @After
     fun tearDown() {
         cacheDir.deleteRecursively()
+    }
+
+    @Test
+    fun cookieAwareRequestInterceptionCanBeEnabledOnSupportedWebView() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.COOKIE_INTERCEPT))
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val webView = WebView(ApplicationProvider.getApplicationContext())
+            WebSettingsCompat.setCookiesIncludedInShouldInterceptRequest(webView.settings, true)
+            webView.destroy()
+        }
     }
 
     @Test
@@ -78,6 +93,7 @@ class GadgetBypassWebViewClientTest {
             isEnabled = { false },
             endpoint = { GadgetBypassRules.DEFAULT_ENDPOINT },
             gameResourceEngine = resourceEngine,
+            cookiesIncludedInRequestHeaders = true,
         )
         val actual = AtomicReference<WebResourceResponse?>()
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
@@ -85,7 +101,7 @@ class GadgetBypassWebViewClientTest {
             actual.set(
                 wrapper.shouldInterceptRequest(
                     webView,
-                    "https://w17k.kancolle-server.com/kcs2/resources/ship/full/a.png?version=1",
+                    request("https://w17k.kancolle-server.com/kcs2/resources/ship/full/a.png?version=1"),
                 ),
             )
             webView.destroy()
@@ -93,6 +109,84 @@ class GadgetBypassWebViewClientTest {
 
         assertEquals("cached", actual.get()!!.data.bufferedReader().readText())
         assertEquals(0, original.interceptCalls)
+    }
+
+    @Test
+    fun legacyUrlOnlyCallbackDelegatesWithoutReadingGameCache() {
+        val sentinel = WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(byteArrayOf(9)))
+        val original = RecordingClient(sentinel)
+        val root = File(cacheDir, "legacy-resources")
+        var fetches = 0
+        val resourceEngine = GameResourceCacheEngine(
+            GameResourceCacheStore(root, GameResourceCacheIndex(File(root, "index.json")), 10_000),
+            GameResourceFetcher { _, _, _ ->
+                fetches++
+                GameResourceFetchResult(200, "OK", emptyMap(), byteArrayOf(1))
+            },
+        ) { GameResourceCacheMode.FULL }
+        val wrapper = GadgetBypassWebViewClient(
+            original, GadgetBypassEngine(GadgetBypassCache(cacheDir)),
+            { false }, { GadgetBypassRules.DEFAULT_ENDPOINT }, resourceEngine, true,
+        )
+        val actual = AtomicReference<WebResourceResponse?>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val webView = WebView(ApplicationProvider.getApplicationContext())
+            actual.set(wrapper.shouldInterceptRequest(
+                webView, "https://w17k.kancolle-server.com/kcs2/resources/a.png"))
+            webView.destroy()
+        }
+        assertSame(sentinel, actual.get())
+        assertEquals(0, fetches)
+    }
+
+    private fun request(url: String): WebResourceRequest = object : WebResourceRequest {
+        override fun getUrl(): Uri = Uri.parse(url)
+        override fun isForMainFrame(): Boolean = false
+        override fun isRedirect(): Boolean = false
+        override fun hasGesture(): Boolean = false
+        override fun getMethod(): String = "GET"
+        override fun getRequestHeaders(): Map<String, String> = mapOf("Cookie" to "sid=browser")
+    }
+
+    @Test
+    fun postToStaticPathIsDelegatedWithoutFetching() {
+        val sentinel = WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(byteArrayOf(9)))
+        val original = RecordingClient(sentinel)
+        val root = File(cacheDir, "post-resources")
+        var fetches = 0
+        val resourceEngine = GameResourceCacheEngine(
+            GameResourceCacheStore(root, GameResourceCacheIndex(File(root, "index.json")), 10_000),
+            GameResourceFetcher { _, _, _ ->
+                fetches++
+                GameResourceFetchResult(200, "OK", emptyMap(), byteArrayOf(1))
+            },
+        ) { GameResourceCacheMode.TEMPORARY }
+        val wrapper = GadgetBypassWebViewClient(
+            original = original,
+            engine = GadgetBypassEngine(GadgetBypassCache(cacheDir)),
+            isEnabled = { false },
+            endpoint = { GadgetBypassRules.DEFAULT_ENDPOINT },
+            gameResourceEngine = resourceEngine,
+            cookiesIncludedInRequestHeaders = true,
+        )
+        val request = object : WebResourceRequest {
+            override fun getUrl(): Uri = Uri.parse("https://w17k.kancolle-server.com/kcs2/resources/a.png")
+            override fun isForMainFrame(): Boolean = false
+            override fun isRedirect(): Boolean = false
+            override fun hasGesture(): Boolean = false
+            override fun getMethod(): String = "POST"
+            override fun getRequestHeaders(): Map<String, String> = emptyMap()
+        }
+        val actual = AtomicReference<WebResourceResponse?>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val webView = WebView(ApplicationProvider.getApplicationContext())
+            actual.set(wrapper.shouldInterceptRequest(webView, request))
+            webView.destroy()
+        }
+
+        assertSame(sentinel, actual.get())
+        assertEquals(1, original.interceptCalls)
+        assertEquals(0, fetches)
     }
 
     private fun assertDelegates(enabled: Boolean, url: String) {
@@ -127,6 +221,14 @@ class GadgetBypassWebViewClientTest {
         override fun shouldInterceptRequest(
             view: WebView,
             url: String,
+        ): WebResourceResponse {
+            interceptCalls += 1
+            return response
+        }
+
+        override fun shouldInterceptRequest(
+            view: WebView,
+            request: WebResourceRequest,
         ): WebResourceResponse {
             interceptCalls += 1
             return response

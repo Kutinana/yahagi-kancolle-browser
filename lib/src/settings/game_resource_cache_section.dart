@@ -68,6 +68,30 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
               title: l10n.gameResourceCacheFull,
               subtitle: l10n.gameResourceCacheFullDesc,
             ),
+            if (!status.supported)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  l10n.gameResourceCacheUnsupported,
+                  style: const TextStyle(color: Color(0xffffb4a9)),
+                ),
+              ),
+            if (!controller.initialized || status.policyError)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  l10n.gameResourceCacheUnavailable,
+                  style: const TextStyle(color: Color(0xffffb4a9)),
+                ),
+              ),
+            if (isFullCache && controller.manifestError)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  l10n.gameResourceCacheManifestFailed,
+                  style: const TextStyle(color: Color(0xffffb4a9)),
+                ),
+              ),
             const Divider(color: Color(0xff294052), height: 1),
             if (isFullCache && status.capacityBlocked)
               Padding(
@@ -105,7 +129,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                   if (isFullCache)
                     FilledButton.icon(
                       key: const Key('cache-download-toggle'),
-                      onPressed: controller.busy
+                      onPressed: !controller.initialized || controller.busy
                           ? null
                           : () =>
                                 status.state ==
@@ -128,7 +152,9 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                   if (isFullCache)
                     OutlinedButton.icon(
                       key: const Key('cache-check-integrity'),
-                      onPressed: controller.busy ? null : _checkIntegrity,
+                      onPressed: !controller.initialized || controller.busy
+                          ? null
+                          : _checkIntegrity,
                       icon: const Icon(Icons.fact_check_outlined),
                       label: Text(l10n.gameResourceCacheCheck),
                     ),
@@ -139,7 +165,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                           status.outdatedCount > 0))
                     OutlinedButton.icon(
                       key: const Key('cache-repair'),
-                      onPressed: controller.busy
+                      onPressed: !controller.initialized || controller.busy
                           ? null
                           : () => _confirmRepair(l10n),
                       icon: const Icon(Icons.build_outlined),
@@ -147,7 +173,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                     ),
                   TextButton.icon(
                     key: const Key('cache-clear'),
-                    onPressed: controller.busy
+                    onPressed: !controller.initialized || controller.busy
                         ? null
                         : () => _confirmClear(l10n),
                     icon: const Icon(Icons.delete_outline),
@@ -197,12 +223,18 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
     required String title,
     required String subtitle,
   }) {
-    final selected = widget.controller.mode == mode;
+    final selected =
+        widget.controller.initialized && widget.controller.mode == mode;
     return InkWell(
       key: Key('cache-mode-${mode.name}'),
-      onTap: widget.controller.busy || selected
+      onTap:
+          !widget.controller.initialized ||
+              widget.controller.busy ||
+              selected ||
+              (!widget.controller.status.supported &&
+                  mode == GameResourceCacheMode.full)
           ? null
-          : () => widget.controller.setMode(mode),
+          : () => _run(() => widget.controller.setMode(mode)),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
@@ -247,8 +279,12 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
   }
 
   Future<void> _checkIntegrity() async {
-    await widget.controller.checkIntegrity();
-    if (mounted) setState(() => _integrityChecked = true);
+    try {
+      await widget.controller.checkIntegrity();
+      if (mounted) setState(() => _integrityChecked = true);
+    } catch (_) {
+      _showFailure();
+    }
   }
 
   Future<void> _confirmDownload(AppLocalizations l10n) async {
@@ -321,16 +357,22 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
       false;
 
   Future<void> _run(Future<bool> Function() action) async {
-    final succeeded = await action();
-    if (!succeeded && mounted) {
-      final l10n =
-          AppLocalizations.of(context) ??
-          lookupAppLocalizations(const Locale('zh'));
-      TopNotice.show(
-        context,
-        message: l10n.gameResourceCacheActionFailed,
-        tone: TopNoticeTone.error,
-      );
+    try {
+      if (!await action()) _showFailure();
+    } catch (_) {
+      _showFailure();
     }
+  }
+
+  void _showFailure() {
+    if (!mounted) return;
+    final l10n =
+        AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('zh'));
+    TopNotice.show(
+      context,
+      message: l10n.gameResourceCacheActionFailed,
+      tone: TopNoticeTone.error,
+    );
   }
 }

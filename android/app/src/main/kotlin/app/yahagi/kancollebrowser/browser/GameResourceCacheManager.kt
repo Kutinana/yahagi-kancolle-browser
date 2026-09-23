@@ -16,11 +16,13 @@ class GameResourceCacheManager(
     private val modeProvider: () -> GameResourceCacheMode,
     private val onModeChanged: (GameResourceCacheMode) -> Unit,
     private val networkMonitor: GameResourceNetworkMonitor? = null,
+    private val canInterceptGameRequests: () -> Boolean = { true },
 ) : MethodChannel.MethodCallHandler {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val pendingManifestLock = Any()
     private var pendingManifest: PendingManifest? = null
     private val modeEpoch = AtomicLong(0)
+    @Volatile private var policyError = false
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
@@ -30,11 +32,31 @@ class GameResourceCacheManager(
                 synchronized(pendingManifestLock) {
                     pendingManifest = null
                 }
-                onModeChanged(mode)
-                runIo(result) {
-                    engine.enforcePolicy()
-                    coordinator.configureModeChange(mode.wireName, mode != GameResourceCacheMode.FULL) {
-                        modeEpoch.get() == capturedEpoch && modeProvider() == mode
+                if (mode == GameResourceCacheMode.FULL && !canInterceptGameRequests()) {
+                    result.success(false)
+                } else {
+                    scope.launch {
+                        val outcome = runCatching {
+                            withContext(Dispatchers.IO) {
+                                coordinator.configureModeChange(
+                                    mode.wireName,
+                                    mode != GameResourceCacheMode.FULL,
+                                ) { modeEpoch.get() == capturedEpoch }
+                            }
+                        }
+                        outcome.onSuccess { configured ->
+                            if (configured && modeEpoch.get() == capturedEpoch) {
+                                onModeChanged(mode)
+                                policyError = withContext(Dispatchers.IO) {
+                                    runCatching { engine.enforcePolicy() }.isFailure
+                                }
+                                result.success(true)
+                            } else {
+                                result.success(false)
+                            }
+                        }.onFailure {
+                            result.error("game_resource_cache_error", it.message ?: "Cache configuration failed", null)
+                        }
                     }
                 }
             }
@@ -155,7 +177,8 @@ class GameResourceCacheManager(
                 }
             }
             "startDownload" -> runIo(result) {
-                coordinator.startDownload(call.argument<Boolean>("allowMetered") == true)
+                canInterceptGameRequests() &&
+                    coordinator.startDownload(call.argument<Boolean>("allowMetered") == true)
             }
             "pauseDownload" -> runIo(result) { coordinator.pauseDownload() }
             "checkIntegrity" -> runIo(result) {
@@ -184,11 +207,18 @@ class GameResourceCacheManager(
 
     private fun statusMap(): Map<String, Any?> {
         val status = coordinator.status()
-        val cache = engine.status()
+        val cache = runCatching { engine.status() }
+            .onSuccess { policyError = false }
+            .getOrElse {
+                policyError = true
+                engine.statusSnapshot()
+            }
         return mapOf(
             "mode" to modeProvider().wireName,
+            "supported" to canInterceptGameRequests(),
+            "policyError" to policyError,
             "state" to status.state.wireName,
-            "cachedBytes" to status.cachedBytes,
+            "cachedBytes" to cache.usedBytes,
             "maxBytes" to cache.maxBytes,
             "targetBytes" to status.targetBytes,
             "downloadedBytes" to status.downloadedBytes,

@@ -18,6 +18,11 @@ class ExpeditionStrings {
   final bool traditional;
 
   bool get _ja => languageCode == 'ja';
+  String get progress => _ja
+      ? '遠征進捗'
+      : traditional
+      ? '遠征進度'
+      : '远征进度';
   String get title => _ja
       ? '遠征チェック'
       : traditional

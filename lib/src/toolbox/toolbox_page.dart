@@ -12,6 +12,7 @@ import 'sortie_map_query/enemy_catalog_controller.dart';
 import 'toolbox_mode.dart';
 
 export 'toolbox_mode.dart' show ToolboxMode;
+export 'composition_image_page.dart' show CompositionImageDraftController;
 
 class ToolboxPage extends StatelessWidget {
   const ToolboxPage({
@@ -20,12 +21,16 @@ class ToolboxPage extends StatelessWidget {
     this.mode = ToolboxMode.export,
     this.sortieMapCatalogController,
     this.enemyCatalogController,
+    this.compositionInitiallyShowSaved = true,
+    this.compositionDraftController,
   });
 
   final GameState state;
   final ToolboxMode mode;
   final SortieMapCatalogController? sortieMapCatalogController;
   final EnemyCatalogController? enemyCatalogController;
+  final bool compositionInitiallyShowSaved;
+  final CompositionImageDraftController? compositionDraftController;
 
   @override
   Widget build(BuildContext context) => LazyIndexedStack(
@@ -34,7 +39,10 @@ class ToolboxPage extends StatelessWidget {
       FleetExportPage(state: state),
       CompositionImagePage(
         state: state,
+        sortieMapCatalogController: sortieMapCatalogController,
         visible: mode == ToolboxMode.composition,
+        initiallyShowSaved: compositionInitiallyShowSaved,
+        draftController: compositionDraftController,
       ),
       ExpCalcPage(state: state, catalogController: sortieMapCatalogController),
       SortieMapQueryPage(

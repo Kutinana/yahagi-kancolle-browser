@@ -10,6 +10,7 @@ import 'operation_progress.dart';
 
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import '../expedition/expedition_check_card.dart';
+import '../expedition/expedition_strings.dart';
 
 enum ExpeditionSummaryMode { summary, check }
 
@@ -73,8 +74,8 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
           trailing: ExpeditionModeSelector(
             mode: _mode,
             compact: true,
-            summaryLabel: strings.briefing,
-            checkLabel: strings.check,
+            summaryLabel: ExpeditionStrings.of(context).progress,
+            checkLabel: ExpeditionStrings.of(context).title,
             onChanged: (mode) => setState(() => _mode = mode),
           ),
           child: _mode == ExpeditionSummaryMode.summary
@@ -188,7 +189,10 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
                         child: Text(
                           mission,
                           key: Key('expedition-summary-name-$fleetId'),
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

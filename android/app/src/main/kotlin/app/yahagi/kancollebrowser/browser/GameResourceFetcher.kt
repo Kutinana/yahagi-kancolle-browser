@@ -41,10 +41,8 @@ class HttpUrlConnectionGameResourceFetcher(
                 connection.connectTimeout = connectTimeoutMs
                 connection.readTimeout = readTimeoutMs
                 connection.requestMethod = "GET"
-                requestHeaders.forEach { (name, value) ->
-                    if (name.equals("Cookie", true) || name.equals("User-Agent", true) || name.equals("Accept", true)) {
-                        connection.setRequestProperty(name, value)
-                    }
+                GameResourceCacheRules.forwardedRequestHeaders(requestHeaders).forEach { (name, value) ->
+                    connection.setRequestProperty(name, value)
                 }
                 cached?.etag?.let { connection.setRequestProperty("If-None-Match", it) }
                 cached?.lastModified?.let { connection.setRequestProperty("If-Modified-Since", it) }
@@ -93,7 +91,7 @@ class HttpUrlConnectionGameResourceFetcher(
         val after = runCatching { URI(next) }.getOrNull() ?: return false
         if (!GameResourceCacheRules.shouldCache(next, "GET")) return false
         if (before.scheme.equals("https", true) && !after.scheme.equals("https", true)) return false
-        return after.scheme.equals("https", true) || after.scheme.equals("http", true)
+        return before.host.equals(after.host, ignoreCase = true)
     }
 
     companion object {

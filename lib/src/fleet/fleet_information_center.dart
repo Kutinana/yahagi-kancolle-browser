@@ -21,6 +21,7 @@ import 'ship_status_style.dart';
 import 'ship_status_visuals.dart';
 import 'status_density.dart';
 import '../expedition/expedition_check_page.dart';
+import '../expedition/expedition_strings.dart';
 import '../development/development_repository.dart';
 import '../development/development_workbench_state_store.dart';
 import '../development/equipment_development_page.dart';
@@ -256,8 +257,8 @@ class _PageHeader extends StatelessWidget {
               onExpeditionModeChanged != null)
             ExpeditionModeSelector(
               mode: expeditionMode!,
-              summaryLabel: fleetText(context, '简报'),
-              checkLabel: fleetText(context, '检查'),
+              summaryLabel: ExpeditionStrings.of(context).progress,
+              checkLabel: ExpeditionStrings.of(context).title,
               onChanged: onExpeditionModeChanged!,
             ),
         ],
