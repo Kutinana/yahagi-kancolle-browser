@@ -179,7 +179,8 @@ final class BattleController extends ChangeNotifier
     void Function(
       Map<int, List<DamageControlEquipmentRef>> consumedByShipId,
       DateTime capturedAt,
-    ) updater,
+    )
+    updater,
   ) {
     _damageControlUpdater = updater;
     final current = _current;
@@ -645,11 +646,14 @@ final class BattleController extends ChangeNotifier
       }
     }
     final hasUntrustedPoiLedger = _hasUntrustedPoiLedger;
-    final parsedFriendMain = _mergeEscapedFlags(parsed.friendMain, friendMain);
-    final parsedFriendEscort = _mergeEscapedFlags(
-      parsed.friendEscort,
-      friendEscort,
-    );
+    final parsedFriendMain = [
+      for (final ship in _mergeEscapedFlags(parsed.friendMain, friendMain))
+        ship.withLatestFriendlyProficiency(state),
+    ];
+    final parsedFriendEscort = [
+      for (final ship in _mergeEscapedFlags(parsed.friendEscort, friendEscort))
+        ship.withLatestFriendlyProficiency(state),
+    ];
     if (!practice && !hasUntrustedPoiLedger) {
       final severity = detectFriendlyDamageAlert(
         before: <BattleShipSnapshot>[...friendMain, ...friendEscort],

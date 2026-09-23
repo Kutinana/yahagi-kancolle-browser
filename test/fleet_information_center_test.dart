@@ -18,6 +18,55 @@ import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
   testWidgets(
+    'fleet aircraft rank follows received equipment inventory updates',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(590, 700);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final controller = GameStateController();
+      addTearDown(controller.dispose);
+      controller
+        ..accept(start2Event)
+        ..accept(portEvent)
+        ..accept(slotItemEvent);
+      await controller.idle;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: FleetInformationCenter(controller: controller)),
+        ),
+      );
+      final rank = find.byKey(const Key('fleet-equipment-proficiency-9001-1'));
+      String asset() =>
+          (tester.widget<Image>(rank).image as AssetImage).assetName;
+      expect(asset(), 'assets/images/airplane/alv6.png');
+
+      void receiveRank(int level) {
+        final items =
+            (jsonDecode(slotItemEvent.responseBody) as Map)['api_data'] as List;
+        controller.accept(
+          kcsapiEvent('/kcsapi/api_get_member/slot_item', [
+            for (final item in items)
+              if ((item as Map)['api_id'] == 7002)
+                {...Map<String, Object?>.from(item), 'api_alv': level}
+              else
+                item,
+          ]),
+        );
+      }
+
+      receiveRank(7);
+      await controller.idle;
+      await tester.pump();
+      expect(asset(), 'assets/images/airplane/alv7.png');
+      receiveRank(0);
+      await controller.idle;
+      await tester.pump();
+      expect(rank, findsNothing);
+    },
+  );
+
+  testWidgets(
     'changing accounts clears ship and equipment selection despite reused instance IDs',
     (tester) async {
       tester.view.devicePixelRatio = 1;

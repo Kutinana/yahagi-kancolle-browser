@@ -120,6 +120,7 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
                 DetailedBattlePanel(
                   battle: battle,
                   gameState: widget.controller.gameStateSnapshot,
+                  latestGameState: () => widget.controller.gameStateSnapshot,
                   damagePulseMode: widget.damagePulseMode,
                   showEnemyPortraits: widget.showEnemyPortraits,
                   showLastFormationHint: widget.showLastFormationHint,
@@ -127,6 +128,7 @@ class _LiveBattleCardState extends State<LiveBattleCard> {
               else
                 BattleShipDetailsHost(
                   battle: battle,
+                  latestGameState: () => widget.controller.gameStateSnapshot,
                   child: _CompactBattlePanel(
                     battle: battle,
                     gameState: widget.controller.gameStateSnapshot,

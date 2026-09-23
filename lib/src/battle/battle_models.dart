@@ -222,6 +222,28 @@ class BattleShipSnapshot {
   bool get isSunk => currentHp <= 0;
   bool get isHeavilyDamaged => !isSunk && currentHp * 4 <= maxHp;
 
+  BattleShipSnapshot withLatestFriendlyProficiency(GameState state) {
+    if (side != BattleSide.friend) return this;
+    final owned = state.ships[ownedShipId];
+    final previous = details?.equipment;
+    if (owned == null || previous == null) return this;
+    final equippedIds = <int>[
+      ...owned.slotIds.where((id) => id > 0),
+      if (owned.extraSlotId > 0) owned.extraSlotId,
+    ];
+    // A partial inventory is not proof that an aircraft lost its rank.
+    if (!equippedIds.every(state.slotItems.containsKey)) return this;
+    final latest = BattleShipDetails.friendly(owned, state);
+    final latestEquipment = latest.equipment!;
+    if (latestEquipment.length != previous.length) return this;
+    for (var i = 0; i < previous.length; i++) {
+      if (latestEquipment[i].proficiency != previous[i].proficiency) {
+        return copyWith(details: latest);
+      }
+    }
+    return this;
+  }
+
   BattleShipSnapshot copyWith({
     int? initialHp,
     int? maxHp,
@@ -232,6 +254,7 @@ class BattleShipSnapshot {
     List<int>? usedDamageControlItemIds,
     bool? isEscaped,
     bool? hpUnknown,
+    BattleShipDetails? details,
   }) {
     return BattleShipSnapshot(
       masterId: masterId,
@@ -251,7 +274,7 @@ class BattleShipSnapshot {
           usedDamageControlItemIds ?? this.usedDamageControlItemIds,
       isEscaped: isEscaped ?? this.isEscaped,
       hpUnknown: hpUnknown ?? this.hpUnknown,
-      details: details,
+      details: details ?? this.details,
     );
   }
 }

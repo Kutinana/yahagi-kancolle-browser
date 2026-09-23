@@ -20,6 +20,7 @@ class DetailedBattlePanel extends StatelessWidget {
     super.key,
     required this.battle,
     required this.gameState,
+    this.latestGameState,
     this.damagePulseMode = DamagePulseFilter.all,
     this.showEnemyPortraits = true,
     this.showLastFormationHint = true,
@@ -27,6 +28,7 @@ class DetailedBattlePanel extends StatelessWidget {
 
   final LiveBattle battle;
   final GameState gameState;
+  final GameState Function()? latestGameState;
   final DamagePulseFilter damagePulseMode;
   final bool showEnemyPortraits;
   final bool showLastFormationHint;
@@ -44,6 +46,7 @@ class DetailedBattlePanel extends StatelessWidget {
         : '敌方主力';
     return BattleShipDetailsHost(
       battle: battle,
+      latestGameState: latestGameState,
       child: Column(
         key: const Key('detailed-battle-panel'),
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -22,6 +22,65 @@ import 'fixtures/kcsapi_fixtures.dart';
 void main() {
   setUp(() => GameStateController.disableTimerForTest = true);
 
+  testWidgets('owned equipment rank follows received inventory updates', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 700);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(portEvent)
+      ..accept(slotItemEvent);
+    await controller.idle;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: OwnedInventoryPage(controller: controller, showShips: false),
+        ),
+      ),
+    );
+    final variants = find.byKey(const Key('equipment-variants-cell-202'));
+    Finder rank(String level) => find.descendant(
+      of: variants,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/images/airplane/alv$level.png',
+      ),
+    );
+    expect(rank('6'), findsOneWidget);
+
+    void receiveRank(int level) {
+      final items =
+          (jsonDecode(slotItemEvent.responseBody) as Map)['api_data'] as List;
+      controller.accept(
+        kcsapiEvent('/kcsapi/api_get_member/slot_item', [
+          for (final item in items)
+            if ((item as Map)['api_id'] == 7002)
+              {...Map<String, Object?>.from(item), 'api_alv': level}
+            else
+              item,
+        ]),
+      );
+    }
+
+    receiveRank(7);
+    await controller.idle;
+    await tester.pump();
+    expect(rank('6'), findsNothing);
+    expect(rank('7'), findsOneWidget);
+    receiveRank(0);
+    await controller.idle;
+    await tester.pump();
+    expect(rank('7'), findsNothing);
+  });
+
   testWidgets(
     'account change closes an owned ship drawer even before matching instance IDs refresh',
     (tester) async {
