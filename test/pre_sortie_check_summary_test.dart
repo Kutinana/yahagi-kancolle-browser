@@ -135,6 +135,10 @@ void main() {
     expect(find.text('第1舰队 舰娘疲劳未恢复'), findsOneWidget);
     expect(find.text('第1舰队 装备缺失（主装备槽）：瑞鹤改二甲、雪风改'), findsOneWidget);
     expect(find.text('第1舰队 装备缺失（增设槽）：雪风改'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('第1舰队 舰娘未补给')).style?.fontWeight,
+      FontWeight.w700,
+    );
 
     const kinds = <String>[
       'critical',
@@ -207,7 +211,10 @@ void main() {
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: MediaQuery(
-                  data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                  data: MediaQueryData(
+                    textScaler: TextScaler.linear(scale),
+                    boldText: true,
+                  ),
                   child: SizedBox(
                     width: 1050,
                     child: SingleChildScrollView(

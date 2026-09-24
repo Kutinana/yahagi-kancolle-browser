@@ -11,6 +11,37 @@ import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart'
 import 'package:yahagi_kancolle_browser/src/settings/screen_settings_page.dart';
 
 void main() {
+  testWidgets('setting titles and descriptions share the function-area sizes', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final layout = await LayoutSettingsController.load(
+      SharedPreferencesLayoutSettingsStore(),
+    );
+    final display = await DisplayModeController.load(MemoryDisplayModeStore());
+    addTearDown(layout.dispose);
+    addTearDown(display.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ScreenSettingsPage(
+          layoutSettingsController: layout,
+          displayModeController: display,
+        ),
+      ),
+    );
+
+    for (final (title, description) in <(String, String)>[
+      ('功能区位置', '选择功能区显示在左侧或右侧，竖屏保持上下布局。'),
+      ('菜单栏位置', '上方位于游戏画面下方。'),
+      ('锁定界面布局', '锁定后禁止长按卡片与顶栏资源进入自定义编辑，并禁止拖拽导航栏排序；功能页仍可正常切换'),
+    ]) {
+      final titleFinder = find.text(title);
+      await tester.ensureVisible(titleFinder);
+      expect(tester.widget<Text>(titleFinder).style?.fontSize, 14);
+      expect(tester.widget<Text>(find.text(description)).style?.fontSize, 12);
+    }
+  });
+
   testWidgets('information panel switch and reset affect panel preferences', (
     tester,
   ) async {

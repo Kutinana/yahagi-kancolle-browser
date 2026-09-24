@@ -357,14 +357,15 @@ class _OwnedInventoryPageState extends State<OwnedInventoryPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (widget.showSectionControl) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 4,
                 children: [
                   OwnedInventoryOwnershipSegmented(
                     showOwned: _showOwned,
                     onChanged: _changeOwnership,
                   ),
-                  const SizedBox(width: 8),
                   OwnedInventorySegmented(
                     showShips: _showShips,
                     shipCount: _state.ships.length,
@@ -686,27 +687,30 @@ class _UnownedShipsView extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
         child: Align(
           alignment: Alignment.topLeft,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final row in rows)
-                _UnownedShipCard(
-                  state: state,
-                  row: row,
-                  excluded: excluded.contains(row.familyRootId),
-                  selected: row.master.id == selectedShipMasterId,
-                  onTap: onShipTap == null
-                      ? null
-                      : () => onShipTap!(row.master.id),
-                  onChanged: reminderController == null
-                      ? null
-                      : (value) => reminderController!.setFamilyExcluded(
-                          row.familyRootId,
-                          value ?? false,
-                        ),
-                ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) => Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final row in rows)
+                  _UnownedShipCard(
+                    state: state,
+                    row: row,
+                    width: _unownedCardWidth(constraints.maxWidth),
+                    excluded: excluded.contains(row.familyRootId),
+                    selected: row.master.id == selectedShipMasterId,
+                    onTap: onShipTap == null
+                        ? null
+                        : () => onShipTap!(row.master.id),
+                    onChanged: reminderController == null
+                        ? null
+                        : (value) => reminderController!.setFamilyExcluded(
+                            row.familyRootId,
+                            value ?? false,
+                          ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -731,19 +735,22 @@ class _UnownedEquipmentView extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
         child: Align(
           alignment: Alignment.topLeft,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final row in rows)
-                _UnownedEquipmentCard(
-                  row: row,
-                  selected: row.master.id == selectedEquipmentMasterId,
-                  onTap: onEquipmentTap == null
-                      ? null
-                      : () => onEquipmentTap!(row.master.id),
-                ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) => Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final row in rows)
+                  _UnownedEquipmentCard(
+                    row: row,
+                    width: _unownedCardWidth(constraints.maxWidth),
+                    selected: row.master.id == selectedEquipmentMasterId,
+                    onTap: onEquipmentTap == null
+                        ? null
+                        : () => onEquipmentTap!(row.master.id),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -751,10 +758,23 @@ class _UnownedEquipmentView extends StatelessWidget {
   }
 }
 
+double _unownedCardWidth(double availableWidth) {
+  if (availableWidth < 300) return availableWidth;
+  final columns = availableWidth < 560
+      ? 2
+      : availableWidth < 700
+      ? 3
+      : availableWidth < 1200
+      ? 4
+      : math.max(4, ((availableWidth + 8) / 220).floor());
+  return (availableWidth - (columns - 1) * 8) / columns;
+}
+
 class _UnownedShipCard extends StatelessWidget {
   const _UnownedShipCard({
     required this.state,
     required this.row,
+    required this.width,
     required this.excluded,
     required this.selected,
     this.onTap,
@@ -762,6 +782,7 @@ class _UnownedShipCard extends StatelessWidget {
   });
   final GameState state;
   final UnownedShipFamilyRow row;
+  final double width;
   final bool excluded;
   final bool selected;
   final VoidCallback? onTap;
@@ -773,12 +794,62 @@ class _UnownedShipCard extends StatelessWidget {
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
     final borderRadius = BorderRadius.circular(8);
+    final compact = width < 280;
+    final portraitWidth = width < 165
+        ? 44.0
+        : compact
+        ? 52.0
+        : 78.0;
+    final portrait = ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: ShipPortrait(
+        ship: row.master,
+        serverOrigin: state.serverOrigin,
+        width: portraitWidth,
+        height: portraitWidth * 51 / 78,
+      ),
+    );
+    final name = Text(
+      row.master.name,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: compact ? 13 : null,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+    final type = Text(
+      row.typeName.isEmpty ? l10n.otherType : row.typeName,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: Color(0xff8fa9b7),
+        fontSize: compact ? 11 : 12,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+    Widget fitInOneLine(Text text) => SizedBox(
+      width: double.infinity,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: text,
+      ),
+    );
+    final checkbox = Checkbox(
+      value: excluded,
+      onChanged: onChanged,
+      visualDensity: compact ? VisualDensity.compact : null,
+      materialTapTargetSize: compact ? MaterialTapTargetSize.shrinkWrap : null,
+    );
     return Semantics(
       button: onTap != null,
       selected: selected,
       child: SizedBox(
         key: Key('unowned-ship-${row.familyRootId}'),
-        width: 210,
+        width: width,
         child: Material(
           color: selected ? const Color(0xff183f4e) : const Color(0xff102b39),
           shape: RoundedRectangleBorder(
@@ -793,41 +864,23 @@ class _UnownedShipCard extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(compact ? 6 : 8),
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: ShipPortrait(
-                      ship: row.master,
-                      serverOrigin: state.serverOrigin,
-                      width: 78,
-                      height: 51,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
+                  portrait,
+                  SizedBox(width: compact ? 4 : 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          row.master.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
+                        fitInOneLine(name),
                         const SizedBox(height: 3),
-                        Text(
-                          row.typeName.isEmpty ? l10n.otherType : row.typeName,
-                          style: const TextStyle(
-                            color: Color(0xff8fa9b7),
-                            fontSize: 12,
-                          ),
-                        ),
+                        fitInOneLine(type),
                       ],
                     ),
                   ),
-                  Checkbox(value: excluded, onChanged: onChanged),
+                  checkbox,
                 ],
               ),
             ),
@@ -841,22 +894,25 @@ class _UnownedShipCard extends StatelessWidget {
 class _UnownedEquipmentCard extends StatelessWidget {
   const _UnownedEquipmentCard({
     required this.row,
+    required this.width,
     required this.selected,
     this.onTap,
   });
   final UnownedEquipmentRow row;
+  final double width;
   final bool selected;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(8);
+    final compact = width < 280;
     return Semantics(
       button: onTap != null,
       selected: selected,
       child: SizedBox(
         key: Key('unowned-equipment-${row.master.id}'),
-        width: 210,
+        width: width,
         child: Material(
           color: selected ? const Color(0xff183f4e) : const Color(0xff102b39),
           shape: RoundedRectangleBorder(
@@ -871,33 +927,45 @@ class _UnownedEquipmentCard extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  _EquipmentIcon(master: row.master),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          row.master.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          row.typeName,
-                          style: const TextStyle(
-                            color: Color(0xff8fa9b7),
-                            fontSize: 12,
+              padding: EdgeInsets.all(compact ? 6 : 8),
+              child: SizedBox(
+                height: compact ? 38 : 51,
+                child: Row(
+                  children: [
+                    _EquipmentIcon(master: row.master),
+                    SizedBox(width: compact ? 8 : 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            row.master.name,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: compact ? 13 : null,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 3),
+                          Text(
+                            row.typeName,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: const Color(0xff8fa9b7),
+                              fontSize: compact ? 11 : 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../diagnostics/diagnostic_controller.dart';
 import '../widgets/top_notice.dart';
+import 'settings_ui_helpers.dart';
 
 class DiagnosticUserSection extends StatelessWidget {
   const DiagnosticUserSection({super.key, required this.controller});
@@ -33,7 +34,7 @@ class DiagnosticUserSection extends StatelessWidget {
                     controller.enabled
                         ? l10n.diagnosticStatusEnabled
                         : l10n.diagnosticStatusDisabled,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: SettingsTileTypography.title,
                   ),
                 ),
               ],
@@ -41,14 +42,17 @@ class DiagnosticUserSection extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               l10n.diagnosticPrivacyDesc,
-              style: const TextStyle(color: Color(0xff9bb0bd), height: 1.45),
+              style: SettingsTileTypography.description.copyWith(
+                color: const Color(0xff9bb0bd),
+                height: 1.45,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.diagnosticStorageUsage(
                 _formatBytes(controller.storageBytes),
               ),
-              style: const TextStyle(color: Color(0xff8197a5)),
+              style: SettingsTileTypography.description,
             ),
             const SizedBox(height: 14),
             FilledButton.icon(

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/expedition_summary_card.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/fleet_information_center.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/morale_recovery_timer_controller.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/operation_status_views.dart';
@@ -17,6 +18,59 @@ import 'package:yahagi_kancolle_browser/src/settings/battle_status_effect_settin
 import 'fixtures/kcsapi_fixtures.dart';
 
 void main() {
+  testWidgets('marks only expansion-slot equipment after its name', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1180, 720);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final port =
+        jsonDecode(
+              jsonEncode(
+                (jsonDecode(portEvent.responseBody) as Map)['api_data'],
+              ),
+            )
+            as Map<String, dynamic>;
+    final firstShip = (port['api_ship'] as List).first as Map<String, dynamic>;
+    firstShip
+      ..['api_slot'] = <int>[7001, 9999, 7002]
+      ..['api_slot_ex'] = 7004;
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(kcsapiEvent('/kcsapi/api_port/port', port))
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: FleetInformationCenter(controller: controller)),
+      ),
+    );
+
+    final expansion = find.byKey(const Key('fleet-equipment-expansion-9001-2'));
+    final name = find.byKey(const Key('fleet-equipment-name-9001-2'));
+    expect(expansion, findsOneWidget);
+    expect(
+      find.descendant(of: expansion, matching: find.text('增设')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getRect(expansion).left,
+      greaterThan(tester.getRect(name).right),
+    );
+    expect(
+      find.byKey(const Key('fleet-equipment-expansion-9001-0')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('fleet-equipment-expansion-9001-1')),
+      findsNothing,
+    );
+  });
+
   testWidgets(
     'fleet aircraft rank follows received equipment inventory updates',
     (tester) async {
@@ -2299,6 +2353,70 @@ void main() {
       selectedMaterial(const Key('fleet-button-1')).color,
       const Color(0xff102331),
     );
+  });
+
+  testWidgets('远征检查切换页面后保留最后选择的舰队', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1180, 720);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    final port =
+        (jsonDecode(portEvent.responseBody) as Map)['api_data']
+            as Map<String, dynamic>;
+    final fleets = port['api_deck_port'] as List;
+    (fleets[2] as Map)['api_ship'] = <int>[9001, -1, -1, -1, -1, -1];
+    controller
+      ..accept(start2Event)
+      ..accept(kcsapiEvent('/kcsapi/api_port/port', port))
+      ..accept(slotItemEvent);
+    await controller.idle;
+
+    var selectedFleetId = 2;
+    var showExpedition = true;
+    late StateSetter updateHost;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateHost = setState;
+            return Scaffold(
+              body: showExpedition
+                  ? FleetInformationCenter(
+                      controller: controller,
+                      page: FleetInformationPage.expedition,
+                      expeditionMode: ExpeditionSummaryMode.check,
+                      initialFleetId: selectedFleetId,
+                      onFleetSelected: (id) =>
+                          setState(() => selectedFleetId = id),
+                    )
+                  : const SizedBox.shrink(),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('fleet-button-3')));
+    await tester.pumpAndSettle();
+    expect(selectedFleetId, 3);
+
+    updateHost(() => showExpedition = false);
+    await tester.pump();
+    updateHost(() => showExpedition = true);
+    await tester.pumpAndSettle();
+
+    final selected = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byKey(const Key('fleet-button-3')),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(selected.color, const Color(0xff3a3020));
   });
 
   testWidgets('手机竖屏下舰队、入渠、建造页面无溢出', (tester) async {

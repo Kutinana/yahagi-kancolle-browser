@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../widgets/top_notice.dart';
 import 'game_rendering_mode.dart';
 import 'game_rendering_mode_controller.dart';
+import 'settings_ui_helpers.dart';
 
 class GameRenderingModeSection extends StatelessWidget {
   const GameRenderingModeSection({
@@ -93,21 +94,9 @@ class GameRenderingModeSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  Text(title, style: SettingsTileTypography.title),
                   const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xff8197a5),
-                    ),
-                  ),
+                  Text(subtitle, style: SettingsTileTypography.description),
                 ],
               ),
             ),

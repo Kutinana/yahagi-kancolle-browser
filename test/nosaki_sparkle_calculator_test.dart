@@ -1,9 +1,133 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/anchorage_repair_calculator.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/fleet_status_visual.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/fleet_switcher_bar.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/nosaki_sparkle_calculator.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 
 void main() {
   group('NosakiSparkleCalculator', () {
+    testWidgets('fleet switcher renders the active sparkle label', (
+      tester,
+    ) async {
+      final state = buildNosakiTestState(companionConds: [49, 54]);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: FleetSwitcherBar(
+              fleets: state.fleets,
+              selectedFleetId: 1,
+              state: state,
+              nosakiSparkleStartedAt: DateTime.utc(2026, 9, 25, 12),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('野崎刷闪中'), findsOneWidget);
+      expect(
+        find.byKey(const Key('fleet-selector-status-dot-1')),
+        findsOneWidget,
+      );
+    });
+    test('fleet switcher combines repair and sparkle in one fleet', () {
+      final now = DateTime.utc(2026, 9, 25, 12);
+      final startedAt = now.subtract(const Duration(minutes: 25));
+      final base = buildNosakiTestState(
+        flagshipMasterId: 182,
+        secondMasterId: 1002,
+        companionConds: [49, 49],
+      );
+      final state = base.copyWith(
+        ships: <int, OwnedShip>{
+          ...base.ships,
+          1: const OwnedShip(
+            id: 1,
+            masterId: 182,
+            level: 80,
+            currentHp: 50,
+            maxHp: 50,
+            currentFuel: 100,
+            currentAmmo: 100,
+            condition: 49,
+            slotIds: [100],
+          ),
+          3: const OwnedShip(
+            id: 3,
+            masterId: 503,
+            level: 60,
+            currentHp: 25,
+            maxHp: 30,
+            currentFuel: 100,
+            currentAmmo: 100,
+            condition: 49,
+          ),
+        },
+        slotItems: <int, OwnedSlotItem>{
+          ...base.slotItems,
+          100: const OwnedSlotItem(id: 100, masterId: 86),
+        },
+        masterSlotItems: <int, MasterSlotItem>{
+          ...base.masterSlotItems,
+          86: const MasterSlotItem(id: 86, name: '舰艇修理设施'),
+        },
+      );
+      expect(
+        AnchorageRepairCalculator.project(
+          state: state,
+          fleetId: 1,
+          elapsed: const Duration(minutes: 25),
+        ).rows.any((row) => row.status == AnchorageRepairShipStatus.repairing),
+        isTrue,
+      );
+      expect(
+        NosakiSparkleCalculator.project(
+          state: state,
+          fleetId: 1,
+          elapsed: const Duration(minutes: 25),
+        ).rows.any((row) => row.status == NosakiSparkleShipStatus.sparkling),
+        isTrue,
+      );
+
+      final visual = fleetStatusVisual(
+        state.fleets.single,
+        state: state,
+        anchorageRepairStartedAt: startedAt,
+        nosakiSparkleStartedAt: startedAt,
+        now: now,
+      );
+      expect(visual.status, FleetOperationalStatus.anchorageRepairAndSparkle);
+      expect(visual.label, '泊地修理·刷闪中');
+    });
+    test('fleet switcher shows sparkle only while a target is eligible', () {
+      final now = DateTime.utc(2026, 9, 25, 12);
+      final startedAt = now.subtract(const Duration(minutes: 8));
+      final state = buildNosakiTestState(companionConds: [49, 54]);
+      final fleet = state.fleets.single;
+
+      expect(
+        fleetStatusVisual(fleet, state: state, now: now).status,
+        FleetOperationalStatus.standby,
+      );
+      final active = fleetStatusVisual(
+        fleet,
+        state: state,
+        nosakiSparkleStartedAt: startedAt,
+        now: now,
+      );
+      expect(active.status, FleetOperationalStatus.nosakiSparkle);
+      expect(active.label, '野崎刷闪中');
+      expect(active.color, const Color(0xffffc940));
+      expect(
+        fleetStatusVisual(
+          fleet,
+          state: buildNosakiTestState(companionConds: [54, 54]),
+          nosakiSparkleStartedAt: startedAt,
+          now: now,
+        ).status,
+        FleetOperationalStatus.standby,
+      );
+    });
     test(
       'recognizes Nosaki Kai flagship and projects +3 cond for all companion ships',
       () {
@@ -185,7 +309,10 @@ void main() {
     });
 
     test('fails eligibility if Nosaki condition is below 30', () {
-      final state = buildNosakiTestState(flagshipMasterId: 1002, nosakiCond: 25);
+      final state = buildNosakiTestState(
+        flagshipMasterId: 1002,
+        nosakiCond: 25,
+      );
 
       final projection = NosakiSparkleCalculator.project(
         state: state,
@@ -281,7 +408,9 @@ GameState buildNosakiTestState({
       id: 2,
       masterId: secondMasterId,
       level: 70,
-      currentHp: secondMasterId == 1002 || secondMasterId == 996 ? nosakiHp : 40,
+      currentHp: secondMasterId == 1002 || secondMasterId == 996
+          ? nosakiHp
+          : 40,
       maxHp: secondMasterId == 1002 || secondMasterId == 996 ? nosakiMaxHp : 40,
       currentFuel: secondMasterId == 1002 || secondMasterId == 996
           ? nosakiFuel

@@ -253,6 +253,7 @@ void main() {
     final value = find.descendant(of: status, matching: find.text('HP 修理准备就绪'));
     expect(label, findsOneWidget);
     expect(value, findsOneWidget);
+    expect(tester.widget<Text>(label).style?.fontWeight, FontWeight.w700);
     expect(
       tester.getRect(value).center.dy,
       closeTo(tester.getRect(label).center.dy, 1),
@@ -503,6 +504,10 @@ void _expectAnchoragePortraits(WidgetTester tester) {
 }
 
 Widget _app(GameStateController controller, Size size) => MaterialApp(
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(boldText: true),
+    child: child ?? const SizedBox.shrink(),
+  ),
   home: Scaffold(
     body: Center(
       child: SizedBox(

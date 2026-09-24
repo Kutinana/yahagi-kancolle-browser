@@ -8,6 +8,7 @@ import '../browser/network_proxy_channel.dart';
 import '../widgets/top_notice.dart';
 import '../widgets/adaptive_input_dialog.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
+import 'settings_ui_helpers.dart';
 
 class NetworkSettingsSection extends StatefulWidget {
   const NetworkSettingsSection({
@@ -594,20 +595,15 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
                 children: <Widget>[
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                    style: SettingsTileTypography.title.copyWith(
                       color: enabled ? null : const Color(0xff526776),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: enabled
-                          ? const Color(0xff8197a5)
-                          : const Color(0xff526776),
+                    style: SettingsTileTypography.description.copyWith(
+                      color: enabled ? null : const Color(0xff526776),
                     ),
                   ),
                 ],

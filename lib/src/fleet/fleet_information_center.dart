@@ -170,6 +170,10 @@ class _FleetInformationCenterState extends State<FleetInformationCenter> {
                                 controller: widget.controller,
                                 showHeader: false,
                                 initialFleetId: _selectedFleetId,
+                                onFleetSelected: (fleetId) {
+                                  setState(() => _selectedFleetId = fleetId);
+                                  widget.onFleetSelected?.call(fleetId);
+                                },
                                 onBack: () {},
                               )
                             : ExpeditionStatusView(state: state),
@@ -257,8 +261,8 @@ class _PageHeader extends StatelessWidget {
               onExpeditionModeChanged != null)
             ExpeditionModeSelector(
               mode: expeditionMode!,
-              summaryLabel: ExpeditionStrings.of(context).progress,
-              checkLabel: ExpeditionStrings.of(context).title,
+              summaryLabel: ExpeditionStrings.of(context).modeProgress,
+              checkLabel: ExpeditionStrings.of(context).modeCheck,
               onChanged: onExpeditionModeChanged!,
             ),
         ],
@@ -425,6 +429,10 @@ class _FleetViewState extends State<_FleetView> {
             FleetSwitcherBar(
               fleets: fleetButtons,
               selectedFleetId: fleet.id,
+              state: state,
+              now: widget.now,
+              anchorageRepairStartedAt: widget.anchorageRepairStartedAt,
+              nosakiSparkleStartedAt: widget.nosakiSparkleStartedAt,
               sortieFleetId: state.combatState.isActive
                   ? state.combatState.sortieFleetId
                   : null,
@@ -1293,6 +1301,12 @@ class _CompactEquipmentRow extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
+                    if (equipment.owned.id == ship.extraSlotId)
+                      _MiniBadge(
+                        key: Key('fleet-equipment-expansion-${ship.id}-$index'),
+                        text: fleetText(context, '增设'),
+                        color: const Color(0xffffc85a),
+                      ),
                     if (equipment.owned.level > 0) ...[
                       Text(
                         '★${equipment.owned.level}',

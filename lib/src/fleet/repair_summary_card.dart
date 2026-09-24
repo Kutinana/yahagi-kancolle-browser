@@ -188,6 +188,7 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
               disabled ? fleetText(context, '锁') : strings.inactive,
               style: TextStyle(
                 fontSize: 11,
+                fontWeight: FontWeight.w700,
                 color: disabled
                     ? const Color(0xff4a5c68)
                     : const Color(0xff8197a5),
@@ -271,7 +272,11 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
         disabled: false,
         detail: Text(
           strings.inactive,
-          style: const TextStyle(fontSize: 11, color: Color(0xff8197a5)),
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xff8197a5),
+            fontWeight: FontWeight.w700,
+          ),
         ),
         onTap: () => widget.onOpenRepair(
           RepairDestination(mode: RepairCenterMode.anchorage, fleetId: fleetId),
@@ -372,7 +377,11 @@ class _RepairSummaryCardState extends State<RepairSummaryCard> {
         disabled: false,
         detail: Text(
           strings.inactive,
-          style: const TextStyle(fontSize: 11, color: Color(0xff8197a5)),
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xff8197a5),
+            fontWeight: FontWeight.w700,
+          ),
         ),
         onTap: () => widget.onOpenRepair(
           RepairDestination(mode: RepairCenterMode.nosaki, fleetId: fleetId),

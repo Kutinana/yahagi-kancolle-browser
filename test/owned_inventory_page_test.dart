@@ -10,6 +10,7 @@ import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_reducer.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/ship_portrait.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_page.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/owned_inventory_projection.dart';
 import 'package:yahagi_kancolle_browser/src/inventory/unowned_inventory_projection.dart';
@@ -639,6 +640,258 @@ void main() {
       find.descendant(of: drawer, matching: find.textContaining('Lv.')),
       findsNothing,
     );
+  });
+
+  testWidgets('手机竖屏未持有舰娘并排两列且舰种加粗', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController();
+    addTearDown(controller.dispose);
+    final rows = UnownedInventoryProjection(
+      controller.state,
+    ).unownedShipFamilies;
+    expect(rows.length, greaterThanOrEqualTo(2));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showOwned: false,
+            showShips: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final first = find.byKey(Key('unowned-ship-${rows[0].familyRootId}'));
+    final second = find.byKey(Key('unowned-ship-${rows[1].familyRootId}'));
+    expect(tester.getTopLeft(second).dy, tester.getTopLeft(first).dy);
+    expect(
+      tester.getTopLeft(second).dx,
+      greaterThan(tester.getTopLeft(first).dx),
+    );
+    final typeFinder = find.descendant(
+      of: first,
+      matching: find.text(rows[0].typeName),
+    );
+    final type = tester.widget<Text>(typeFinder);
+    expect(type.style?.fontWeight, FontWeight.w700);
+    final portrait = find.descendant(
+      of: first,
+      matching: find.byType(ShipPortrait),
+    );
+    final portraitWidget = tester.widget<ShipPortrait>(portrait);
+    expect(
+      portraitWidget.width / portraitWidget.height,
+      closeTo(78 / 51, 0.03),
+    );
+    final name = find.descendant(
+      of: first,
+      matching: find.text(rows[0].master.name),
+    );
+    expect(
+      tester.getTopLeft(name).dy,
+      lessThan(tester.getBottomLeft(portrait).dy),
+    );
+    expect(
+      tester.getTopLeft(typeFinder).dy,
+      lessThan(tester.getBottomLeft(portrait).dy),
+    );
+    expect(
+      tester.getTopLeft(typeFinder).dx,
+      greaterThan(tester.getTopRight(portrait).dx),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('展开屏未持有舰娘和装备四列填满可用宽度', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(750, 832);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController(
+      extraUnownedShips: 2,
+      includeUnownedEquipment: true,
+      extraUnownedEquipment: 2,
+    );
+    addTearDown(controller.dispose);
+    final rows = UnownedInventoryProjection(
+      controller.state,
+    ).unownedShipFamilies;
+    expect(rows.length, greaterThanOrEqualTo(4));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showOwned: false,
+            showShips: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cards = [
+      for (final row in rows.take(4))
+        find.byKey(Key('unowned-ship-${row.familyRootId}')),
+    ];
+    expect(tester.getTopLeft(cards[1]).dy, tester.getTopLeft(cards[0]).dy);
+    expect(tester.getTopLeft(cards[2]).dy, tester.getTopLeft(cards[0]).dy);
+    expect(tester.getTopLeft(cards[3]).dy, tester.getTopLeft(cards[0]).dy);
+    expect(tester.getTopRight(cards[3]).dx, greaterThan(730));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showOwned: false,
+            showShips: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final equipmentRows = UnownedInventoryProjection(
+      controller.state,
+    ).unownedEquipment;
+    expect(equipmentRows.length, greaterThanOrEqualTo(4));
+    final equipmentCards = [
+      for (final row in equipmentRows.take(4))
+        find.byKey(Key('unowned-equipment-${row.master.id}')),
+    ];
+    expect(
+      tester.getTopLeft(equipmentCards[1]).dy,
+      tester.getTopLeft(equipmentCards[0]).dy,
+    );
+    expect(
+      tester.getTopLeft(equipmentCards[2]).dy,
+      tester.getTopLeft(equipmentCards[0]).dy,
+    );
+    expect(
+      tester.getTopLeft(equipmentCards[3]).dy,
+      tester.getTopLeft(equipmentCards[0]).dy,
+    );
+    expect(tester.getTopRight(equipmentCards[3]).dx, greaterThan(730));
+
+    tester.view.physicalSize = const Size(832, 750);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(equipmentCards[3]).dy,
+      tester.getTopLeft(equipmentCards[0]).dy,
+    );
+    expect(tester.getTopRight(equipmentCards[3]).dx, greaterThan(812));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showOwned: false,
+            showShips: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(cards[3]).dy, tester.getTopLeft(cards[0]).dy);
+    expect(tester.getTopRight(cards[3]).dx, greaterThan(812));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('手机竖屏未持有装备并排两列且装备种类加粗', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final controller = await _equipmentCompatibilityController(
+      includeUnownedEquipment: true,
+    );
+    addTearDown(controller.dispose);
+    final rows = UnownedInventoryProjection(controller.state).unownedEquipment;
+    expect(rows.length, greaterThanOrEqualTo(2));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showOwned: false,
+            showShips: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final shipRows = UnownedInventoryProjection(
+      controller.state,
+    ).unownedShipFamilies;
+    final shipCard = find.byKey(
+      Key('unowned-ship-${shipRows.first.familyRootId}'),
+    );
+    final shipCardHeight = tester.getSize(shipCard).height;
+    final shipNameInset =
+        tester
+            .getTopLeft(
+              find.descendant(
+                of: shipCard,
+                matching: find.text(shipRows.first.master.name),
+              ),
+            )
+            .dx -
+        tester.getTopLeft(shipCard).dx;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: OwnedInventoryPage(
+            controller: controller,
+            showOwned: false,
+            showShips: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final first = find.byKey(Key('unowned-equipment-${rows[0].master.id}'));
+    final second = find.byKey(Key('unowned-equipment-${rows[1].master.id}'));
+    expect(tester.getSize(first).height, closeTo(shipCardHeight, 1));
+    final equipmentNameInset =
+        tester
+            .getTopLeft(
+              find.descendant(
+                of: first,
+                matching: find.text(rows[0].master.name),
+              ),
+            )
+            .dx -
+        tester.getTopLeft(first).dx;
+    expect(equipmentNameInset, lessThan(shipNameInset - 15));
+    expect(equipmentNameInset, lessThan(50));
+    expect(tester.getTopLeft(second).dy, tester.getTopLeft(first).dy);
+    expect(
+      tester.getTopLeft(second).dx,
+      greaterThan(tester.getTopLeft(first).dx),
+    );
+    final type = tester.widget<Text>(
+      find.descendant(of: first, matching: find.text(rows[0].typeName)),
+    );
+    expect(type.style?.fontWeight, FontWeight.w700);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('舰娘抽屉在切换范围及选中对象失效时关闭', (tester) async {
@@ -3256,6 +3509,8 @@ class _MutableInventoryReducer extends GameStateReducer {
 Future<GameStateController> _equipmentCompatibilityController({
   bool includeOwnedUnknownType = false,
   bool includeUnownedEquipment = false,
+  int extraUnownedShips = 0,
+  int extraUnownedEquipment = 0,
 }) async {
   final startEnvelope =
       jsonDecode(start2Event.responseBody) as Map<String, Object?>;
@@ -3287,6 +3542,14 @@ Future<GameStateController> _equipmentCompatibilityController({
         ..['api_name'] = '未知舰种'
         ..['api_stype'] = 99;
   ships.add(unknownTypeShip);
+  for (var index = 0; index < extraUnownedShips; index++) {
+    ships.add(<String, Object?>{
+      ...unownedShip,
+      'api_id': 105 + index,
+      'api_sortno': 54 + index,
+      'api_name': '测试舰娘 $index',
+    });
+  }
   if (includeUnownedEquipment) {
     final equipment = startData['api_mst_slotitem']! as List<Object?>;
     startData['api_mst_slotitem_equiptype'] = <Object?>[
@@ -3306,6 +3569,14 @@ Future<GameStateController> _equipmentCompatibilityController({
       'api_sortno': 19,
       'api_name': '零式水上侦察机二型',
     });
+    for (var index = 0; index < extraUnownedEquipment; index++) {
+      equipment.add(<String, Object?>{
+        ...equipment.first! as Map<String, Object?>,
+        'api_id': 206 + index,
+        'api_sortno': 20 + index,
+        'api_name': '测试装备 $index',
+      });
+    }
   }
   startData['api_mst_equip_ship'] = <String, Object?>{
     '104': <String, Object?>{

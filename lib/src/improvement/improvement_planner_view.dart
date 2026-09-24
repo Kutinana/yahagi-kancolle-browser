@@ -444,12 +444,14 @@ class _ImprovementTableState extends State<_ImprovementTable> {
     return type.length > 3 ? type[3] : -1;
   }
 
-  List<String> _secretaryValues(ImprovementPlannerRow row) {
+  List<ImprovementSecretarySchedule> _secretarySchedules(
+    ImprovementPlannerRow row,
+  ) {
     final routes = row.upgradeRoutes;
-    if (routes.isEmpty) return row.secretaryLabels;
-    return <String>[
+    if (routes.isEmpty) return row.secretarySchedules;
+    return <ImprovementSecretarySchedule>[
       for (final route in routes)
-        for (final secretary in route.secretaryLabels) secretary,
+        for (final schedule in route.secretarySchedules) schedule,
     ];
   }
 
@@ -462,7 +464,7 @@ class _ImprovementTableState extends State<_ImprovementTable> {
 
   List<double> _secretaryRouteHeights(ImprovementPlannerRow row) => <double>[
     for (final route in row.upgradeRoutes)
-      _routeHeight(_secretaryLineCount(route.secretaryLabels)),
+      34.0 + math.max(24.0, _secretaryScheduleHeight(route.secretarySchedules)),
   ];
 
   List<double> _targetRouteHeights(ImprovementPlannerRow row) => <double>[
@@ -479,27 +481,22 @@ class _ImprovementTableState extends State<_ImprovementTable> {
     });
   }
 
-  int _secretaryLineCount(List<String> values) {
-    if (values.isEmpty) return 1;
-    const availableWidth = 174.0;
-    const spacing = 10.0;
-    var lines = 1;
-    var usedWidth = 0.0;
-    for (final value in values) {
+  double _secretaryScheduleHeight(
+    List<ImprovementSecretarySchedule> schedules,
+  ) {
+    if (schedules.isEmpty) return 20;
+    var height = 0.0;
+    for (final schedule in schedules) {
       final painter = TextPainter(
-        text: TextSpan(text: value, style: _cellStyle),
-        maxLines: 1,
+        text: TextSpan(
+          text: schedule.secretaryLabels.join('、'),
+          style: _cellStyle,
+        ),
         textDirection: TextDirection.ltr,
-      )..layout();
-      final requiredWidth = painter.width + (usedWidth == 0 ? 0 : spacing);
-      if (usedWidth > 0 && usedWidth + requiredWidth > availableWidth) {
-        lines += 1;
-        usedWidth = painter.width;
-      } else {
-        usedWidth += requiredWidth;
-      }
+      )..layout(maxWidth: 154);
+      height += math.max(18.0, painter.height) + 4;
     }
-    return lines;
+    return height;
   }
 
   double _rowHeight(ImprovementPlannerRow row) {
@@ -528,7 +525,7 @@ class _ImprovementTableState extends State<_ImprovementTable> {
                   0,
                   (sum, route) => sum + math.max(1, route.upgrade.items.length),
                 ),
-            24.0 * _secretaryLineCount(_secretaryValues(row)),
+            _secretaryScheduleHeight(_secretarySchedules(row)),
             24.0 * math.max(1, routes.length),
             routeLaneHeight,
           ].reduce(math.max),
@@ -576,7 +573,7 @@ class _ImprovementTableState extends State<_ImprovementTable> {
           ),
         ];
       },
-      scrollableColumnWidths: const <double>[170, 210, 280, 220, 190, 82, 220],
+      scrollableColumnWidths: const <double>[170, 210, 280, 220, 300, 82, 220],
       scrollableHeaders: const <Widget>[
         _Header(
           label: '基础消耗',
@@ -656,12 +653,16 @@ class _ImprovementTableState extends State<_ImprovementTable> {
                   focusedRouteIndex: focusedRouteIndex,
                   onRouteTap: onRouteTap,
                   contentBuilder: (routeIndex) => _RouteSecretaryContent(
-                    values: routes[routeIndex].secretaryLabels,
+                    schedules: routes[routeIndex].secretarySchedules,
+                    dayKeyPrefix:
+                        'improvement-route-secretary-day-${entry.equipmentId}-$routeIndex',
                   ),
                 )
               : _SecretaryWrap(
                   wrapKey: Key('improvement-secretaries-${entry.equipmentId}'),
-                  values: _secretaryValues(row),
+                  schedules: _secretarySchedules(row),
+                  dayKeyPrefix:
+                      'improvement-secretary-day-${entry.equipmentId}',
                 ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1139,22 +1140,22 @@ class _RouteConsumeContent extends StatelessWidget {
 }
 
 class _RouteSecretaryContent extends StatelessWidget {
-  const _RouteSecretaryContent({required this.values});
+  const _RouteSecretaryContent({
+    required this.schedules,
+    required this.dayKeyPrefix,
+  });
 
-  final List<String> values;
+  final List<ImprovementSecretarySchedule> schedules;
+  final String dayKeyPrefix;
 
   @override
-  Widget build(BuildContext context) => values.isEmpty
+  Widget build(BuildContext context) => schedules.isEmpty
       ? const _EmptyCell()
       : Align(
           alignment: Alignment.centerLeft,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 2,
-            children: [
-              for (final value in values)
-                Text(value, maxLines: 1, style: _cellStyle),
-            ],
+          child: _SecretaryScheduleList(
+            schedules: schedules,
+            dayKeyPrefix: dayKeyPrefix,
           ),
         );
 }
@@ -1300,30 +1301,114 @@ class _Lines extends StatelessWidget {
 }
 
 class _SecretaryWrap extends StatelessWidget {
-  const _SecretaryWrap({required this.wrapKey, required this.values});
+  const _SecretaryWrap({
+    required this.wrapKey,
+    required this.schedules,
+    required this.dayKeyPrefix,
+  });
   final Key wrapKey;
-  final List<String> values;
+  final List<ImprovementSecretarySchedule> schedules;
+  final String dayKeyPrefix;
 
   @override
-  Widget build(BuildContext context) => values.isEmpty
+  Widget build(BuildContext context) => schedules.isEmpty
       ? const _EmptyCell()
       : Align(
           alignment: Alignment.centerLeft,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            child: Wrap(
+            child: _SecretaryScheduleList(
               key: wrapKey,
-              spacing: 10,
-              runSpacing: 2,
-              alignment: WrapAlignment.start,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                for (final value in values)
-                  Text(value, maxLines: 1, style: _cellStyle),
-              ],
+              schedules: schedules,
+              dayKeyPrefix: dayKeyPrefix,
             ),
           ),
         );
+}
+
+class _SecretaryScheduleList extends StatelessWidget {
+  const _SecretaryScheduleList({
+    super.key,
+    required this.schedules,
+    required this.dayKeyPrefix,
+  });
+
+  static const _weekdayOrder = <int>[7, 1, 2, 3, 4, 5, 6];
+  static const _weekdayLabels = <String>['日', '一', '二', '三', '四', '五', '六'];
+
+  final List<ImprovementSecretarySchedule> schedules;
+  final String dayKeyPrefix;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      for (var groupIndex = 0; groupIndex < schedules.length; groupIndex++)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              for (
+                var dayIndex = 0;
+                dayIndex < _weekdayOrder.length;
+                dayIndex++
+              ) ...[
+                if (dayIndex > 0) const SizedBox(width: 1),
+                _SecretaryDayCell(
+                  key: Key(
+                    '$dayKeyPrefix-$groupIndex-${_weekdayOrder[dayIndex]}',
+                  ),
+                  label: _weekdayLabels[dayIndex],
+                  active: schedules[groupIndex].weekdays.contains(
+                    _weekdayOrder[dayIndex],
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  schedules[groupIndex].secretaryLabels.join('、'),
+                  softWrap: true,
+                  style: _cellStyle,
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
+}
+
+class _SecretaryDayCell extends StatelessWidget {
+  const _SecretaryDayCell({
+    super.key,
+    required this.label,
+    required this.active,
+  });
+
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 16,
+    height: 18,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: active ? const Color(0xff258b68) : const Color(0xff37434a),
+      borderRadius: BorderRadius.circular(2),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        color: active ? const Color(0xffe5fff4) : const Color(0xff8fa0a8),
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+        height: 1,
+      ),
+    ),
+  );
 }
 
 class _EmptyCell extends StatelessWidget {

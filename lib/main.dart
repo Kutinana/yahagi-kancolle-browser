@@ -853,6 +853,10 @@ class YahagiApp extends StatelessWidget {
         final routeObserver = gameRouteObserver ?? yahagiGameRouteObserver;
         return MaterialApp(
           debugShowCheckedModeBanner: false,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(boldText: true),
+            child: child ?? const SizedBox.shrink(),
+          ),
           scrollBehavior: const AppScrollBehavior(),
           title: 'ヤハギ',
           locale: layoutSettingsController.localeCode != null
@@ -2492,6 +2496,11 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                     controller: widget.gameStateController,
                                     page: FleetInformationPage.expedition,
                                     initialFleetId: _expeditionCheckFleetId,
+                                    onFleetSelected: (fleetId) {
+                                      setState(() {
+                                        _expeditionCheckFleetId = fleetId;
+                                      });
+                                    },
                                     showContextHeader: false,
                                     expeditionMode: _expeditionCenterMode,
                                     onExpeditionModeChanged: (mode) {

@@ -129,7 +129,11 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
       return Center(
         child: Text(
           l10n.noSortieWarnings,
-          style: const TextStyle(color: Color(0xff8197a5), fontSize: 13),
+          style: const TextStyle(
+            color: Color(0xff8197a5),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       );
     }
@@ -167,6 +171,7 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
                     style: TextStyle(
                       color: warning.kind.foreground,
                       fontSize: 13,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -200,7 +205,12 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
                       text: warning.message,
                       style: DefaultTextStyle.of(
                         context,
-                      ).style.merge(const TextStyle(fontSize: 13)),
+                      ).style.merge(
+                        const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                     textDirection: Directionality.of(context),
                     textScaler: MediaQuery.textScalerOf(context),
@@ -239,13 +249,17 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
                 style: const TextStyle(
                   color: Color(0xff8197a5),
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 l10n.noMapGaugeDataHint,
-                style: const TextStyle(color: Color(0xff4a5c68), fontSize: 11),
+                style: const TextStyle(
+                  color: Color(0xff4a5c68),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -289,7 +303,11 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 l10n.allMapsCleared,
-                style: const TextStyle(color: Color(0xff8197a5), fontSize: 12),
+                style: const TextStyle(
+                  color: Color(0xff8197a5),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           )
@@ -330,7 +348,11 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
           const SizedBox(width: 4),
           Text(
             l10n.showClearedMaps,
-            style: const TextStyle(fontSize: 11, color: Colors.white),
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

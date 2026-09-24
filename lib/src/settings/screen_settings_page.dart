@@ -130,18 +130,12 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                                   key: const Key(
                                     'settings-ui-display-size-label',
                                   ),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                  style: SettingsTileTypography.title,
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   l10n.uiDisplaySizeDesc,
-                                  style: const TextStyle(
-                                    color: Color(0xff8197a5),
-                                    fontSize: 12,
-                                  ),
+                                  style: SettingsTileTypography.description,
                                 ),
                               ],
                             ),
@@ -211,17 +205,12 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                               children: [
                                 Text(
                                   l10n.workspaceMenuPosition,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                  style: SettingsTileTypography.title,
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   l10n.workspaceMenuPositionDesc,
-                                  style: const TextStyle(
-                                    color: Color(0xff8197a5),
-                                  ),
+                                  style: SettingsTileTypography.description,
                                 ),
                               ],
                             ),
@@ -417,18 +406,12 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                                   children: [
                                     Text(
                                       l10n.topNoticeDurationTitle,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                      style: SettingsTileTypography.title,
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
                                       l10n.topNoticeDurationSubtitle,
-                                      style: const TextStyle(
-                                        color: Color(0xff8197a5),
-                                        fontSize: 12,
-                                      ),
+                                      style: SettingsTileTypography.description,
                                     ),
                                   ],
                                 ),

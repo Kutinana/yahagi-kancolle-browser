@@ -74,8 +74,8 @@ class _ExpeditionSummaryCardState extends State<ExpeditionSummaryCard> {
           trailing: ExpeditionModeSelector(
             mode: _mode,
             compact: true,
-            summaryLabel: ExpeditionStrings.of(context).progress,
-            checkLabel: ExpeditionStrings.of(context).title,
+            summaryLabel: ExpeditionStrings.of(context).modeProgress,
+            checkLabel: ExpeditionStrings.of(context).modeCheck,
             onChanged: (mode) => setState(() => _mode = mode),
           ),
           child: _mode == ExpeditionSummaryMode.summary

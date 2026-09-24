@@ -14,14 +14,22 @@ class FleetSwitcherBar extends StatelessWidget {
     super.key,
     required this.fleets,
     required this.selectedFleetId,
+    this.state,
     this.sortieFleetId,
+    this.anchorageRepairStartedAt,
+    this.nosakiSparkleStartedAt,
+    this.now,
     this.onFleetSelected,
     this.showTitle = true,
   });
 
   final List<Fleet> fleets;
   final int selectedFleetId;
+  final GameState? state;
   final int? sortieFleetId;
+  final DateTime? anchorageRepairStartedAt;
+  final DateTime? nosakiSparkleStartedAt;
+  final DateTime? now;
   final ValueChanged<int>? onFleetSelected;
   final bool showTitle;
 
@@ -51,7 +59,14 @@ class FleetSwitcherBar extends StatelessWidget {
               key: Key('fleet-button-${item.id}'),
               fleet: item,
               selected: item.id == selectedFleetId,
-              isSortie: item.id == sortieFleetId,
+              status: fleetStatusVisual(
+                item,
+                state: state,
+                now: now,
+                isSortie: item.id == sortieFleetId,
+                anchorageRepairStartedAt: anchorageRepairStartedAt,
+                nosakiSparkleStartedAt: nosakiSparkleStartedAt,
+              ),
               onTap: () => onFleetSelected?.call(item.id),
             ),
           ),
@@ -67,19 +82,18 @@ class _FleetButton extends StatelessWidget {
     super.key,
     required this.fleet,
     required this.selected,
-    required this.isSortie,
+    required this.status,
     required this.onTap,
   });
 
   final Fleet fleet;
   final bool selected;
-  final bool isSortie;
+  final FleetStatusVisual status;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final phone = usesCompactFleetLayout(context);
-    final status = fleetStatusVisual(fleet, isSortie: isSortie);
     return Material(
       color: selected ? const Color(0xff3a3020) : const Color(0xff102331),
       borderRadius: BorderRadius.circular(9),

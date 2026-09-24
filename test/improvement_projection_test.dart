@@ -121,6 +121,19 @@ void main() {
 
     expect(rows, hasLength(1));
     expect(rows.single.secretaryLabels, <String>['明石①⑤', '夕张①②③④⑤⑥⑦']);
+    expect(rows.single.secretarySchedules, hasLength(2));
+    expect(rows.single.secretarySchedules[0].secretaryLabels, <String>['明石']);
+    expect(rows.single.secretarySchedules[0].weekdays, <int>{1, 5});
+    expect(rows.single.secretarySchedules[1].secretaryLabels, <String>['夕张']);
+    expect(rows.single.secretarySchedules[1].weekdays, <int>{
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+    });
   });
 
   test('specific weekday keeps secretary labels without weekday suffix', () {
@@ -136,6 +149,43 @@ void main() {
     );
 
     expect(rows.single.secretaryLabels, <String>['明石', '夕张']);
+    expect(rows.single.secretarySchedules[0].weekdays, <int>{1, 5});
+  });
+
+  test('groups secretaries that share the same weekly schedule', () {
+    final source = _multiWeekdayEntry(evolvable: false);
+    final entry = ImprovementEntry(
+      equipmentId: source.equipmentId,
+      baseCost: source.baseCost,
+      arrangements: <ImprovementArrangement>[
+        ...source.arrangements,
+        const ImprovementArrangement(
+          secretaryId: 3,
+          secretaryLabel: '大淀',
+          weekdays: <int>{DateTime.monday, DateTime.friday},
+        ),
+      ],
+      stage0: source.stage0,
+      stage1: source.stage1,
+      upgrades: source.upgrades,
+    );
+    final rows = projectImprovementRows(
+      ImprovementDataset(
+        version: const ImprovementDatasetVersion(
+          dataVersion: 'test',
+          commitSha: '',
+        ),
+        entries: <ImprovementEntry>[entry],
+      ),
+      weekday: improvementAllWeekdays,
+    );
+
+    expect(rows.single.secretarySchedules, hasLength(2));
+    expect(rows.single.secretarySchedules.first.secretaryLabels, <String>[
+      '明石',
+      '大淀',
+    ]);
+    expect(rows.single.secretarySchedules.first.weekdays, <int>{1, 5});
   });
 
   test('resolves numeric secretary labels by ship sort number', () {

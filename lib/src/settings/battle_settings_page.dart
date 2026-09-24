@@ -262,18 +262,15 @@ class _StatusEffectRow extends StatelessWidget {
       children: <Widget>[
         Text(
           title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+          style: SettingsTileTypography.title.copyWith(
             color: enabled ? null : const Color(0xff526776),
           ),
         ),
         const SizedBox(height: 3),
         Text(
           subtitle,
-          style: TextStyle(
-            fontSize: 12,
-            color: enabled ? const Color(0xff8197a5) : const Color(0xff526776),
+          style: SettingsTileTypography.description.copyWith(
+            color: enabled ? null : const Color(0xff526776),
           ),
         ),
       ],

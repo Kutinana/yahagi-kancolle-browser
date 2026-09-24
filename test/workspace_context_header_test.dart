@@ -232,8 +232,8 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(find.text('远征进度'), findsOneWidget);
-    expect(find.text('远征检查'), findsOneWidget);
+    expect(find.text('进度'), findsOneWidget);
+    expect(find.text('检查'), findsOneWidget);
     final title = tester.getRect(
       find.byKey(const Key('workspace-title-expedition')),
     );

@@ -7,6 +7,8 @@ import '../localization/ui_text.dart';
 import '../fleet/fleet_switcher_bar.dart';
 import '../game_state/game_state.dart';
 import '../game_state/game_state_controller.dart';
+import '../performance/second_tick_scope.dart';
+import 'expedition_completion_estimate.dart';
 import 'expedition_evaluator.dart';
 import 'expedition_income_calculator.dart';
 import 'expedition_mission_picker.dart';
@@ -19,6 +21,7 @@ class ExpeditionCheckPage extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onBack,
+    this.onFleetSelected,
     this.initialFleetId,
     this.showHeader = true,
     this.selectionStore,
@@ -26,6 +29,7 @@ class ExpeditionCheckPage extends StatefulWidget {
   });
   final GameStateController controller;
   final VoidCallback onBack;
+  final ValueChanged<int>? onFleetSelected;
   final int? initialFleetId;
   final bool showHeader;
   final ExpeditionSelectionStore? selectionStore;
@@ -79,6 +83,7 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
       fleetId = selectedFleetId;
       missionId = expeditionRules.keys.first;
     });
+    widget.onFleetSelected?.call(selectedFleetId);
     _restoreMissionForFleet(selectedFleetId);
   }
 
@@ -190,6 +195,13 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
           child: FleetSwitcherBar(
             fleets: fleets,
             selectedFleetId: fleetId,
+            state: state,
+            sortieFleetId: state.combatState.isActive
+                ? state.combatState.sortieFleetId
+                : null,
+            anchorageRepairStartedAt:
+                widget.controller.anchorageRepairStartedAt,
+            nosakiSparkleStartedAt: widget.controller.nosakiSparkleStartedAt,
             showTitle: false,
             onFleetSelected: _selectFleet,
           ),
@@ -250,13 +262,15 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _overview(s, mission, income, ev)),
+                        Expanded(
+                          child: _overview(s, mission, income, ev, fleet),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(child: _conditions(s, ev)),
                       ],
                     )
                   else ...[
-                    _overview(s, mission, income, ev),
+                    _overview(s, mission, income, ev, fleet),
                     const SizedBox(height: 12),
                     _conditions(s, ev),
                   ],
@@ -352,6 +366,7 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
     MasterMission? mission,
     ExpeditionIncome income,
     ExpeditionEvaluation ev,
+    Fleet fleet,
   ) => _panel(
     s.timeAndCost,
     Column(
@@ -360,6 +375,18 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
         _infoRow(
           s.requiredTime,
           mission == null ? '--' : _duration(mission.duration),
+        ),
+        const SizedBox(height: 6),
+        SecondTickBuilder(
+          builder: (context, now, _) => _completionRow(
+            s,
+            estimateExpeditionCompletion(
+              fleet: fleet,
+              selectedMission: mission,
+              now: now,
+            ),
+            now,
+          ),
         ),
         const SizedBox(height: 6),
         Row(
@@ -434,12 +461,54 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
     child: Row(
       children: [
         if (icon != null) ...[icon, const SizedBox(width: 6)],
-        Text(label, style: const TextStyle(color: Color(0xff8fa8b6))),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xff8fa8b6),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         const Spacer(),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
       ],
     ),
   );
+  Widget _completionRow(
+    ExpeditionStrings strings,
+    ExpeditionCompletionEstimate estimate,
+    DateTime now,
+  ) {
+    final time = estimate.completionTime;
+    return Container(
+      key: const Key('expedition-estimated-completion'),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xff0b1d29),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              strings.estimatedCompletionTime,
+              style: const TextStyle(
+                color: Color(0xff8fa8b6),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            time == null
+                ? '--'
+                : formatExpeditionCompletionTime(time, now: now),
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _duration(Duration d) =>
       '${d.inHours.toString().padLeft(2, '0')}:${(d.inMinutes % 60).toString().padLeft(2, '0')}:00';
 
@@ -559,6 +628,7 @@ class _ExpeditionCheckPageState extends State<ExpeditionCheckPage> {
                   style: const TextStyle(
                     color: Color(0xff7792a3),
                     fontSize: 11,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],

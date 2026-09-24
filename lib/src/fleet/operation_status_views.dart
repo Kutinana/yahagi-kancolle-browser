@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../game_state/game_state.dart';
+import '../expedition/expedition_completion_estimate.dart';
+import '../expedition/expedition_strings.dart';
 import '../performance/second_tick_scope.dart';
 import 'operation_progress.dart';
 import 'ship_portrait.dart';
@@ -67,6 +69,12 @@ class ExpeditionStatusView extends StatelessWidget {
                   label: AppLocalizations.of(context)?.progress ?? '进行进度',
                   start: start,
                   end: fleet.mission.completionTime!,
+                  completionKey: Key(
+                    'expedition-progress-completion-${fleet.id}',
+                  ),
+                  completionLabel: ExpeditionStrings.of(
+                    context,
+                  ).estimatedCompletionTime,
                 )
               : Text(
                   AppLocalizations.of(context)?.expeditionInProgress ?? '远征进行中',
@@ -518,12 +526,16 @@ class _TimedProgress extends StatelessWidget {
     required this.label,
     required this.start,
     required this.end,
+    this.completionKey,
+    this.completionLabel,
   });
 
   final Key progressKey;
   final String label;
   final DateTime start;
   final DateTime end;
+  final Key? completionKey;
+  final String? completionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -553,6 +565,7 @@ class _TimedProgress extends StatelessWidget {
                   style: const TextStyle(
                     color: Color(0xffa9c6d2),
                     fontSize: 11,
+                    fontWeight: FontWeight.w700,
                     fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
                   ),
                 ),
@@ -566,6 +579,24 @@ class _TimedProgress extends StatelessWidget {
               color: _progressColor,
               backgroundColor: const Color(0xff263f4d),
             ),
+            if (completionLabel != null) ...[
+              const SizedBox(height: 4),
+              Padding(
+                key: completionKey,
+                padding: EdgeInsets.zero,
+                child: Text(
+                  '$completionLabel ${formatExpeditionCompletionTime(end, now: now)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xffa9c6d2),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },

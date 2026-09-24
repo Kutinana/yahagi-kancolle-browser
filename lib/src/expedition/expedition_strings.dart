@@ -28,6 +28,16 @@ class ExpeditionStrings {
       : traditional
       ? '遠征檢查'
       : '远征检查';
+  String get modeProgress => _ja
+      ? '進捗'
+      : traditional
+      ? '進度'
+      : '进度';
+  String get modeCheck => _ja
+      ? 'チェック'
+      : traditional
+      ? '檢查'
+      : '检查';
   String get compact => _ja || traditional ? '簡潔' : '简洁';
   String get detailed => _ja || traditional ? '詳細' : '详细';
   String get success => _ja ? '成功' : '成功';
@@ -111,6 +121,11 @@ class ExpeditionStrings {
       : traditional
       ? '所需時間'
       : '所需时间';
+  String get estimatedCompletionTime => _ja
+      ? '完了予定時刻'
+      : traditional
+      ? '預計完成時間'
+      : '预计完成时间';
   String get fuelCost => _ja
       ? '燃料消費'
       : traditional

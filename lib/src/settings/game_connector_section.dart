@@ -5,6 +5,7 @@ import '../browser/game_browser_controller.dart';
 import '../widgets/top_notice.dart';
 import 'game_connector.dart';
 import 'game_connector_controller.dart';
+import 'settings_ui_helpers.dart';
 
 class GameConnectorSection extends StatelessWidget {
   const GameConnectorSection({
@@ -72,21 +73,9 @@ class GameConnectorSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  Text(title, style: SettingsTileTypography.title),
                   const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xff8197a5),
-                    ),
-                  ),
+                  Text(subtitle, style: SettingsTileTypography.description),
                 ],
               ),
             ),

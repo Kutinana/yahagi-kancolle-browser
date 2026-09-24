@@ -1,9 +1,40 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/fleet/anchorage_repair_calculator.dart';
+import 'package:yahagi_kancolle_browser/src/fleet/fleet_status_visual.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 
 void main() {
   group('AnchorageRepairCalculator', () {
+    test('fleet switcher shows repair only while a ship is being repaired', () {
+      final now = DateTime.utc(2026, 9, 25, 12);
+      final startedAt = now.subtract(const Duration(minutes: 25));
+      final state = buildAnchorageTestState(facilities: 0);
+      final fleet = state.fleets.single;
+
+      expect(
+        fleetStatusVisual(fleet, state: state, now: now).status,
+        FleetOperationalStatus.standby,
+      );
+      final active = fleetStatusVisual(
+        fleet,
+        state: state,
+        anchorageRepairStartedAt: startedAt,
+        now: now,
+      );
+      expect(active.status, FleetOperationalStatus.anchorageRepair);
+      expect(active.label, '泊地修理中');
+      expect(active.color, const Color(0xff29a634));
+      expect(
+        fleetStatusVisual(
+          fleet,
+          state: buildAnchorageTestState(facilities: 0, allShipsFull: true),
+          anchorageRepairStartedAt: startedAt,
+          now: now,
+        ).status,
+        FleetOperationalStatus.standby,
+      );
+    });
     test('maps repair facilities to repairable fleet positions', () {
       for (var facilities = 0; facilities <= 4; facilities++) {
         final projection = AnchorageRepairCalculator.project(

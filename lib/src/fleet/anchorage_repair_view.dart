@@ -265,6 +265,11 @@ class _AnchorageRepairViewState extends State<AnchorageRepairView> {
           child: FleetSwitcherBar(
             fleets: state.fleets,
             selectedFleetId: effectiveFleetId,
+            state: state,
+            now: now,
+            anchorageRepairStartedAt:
+                widget.controller.anchorageRepairStartedAt,
+            nosakiSparkleStartedAt: widget.controller.nosakiSparkleStartedAt,
             showTitle: false,
             sortieFleetId: state.combatState.isActive
                 ? state.combatState.sortieFleetId
@@ -395,7 +400,11 @@ class _SummaryCard extends StatelessWidget {
               label,
               maxLines: 1,
               softWrap: false,
-              style: const TextStyle(color: _muted, fontSize: 10),
+              style: const TextStyle(
+                color: _muted,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(width: 8),
             Text(
@@ -486,7 +495,7 @@ class _TableCells extends StatelessWidget {
                 style: TextStyle(
                   color: header ? _muted : const Color(0xffdce6eb),
                   fontSize: header ? 11 : 12,
-                  fontWeight: header ? FontWeight.w800 : FontWeight.w600,
+                  fontWeight: header ? FontWeight.w800 : FontWeight.w700,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -572,7 +581,11 @@ class _ShipIdentity extends StatelessWidget {
                 'Lv.${row.ship.level} · $posLabel',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _muted, fontSize: 9),
+                style: const TextStyle(
+                  color: _muted,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),

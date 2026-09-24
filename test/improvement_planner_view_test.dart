@@ -378,7 +378,7 @@ void main() {
     expect(controller.favoriteEquipmentIds, contains(firstId));
   });
 
-  testWidgets('all weekday segment aggregates secretary weekday labels', (
+  testWidgets('secretary schedule shows seven days before names', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -405,7 +405,25 @@ void main() {
     await tester.pump(const Duration(milliseconds: 220));
 
     expect(controller.selectedWeekday, improvementAllWeekdays);
-    expect(find.text('睦月①②'), findsOneWidget);
+    final secretary = find.byKey(const Key('improvement-secretaries-1'));
+    expect(
+      find.descendant(of: secretary, matching: find.text('睦月')),
+      findsOneWidget,
+    );
+    expect(find.text('睦月①②'), findsNothing);
+    for (final day in <int>[7, 1, 2, 3, 4, 5, 6]) {
+      final cell = find.byKey(Key('improvement-secretary-day-1-0-$day'));
+      expect(cell, findsOneWidget);
+      final decoration = tester
+          .widget<Container>(find.descendant(of: cell, matching: find.byType(Container)))
+          .decoration! as BoxDecoration;
+      expect(
+        decoration.color,
+        <int>{1, 2}.contains(day)
+            ? const Color(0xff258b68)
+            : const Color(0xff37434a),
+      );
+    }
   });
 
   testWidgets('places search and filter after favorite and filters evolution', (

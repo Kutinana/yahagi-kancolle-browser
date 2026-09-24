@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/account/account_session.dart';
 import 'package:yahagi_kancolle_browser/src/expedition/expedition_check_page.dart';
 import 'package:yahagi_kancolle_browser/src/expedition/expedition_selection_store.dart';
+import 'package:yahagi_kancolle_browser/src/expedition/expedition_completion_estimate.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
 
 import 'fixtures/kcsapi_fixtures.dart';
@@ -92,6 +96,138 @@ void main() {
 
     expect(find.byKey(const Key('expedition-mission-picker')), findsOneWidget);
     expect(find.textContaining('1 ·'), findsOneWidget);
+  });
+
+  testWidgets('远征检查在所需时间下显示当前远征的本地完成时刻', (tester) async {
+    final completion = DateTime.now().add(const Duration(hours: 1));
+    final port =
+        (jsonDecode(portEvent.responseBody) as Map)['api_data']
+            as Map<String, dynamic>;
+    final fleets = port['api_deck_port'] as List;
+    (fleets[1]['api_mission'] as List)[2] = completion.millisecondsSinceEpoch;
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(kcsapiEvent('/kcsapi/api_port/port', port));
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExpeditionCheckPage(
+          controller: controller,
+          onBack: () {},
+          selectionStore: _MemoryExpeditionSelectionStore(<int, int>{2: 5}),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final estimate = find.byKey(const Key('expedition-estimated-completion'));
+    expect(estimate, findsOneWidget);
+    expect(
+      tester.getTopLeft(estimate).dy,
+      greaterThan(tester.getBottomLeft(find.text('所需时间')).dy),
+    );
+    expect(
+      find.descendant(of: estimate, matching: find.text('预计完成时间')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: estimate,
+        matching: find.text(
+          formatExpeditionCompletionTime(completion, now: DateTime.now()),
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: estimate, matching: find.text('远征进行中')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('空闲舰队预计完成时间下不显示起算说明', (tester) async {
+    final port =
+        (jsonDecode(portEvent.responseBody) as Map)['api_data']
+            as Map<String, dynamic>;
+    final fleets = port['api_deck_port'] as List;
+    fleets[1]['api_mission'] = <int>[0, 0, 0, 0];
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(kcsapiEvent('/kcsapi/api_port/port', port));
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ExpeditionCheckPage(
+          controller: controller,
+          onBack: () {},
+          selectionStore: _MemoryExpeditionSelectionStore(<int, int>{2: 5}),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final estimate = find.byKey(const Key('expedition-estimated-completion'));
+    expect(estimate, findsOneWidget);
+    expect(
+      find.descendant(of: estimate, matching: find.text('若现在出发')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: estimate, matching: find.text('--')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('检查其他远征时当前时间估算在日文手机宽度不溢出', (tester) async {
+    tester.view.physicalSize = const Size(430, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final port =
+        (jsonDecode(portEvent.responseBody) as Map)['api_data']
+            as Map<String, dynamic>;
+    final fleets = port['api_deck_port'] as List;
+    (fleets[1]['api_mission'] as List)[2] = DateTime.now()
+        .add(const Duration(hours: 1))
+        .millisecondsSinceEpoch;
+    final controller = GameStateController();
+    addTearDown(controller.dispose);
+    controller
+      ..accept(start2Event)
+      ..accept(kcsapiEvent('/kcsapi/api_port/port', port));
+    await controller.idle;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ja'),
+        supportedLocales: const [Locale('ja')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: ExpeditionCheckPage(
+          controller: controller,
+          onBack: () {},
+          selectionStore: _MemoryExpeditionSelectionStore(<int, int>{2: 21}),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final estimate = find.byKey(const Key('expedition-estimated-completion'));
+    expect(estimate, findsOneWidget);
+    expect(
+      find.descendant(of: estimate, matching: find.text('現在時刻から計算')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('详情页在窄屏显示耗时、消耗、收入与条件', (tester) async {

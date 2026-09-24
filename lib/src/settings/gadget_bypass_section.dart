@@ -5,6 +5,7 @@ import '../browser/gadget_bypass_channel.dart';
 import '../browser/gadget_bypass_controller.dart';
 import '../browser/gadget_bypass_store.dart';
 import '../widgets/standalone_text_input_dialog.dart';
+import 'settings_ui_helpers.dart';
 
 class GadgetBypassSection extends StatefulWidget {
   const GadgetBypassSection({
@@ -110,18 +111,12 @@ class _GadgetBypassSectionState extends State<GadgetBypassSection> {
                       children: <Widget>[
                         Text(
                           l10n.gadgetBypassEnable,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: SettingsTileTypography.title,
                         ),
                         const SizedBox(height: 3),
                         Text(
                           l10n.gadgetBypassDesc,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xff8197a5),
-                          ),
+                          style: SettingsTileTypography.description,
                         ),
                       ],
                     ),

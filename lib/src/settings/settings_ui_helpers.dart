@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 
+abstract final class SettingsTileTypography {
+  static const title = TextStyle(fontSize: 14, fontWeight: FontWeight.w700);
+  static const description = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    color: Color(0xff8197a5),
+  );
+}
+
 mixin SettingsUIHelpers {
   Widget buildSectionTitle(String title) {
     return Padding(
@@ -55,9 +64,7 @@ mixin SettingsUIHelpers {
                   Text(
                     title,
                     key: titleKey,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                    style: SettingsTileTypography.title.copyWith(
                       color: enabled ? null : const Color(0xff526776),
                     ),
                   ),
@@ -65,11 +72,8 @@ mixin SettingsUIHelpers {
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: enabled
-                            ? const Color(0xff8197a5)
-                            : const Color(0xff526776),
+                      style: SettingsTileTypography.description.copyWith(
+                        color: enabled ? null : const Color(0xff526776),
                       ),
                     ),
                   ],
@@ -107,9 +111,7 @@ mixin SettingsUIHelpers {
                 Text(
                   title,
                   key: titleKey,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                  style: SettingsTileTypography.title.copyWith(
                     color: enabled ? null : const Color(0xff526776),
                   ),
                 ),
@@ -117,7 +119,9 @@ mixin SettingsUIHelpers {
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: const TextStyle(color: Color(0xff8197a5)),
+                    style: SettingsTileTypography.description.copyWith(
+                      color: enabled ? null : const Color(0xff526776),
+                    ),
                   ),
                 ],
               ],
@@ -154,13 +158,7 @@ mixin SettingsUIHelpers {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              Text(title, style: SettingsTileTypography.title),
               Text(
                 '${(value * 100).toInt()}%',
                 style: TextStyle(

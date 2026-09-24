@@ -128,6 +128,9 @@ class WorkspaceContextHeader extends StatelessWidget {
       return FleetSwitcherBar(
         fleets: state.fleets,
         selectedFleetId: selectedFleetId,
+        state: state,
+        anchorageRepairStartedAt: anchorageRepairStartedAt,
+        nosakiSparkleStartedAt: nosakiSparkleStartedAt,
         sortieFleetId: state.combatState.isActive
             ? state.combatState.sortieFleetId
             : null,
@@ -427,8 +430,8 @@ class WorkspaceContextHeader extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: ExpeditionModeSelector(
                 mode: expeditionMode,
-                summaryLabel: ExpeditionStrings.of(context).progress,
-                checkLabel: ExpeditionStrings.of(context).title,
+                summaryLabel: ExpeditionStrings.of(context).modeProgress,
+                checkLabel: ExpeditionStrings.of(context).modeCheck,
                 onChanged: onExpeditionModeChanged!,
               ),
             ),

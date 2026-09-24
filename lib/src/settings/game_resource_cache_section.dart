@@ -5,6 +5,7 @@ import '../browser/game_resource_cache_channel.dart';
 import '../browser/game_resource_cache_controller.dart';
 import '../browser/game_resource_cache_store.dart';
 import '../widgets/top_notice.dart';
+import 'settings_ui_helpers.dart';
 
 class GameResourceCacheSection extends StatefulWidget {
   const GameResourceCacheSection({super.key, required this.controller});
@@ -245,21 +246,9 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  Text(title, style: SettingsTileTypography.title),
                   const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xff8197a5),
-                    ),
-                  ),
+                  Text(subtitle, style: SettingsTileTypography.description),
                 ],
               ),
             ),

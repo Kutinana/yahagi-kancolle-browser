@@ -244,6 +244,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('远征简报'), findsOneWidget);
+    expect(find.text('进度'), findsOneWidget);
+    expect(find.text('检查'), findsOneWidget);
     expect(find.text('简洁'), findsOneWidget);
     expect(find.text('详细'), findsOneWidget);
     expect(find.text('成功'), findsOneWidget);
