@@ -66,7 +66,7 @@ void main() {
 
     expect(find.text('临时缓存'), findsOneWidget);
     expect(find.textContaining('最多保留 7 天'), findsOneWidget);
-    expect(find.textContaining('不超过 1 GB'), findsOneWidget);
+    expect(find.textContaining('不超过 2 GB'), findsOneWidget);
     expect(find.byKey(const Key('cache-download-toggle')), findsNothing);
     expect(find.byKey(const Key('cache-check-integrity')), findsNothing);
     expect(find.byKey(const Key('cache-repair')), findsNothing);

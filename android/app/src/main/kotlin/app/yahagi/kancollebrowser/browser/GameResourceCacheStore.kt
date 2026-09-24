@@ -492,7 +492,7 @@ class GameResourceCacheStore(
 
     companion object {
         const val DEFAULT_MAX_BYTES: Long = 50_000_000_000L
-        const val TEMPORARY_MAX_BYTES: Long = 1_000_000_000L
+        const val TEMPORARY_MAX_BYTES: Long = 2_000_000_000L
         const val TEMPORARY_MAX_IDLE_AGE_MS: Long = 7L * 24L * 60L * 60L * 1000L
         private const val ACCESS_TIME_WRITE_INTERVAL_MS = 60_000L
     }

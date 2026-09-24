@@ -2162,7 +2162,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameResourceCacheNoneDesc =>
-      '不预下载资源；游玩时按需缓存，缓存最多保留 7 天且占用不超过 1 GB，过期或超出上限时将自动清理。';
+      '不预下载资源；游玩时按需缓存，缓存最多保留 7 天且占用不超过 2 GB，过期或超出上限时将自动清理。';
 
   @override
   String get gameResourceCacheLight => '轻度缓存';
@@ -5567,7 +5567,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameResourceCacheNoneDesc =>
-      '不預先下載資源；遊玩時按需快取，最多保留 7 天且占用不超過 1 GB，過期或超出上限時將自動清理。';
+      '不預先下載資源；遊玩時按需快取，最多保留 7 天且占用不超過 2 GB，過期或超出上限時將自動清理。';
 
   @override
   String get gameResourceCacheLight => '輕度快取';

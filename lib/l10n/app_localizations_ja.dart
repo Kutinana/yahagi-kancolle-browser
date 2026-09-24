@@ -2181,7 +2181,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get gameResourceCacheNoneDesc =>
-      'リソースは事前ダウンロードせず、プレイ中に必要な分だけキャッシュします。保存期間は最長 7 日、使用量は最大 1 GB で、期限切れまたは上限超過時に自動削除されます。';
+      'リソースは事前ダウンロードせず、プレイ中に必要な分だけキャッシュします。保存期間は最長 7 日、使用量は最大 2 GB で、期限切れまたは上限超過時に自動削除されます。';
 
   @override
   String get gameResourceCacheLight => '軽量キャッシュ';

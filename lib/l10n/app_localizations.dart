@@ -4166,7 +4166,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheNoneDesc.
   ///
   /// In zh, this message translates to:
-  /// **'不预下载资源；游玩时按需缓存，缓存最多保留 7 天且占用不超过 1 GB，过期或超出上限时将自动清理。'**
+  /// **'不预下载资源；游玩时按需缓存，缓存最多保留 7 天且占用不超过 2 GB，过期或超出上限时将自动清理。'**
   String get gameResourceCacheNoneDesc;
 
   /// No description provided for @gameResourceCacheLight.

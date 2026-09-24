@@ -754,7 +754,7 @@
   "gameResourceCacheTitle": "ゲームリソースのローカルキャッシュ",
   "gameResourceCacheDesc": "リソースは「艦隊これくしょん -艦これ-」公式サーバーから取得します。キャッシュはいつでも削除できます。",
   "gameResourceCacheNone": "一時キャッシュ",
-  "gameResourceCacheNoneDesc": "リソースは事前ダウンロードせず、プレイ中に必要な分だけキャッシュします。保存期間は最長 7 日、使用量は最大 1 GB で、期限切れまたは上限超過時に自動削除されます。",
+  "gameResourceCacheNoneDesc": "リソースは事前ダウンロードせず、プレイ中に必要な分だけキャッシュします。保存期間は最長 7 日、使用量は最大 2 GB で、期限切れまたは上限超過時に自動削除されます。",
   "gameResourceCacheLight": "軽量キャッシュ",
   "gameResourceCacheLightDesc": "起動ファイル、よく使う UI、保有艦娘の立ち絵と装備リソースをキャッシュします。",
   "gameResourceCacheFull": "ローカルキャッシュ",
