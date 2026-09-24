@@ -758,7 +758,7 @@
   "gameResourceCacheLight": "輕度快取",
   "gameResourceCacheLightDesc": "快取啟動檔案、常用 UI、已持有艦娘立繪與裝備資源。",
   "gameResourceCacheFull": "本機快取",
-  "gameResourceCacheFullDesc": "預先下載固定基礎資源清單（約 5.73 GB）；新內容會在遊玩時自動快取。",
+  "gameResourceCacheFullDesc": "預先下載固定基礎資源清單（約 5.72 GB）；新內容會在遊玩時自動快取。",
   "gameResourceCacheStart": "開始下載",
   "gameResourceCachePause": "暫停下載",
   "gameResourceCacheResume": "繼續下載",

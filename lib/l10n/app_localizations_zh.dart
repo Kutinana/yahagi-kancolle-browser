@@ -2175,7 +2175,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameResourceCacheFullDesc =>
-      '预下载基础资源（约 5.73 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。';
+      '预下载基础资源（约 5.72 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。';
 
   @override
   String get gameResourceCacheStart => '开始下载';
@@ -5580,7 +5580,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get gameResourceCacheFullDesc =>
-      '預先下載固定基礎資源清單（約 5.73 GB）；新內容會在遊玩時自動快取。';
+      '預先下載固定基礎資源清單（約 5.72 GB）；新內容會在遊玩時自動快取。';
 
   @override
   String get gameResourceCacheStart => '開始下載';

@@ -2195,7 +2195,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get gameResourceCacheFullDesc =>
-      '固定の基本リソース一覧に含まれるファイル（約 5.73 GB）を事前ダウンロードします。新しいコンテンツはプレイ中に自動でキャッシュします。';
+      '固定の基本リソース一覧に含まれるファイル（約 5.72 GB）を事前ダウンロードします。新しいコンテンツはプレイ中に自動でキャッシュします。';
 
   @override
   String get gameResourceCacheStart => 'ダウンロード開始';

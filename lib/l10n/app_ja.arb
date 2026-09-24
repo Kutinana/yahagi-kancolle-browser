@@ -758,7 +758,7 @@
   "gameResourceCacheLight": "軽量キャッシュ",
   "gameResourceCacheLightDesc": "起動ファイル、よく使う UI、保有艦娘の立ち絵と装備リソースをキャッシュします。",
   "gameResourceCacheFull": "ローカルキャッシュ",
-  "gameResourceCacheFullDesc": "固定の基本リソース一覧に含まれるファイル（約 5.73 GB）を事前ダウンロードします。新しいコンテンツはプレイ中に自動でキャッシュします。",
+  "gameResourceCacheFullDesc": "固定の基本リソース一覧に含まれるファイル（約 5.72 GB）を事前ダウンロードします。新しいコンテンツはプレイ中に自動でキャッシュします。",
   "gameResourceCacheStart": "ダウンロード開始",
   "gameResourceCachePause": "一時停止",
   "gameResourceCacheResume": "再開",

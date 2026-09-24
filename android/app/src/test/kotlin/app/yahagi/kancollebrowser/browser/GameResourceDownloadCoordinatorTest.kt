@@ -49,6 +49,29 @@ class GameResourceDownloadCoordinatorTest {
     }
 
     @Test
+    fun `full baseline manifest can be prepared while cache index is populated`() {
+        val fixture = fixture()
+        val urls = List(62_226) { id -> official("/kcs2/resources/ship/full/$id.png?version=1") }
+        fixture.root.resolve("index.json").bufferedWriter().use { writer ->
+            writer.write("{\"version\":2}\n")
+            urls.forEachIndexed { id, url ->
+                val checksum = id.toString().padStart(64, '0')
+                writer.write(
+                    "{\"key\":\"$url\",\"fileName\":\"$checksum.cache\"," +
+                        "\"version\":null,\"mimeType\":\"image/png\",\"byteLength\":1," +
+                        "\"etag\":null,\"lastModified\":null,\"lastAccessedAt\":0," +
+                        "\"lastValidatedAt\":0,\"sha256\":\"$checksum\"}\n",
+                )
+            }
+        }
+
+        fixture.coordinator.setManifest("full", urls, urls.size.toLong(), List(urls.size) { 1L })
+
+        assertEquals(urls.size, fixture.coordinator.status().damagedCount)
+        fixture.coordinator.dispose()
+    }
+
+    @Test
     fun `oversized manifest is rejected before building JSON`() {
         val fixture = fixture()
         val urls = List(GameResourceCacheIndex.MAX_ENTRIES + 1) {

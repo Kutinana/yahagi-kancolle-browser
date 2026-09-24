@@ -4190,7 +4190,7 @@ abstract class AppLocalizations {
   /// No description provided for @gameResourceCacheFullDesc.
   ///
   /// In zh, this message translates to:
-  /// **'预下载基础资源（约 5.73 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。'**
+  /// **'预下载基础资源（约 5.72 GB），无需等下载完成，可边下边玩，不影响游戏。新内容会在游玩时自动缓存。'**
   String get gameResourceCacheFullDesc;
 
   /// No description provided for @gameResourceCacheStart.
