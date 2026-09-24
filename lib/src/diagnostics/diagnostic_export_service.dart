@@ -48,6 +48,17 @@ final class DiagnosticExportService {
     }
   }
 
+  Future<void> clearGeneratedExports() async {
+    if (!await exportDirectory.exists()) return;
+    final generatedName = RegExp(r'^Yahagi-Diagnostics-\d{8}-\d{6}\.json$');
+    await for (final entity in exportDirectory.list(followLinks: false)) {
+      if (entity is File &&
+          generatedName.hasMatch(entity.uri.pathSegments.last)) {
+        await entity.delete();
+      }
+    }
+  }
+
   Future<File> _createAuditedExport() async {
     await exportDirectory.create(recursive: true);
     await _removeOldExports();

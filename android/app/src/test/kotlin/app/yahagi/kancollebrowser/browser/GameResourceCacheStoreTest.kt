@@ -24,6 +24,23 @@ class GameResourceCacheStoreTest {
     }
 
     @Test
+    fun `metadata budget evicts old resource without growing the index`() {
+        val root = temporaryFolder.newFolder("metadata-budget")
+        val index = GameResourceCacheIndex(root.resolve("index.json"), maxMetadataBytes = 1_024)
+        val store = GameResourceCacheStore(root, index, 10_000)
+        val first = GameResourceCacheKey("/kcs2/resources/first.png")
+        val second = GameResourceCacheKey("/kcs2/resources/second.png")
+        val headers = mapOf("Content-Security-Policy" to "x".repeat(400))
+
+        store.commit(first, byteArrayOf(1), mimeType = "image/png", responseHeaders = headers)
+        store.commit(second, byteArrayOf(2), mimeType = "image/png", responseHeaders = headers)
+
+        assertFalse(store.contains(first))
+        assertTrue(store.contains(second))
+        assertEquals(1, store.entries().size)
+    }
+
+    @Test
     fun `clear rejects a write started before clear`() {
         val root = temporaryFolder.newFolder("clear-generation")
         val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")), 10)
@@ -306,5 +323,18 @@ class GameResourceCacheStoreTest {
         assertTrue(store.totalBytes() <= 3)
         assertEquals(1, store.entries().size)
         pool.shutdownNow()
+    }
+
+    @Test
+    fun `resource larger than per file limit is not cached`() {
+        val root = temporaryFolder.newFolder("cache")
+        val store = GameResourceCacheStore(root, GameResourceCacheIndex(root.resolve("index.json")))
+        val oversized = ByteArray((HttpUrlConnectionGameResourceFetcher.MAX_RESOURCE_BYTES + 1).toInt())
+
+        assertNull(store.commitWithEviction(
+            GameResourceCacheKey("/kcs2/resources/large.mp4"), oversized, mimeType = "video/mp4",
+        ))
+        assertTrue(store.entries().isEmpty())
+        assertTrue(root.resolve("files").listFiles().orEmpty().isEmpty())
     }
 }

@@ -1015,6 +1015,46 @@ void main() {
     expect(find.text('repair quest'), findsOneWidget);
     expect(find.text('完成'), findsOneWidget);
   });
+
+  testWidgets('unverified full quest count says awaiting confirmation', (
+    tester,
+  ) async {
+    final controller = GameStateController(
+      initialState: GameState.empty.copyWith(
+        memberId: 1,
+        quests: {
+          609: const GameQuest(
+            id: 609,
+            title: 'factory quest',
+            detail: '',
+            category: 6,
+            type: 1,
+            state: 2,
+            progressFlag: 2,
+            progressCurrent: 5,
+            progressRequired: 5,
+            localCompletionVerified: false,
+          ),
+        },
+      ),
+    );
+    addTearDown(controller.dispose);
+    await controller.idle;
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('zh'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(body: PinnedQuestsSummary(
+        controller: controller,
+        collapsed: false,
+        onToggleCollapse: () {},
+        onOpenQuest: (_) {},
+      )),
+    ));
+    await tester.pump();
+    expect(find.text('5/5 · 已达成（待确认）'), findsOneWidget);
+    expect(find.text('完成'), findsNothing);
+  });
 }
 
 class _StaticStore extends GameStateStore {

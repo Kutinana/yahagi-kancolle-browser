@@ -48,6 +48,7 @@ final class DiagnosticController extends ChangeNotifier {
 
   bool _enabled = true;
   bool _exporting = false;
+  Future<void> _fileOperations = Future<void>.value();
   int _storageBytes = 0;
   DateTime? _oldestRecordAt;
   FlutterExceptionHandler? _previousFlutterHandler;
@@ -78,11 +79,14 @@ final class DiagnosticController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setEnabled(bool value) async {
+  Future<void> setEnabled(bool value) =>
+      _enqueueFileOperation(() => _setEnabled(value));
+
+  Future<void> _setEnabled(bool value) async {
     if (value == _enabled) return;
+    await settings.saveEnabled(value);
     _enabled = value;
     notifyListeners();
-    await settings.saveEnabled(value);
     if (value) {
       await recorder.setEnabled(true);
       _attach();
@@ -106,25 +110,38 @@ final class DiagnosticController extends ChangeNotifier {
 
   Future<File> export() => share();
 
-  Future<T> _runExport<T>(Future<T> Function() operation) async {
-    _exporting = true;
-    notifyListeners();
-    try {
-      await recorder.flush();
-      return await operation();
-    } finally {
-      _exporting = false;
-      await refreshStorageState();
-      notifyListeners();
-    }
+  Future<T> _runExport<T>(Future<T> Function() operation) =>
+      _enqueueFileOperation(() async {
+        _exporting = true;
+        notifyListeners();
+        try {
+          await recorder.flush();
+          return await operation();
+        } finally {
+          _exporting = false;
+          await refreshStorageState();
+          notifyListeners();
+        }
+      });
+
+  Future<T> _enqueueFileOperation<T>(Future<T> Function() operation) {
+    final result = _fileOperations.then((_) => operation());
+    _fileOperations = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
   }
 
-  Future<void> clear() async {
-    await recorder.flush();
-    await storage.clear();
-    await refreshStorageState();
-    notifyListeners();
-  }
+  Future<void> clear() => _enqueueFileOperation(() async {
+    await recorder.setEnabled(false);
+    try {
+      await recorder.flush();
+      await storage.clear();
+      await exporter.clearGeneratedExports();
+      await refreshStorageState();
+      notifyListeners();
+    } finally {
+      if (_enabled) await recorder.setEnabled(true);
+    }
+  });
 
   Future<void> refreshStorageState() async {
     final state = await storage.inspect();

@@ -204,7 +204,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get diagnosticClearConfirmTitle => '清除诊断日志？';
 
   @override
-  String get diagnosticClearConfirmDesc => '设备上的诊断日志将被永久删除。';
+  String get diagnosticClearConfirmDesc => '将删除应用内的诊断日志和临时导出副本。已另存或分享的文件需自行删除。';
+
+  @override
+  String get diagnosticClearFailed => '清除诊断数据失败，请重试。';
 
   @override
   String get diagnosticExportFailed => '诊断文件导出失败';
@@ -1036,7 +1039,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backgroundGameRetentionDesc =>
-      '进入后台时显示常驻通知以降低游戏会话被系统回收的概率，可能增加耗电。';
+      '游戏运行期间显示常驻通知，降低切换应用后会话被系统回收的概率，可能增加耗电。';
 
   @override
   String get backgroundGameRetentionNotificationTitle => '矢矧正在后台运行';
@@ -1193,6 +1196,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get questsNeedSync => '需进入任务界面同步信息';
+
+  @override
+  String get questAwaitingConfirmation => '已达成（待确认）';
 
   @override
   String get waitingQuestData => '等待任务数据';
@@ -2378,8 +2384,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get kcwikiReportTitle => '帮助 KCWiki 收集数据';
 
   @override
-  String get kcwikiReportDisabledDesc =>
-      '默认开启，当前已关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。';
+  String get kcwikiReportDisabledDesc => '默认关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。';
 
   @override
   String get kcwikiReportEnabledDesc => '已开启；仅发送带路、任务前置、战斗、友军、陆航/空袭和改修数据。';
@@ -2389,7 +2394,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get kcwikiReportConfirmDesc =>
-      '开启后，应用会把带路、任务前置、战斗、友军、陆航/空袭和改修记录发送到 KCWiki 的 report2 服务器。该服务器目前使用未加密的 HTTP；不会发送登录令牌、Cookie 或请求头；上传失败不会阻塞游戏功能。';
+      '开启后，应用会通过已配置的 HTTPS 地址发送带路、任务前置、战斗、友军、陆航/空袭和改修记录。不发送登录令牌、Cookie 或请求头；上传失败不会阻塞游戏功能。';
+
+  @override
+  String get kcwikiReportUnavailable => '当前版本未配置安全的 HTTPS 上报地址，无法开启数据贡献。';
 
   @override
   String get kcwikiReportEnable => '自愿开启';
@@ -3126,6 +3134,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String questPendingConfirmationSingleNotice(String title) {
+    return '任务目标已达成（待游戏确认）：$title';
+  }
+
+  @override
+  String questPendingConfirmationMultiNotice(int count) {
+    return '$count 个任务目标已达成（待游戏确认）';
+  }
+
+  @override
   String noticeDevSuccess(String name) {
     return '$name 开发成功';
   }
@@ -3318,6 +3336,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get expCalcTrackDeleted => '已从经验追踪列表移除';
+
+  @override
+  String get expCalcTrackLoadFailed => '追踪列表读取失败，点击重试';
+
+  @override
+  String get expCalcTrackSaveFailed => '追踪列表保存失败，请重试';
 
   @override
   String get expCalcFreeMode => '自定义计算（无舰娘）';
@@ -3583,7 +3607,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get diagnosticClearConfirmTitle => '清除診斷日誌？';
 
   @override
-  String get diagnosticClearConfirmDesc => '裝置上的診斷日誌將被永久刪除。';
+  String get diagnosticClearConfirmDesc =>
+      '將刪除應用程式內的診斷日誌和暫存匯出副本。已另存或分享的檔案需自行刪除。';
+
+  @override
+  String get diagnosticClearFailed => '清除診斷資料失敗，請重試。';
 
   @override
   String get diagnosticExportFailed => '診斷檔案匯出失敗';
@@ -4416,7 +4444,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get backgroundGameRetentionDesc =>
-      '進入背景時顯示常駐通知，以降低遊戲工作階段被系統回收的機率，可能增加耗電。';
+      '遊戲執行期間顯示常駐通知，降低切換應用程式後工作階段被系統回收的機率，可能增加耗電。';
 
   @override
   String get backgroundGameRetentionNotificationTitle => '矢矧正在背景執行';
@@ -4573,6 +4601,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get questsNeedSync => '需進入任務介面同步資訊';
+
+  @override
+  String get questAwaitingConfirmation => '已達成（待確認）';
 
   @override
   String get waitingQuestData => '等待任務資料';
@@ -5758,8 +5789,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get kcwikiReportTitle => '協助 KCWiki 收集資料';
 
   @override
-  String get kcwikiReportDisabledDesc =>
-      '預設開啟，目前已關閉。關閉時不收集、不組包、不連線，也不影響遊戲和本機功能。';
+  String get kcwikiReportDisabledDesc => '預設關閉。關閉時不收集、不組包、不連線，也不影響遊戲和本機功能。';
 
   @override
   String get kcwikiReportEnabledDesc => '已開啟；僅傳送帶路、任務前置、戰鬥、友軍、陸航／空襲和改修資料。';
@@ -5769,7 +5799,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get kcwikiReportConfirmDesc =>
-      '開啟後，應用程式會把帶路、任務前置、戰鬥、友軍、陸航／空襲和改修記錄傳送到 KCWiki 的 report2 伺服器。該伺服器目前使用未加密的 HTTP；不會傳送登入權杖、Cookie 或請求標頭；上傳失敗不會阻塞遊戲功能。';
+      '開啟後，應用程式會透過已設定的 HTTPS 位址傳送帶路、任務前置、戰鬥、友軍、陸航／空襲和改修記錄。不傳送登入權杖、Cookie 或請求標頭；上傳失敗不會阻塞遊戲功能。';
+
+  @override
+  String get kcwikiReportUnavailable => '目前版本未設定安全的 HTTPS 回報位址，無法開啟資料貢獻。';
 
   @override
   String get kcwikiReportEnable => '自願開啟';
@@ -6506,6 +6539,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String questPendingConfirmationSingleNotice(String title) {
+    return '任務目標已達成（待遊戲確認）：$title';
+  }
+
+  @override
+  String questPendingConfirmationMultiNotice(int count) {
+    return '$count 個任務目標已達成（待遊戲確認）';
+  }
+
+  @override
   String noticeDevSuccess(String name) {
     return '$name 開發成功';
   }
@@ -6698,6 +6741,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get expCalcTrackDeleted => '已從經驗追蹤清單移除';
+
+  @override
+  String get expCalcTrackLoadFailed => '追蹤清單讀取失敗，點擊重試';
+
+  @override
+  String get expCalcTrackSaveFailed => '追蹤清單儲存失敗，請重試';
 
   @override
   String get expCalcFreeMode => '自訂計算（無艦娘）';

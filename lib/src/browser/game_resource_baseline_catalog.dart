@@ -116,8 +116,8 @@ final class GameResourceBaselineCatalog {
 
   static bool _isPreloadable(String path) {
     final lower = path.toLowerCase();
-    if (lower.startsWith('/kcs2/resources/')) return true;
     if (!const <String>[
+      '/kcs2/resources/',
       '/kcs2/img/',
       '/kcs/sound/',
       '/kcscontents/',

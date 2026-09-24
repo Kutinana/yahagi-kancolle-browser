@@ -229,8 +229,16 @@ class PinnedQuestsSummary extends StatelessWidget {
   }
 
   String _getProgressText(GameQuest q, AppLocalizations l10n) {
-    if (q.exactProgressLabel case final progress?) return progress;
     if (q.isCompleted) return l10n.done;
+    if (q.exactProgressLabel case final progress?) {
+      if (q.progressRequired != null &&
+          q.progressRequired! > 0 &&
+          q.progressCurrent != null &&
+          q.progressCurrent! >= q.progressRequired!) {
+        return '$progress · ${l10n.questAwaitingConfirmation}';
+      }
+      return progress;
+    }
     if (q.state == 2) {
       if (q.progressFlag == 1) return '50%';
       if (q.progressFlag == 2) return '80%';

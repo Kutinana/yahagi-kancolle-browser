@@ -6,9 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.ResultReceiver
 import androidx.core.content.ContextCompat
 
 class NotificationProgressService : Service() {
@@ -22,11 +24,26 @@ class NotificationProgressService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val receipt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra(EXTRA_RECEIPT, ResultReceiver::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent?.getParcelableExtra<ResultReceiver>(EXTRA_RECEIPT)
+        }
         if (intent?.action == ACTION_SET_SESSION_RETENTION) {
             sessionRetentionRequested = intent.getBooleanExtra(EXTRA_RETAINING, false)
         }
         handler.removeCallbacks(refreshRunnable)
-        refreshAndSchedule()
+        try {
+            refreshAndSchedule()
+            receipt?.send(RESULT_OK, Bundle.EMPTY)
+        } catch (error: Exception) {
+            sessionRetentionRequested = false
+            receipt?.send(RESULT_ERROR, Bundle().apply {
+                putString(EXTRA_ERROR, error.message ?: error.javaClass.simpleName)
+            })
+            stopSelf()
+        }
         return START_STICKY
     }
 
@@ -113,6 +130,11 @@ class NotificationProgressService : Service() {
         private const val ACTION_SET_SESSION_RETENTION =
             "app.yahagi.kancollebrowser.action.SET_SESSION_RETENTION"
         private const val EXTRA_RETAINING = "retaining"
+        private const val EXTRA_RECEIPT = "receipt"
+        private const val EXTRA_ERROR = "error"
+        private const val RESULT_OK = 1
+        private const val RESULT_ERROR = 2
+        private const val RECEIPT_TIMEOUT_MS = 8_000L
 
         @Volatile
         private var running = false
@@ -120,15 +142,47 @@ class NotificationProgressService : Service() {
         @Volatile
         private var sessionRetentionRequested = false
 
-        fun setSessionRetention(context: Context, retaining: Boolean) {
+        fun setSessionRetention(
+            context: Context,
+            retaining: Boolean,
+            onComplete: (Exception?) -> Unit,
+        ) {
+            val callbackHandler = Handler(Looper.getMainLooper())
+            var completed = false
+            lateinit var timeout: Runnable
+            fun complete(error: Exception?) {
+                if (completed) return
+                completed = true
+                callbackHandler.removeCallbacks(timeout)
+                onComplete(error)
+            }
+            timeout = Runnable {
+                complete(IllegalStateException("Foreground service did not confirm startup"))
+            }
+            val receipt = object : ResultReceiver(callbackHandler) {
+                override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
+                    complete(
+                        if (resultCode == RESULT_OK) null
+                        else IllegalStateException(
+                            resultData?.getString(EXTRA_ERROR) ?: "Foreground service startup failed",
+                        ),
+                    )
+                }
+            }
             val intent = Intent(context, NotificationProgressService::class.java).apply {
                 action = ACTION_SET_SESSION_RETENTION
                 putExtra(EXTRA_RETAINING, retaining)
+                putExtra(EXTRA_RECEIPT, receipt)
             }
-            if (retaining) {
-                ContextCompat.startForegroundService(context, intent)
-            } else {
-                context.startService(intent)
+            try {
+                if (retaining) {
+                    ContextCompat.startForegroundService(context, intent)
+                } else {
+                    context.startService(intent)
+                }
+                callbackHandler.postDelayed(timeout, RECEIPT_TIMEOUT_MS)
+            } catch (error: Exception) {
+                complete(error)
             }
         }
 

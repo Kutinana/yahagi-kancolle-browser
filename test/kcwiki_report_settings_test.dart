@@ -1,13 +1,27 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yahagi_kancolle_browser/src/kcwiki_report/kcwiki_report_settings.dart';
 
 void main() {
-  test('missing preference enables KCWiki reporting by default', () async {
+  test('legacy default-on preference requires renewed consent', () async {
+    SharedPreferences.setMockInitialValues({
+      'kcwiki.report.enabled.v1': true,
+    });
+    final controller = await KcwikiReportController.load(
+      SharedPreferencesKcwikiReportSettingsStore(),
+    );
+    addTearDown(controller.dispose);
+    expect(controller.enabled, isFalse);
+    await controller.setEnabled(true);
+    expect(controller.enabled, isTrue);
+  });
+
+  test('missing preference keeps KCWiki reporting off until opt-in', () async {
     final store = MemoryKcwikiReportSettingsStore();
     final controller = await KcwikiReportController.load(store);
     addTearDown(controller.dispose);
 
-    expect(controller.enabled, isTrue);
+    expect(controller.enabled, isFalse);
   });
 
   test('disabled preference is restored', () async {

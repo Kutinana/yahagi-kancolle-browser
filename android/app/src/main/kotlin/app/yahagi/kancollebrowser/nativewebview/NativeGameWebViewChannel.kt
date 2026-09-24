@@ -352,6 +352,17 @@ internal class NativeGameWebViewChannel(
             override fun pageFinished(generation: Long, url: String) =
                 handlePageFinished(attachmentId, generation, url)
 
+            override fun presentationChanged(generation: Long, isGame: Boolean) =
+                emitForGeneration(
+                    attachmentId,
+                    generation,
+                    mapOf(
+                        "type" to "presentationChanged",
+                        "generationId" to generation,
+                        "isGame" to isGame,
+                    ),
+                )
+
             override fun mainFrameError(generation: Long, errorCode: Int, description: String) =
                 handleMainFrameError(attachmentId, generation, errorCode, description)
 

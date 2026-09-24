@@ -3,8 +3,10 @@ package app.yahagi.kancollebrowser.browser
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Message
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.webkit.ClientCertRequest
+import android.webkit.CookieManager
 import android.webkit.HttpAuthHandler
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.SafeBrowsingResponse
@@ -16,6 +18,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.util.Log
 import java.io.ByteArrayInputStream
+import java.net.URI
 
 /**
  * Wraps the plugin's [WebViewClient] and serves gadget client files from the
@@ -33,6 +36,7 @@ class GadgetBypassWebViewClient(
 
     private companion object {
         const val TAG = "GadgetBypass"
+        const val SLOW_CACHE_REQUEST_MS = 500L
     }
 
     val originalClient: WebViewClient
@@ -59,6 +63,7 @@ class GadgetBypassWebViewClient(
         if (isEnabled() && GadgetBypassRules.shouldIntercept(url, "GET")) {
             return serveFromBypass(url) ?: original.shouldInterceptRequest(view, url)
         }
+        serveFromGameCache(url)?.let { return it }
         return original.shouldInterceptRequest(view, url)
     }
 
@@ -78,19 +83,53 @@ class GadgetBypassWebViewClient(
         url: String,
         requestHeaders: Map<String, String> = emptyMap(),
         method: String = "GET",
-    ): WebResourceResponse? = try {
-        if (!cookiesIncludedInRequestHeaders || !method.equals("GET", true)) return null
-        val response = gameResourceEngine?.fetch(url, requestHeaders, method = method) ?: return null
-        WebResourceResponse(
-            response.mimeType,
-            response.encoding,
-            response.statusCode,
-            response.reasonPhrase,
-            response.headers,
-            ByteArrayInputStream(response.bytes),
-        )
-    } catch (_: Exception) {
-        null
+    ): WebResourceResponse? {
+        if (!method.equals("GET", true) ||
+            !cookiesIncludedInRequestHeaders &&
+                !GameResourceCacheRules.canInterceptWithoutCookieHeaders(url, method)
+        ) return null
+        val startedAt = SystemClock.elapsedRealtime()
+        val path = runCatching { URI(url).rawPath }.getOrNull() ?: "unknown"
+        return try {
+            val cacheHeaders = if (cookiesIncludedInRequestHeaders) requestHeaders else {
+                // Shared binary assets need no cookie lookup on the WebView I/O thread.
+                val shareable = runCatching { URI(url) }.getOrNull()
+                    ?.let(GameResourceCacheRules::isShareableStaticUri) == true
+                val alreadyHasCookie = requestHeaders.keys.any { it.equals("Cookie", true) }
+                val cookie = if (shareable || alreadyHasCookie) null else {
+                    runCatching { CookieManager.getInstance().getCookie(url) }.getOrNull()
+                }
+                GameResourceCacheRules.withFallbackCookie(requestHeaders, cookie)
+            }
+            val response = gameResourceEngine?.fetch(url, cacheHeaders, method = method)
+            val elapsedMs = SystemClock.elapsedRealtime() - startedAt
+            if (elapsedMs >= SLOW_CACHE_REQUEST_MS) {
+                Log.w(TAG, "resource cache ${response?.source ?: "fallback"} took ${elapsedMs}ms for $path")
+            } else if (response?.source == GameResourceResponseSource.NETWORK) {
+                Log.d(TAG, "resource cache NETWORK took ${elapsedMs}ms for $path")
+            }
+            if (response == null) return null
+            val stream = try { response.openStream() } catch (error: Exception) {
+                response.discard()
+                throw error
+            }
+            try {
+                WebResourceResponse(
+                    response.mimeType,
+                    response.encoding,
+                    response.statusCode,
+                    response.reasonPhrase,
+                    response.headers,
+                    stream,
+                )
+            } catch (error: Exception) {
+                stream.close()
+                throw error
+            }
+        } catch (error: Exception) {
+            Log.w(TAG, "resource cache failed for $path: ${error.javaClass.simpleName}")
+            null
+        }
     }
 
     @Deprecated("Deprecated in WebView")

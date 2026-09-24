@@ -24,6 +24,7 @@ import '../telemetry/telemetry_controller.dart';
 import '../toolbox/sortie_map_query/sortie_map_catalog_controller.dart';
 import '../toolbox/sortie_map_query/enemy_catalog_controller.dart';
 import '../kcwiki_report/kcwiki_report_settings.dart';
+import '../kcwiki_report/kcwiki_report_transport.dart';
 import '../widgets/top_notice.dart';
 import '../widgets/adaptive_input_dialog.dart';
 import 'diagnostic_user_section.dart';
@@ -47,6 +48,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.senkaController,
     this.gameResourceCacheController,
     this.kcwikiReportController,
+    this.kcwikiEndpointAvailable,
     this.diagnosticController,
     this.showDeveloperDiagnostics = false,
     this.gameRenderingModeController,
@@ -66,6 +68,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final SenkaController? senkaController;
   final GameResourceCacheController? gameResourceCacheController;
   final KcwikiReportController? kcwikiReportController;
+  final bool? kcwikiEndpointAvailable;
   final DiagnosticController? diagnosticController;
   final bool showDeveloperDiagnostics;
   final GameRenderingModeController? gameRenderingModeController;
@@ -375,6 +378,15 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     bool enabled,
   ) async {
     if (enabled) {
+      if (!(kcwikiEndpointAvailable ??
+          configuredKcwikiReportEndpoint() != null)) {
+        TopNotice.show(
+          context,
+          message: l10n.kcwikiReportUnavailable,
+          tone: TopNoticeTone.error,
+        );
+        return;
+      }
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(

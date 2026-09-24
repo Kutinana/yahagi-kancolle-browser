@@ -205,6 +205,10 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
 
   // Tracker table items
   List<ExpCalcTrackItem> _trackItems = <ExpCalcTrackItem>[];
+  int _trackGeneration = 0;
+  bool _trackLoading = true;
+  bool _trackLoadFailed = false;
+  Future<void> _trackWriteQueue = Future<void>.value();
 
   @override
   void initState() {
@@ -239,6 +243,13 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
       _loadCatalog();
     }
     if (oldWidget.state.memberId != widget.state.memberId) {
+      _trackGeneration++;
+      _trackItems = <ExpCalcTrackItem>[];
+      _trackLoading = true;
+      _trackLoadFailed = false;
+      _selectedShipInstanceId = null;
+      _selectedShipName = '';
+      _initShipSelection();
       _loadTrackItems();
     }
     if (_selectedShipInstanceId != null) {
@@ -273,6 +284,7 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
   void dispose() {
     widget.catalogController?.removeListener(_onCatalogChanged);
     _catalogGeneration++;
+    _trackGeneration++;
     _curLevelController.dispose();
     _targetLevelController.dispose();
     for (final node in _routeNodes) {
@@ -282,11 +294,39 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
   }
 
   Future<void> _loadTrackItems() async {
-    final items = await _store.loadTrackItems();
-    if (!mounted) return;
+    final generation = _trackGeneration;
+    final memberId = widget.state.memberId;
+    try {
+      final items = await _store.loadTrackItems(memberId);
+      if (!mounted ||
+          generation != _trackGeneration ||
+          memberId != widget.state.memberId) {
+        return;
+      }
+      setState(() {
+        _trackItems = items;
+        _trackLoading = false;
+        _trackLoadFailed = false;
+      });
+    } catch (_) {
+      if (!mounted ||
+          generation != _trackGeneration ||
+          memberId != widget.state.memberId) {
+        return;
+      }
+      setState(() {
+        _trackLoading = false;
+        _trackLoadFailed = true;
+      });
+    }
+  }
+
+  void _retryLoadTrackItems() {
     setState(() {
-      _trackItems = items;
+      _trackLoading = true;
+      _trackLoadFailed = false;
     });
+    _loadTrackItems();
   }
 
   void _initShipSelection() {
@@ -295,6 +335,8 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
       final first = sortedShips.first;
       _selectShip(first);
     } else {
+      _selectedShipInstanceId = null;
+      _selectedShipName = '';
       _currentLevel = 1;
       _currentExp = 0;
       _targetLevel = 2;
@@ -434,7 +476,8 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
   );
 
   Future<void> _addTrackItem() async {
-    if (!_canEstimate) return;
+    if (!_canEstimate || _trackLoading || _trackLoadFailed) return;
+    final memberId = widget.state.memberId;
     final l10n = AppLocalizations.of(context)!;
     final shipName = _selectedShipInstanceId != null
         ? _selectedShipName
@@ -461,24 +504,71 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
       createdAt: DateTime.now(),
     );
 
-    final updated = <ExpCalcTrackItem>[item, ..._trackItems];
-    await _store.saveTrackItems(updated);
-
-    if (!mounted) return;
-    setState(() => _trackItems = updated);
+    final saved = await _mutateTrackItems((items) => [item, ...items]);
+    if (!mounted || widget.state.memberId != memberId) return;
+    if (!saved) {
+      if (!_trackLoadFailed) {
+        TopNotice.show(
+          context,
+          message: l10n.expCalcTrackSaveFailed,
+          tone: TopNoticeTone.error,
+        );
+      }
+      return;
+    }
 
     TopNotice.show(context, message: l10n.expCalcTrackAdded);
   }
 
   Future<void> _deleteTrackItem(String id) async {
+    if (_trackLoading || _trackLoadFailed) return;
+    final memberId = widget.state.memberId;
     final l10n = AppLocalizations.of(context)!;
-    final updated = _trackItems.where((i) => i.id != id).toList();
-    await _store.saveTrackItems(updated);
-
-    if (!mounted) return;
-    setState(() => _trackItems = updated);
+    final saved = await _mutateTrackItems(
+      (items) => items.where((item) => item.id != id).toList(),
+    );
+    if (!mounted || widget.state.memberId != memberId) return;
+    if (!saved) {
+      TopNotice.show(
+        context,
+        message: l10n.expCalcTrackSaveFailed,
+        tone: TopNoticeTone.error,
+      );
+      return;
+    }
 
     TopNotice.show(context, message: l10n.expCalcTrackDeleted);
+  }
+
+  Future<bool> _mutateTrackItems(
+    List<ExpCalcTrackItem> Function(List<ExpCalcTrackItem>) update,
+  ) {
+    final generation = _trackGeneration;
+    final memberId = widget.state.memberId;
+    final operation = _trackWriteQueue.then((_) async {
+      if (!mounted ||
+          _trackLoading ||
+          _trackLoadFailed ||
+          generation != _trackGeneration ||
+          memberId != widget.state.memberId) {
+        return false;
+      }
+      final updated = update(_trackItems);
+      try {
+        if (!await _store.saveTrackItems(memberId, updated)) return false;
+      } catch (_) {
+        return false;
+      }
+      if (!mounted ||
+          generation != _trackGeneration ||
+          memberId != widget.state.memberId) {
+        return false;
+      }
+      setState(() => _trackItems = updated);
+      return true;
+    });
+    _trackWriteQueue = operation.then<void>((_) {}, onError: (Object _) {});
+    return operation;
   }
 
   String get _fontFamily =>
@@ -1300,7 +1390,9 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
     const SizedBox(height: 10),
     FilledButton.icon(
       key: const Key('exp-calc-add-button'),
-      onPressed: _canEstimate ? _addTrackItem : null,
+      onPressed: _canEstimate && !_trackLoading && !_trackLoadFailed
+          ? _addTrackItem
+          : null,
       style: FilledButton.styleFrom(
         backgroundColor: _ExpCalcPalette.gold,
         foregroundColor: _ExpCalcPalette.background,
@@ -1404,7 +1496,16 @@ class _ExpCalcPageState extends State<ExpCalcPage> {
           ],
         ),
         const SizedBox(height: 10),
-        if (_trackItems.isEmpty)
+        if (_trackLoadFailed)
+          TextButton.icon(
+            key: const Key('exp-calc-track-retry'),
+            onPressed: _retryLoadTrackItems,
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.expCalcTrackLoadFailed),
+          )
+        else if (_trackLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (_trackItems.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(

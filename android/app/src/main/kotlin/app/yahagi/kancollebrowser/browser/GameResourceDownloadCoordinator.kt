@@ -119,6 +119,9 @@ class GameResourceDownloadCoordinator(
         expectedLengths: List<Long> = emptyList(),
     ): GameResourcePreparedManifest {
         check(!disposed.get()) { "Resource cache coordinator is disposed" }
+        require(candidates.size <= MAX_MANIFEST_ENTRIES &&
+            candidates.sumOf { it.length.toLong() } <= MAX_MANIFEST_URL_CHARS
+        ) { "Resource cache manifest is too large" }
         require(expectedLengths.isEmpty() || expectedLengths.size == candidates.size) {
             "Expected lengths must align with manifest URLs"
         }
@@ -459,6 +462,7 @@ class GameResourceDownloadCoordinator(
                     engine.fetch(
                         url,
                         expectedLength = expectedLength,
+                        waitForSlot = true,
                         shouldStore = {
                             workerGeneration == generation.get() &&
                                 modeProvider() != GameResourceCacheMode.NONE
@@ -472,10 +476,14 @@ class GameResourceDownloadCoordinator(
                     }
                     return
                 } ?: continue
-                if (workerGeneration != generation.get() || pauseRequested) return
-                if (response.source == GameResourceResponseSource.NETWORK) {
-                    synchronized(this) { downloadedBytes += response.bytes.size }
+                if (workerGeneration != generation.get() || pauseRequested) {
+                    response.discard()
+                    return
                 }
+                if (response.source == GameResourceResponseSource.NETWORK) {
+                    synchronized(this) { downloadedBytes += response.bodyLength }
+                }
+                response.discard()
                 val inspection = engine.inspect(url, expectedLength)
                 if (inspection.state == GameResourceInspectionState.VALID) {
                     synchronized(this) {
@@ -575,7 +583,7 @@ class GameResourceDownloadCoordinator(
     }
 
     private fun loadManifest(file: File): Boolean {
-        if (!file.isFile || file.length() == 0L) return false
+        if (!file.isFile || file.length() == 0L || file.length() > MAX_MANIFEST_FILE_BYTES) return false
         return runCatching {
             val json = JSONObject(file.readText())
             if (json.optString("profile") != profile) return@runCatching false
@@ -787,6 +795,9 @@ class GameResourceDownloadCoordinator(
 
     companion object {
         private const val MAX_STATE_FILE_BYTES = 256L * 1024L
+        private const val MAX_MANIFEST_FILE_BYTES = 12L * 1024L * 1024L
+        private const val MAX_MANIFEST_URL_CHARS = 8L * 1024L * 1024L
+        private const val MAX_MANIFEST_ENTRIES = GameResourceCacheIndex.MAX_ENTRIES
     }
 
     private data class CoordinatorStateSnapshot(

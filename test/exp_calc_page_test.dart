@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_catalog_controller.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_catalog_store.dart';
@@ -6,7 +7,9 @@ import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
+import 'package:yahagi_kancolle_browser/src/account/account_session.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/exp_calc/exp_calc_models.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/exp_calc/exp_calc_page.dart';
@@ -29,13 +32,83 @@ class FakeExpTrackerStore implements ExpTrackerStore {
   List<ExpCalcTrackItem> items = [];
 
   @override
-  Future<List<ExpCalcTrackItem>> loadTrackItems() async => List.of(items);
+  Future<List<ExpCalcTrackItem>> loadTrackItems(int memberId) async =>
+      List.of(items);
 
   @override
-  Future<void> saveTrackItems(List<ExpCalcTrackItem> newItems) async {
+  Future<bool> saveTrackItems(
+    int memberId,
+    List<ExpCalcTrackItem> newItems,
+  ) async {
     items = List.of(newItems);
+    return true;
   }
 }
+
+class _DelayedExpTrackerStore implements ExpTrackerStore {
+  final loads = <Completer<List<ExpCalcTrackItem>>>[];
+  @override
+  Future<List<ExpCalcTrackItem>> loadTrackItems(int memberId) {
+    final pending = Completer<List<ExpCalcTrackItem>>();
+    loads.add(pending);
+    return pending.future;
+  }
+
+  @override
+  Future<bool> saveTrackItems(
+    int memberId,
+    List<ExpCalcTrackItem> items,
+  ) async => true;
+}
+
+class _FailingLoadExpTrackerStore implements ExpTrackerStore {
+  int loads = 0;
+  final items = <ExpCalcTrackItem>[_accountItem('existing plan')];
+
+  @override
+  Future<List<ExpCalcTrackItem>> loadTrackItems(int memberId) async {
+    if (loads++ == 0) throw StateError('temporary read failure');
+    return List.of(items);
+  }
+
+  @override
+  Future<bool> saveTrackItems(
+    int memberId,
+    List<ExpCalcTrackItem> items,
+  ) async {
+    this.items
+      ..clear()
+      ..addAll(items);
+    return true;
+  }
+}
+
+class _FailingSaveExpTrackerStore extends FakeExpTrackerStore {
+  @override
+  Future<bool> saveTrackItems(
+    int memberId,
+    List<ExpCalcTrackItem> newItems,
+  ) async {
+    throw StateError('disk unavailable');
+  }
+}
+
+ExpCalcTrackItem _accountItem(String name) => ExpCalcTrackItem(
+  id: name,
+  shipInstanceId: 1,
+  shipMasterId: 1,
+  shipName: name,
+  targetLevel: 25,
+  targetExp: 10000,
+  map: '5-2',
+  rank: BattleRank.s,
+  isFlagship: true,
+  isMvp: true,
+  baseExp: 150,
+  mapExp: 540,
+  recordedLevel: 20,
+  recordedExp: 5000,
+);
 
 final _assetCatalog = SortieMapCatalogData.fromJsonString(
   File('assets/data/sortie_map_catalog.json').readAsStringSync(),
@@ -43,6 +116,104 @@ final _assetCatalog = SortieMapCatalogData.fromJsonString(
 Future<SortieMapCatalogData> _loadCatalog() async => _assetCatalog;
 
 void main() {
+  testWidgets('failed tracking save does not claim success or alter list', (
+    tester,
+  ) async {
+    final store = _FailingSaveExpTrackerStore();
+    await tester.pumpWidget(
+      _testableApp(
+        ExpCalcPage(
+          state: const GameState(memberId: 1),
+          store: store,
+          catalogLoader: _loadCatalog,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('exp-calc-add-button')));
+    await tester.tap(find.byKey(const Key('exp-calc-add-button')));
+    await tester.pump();
+    expect(store.items, isEmpty);
+    expect(find.text('追踪列表保存失败，请重试'), findsOneWidget);
+  });
+  testWidgets('failed tracking load blocks writes until retry succeeds', (
+    tester,
+  ) async {
+    final store = _FailingLoadExpTrackerStore();
+    await tester.pumpWidget(
+      _testableApp(
+        ExpCalcPage(
+          state: const GameState(memberId: 1),
+          store: store,
+          catalogLoader: _loadCatalog,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('exp-calc-track-retry')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('exp-calc-add-button')))
+          .onPressed,
+      isNull,
+    );
+    expect(store.items.single.shipName, 'existing plan');
+
+    await tester.tap(find.byKey(const Key('exp-calc-track-retry')));
+    await tester.pumpAndSettle();
+    expect(find.text('existing plan'), findsWidgets);
+    expect(find.byKey(const Key('exp-calc-track-retry')), findsNothing);
+  });
+  testWidgets('switching accounts immediately clears ship and tracking data', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final session = AccountSession(initialMemberId: 1);
+    final store = SharedPreferencesExpTrackerStore(accountSession: session);
+    await store.saveTrackItems(1, [_accountItem('A tracking')]);
+    GameState account(int memberId, String name, int level) => GameState(
+      memberId: memberId,
+      masterShips: {1: MasterShip(id: 1, name: name, shipTypeId: 2)},
+      ships: {1: OwnedShip(id: 1, masterId: 1, level: level)},
+    );
+    Widget page(GameState state) => _testableApp(
+      ExpCalcPage(state: state, store: store, catalogLoader: _loadCatalog),
+    );
+
+    await tester.pumpWidget(page(account(1, 'A ship', 20)));
+    await tester.pumpAndSettle();
+    expect(find.text('A tracking'), findsWidgets);
+    session.selectMember(2);
+    await tester.pumpWidget(page(account(2, 'B ship', 30)));
+    await tester.pump();
+    expect(find.text('A tracking'), findsNothing);
+    expect(find.text('A ship · Lv.20'), findsNothing);
+    expect(find.text('B ship · Lv.30'), findsOneWidget);
+  });
+
+  testWidgets('late account A load cannot replace account B plans', (
+    tester,
+  ) async {
+    final store = _DelayedExpTrackerStore();
+    Widget page(int memberId) => _testableApp(
+      ExpCalcPage(
+        state: GameState(memberId: memberId),
+        store: store,
+        catalogLoader: _loadCatalog,
+      ),
+    );
+    await tester.pumpWidget(page(1));
+    await tester.pumpWidget(page(2));
+    expect(store.loads, hasLength(2));
+    store.loads[1].complete([_accountItem('B tracking')]);
+    await tester.pump();
+    expect(find.text('B tracking'), findsWidgets);
+    store.loads[0].complete([_accountItem('A tracking')]);
+    await tester.pump();
+    expect(find.text('B tracking'), findsWidgets);
+    expect(find.text('A tracking'), findsNothing);
+  });
+
   testWidgets('narrow landscape keeps five-digit point earnings on one line', (
     tester,
   ) async {

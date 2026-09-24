@@ -2,6 +2,7 @@ package app.yahagi.kancollebrowser.browser
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -67,9 +68,138 @@ class GameResourceCacheEngineTest {
         val url = official("/kcs2/resources/a.png")
         assertNull(engine.fetch(url, mapOf("Cache-Control" to "no-store")))
         assertNull(engine.fetch(url, mapOf("Cache-Control" to "only-if-cached")))
-        assertNull(engine.fetch(url, mapOf("Pragma" to "no-cache")))
         assertEquals(0, fetcher.calls.get())
         assertTrue(engine.entries().isEmpty())
+    }
+
+    @Test
+    fun `oversized request header bypasses native cache before directive parsing`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(1)))
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/a.png")
+
+        assertNull(engine.fetch(url, mapOf("Cache-Control" to "max-age=1,".repeat(10_000))))
+        assertEquals(0, fetcher.calls.get())
+    }
+
+    @Test
+    fun `reload directive reuses cached static binary without network`() {
+        val initial = result(byteArrayOf(7)).copy(headers = mapOf(
+            "Content-Type" to "image/png", "ETag" to "asset-7",
+        ))
+        val fetcher = QueueFetcher(initial)
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/a.png?version=7")
+
+        assertEquals(GameResourceResponseSource.NETWORK, engine.fetch(url)?.source)
+        val reloaded = engine.fetch(url, mapOf("Cache-Control" to "no-cache"))
+
+        assertEquals(GameResourceResponseSource.CACHE, reloaded?.source)
+        assertArrayEquals(byteArrayOf(7), reloaded?.bytes)
+        assertEquals(1, fetcher.calls.get())
+    }
+
+    @Test
+    fun `pragma and zero max age also reuse cached static binary`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(7)))
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/a.png?version=7")
+
+        engine.fetch(url)
+        assertEquals(GameResourceResponseSource.CACHE,
+            engine.fetch(url, mapOf("Pragma" to "no-cache"))?.source)
+        assertEquals(GameResourceResponseSource.CACHE,
+            engine.fetch(url, mapOf("Cache-Control" to "max-age=0"))?.source)
+        assertEquals(1, fetcher.calls.get())
+    }
+
+    @Test
+    fun `reload directive reuses a cached script as in beta2`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(7)))
+        val engine = engine(fetcher)
+        val url = official("/kcs2/js/feature.js?version=7")
+
+        engine.fetch(url)
+        assertEquals(GameResourceResponseSource.CACHE,
+            engine.fetch(url, mapOf("Cache-Control" to "no-cache"))?.source)
+        assertEquals(GameResourceResponseSource.CACHE,
+            engine.fetch(url, mapOf("Pragma" to "no-cache"))?.source)
+        assertEquals(GameResourceResponseSource.CACHE,
+            engine.fetch(url, mapOf("Cache-Control" to "max-age=0"))?.source)
+        assertEquals(1, fetcher.calls.get())
+    }
+
+    @Test
+    fun `unversioned static binary still revalidates after its ttl`() {
+        var now = 1L
+        val fetcher = QueueFetcher(result(byteArrayOf(7)), result(byteArrayOf(), statusCode = 304))
+        val engine = engine(fetcher, clock = { now })
+        val url = official("/kcs2/resources/a.png")
+
+        engine.fetch(url)
+        assertEquals(GameResourceResponseSource.CACHE,
+            engine.fetch(url, mapOf("Cache-Control" to "no-cache"))?.source)
+        assertEquals(1, fetcher.calls.get())
+
+        now += GameResourceCacheEngine.UNVERSIONED_TTL_MS
+        assertEquals(GameResourceResponseSource.CACHE,
+            engine.fetch(url, mapOf("Cache-Control" to "no-cache"))?.source)
+        assertEquals(2, fetcher.calls.get())
+    }
+
+    @Test
+    fun `temporary and full cache keep sortie assets through a frame reload`() {
+        for (mode in listOf(GameResourceCacheMode.TEMPORARY, GameResourceCacheMode.FULL)) {
+            val fetcher = QueueFetcher(
+                result(byteArrayOf(1)),
+                result(byteArrayOf(2)),
+                result(byteArrayOf(3)),
+                result(byteArrayOf(), statusCode = 304),
+            )
+            val engine = engine(fetcher, mode = mode)
+            val bootstrap = official("/kcs2/version.json")
+            val shipImage = official("/kcs2/resources/ship/full/123.png?version=5")
+            val battleVoice = official("/kcs2/resources/voice/battle/123.mp3")
+
+            engine.fetch(bootstrap)
+            engine.fetch(shipImage)
+            engine.fetch(battleVoice)
+            val entriesBeforeReload = engine.entries().size
+
+            assertEquals(mode.name, GameResourceResponseSource.CACHE,
+                engine.fetch(bootstrap, mapOf("Cache-Control" to "no-cache"))?.source)
+            assertEquals(mode.name, GameResourceResponseSource.CACHE,
+                engine.fetch(shipImage, mapOf("Cache-Control" to "no-cache"))?.source)
+            assertEquals(mode.name, GameResourceResponseSource.CACHE, engine.fetch(battleVoice)?.source)
+            assertEquals(mode.name, entriesBeforeReload, engine.entries().size)
+            assertEquals(mode.name, 4, fetcher.calls.get())
+        }
+    }
+
+    @Test
+    fun `no cache response is reused without forced validation as in beta2`() {
+        val initial = result(byteArrayOf(9)).copy(headers = mapOf(
+            "Content-Type" to "image/png", "Cache-Control" to "no-cache", "ETag" to "asset-9",
+        ))
+        val fetcher = QueueFetcher(initial)
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/a.png?version=9")
+
+        assertEquals(GameResourceResponseSource.NETWORK, engine.fetch(url)?.source)
+        assertEquals(GameResourceResponseSource.CACHE, engine.fetch(url)?.source)
+        assertEquals(1, fetcher.calls.get())
+    }
+
+    @Test
+    fun `reload header does not force a script network request`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(7)), null)
+        val engine = engine(fetcher)
+        val url = official("/kcs2/js/feature.js?version=7")
+
+        assertEquals(GameResourceResponseSource.NETWORK, engine.fetch(url)?.source)
+        assertEquals(GameResourceResponseSource.CACHE,
+            engine.fetch(url, mapOf("Cache-Control" to "no-cache"))?.source)
+        assertEquals(1, fetcher.calls.get())
     }
 
     @Test
@@ -92,6 +222,29 @@ class GameResourceCacheEngineTest {
 
         assertTrue(engine.entries().isEmpty())
         assertEquals(0, store.totalBytes())
+    }
+
+    @Test
+    fun `oversized beta4 cache is reset without clearing other app data`() {
+        val appRoot = temporaryFolder.newFolder()
+        val settings = appRoot.resolve("settings.json")
+        settings.writeText("keep")
+        val cacheRoot = appRoot.resolve("game_resource_cache").apply { mkdirs() }
+        val indexFile = cacheRoot.resolve("index.json")
+        indexFile.bufferedWriter().use { writer ->
+            writer.write("{\"entries\":[\"")
+            repeat(8_193) { writer.write("x".repeat(1_024)) }
+            writer.write("\"]}")
+        }
+        val cachedFile = cacheRoot.resolve("files/old.cache")
+        cachedFile.parentFile?.mkdirs()
+        cachedFile.writeBytes(byteArrayOf(1))
+        val store = GameResourceCacheStore(cacheRoot, GameResourceCacheIndex(indexFile), 10_000)
+        val engine = GameResourceCacheEngine(store, QueueFetcher()) { GameResourceCacheMode.TEMPORARY }
+
+        assertTrue(engine.entries().isEmpty())
+        assertFalse(cachedFile.exists())
+        assertEquals("keep", settings.readText())
     }
 
     @Test
@@ -178,7 +331,29 @@ class GameResourceCacheEngineTest {
     }
 
     @Test
-    fun `no store response and partial response are never cached`() {
+    fun `resource data remains isolated between accounts`() {
+        val fetcher = QueueFetcher(result(byteArrayOf(1)), result(byteArrayOf(2)))
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/account.json?version=1")
+
+        assertArrayEquals(byteArrayOf(1), engine.fetch(url, mapOf("Cookie" to "account=A"))?.bytes)
+        assertArrayEquals(byteArrayOf(2), engine.fetch(url, mapOf("Cookie" to "account=B"))?.bytes)
+        assertArrayEquals(byteArrayOf(1), engine.fetch(url, mapOf("Cookie" to "account=A"))?.bytes)
+        assertEquals(2, fetcher.calls.get())
+    }
+
+    @Test
+    fun `oversized cookie falls back to WebView without a cache download`() {
+        val fetcher = QueueFetcher()
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/account.json")
+
+        assertNull(engine.fetch(url, mapOf("Cookie" to "x".repeat(100_000))))
+        assertEquals(0, fetcher.calls.get())
+    }
+
+    @Test
+    fun `no store response is served once without caching and partial response is delegated`() {
         val fetcher = QueueFetcher(
             result(byteArrayOf(1)).copy(headers = mapOf("Cache-Control" to "private, no-store")),
             result(byteArrayOf(2), statusCode = 206),
@@ -186,10 +361,36 @@ class GameResourceCacheEngineTest {
         val engine = engine(fetcher)
         val first = official("/kcs2/resources/private.png")
         val second = official("/kcs2/resources/partial.png")
-        assertNull(engine.fetch(first))
+        assertEquals(GameResourceResponseSource.NETWORK, engine.fetch(first)?.source)
         assertNull(engine.fetch(second))
         assertEquals(GameResourceInspectionState.MISSING, engine.inspectMetadata(first).state)
         assertEquals(GameResourceInspectionState.MISSING, engine.inspectMetadata(second).state)
+    }
+
+    @Test
+    fun `vary response is served once without entering the shared cache`() {
+        val response = result(byteArrayOf(4)).copy(headers = mapOf(
+            "Content-Type" to "image/png", "Vary" to "Accept-Encoding",
+        ))
+        val fetcher = QueueFetcher(response)
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/vary.png")
+
+        assertEquals(GameResourceResponseSource.NETWORK, engine.fetch(url)?.source)
+        assertEquals(GameResourceInspectionState.MISSING, engine.inspectMetadata(url).state)
+        assertEquals(1, fetcher.calls.get())
+    }
+
+    @Test
+    fun `response setting a cookie remains on WebView path`() {
+        val response = result(byteArrayOf(4)).copy(headers = mapOf(
+            "Content-Type" to "image/png", "Set-Cookie" to "session=renewed; Path=/",
+        ))
+        val engine = engine(QueueFetcher(response))
+        val url = official("/kcs2/resources/cookie.png")
+
+        assertNull(engine.fetch(url))
+        assertEquals(GameResourceInspectionState.MISSING, engine.inspectMetadata(url).state)
     }
 
     @Test
@@ -255,6 +456,77 @@ class GameResourceCacheEngineTest {
         assertArrayEquals(byteArrayOf(7), second.get(5, TimeUnit.SECONDS)?.bytes)
         assertEquals(1, fetcher.calls.get())
         pool.shutdownNow()
+    }
+
+    @Test
+    fun `at most two distinct cache misses download concurrently`() {
+        val started = CountDownLatch(2)
+        val release = CountDownLatch(1)
+        val calls = AtomicInteger()
+        val fetcher = GameResourceFetcher { _, _, _ ->
+            calls.incrementAndGet()
+            started.countDown()
+            release.await(5, TimeUnit.SECONDS)
+            result(byteArrayOf(7))
+        }
+        val engine = engine(fetcher)
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            val first = pool.submit<GameResourceResponse?> { engine.fetch(official("/kcs2/resources/a.png")) }
+            val second = pool.submit<GameResourceResponse?> { engine.fetch(official("/kcs2/resources/b.png")) }
+            assertTrue(started.await(5, TimeUnit.SECONDS))
+
+            assertNull(engine.fetch(official("/kcs2/resources/c.png")))
+            assertEquals(2, calls.get())
+            release.countDown()
+            assertEquals(1, first.get(5, TimeUnit.SECONDS)?.bytes?.size)
+            assertEquals(1, second.get(5, TimeUnit.SECONDS)?.bytes?.size)
+        } finally {
+            release.countDown()
+            pool.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `downloaded file is served and cached without a body array`() {
+        val downloaded = temporaryFolder.newFile("download.part")
+        downloaded.writeBytes(byteArrayOf(1, 2, 3))
+        val fetcher = QueueFetcher(GameResourceFetchResult(
+            200, "OK", mapOf("Content-Length" to "3"), file = downloaded,
+        ))
+        val engine = engine(fetcher)
+        val url = official("/kcs2/resources/a.png")
+
+        val network = engine.fetch(url)
+        assertArrayEquals(byteArrayOf(1, 2, 3), network?.openStream()?.use { it.readBytes() })
+        assertEquals(3L, network?.bodyLength)
+        assertArrayEquals(byteArrayOf(1, 2, 3), engine.fetch(url)?.openStream()?.use { it.readBytes() })
+        assertEquals(1, fetcher.calls.get())
+    }
+
+    @Test
+    fun `oversized metadata serves network response without caching`() {
+        val fetched = result(byteArrayOf(1)).copy(headers = mapOf(
+            "Content-Length" to "1", "ETag" to "x".repeat(20_000),
+        ))
+        val engine = engine(QueueFetcher(fetched))
+
+        val response = engine.fetch(official("/kcs2/resources/a.png"))
+
+        assertArrayEquals(byteArrayOf(1), response?.bytes)
+        assertTrue(engine.entries().isEmpty())
+    }
+
+    @Test
+    fun `uncached streamed response deletes temporary file when closed`() {
+        val downloaded = temporaryFolder.newFile("uncached.part")
+        downloaded.writeBytes(byteArrayOf(4, 5))
+        val engine = engine(QueueFetcher(GameResourceFetchResult(200, "OK", emptyMap(), file = downloaded)))
+
+        val response = engine.fetch(official("/kcs2/resources/a.png"), shouldStore = { false })
+        assertTrue(downloaded.isFile)
+        assertArrayEquals(byteArrayOf(4, 5), response?.openStream()?.use { it.readBytes() })
+        assertFalse(downloaded.exists())
     }
 
     @Test

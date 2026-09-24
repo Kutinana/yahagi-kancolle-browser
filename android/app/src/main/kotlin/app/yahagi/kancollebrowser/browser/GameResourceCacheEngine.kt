@@ -2,19 +2,44 @@ package app.yahagi.kancollebrowser.browser
 
 import java.net.HttpURLConnection
 import java.net.URI
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FilterInputStream
+import java.io.InputStream
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.Semaphore
 
 enum class GameResourceResponseSource { CACHE, NETWORK }
 
-data class GameResourceResponse(
-    val bytes: ByteArray,
+class GameResourceResponse(
+    private val bodyBytes: ByteArray = ByteArray(0),
     val mimeType: String,
     val encoding: String?,
     val statusCode: Int = 200,
     val reasonPhrase: String = "OK",
     val headers: Map<String, String> = emptyMap(),
     val source: GameResourceResponseSource,
-)
+    private val file: File? = null,
+    private val deleteFileOnClose: Boolean = false,
+) {
+    val bytes: ByteArray get() = file?.readBytes() ?: bodyBytes
+    val bodyLength: Long get() = file?.length() ?: bodyBytes.size.toLong()
+
+    fun openStream(): InputStream {
+        val resourceFile = file ?: return ByteArrayInputStream(bodyBytes)
+        val input = resourceFile.inputStream()
+        if (!deleteFileOnClose) return input
+        return object : FilterInputStream(input) {
+            override fun close() {
+                try { super.close() } finally { resourceFile.delete() }
+            }
+        }
+    }
+
+    fun discard() {
+        if (deleteFileOnClose) file?.delete()
+    }
+}
 
 class GameResourceCacheEngine(
     private val store: GameResourceCacheStore,
@@ -23,6 +48,7 @@ class GameResourceCacheEngine(
     private val modeProvider: () -> GameResourceCacheMode,
 ) {
     private val locks = Array(64) { Any() }
+    private val downloadPermits = Semaphore(2)
     private val legacyMigrationDone = AtomicBoolean(false)
 
     private fun ensureLegacyMigration() {
@@ -41,35 +67,54 @@ class GameResourceCacheEngine(
         method: String = "GET",
         expectedLength: Long? = null,
         shouldStore: () -> Boolean = { true },
+        waitForSlot: Boolean = false,
     ): GameResourceResponse? {
         val mode = modeProvider()
-        if (!mode.readsCache || !GameResourceCacheRules.shouldCache(url, method) ||
+        if (!mode.readsCache || requestHeaders.size > 32 ||
+            requestHeaders.any { (name, value) -> name.length > 128 || value.length > 8_192 } ||
+            !GameResourceCacheRules.shouldCache(url, method) ||
             requestHeaders.keys.any { name -> BYPASS_REQUEST_HEADERS.any { it.equals(name, true) } ||
                 (name.startsWith("X-", ignoreCase = true) &&
                     !name.equals("X-Requested-With", ignoreCase = true)) } ||
-            requestHeaders.keys.any { name ->
-                name.equals("Cache-Control", true) || name.equals("Pragma", true)
-            }
+            requestHeaders.value("Cache-Control").hasDirective("no-store") ||
+            requestHeaders.value("Cache-Control").hasDirective("only-if-cached")
         ) return null
         ensureLegacyMigration()
         val key = GameResourceCacheKey.from(url, requestHeaders) ?: return null
         val lock = locks[(key.hashCode() and Int.MAX_VALUE) % locks.size]
         synchronized(lock) {
             val storeGeneration = store.generation()
-            val cached = store.read(key)
+            val cached = store.readFile(key)
             val cachedLengthMismatch = cached != null && expectedLength != null &&
                 cached.entry.byteLength != expectedLength
+            // Keep beta2's hot-cache behavior for reload headers and response no-cache.
+            // Explicit must-revalidate, zero max-age, and bootstrap validation still apply.
+            val forceValidation =
+                cached?.entry?.responseHeaders?.value("Cache-Control").hasDirective("must-revalidate") ||
+                cached?.entry?.responseHeaders?.value("Cache-Control").hasDirective("max-age", "0")
             val mustValidate = GameResourceCacheRules.isAlwaysValidated(url) ||
                 cachedLengthMismatch ||
+                forceValidation ||
                 (cached != null && cached.entry.version == null &&
                     clock() - cached.entry.lastValidatedAt >= UNVERSIONED_TTL_MS)
             if (cached != null && !mustValidate) return cached.toResponse()
             val strictValidation = GameResourceCacheRules.requiresStrictValidation(url)
 
+            val acquired = if (waitForSlot) {
+                downloadPermits.acquire()
+                true
+            } else downloadPermits.tryAcquire()
+            if (!acquired) {
+                return if (strictValidation || forceValidation || cachedLengthMismatch) null
+                    else cached?.toResponse()
+            }
+            try {
             val validationEntry = cached?.entry?.takeUnless { cachedLengthMismatch }
             val fetched = runCatching { fetcher.fetch(url, requestHeaders, validationEntry) }.getOrNull()
-                ?: return if (strictValidation || cachedLengthMismatch ||
+                ?: return if (strictValidation || forceValidation || cachedLengthMismatch ||
                     store.generation() != storeGeneration) null else cached?.toResponse()
+            var retainFetchedFile = false
+            try {
             if (fetched.statusCode == HttpURLConnection.HTTP_NOT_MODIFIED) {
                 if (cachedLengthMismatch) return null
                 if (!fetched.headers.isCacheableResponse()) {
@@ -81,23 +126,27 @@ class GameResourceCacheEngine(
                         !name.equals("Content-Length", ignoreCase = true)
                 }
                 if (!store.markValidated(key, updatedHeaders, storeGeneration)) return null
-                return store.read(key)?.toResponse()
+                return store.readFile(key)?.toResponse()
             }
             if (fetched.statusCode != HttpURLConnection.HTTP_OK) {
                 if (fetched.statusCode == HttpURLConnection.HTTP_PARTIAL) return null
-                return if (strictValidation || cachedLengthMismatch ||
+                return if (strictValidation || forceValidation || cachedLengthMismatch ||
                     store.generation() != storeGeneration) null else cached?.toResponse()
             }
-            if (!fetched.headers.isCacheableResponse()) {
+            // WebView must process Set-Cookie itself. The fetcher stops before reading this body.
+            if (fetched.headers.value("Set-Cookie") != null ||
+                fetched.headers.value("Set-Cookie2") != null) {
                 store.removeIfGeneration(key, storeGeneration)
                 return null
             }
+            val cacheableResponse = fetched.headers.isCacheableResponse()
+            if (!cacheableResponse) store.removeIfGeneration(key, storeGeneration)
             val declaredLength = fetched.headers.value("Content-Length")?.toLongOrNull()
-            if (declaredLength != null && declaredLength != fetched.bytes.size.toLong()) {
+            if (fetched.bodyLength > HttpUrlConnectionGameResourceFetcher.MAX_RESOURCE_BYTES ||
+                declaredLength != null && declaredLength != fetched.bodyLength) {
                 return if (strictValidation || store.generation() != storeGeneration) null
                     else cached?.toResponse()
             }
-
             val mimeInfo = GameResourceCacheRules.mimeTypeFor(url)
             val mimeType = fetched.headers.value("Content-Type")
                 ?.substringBefore(';')
@@ -105,30 +154,51 @@ class GameResourceCacheEngine(
                 ?.takeIf { it.isNotEmpty() }
                 ?: mimeInfo.mime
             val matchesManifest = expectedLength == null ||
-                expectedLength == fetched.bytes.size.toLong()
-            if (matchesManifest && modeProvider().writesCache && shouldStore()) {
-                store.commitWithEviction(
-                    key = key,
-                    bytes = fetched.bytes,
+                expectedLength == fetched.bodyLength
+            var stored: GameResourceCacheEntry? = null
+            if (matchesManifest && cacheableResponse && modeProvider().writesCache && shouldStore()) {
+                stored = try {
+                    if (fetched.file != null) store.commitFileWithEviction(
+                    key = key, source = fetched.file,
                     version = runCatching { URI(url).rawQuery }.getOrNull(),
                     mimeType = mimeType,
                     etag = fetched.headers.value("ETag"),
                     lastModified = fetched.headers.value("Last-Modified"),
-                    responseHeaders = fetched.headers.filterKeys { name ->
-                        name.lowercase() !in HOP_BY_HOP_HEADERS
-                    },
+                    responseHeaders = GameResourceCacheRules.persistedResponseHeaders(fetched.headers),
+                    expectedGeneration = storeGeneration,
+                ) else store.commitWithEviction(
+                    key = key, bytes = fetched.bytes,
+                    version = runCatching { URI(url).rawQuery }.getOrNull(),
+                    mimeType = mimeType,
+                    etag = fetched.headers.value("ETag"),
+                    lastModified = fetched.headers.value("Last-Modified"),
+                    responseHeaders = GameResourceCacheRules.persistedResponseHeaders(fetched.headers),
                     expectedGeneration = storeGeneration,
                 )
+                } catch (_: IllegalArgumentException) {
+                    // The response is still usable; only its cache metadata was rejected.
+                    null
+                }
             }
+            val responseFile = if (stored != null) store.readFile(key)?.file ?: fetched.file else fetched.file
+            retainFetchedFile = responseFile != null && responseFile == fetched.file
             return GameResourceResponse(
-                bytes = fetched.bytes,
+                bodyBytes = fetched.bytes,
                 mimeType = mimeType,
                 encoding = mimeInfo.encoding,
                 statusCode = fetched.statusCode,
                 reasonPhrase = fetched.reasonPhrase,
                 headers = fetched.headers,
                 source = GameResourceResponseSource.NETWORK,
+                file = responseFile,
+                deleteFileOnClose = retainFetchedFile,
             )
+            } finally {
+                if (!retainFetchedFile) fetched.file?.delete()
+            }
+            } finally {
+                downloadPermits.release()
+            }
         }
     }
 
@@ -195,11 +265,11 @@ class GameResourceCacheEngine(
 
     fun availableDeviceBytes(): Long = store.availableDeviceBytes()
 
-    private fun GameResourceCachedValue.toResponse(): GameResourceResponse {
+    private fun GameResourceCachedFile.toResponse(): GameResourceResponse {
         val mime = entry.mimeType
         val encoding = if (mime.startsWith("text/") || mime.contains("javascript") || mime.contains("json")) "utf-8" else null
         return GameResourceResponse(
-            bytes = bytes,
+            file = file,
             mimeType = mime,
             encoding = encoding,
             headers = buildMap {
@@ -220,11 +290,18 @@ class GameResourceCacheEngine(
 
     private fun Map<String, String>.isCacheableResponse(): Boolean {
         if (value("Set-Cookie") != null || value("Set-Cookie2") != null ||
-            value("Vary") != null || value("Pragma")?.contains("no-cache", true) == true
+            value("Vary") != null
         ) return false
-        val directives = value("Cache-Control")?.split(',')?.map { it.trim().substringBefore('=').lowercase() }.orEmpty()
-        return directives.none { it == "private" || it == "no-store" || it == "no-cache" }
+        val cacheControl = value("Cache-Control")
+        return !cacheControl.hasDirective("private") && !cacheControl.hasDirective("no-store")
     }
+
+    private fun String?.hasDirective(name: String, value: String? = null): Boolean =
+        this?.split(',')?.any { directive ->
+            val parts = directive.trim().split('=', limit = 2)
+            parts[0].equals(name, ignoreCase = true) &&
+                (value == null || parts.getOrNull(1)?.trim()?.trim('"') == value)
+        } == true
 
     companion object {
         const val UNVERSIONED_TTL_MS: Long = 6L * 60L * 60L * 1000L

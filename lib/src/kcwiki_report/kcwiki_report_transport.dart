@@ -4,6 +4,18 @@ import 'package:http/http.dart' as http;
 
 import 'kcwiki_report_request.dart';
 
+Uri? configuredKcwikiReportEndpoint() {
+  const raw = String.fromEnvironment('KCWIKI_REPORT_BASE_URL');
+  final uri = Uri.tryParse(raw);
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      uri.host.isEmpty ||
+      uri.userInfo.isNotEmpty) {
+    return null;
+  }
+  return uri;
+}
+
 enum KcwikiTransportFailure { bodyTooLarge, timeout, network, rejected }
 
 final class KcwikiTransportResult {
@@ -53,9 +65,17 @@ final class HttpKcwikiReportTransport implements KcwikiReportTransport {
         failure: KcwikiTransportFailure.bodyTooLarge,
       );
     }
+    if (baseUri.scheme != 'https' ||
+        baseUri.host.isEmpty ||
+        baseUri.userInfo.isNotEmpty) {
+      return const KcwikiTransportResult.failed(
+        failure: KcwikiTransportFailure.network,
+      );
+    }
     final target = baseUri.resolve(request.module.path);
     final outbound = http.Request('POST', target)
       ..headers['content-type'] = request.contentType
+      ..followRedirects = false
       ..body = request.encodedBody;
     try {
       final response = await _client.send(outbound).timeout(timeout);

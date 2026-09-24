@@ -221,6 +221,7 @@ final class NativeActivityGameSurface extends StatefulWidget {
     required this.toolbarController,
     required this.routeObserver,
     this.onGenerationChanged,
+    this.onRenderProcessGone,
     this.networkSettingsController,
     this.captureModeController,
     this.audioController,
@@ -251,6 +252,7 @@ final class NativeActivityGameSurface extends StatefulWidget {
   final GameToolbarController toolbarController;
   final RouteObserver<ModalRoute<dynamic>> routeObserver;
   final void Function(int)? onGenerationChanged;
+  final void Function(bool didCrash)? onRenderProcessGone;
   final NetworkSettingsController? networkSettingsController;
   final CaptureModeController? captureModeController;
   final GameAudioController? audioController;
@@ -793,6 +795,11 @@ final class _NativeActivityGameSurfaceState
           );
         }
         return;
+      case NativeGameWebViewEventType.presentationChanged:
+        widget.toolbarController.onStageChanged(
+          event.isGame! ? GameSurfaceStage.game : GameSurfaceStage.login,
+        );
+        return;
       case NativeGameWebViewEventType.mainFrameError:
         _reportPageError(event.description!);
         return;
@@ -802,10 +809,13 @@ final class _NativeActivityGameSurfaceState
         );
         return;
       case NativeGameWebViewEventType.renderProcessGone:
+        widget.toolbarController.onStageChanged(GameSurfaceStage.login);
+        widget.onRenderProcessGone?.call(event.didCrash!);
         _renderProcessRecoveryAvailable = true;
         _setFatalError('游戏渲染进程已退出。');
         return;
       case NativeGameWebViewEventType.destroyed:
+        widget.toolbarController.onStageChanged(GameSurfaceStage.login);
         _invalidateOperations(fatal: true);
         _generationId = null;
         widget.onGenerationChanged?.call(-1);
@@ -1563,6 +1573,7 @@ final class _NativeActivityGameSurfaceState
   @override
   void dispose() {
     _active = false;
+    widget.toolbarController.onStageChanged(GameSurfaceStage.login);
     _pendingPageFinish = null;
     _popupPreviewGeneration++;
     _popupPreview = null;

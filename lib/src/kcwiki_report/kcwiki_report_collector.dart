@@ -595,7 +595,8 @@ Map<String, Object?> _stringMap(Object? value) {
   if (value is! Map) return <String, Object?>{};
   return <String, Object?>{
     for (final entry in value.entries)
-      if (entry.key is String) entry.key as String: _safeCopy(entry.value),
+      if (entry.key is String && !_isSensitiveKey(entry.key as String))
+        entry.key as String: _safeCopy(entry.value),
   };
 }
 

@@ -63,6 +63,7 @@ enum NativeGameWebViewEventType {
   created,
   pageStarted,
   pageFinished,
+  presentationChanged,
   mainFrameError,
   navigationBlocked,
   renderProcessGone,
@@ -79,6 +80,7 @@ final class NativeGameWebViewEvent {
     this.description,
     this.scheme,
     this.didCrash,
+    this.isGame,
   });
 
   final NativeGameWebViewEventType type;
@@ -89,6 +91,7 @@ final class NativeGameWebViewEvent {
   final String? description;
   final String? scheme;
   final bool? didCrash;
+  final bool? isGame;
 
   factory NativeGameWebViewEvent.decode(Object? raw) {
     if (raw is! Map) {
@@ -141,6 +144,18 @@ final class NativeGameWebViewEvent {
           errorCode: _int(map, 'errorCode'),
           description: _string(map, 'description', maxLength: 256),
         );
+      case NativeGameWebViewEventType.presentationChanged:
+        final isGame = map['isGame'];
+        if (isGame is! bool) {
+          throw const NativeGameWebViewSchemaException(
+            'isGame must be a bool.',
+          );
+        }
+        return NativeGameWebViewEvent._(
+          type: type,
+          generationId: generationId,
+          isGame: isGame,
+        );
       case NativeGameWebViewEventType.navigationBlocked:
         final scheme = _string(map, 'scheme', maxLength: 32);
         if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]{0,31}$').hasMatch(scheme)) {
@@ -173,6 +188,7 @@ final class NativeGameWebViewEvent {
         'created': NativeGameWebViewEventType.created,
         'pageStarted': NativeGameWebViewEventType.pageStarted,
         'pageFinished': NativeGameWebViewEventType.pageFinished,
+        'presentationChanged': NativeGameWebViewEventType.presentationChanged,
         'mainFrameError': NativeGameWebViewEventType.mainFrameError,
         'navigationBlocked': NativeGameWebViewEventType.navigationBlocked,
         'renderProcessGone': NativeGameWebViewEventType.renderProcessGone,
@@ -192,6 +208,11 @@ final class NativeGameWebViewEvent {
           'type',
           'generationId',
           'url',
+        },
+        NativeGameWebViewEventType.presentationChanged: <String>{
+          'type',
+          'generationId',
+          'isGame',
         },
         NativeGameWebViewEventType.mainFrameError: <String>{
           'type',

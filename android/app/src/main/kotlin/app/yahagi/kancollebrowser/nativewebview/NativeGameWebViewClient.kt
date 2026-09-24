@@ -13,6 +13,7 @@ interface NativeGameWebViewEventSink {
     fun created(generation: Long)
     fun pageStarted(generation: Long, url: String)
     fun pageFinished(generation: Long, url: String)
+    fun presentationChanged(generation: Long, isGame: Boolean) = Unit
     fun mainFrameError(generation: Long, errorCode: Int, description: String)
     fun navigationBlocked(generation: Long, scheme: String)
     fun renderProcessGone(generation: Long, didCrash: Boolean)

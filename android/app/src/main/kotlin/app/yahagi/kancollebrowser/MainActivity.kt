@@ -370,6 +370,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
                 proxyProvider = {
                     webViewProxyManager?.currentNativeProxy() ?: java.net.Proxy.NO_PROXY
                 },
+                temporaryDirectory = cacheDir.resolve("resource-downloads"),
             ),
         ) { gameResourceCacheMode }
         gameResourceCacheEngine = resourceEngine
@@ -387,8 +388,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
             ::onGameResourceCacheModeChanged,
             resourceNetworkMonitor,
             {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                    WebViewFeature.isFeatureSupported(WebViewFeature.COOKIE_INTERCEPT)
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
             },
         )
         resourceNetworkMonitor.start(resourceCoordinator::onNetworkChanged)
@@ -565,16 +565,16 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
                     if (retaining == null) {
                         result.error("invalid_argument", "retaining is required", null)
                     } else {
-                        runCatching {
-                            NotificationProgressService.setSessionRetention(this, retaining)
-                        }.onSuccess {
-                            result.success(null)
-                        }.onFailure {
-                            result.error(
-                                "retention_failed",
-                                it.message,
-                                it.javaClass.simpleName,
-                            )
+                        NotificationProgressService.setSessionRetention(this, retaining) { error ->
+                            if (error == null) {
+                                result.success(null)
+                            } else {
+                                result.error(
+                                    "retention_failed",
+                                    error.message,
+                                    error.javaClass.simpleName,
+                                )
+                            }
                         }
                     }
                 }
@@ -926,7 +926,12 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
 
         val webViews = mutableListOf<WebView>()
         collectWebViews(window.decorView, webViews)
-        if (webViews.size != 1) return
+        if (webViews.size != 1) {
+            if (webViews.size > 1) {
+                Log.w("GadgetBypass", "resource cache wrapper skipped: ${webViews.size} WebViews found")
+            }
+            return
+        }
         val webView = webViews.single()
 
         val current = webView.webViewClient ?: return
@@ -938,7 +943,13 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
                 WebSettingsCompat.setCookiesIncludedInShouldInterceptRequest(webView.settings, true)
                 true
             }
+        }.onFailure { error ->
+            Log.w("GadgetBypass", "cookie interception setup failed: ${error.javaClass.simpleName}")
         }.getOrDefault(false)
+
+        if (gameResourceCacheMode != GameResourceCacheMode.NONE) {
+            Log.i("GadgetBypass", "resource cache wrapper mode=${gameResourceCacheMode.wireName} cookieHeaders=$cookieInterceptSupported")
+        }
 
         Log.d("GadgetBypass", "wrapping WebViewClient")
         webView.setWebViewClient(

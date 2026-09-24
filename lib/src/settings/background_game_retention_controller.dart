@@ -67,22 +67,29 @@ final class BackgroundGameRetentionController extends ChangeNotifier {
 
   final BackgroundGameRetentionStore _store;
   bool _enabled;
-  String? _errorMessage;
+  String? _settingErrorMessage;
+  String? _syncErrorMessage;
 
   bool get enabled => _enabled;
-  String? get errorMessage => _errorMessage;
+  String? get errorMessage => _settingErrorMessage ?? _syncErrorMessage;
+
+  void reportSyncError(String? message) {
+    if (_syncErrorMessage == message) return;
+    _syncErrorMessage = message;
+    notifyListeners();
+  }
 
   Future<void> setEnabled(bool enabled) async {
     if (_enabled == enabled) return;
     final previous = _enabled;
     _enabled = enabled;
-    _errorMessage = null;
+    _settingErrorMessage = null;
     notifyListeners();
     try {
       await _store.writeEnabled(enabled);
     } catch (error) {
       _enabled = previous;
-      _errorMessage = 'background game retention setting failed: $error';
+      _settingErrorMessage = '后台保活设置失败：$error';
       notifyListeners();
     }
   }
@@ -93,6 +100,7 @@ final class BackgroundGameRetentionCoordinator {
     required this.controller,
     required this.toolbarController,
     required this.port,
+    this.onFailure,
   }) {
     controller.addListener(_handleInputChanged);
     toolbarController.addListener(_handleInputChanged);
@@ -102,11 +110,12 @@ final class BackgroundGameRetentionCoordinator {
   final BackgroundGameRetentionController controller;
   final GameToolbarController toolbarController;
   final BackgroundGameRetentionPort port;
+  final void Function(Object error)? onFailure;
 
-  bool _foreground = true;
   bool _detached = false;
   bool _disposed = false;
   bool? _pendingTarget;
+  bool? _lastRequestedTarget;
   bool? _lastApplied;
   Future<void>? _drainFuture;
   String? _errorMessage;
@@ -117,10 +126,9 @@ final class BackgroundGameRetentionCoordinator {
     if (_disposed) return;
     switch (state) {
       case AppLifecycleState.resumed:
-        _foreground = true;
         _detached = false;
       case AppLifecycleState.hidden || AppLifecycleState.paused:
-        _foreground = false;
+        break;
       case AppLifecycleState.detached:
         _detached = true;
       case AppLifecycleState.inactive:
@@ -142,17 +150,18 @@ final class BackgroundGameRetentionCoordinator {
 
   void _handleInputChanged() {
     if (_disposed) return;
+    if (_target == _lastRequestedTarget) return;
     _enqueueCurrentTarget();
   }
 
   bool get _target =>
       !_detached &&
-      !_foreground &&
       controller.enabled &&
       toolbarController.stage == GameSurfaceStage.game;
 
   void _enqueueCurrentTarget() {
     _pendingTarget = _target;
+    _lastRequestedTarget = _pendingTarget;
     if (_drainFuture != null) return;
     final drain = _drain();
     _drainFuture = drain.whenComplete(() {
@@ -171,9 +180,16 @@ final class BackgroundGameRetentionCoordinator {
         await port.setRetaining(target);
         _lastApplied = target;
         _errorMessage = null;
+        controller.reportSyncError(null);
       } catch (error) {
         _lastApplied = null;
         _errorMessage = 'background game retention sync failed: $error';
+        controller.reportSyncError('后台保活启动失败：$error');
+        try {
+          onFailure?.call(error);
+        } catch (_) {
+          // Diagnostics must not interrupt a later retention state change.
+        }
       }
     }
   }

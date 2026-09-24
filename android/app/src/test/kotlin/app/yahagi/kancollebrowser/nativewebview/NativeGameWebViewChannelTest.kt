@@ -359,6 +359,7 @@ class NativeGameWebViewChannelTest {
         firstSink.pageFinished(0, "https://old.example/finish")
         firstSink.mainFrameError(0, -2, "old error")
         firstSink.navigationBlocked(0, "intent")
+        firstSink.presentationChanged(0, true)
         firstSink.renderProcessGone(0, true)
         firstSink.destroyed(0)
         secondSink.pageStarted(0, "https://new.example/start")
@@ -731,6 +732,7 @@ class NativeGameWebViewChannelTest {
         sink.pageFinished(0, "https://example.com/finish")
         sink.mainFrameError(0, -2, "network")
         sink.navigationBlocked(0, "intent")
+        sink.presentationChanged(0, true)
         sink.renderProcessGone(0, true)
         sink.destroyed(0)
         sink.pageFinished(0, "https://example.com/late")
@@ -742,6 +744,7 @@ class NativeGameWebViewChannelTest {
                 mapOf("type" to "pageFinished", "generationId" to 0L, "url" to "https://example.com/finish"),
                 mapOf("type" to "mainFrameError", "generationId" to 0L, "errorCode" to -2, "description" to "network"),
                 mapOf("type" to "navigationBlocked", "generationId" to 0L, "scheme" to "intent"),
+                mapOf("type" to "presentationChanged", "generationId" to 0L, "isGame" to true),
                 mapOf("type" to "renderProcessGone", "generationId" to 0L, "didCrash" to true),
                 mapOf("type" to "destroyed", "generationId" to 0L),
             ),
@@ -750,7 +753,7 @@ class NativeGameWebViewChannelTest {
 
         channel.onCancel(null)
         sink.created(1)
-        assertEquals(7, events.values.size)
+        assertEquals(8, events.values.size)
     }
 
     @Test

@@ -1,8 +1,10 @@
 package app.yahagi.kancollebrowser.browser
 
-import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -21,12 +23,21 @@ data class GameResourceCacheEntry(
     val responseHeaders: Map<String, String> = emptyMap(),
 )
 
-class GameResourceCacheIndex(private val indexFile: File) {
+class GameResourceCacheIndex(
+    private val indexFile: File,
+    private val maxMetadataBytes: Long = MAX_METADATA_BYTES,
+) {
     private val entries = linkedMapOf<String, GameResourceCacheEntry>()
     private val fileReferenceCounts = hashMapOf<String, Int>()
     private var cachedTotalBytes = 0L
+    private var cachedMetadataBytes = 0L
     private val journalFile = File(indexFile.parentFile, "${indexFile.name}.journal")
+    private val resetMarkerFile = File(indexFile.parentFile, "${indexFile.name}.reset")
     private var loaded = false
+
+    init {
+        require(maxMetadataBytes > 0L) { "Resource cache index metadata limit must be positive" }
+    }
 
     @Synchronized
     fun get(key: GameResourceCacheKey): GameResourceCacheEntry? {
@@ -41,6 +52,28 @@ class GameResourceCacheIndex(private val indexFile: File) {
     }
 
     @Synchronized
+    fun isFull(): Boolean {
+        ensureLoaded()
+        return entries.size >= MAX_ENTRIES || cachedMetadataBytes >= maxMetadataBytes
+    }
+
+    @Synchronized
+    fun canPut(entry: GameResourceCacheEntry): Boolean {
+        ensureLoaded()
+        val compacted = entry.compactHeaders()
+        val recordBytes = validateEntry(compacted)
+        val replacedBytes = entries[compacted.key]?.let(::recordBytes) ?: 0
+        return (compacted.key in entries || entries.size < MAX_ENTRIES) &&
+            cachedMetadataBytes - replacedBytes + recordBytes <= maxMetadataBytes
+    }
+
+    @Synchronized
+    fun oldestEntry(): GameResourceCacheEntry? {
+        ensureLoaded()
+        return entries.values.minByOrNull { it.lastAccessedAt }
+    }
+
+    @Synchronized
     fun totalBytes(): Long {
         ensureLoaded()
         return cachedTotalBytes
@@ -49,14 +82,22 @@ class GameResourceCacheIndex(private val indexFile: File) {
     @Synchronized
     fun put(entry: GameResourceCacheEntry) {
         ensureLoaded()
-        appendJournalRecord(JSONObject().put("op", "put").put("entry", entry.toJson()))
-        entries[entry.key]?.let {
+        val compacted = entry.compactHeaders()
+        val recordBytes = validateEntry(compacted)
+        check(compacted.key in entries || entries.size < MAX_ENTRIES) { "Resource cache index is full" }
+        val replacedBytes = entries[compacted.key]?.let(::recordBytes) ?: 0
+        require(cachedMetadataBytes - replacedBytes + recordBytes <= maxMetadataBytes) {
+            "Resource cache index metadata limit reached"
+        }
+        appendJournalRecord(JSONObject().put("op", "put").put("entry", compacted.toJson()))
+        entries[compacted.key]?.let {
             decrementFileReference(it.fileName)
             cachedTotalBytes -= it.byteLength
         }
-        entries[entry.key] = entry
-        incrementFileReference(entry.fileName)
-        cachedTotalBytes += entry.byteLength
+        entries[compacted.key] = compacted
+        cachedMetadataBytes += recordBytes - replacedBytes
+        incrementFileReference(compacted.fileName)
+        cachedTotalBytes += compacted.byteLength
         compactJournalIfNeeded()
     }
 
@@ -66,6 +107,7 @@ class GameResourceCacheIndex(private val indexFile: File) {
         val removed = entries[key.value] ?: return null
         appendJournalRecord(JSONObject().put("op", "remove").put("key", key.value))
         entries.remove(key.value)
+        cachedMetadataBytes -= recordBytes(removed)
         decrementFileReference(removed.fileName)
         cachedTotalBytes -= removed.byteLength
         compactJournalIfNeeded()
@@ -92,6 +134,7 @@ class GameResourceCacheIndex(private val indexFile: File) {
         appendJournalRecord(JSONObject().put("op", "removePrefix").put("prefix", prefix))
         removed.forEach {
             entries.remove(it.key)
+            cachedMetadataBytes -= recordBytes(it)
             decrementFileReference(it.fileName)
             cachedTotalBytes -= it.byteLength
         }
@@ -104,6 +147,7 @@ class GameResourceCacheIndex(private val indexFile: File) {
         ensureLoaded()
         appendJournalRecord(JSONObject().put("op", "clear"))
         entries.clear()
+        cachedMetadataBytes = 0L
         fileReferenceCounts.clear()
         cachedTotalBytes = 0L
         compactJournalIfNeeded()
@@ -112,16 +156,13 @@ class GameResourceCacheIndex(private val indexFile: File) {
     private fun ensureLoaded() {
         if (loaded) return
         try {
+            resetOversizedLegacySnapshot()
             if (indexFile.isFile) {
-                val source = indexFile.readText()
                 runCatching {
-                    val array = JSONObject(source).optJSONArray("entries") ?: JSONArray()
-                    for (index in 0 until array.length()) {
-                        val entry = array.getJSONObject(index).toEntry()
-                        entries[entry.key] = entry
-                    }
+                    loadSnapshot()
                 }.onFailure {
                     entries.clear()
+                    cachedMetadataBytes = 0L
                 }
             }
             if (journalFile.isFile) replayJournal()
@@ -132,46 +173,206 @@ class GameResourceCacheIndex(private val indexFile: File) {
             entries.clear()
             fileReferenceCounts.clear()
             cachedTotalBytes = 0L
+            cachedMetadataBytes = 0L
             throw error
         }
     }
 
     private fun replayJournal() {
-        val bytes = journalFile.readBytes()
-        var offset = 0
-        while (offset < bytes.size) {
-            val end = bytes.indexOf('\n'.code.toByte(), offset)
-            if (end < 0) break
-            val line = String(bytes, offset, end - offset, Charsets.UTF_8)
-            val applied = runCatching {
-                val operation = JSONObject(line)
-                when (operation.getString("op")) {
-                    "put" -> operation.getJSONObject("entry").toEntry().also {
-                        entries[it.key] = it
-                    }
-                    "remove" -> entries.remove(operation.getString("key"))
-                    "removePrefix" -> {
-                        val prefix = operation.getString("prefix")
-                        entries.keys.removeAll { it.startsWith(prefix) }
-                    }
-                    "clear" -> entries.clear()
-                    else -> error("Unknown resource cache journal operation")
+        var validBytes = 0L
+        BufferedInputStream(FileInputStream(journalFile)).use { input ->
+            while (true) {
+                val line = readBoundedLine(input) ?: break
+                if (line.text == null) {
+                    validBytes += line.byteCount
+                    continue
                 }
-            }.isSuccess
-            if (!applied) break
-            offset = end + 1
+                val applied = runCatching {
+                    val operation = JSONObject(line.text)
+                    when (operation.getString("op")) {
+                        "put" -> addLoadedEntry(operation.getJSONObject("entry").toEntry())
+                        "remove" -> removeLoadedEntry(operation.getString("key"))
+                        "removePrefix" -> {
+                            val prefix = operation.getString("prefix")
+                            entries.keys.filter { it.startsWith(prefix) }.forEach(::removeLoadedEntry)
+                        }
+                        "clear" -> {
+                            entries.clear()
+                            cachedMetadataBytes = 0L
+                        }
+                        else -> error("Unknown resource cache journal operation")
+                    }
+                }.isSuccess
+                if (!applied) break
+                validBytes += line.byteCount
+            }
         }
-        if (offset != bytes.size) {
-            RandomAccessFile(journalFile, "rw").use { it.setLength(offset.toLong()) }
+        if (validBytes != journalFile.length()) {
+            RandomAccessFile(journalFile, "rw").use { it.setLength(validBytes) }
         }
     }
 
-    private fun ByteArray.indexOf(value: Byte, fromIndex: Int): Int {
-        for (index in fromIndex until size) {
-            if (this[index] == value) return index
+    private fun loadSnapshot() {
+        if (isVersion2Snapshot()) {
+            BufferedInputStream(FileInputStream(indexFile)).use { input ->
+                readBoundedLine(input) // version header
+                while (true) {
+                    val line = readBoundedLine(input) ?: break
+                    if (line.text != null) runCatching {
+                        addLoadedEntry(JSONObject(line.text).toEntry())
+                    }
+                }
+            }
+            return
         }
-        return -1
+        loadLegacySnapshot()
     }
+
+    private fun resetOversizedLegacySnapshot() {
+        if (!resetMarkerFile.isFile &&
+            (!indexFile.isFile || indexFile.length() <= MAX_LEGACY_SNAPSHOT_BYTES || isVersion2Snapshot())
+        ) return
+        // A large beta.2/beta.4 JSON snapshot can require a huge StringBuilder
+        // allocation. Drop only this regenerable resource cache before loading it.
+        if (!resetMarkerFile.isFile && !resetMarkerFile.createNewFile()) {
+            throw IllegalStateException("Cannot mark resource cache index reset")
+        }
+        if (journalFile.exists() && !journalFile.delete()) {
+            throw IllegalStateException("Cannot reset resource cache journal")
+        }
+        if (indexFile.exists() && !indexFile.delete()) {
+            throw IllegalStateException("Cannot reset resource cache snapshot")
+        }
+        if (!resetMarkerFile.delete()) {
+            throw IllegalStateException("Cannot complete resource cache index reset")
+        }
+    }
+
+    private fun isVersion2Snapshot(): Boolean {
+        val prefix = ByteArray(SNAPSHOT_HEADER.length)
+        val count = FileInputStream(indexFile).use { input ->
+            var read = 0
+            while (read < prefix.size) {
+                val amount = input.read(prefix, read, prefix.size - read)
+                if (amount < 0) break
+                read += amount
+            }
+            read
+        }
+        return count == prefix.size && String(prefix, Charsets.UTF_8) == SNAPSHOT_HEADER
+    }
+
+    private fun loadLegacySnapshot() {
+        BufferedInputStream(FileInputStream(indexFile)).use { input ->
+            // Version 1 has one top-level entries array. Parse each object separately.
+            while (true) {
+                val byte = input.read()
+                if (byte < 0) return
+                if (byte == '['.code) break
+            }
+            while (true) {
+                var byte = input.read()
+                while (byte == ','.code || byte == ' '.code || byte == '\n'.code ||
+                    byte == '\r'.code || byte == '\t'.code) byte = input.read()
+                if (byte == ']'.code || byte < 0) return
+                if (byte != '{'.code) return
+                val output = ByteArrayOutputStream()
+                output.write(byte)
+                var depth = 1
+                var quoted = false
+                var escaped = false
+                var oversized = false
+                while (depth > 0) {
+                    byte = input.read()
+                    if (byte < 0) return
+                    if (!oversized) {
+                        if (output.size() < MAX_RECORD_BYTES) output.write(byte)
+                        else oversized = true
+                    }
+                    if (quoted) {
+                        when {
+                            escaped -> escaped = false
+                            byte == '\\'.code -> escaped = true
+                            byte == '"'.code -> quoted = false
+                        }
+                    } else {
+                        when (byte) {
+                            '"'.code -> quoted = true
+                            '{'.code -> depth++
+                            '}'.code -> depth--
+                        }
+                    }
+                }
+                if (!oversized) runCatching {
+                    addLoadedEntry(JSONObject(String(output.toByteArray(), Charsets.UTF_8)).toEntry())
+                }
+            }
+        }
+    }
+
+    private fun addLoadedEntry(entry: GameResourceCacheEntry) {
+        val compacted = entry.compactHeaders()
+        val newBytes = validateEntry(compacted)
+        val replacedBytes = entries[compacted.key]?.let(::recordBytes) ?: 0
+        while ((compacted.key !in entries && entries.size >= MAX_ENTRIES) ||
+            cachedMetadataBytes - replacedBytes + newBytes > maxMetadataBytes
+        ) {
+            val oldest = entries.entries.firstOrNull { it.key != compacted.key } ?: return
+            removeLoadedEntry(oldest.key)
+        }
+        entries[compacted.key] = compacted
+        cachedMetadataBytes += newBytes - replacedBytes
+    }
+
+    private fun removeLoadedEntry(key: String) {
+        val removed = entries.remove(key) ?: return
+        cachedMetadataBytes -= recordBytes(removed)
+    }
+
+    private fun GameResourceCacheEntry.compactHeaders(): GameResourceCacheEntry =
+        copy(responseHeaders = GameResourceCacheRules.persistedResponseHeaders(responseHeaders))
+
+    private data class BoundedLine(val text: String?, val byteCount: Long)
+
+    private fun readBoundedLine(input: BufferedInputStream): BoundedLine? {
+        val output = ByteArrayOutputStream()
+        var byteCount = 0L
+        var oversized = false
+        while (true) {
+            val byte = input.read()
+            if (byte < 0) return null
+            byteCount++
+            if (byte == '\n'.code) {
+                return BoundedLine(
+                    if (oversized) null else String(output.toByteArray(), Charsets.UTF_8),
+                    byteCount,
+                )
+            }
+            if (!oversized) {
+                if (output.size() < MAX_LINE_BYTES) output.write(byte)
+                else oversized = true
+            }
+        }
+    }
+
+    private fun validateEntry(entry: GameResourceCacheEntry): Int {
+        require(entry.key.length <= 2_048 && entry.fileName.length <= 128 &&
+            entry.version.orEmpty().length <= 1_024 && entry.mimeType.length <= 128 &&
+            entry.etag.orEmpty().length <= 1_024 &&
+            entry.lastModified.orEmpty().length <= 1_024 && entry.sha256.length <= 128 &&
+            entry.responseHeaders.size <= 32 && entry.responseHeaders.all { (name, value) ->
+                name.length <= 128 && value.length <= 1_024
+            }
+        ) { "Resource cache metadata is too large" }
+        val bytes = recordBytes(entry)
+        require(bytes <= MAX_RECORD_BYTES) {
+            "Resource cache metadata record is too large"
+        }
+        return bytes
+    }
+
+    private fun recordBytes(entry: GameResourceCacheEntry): Int =
+        entry.toJson().toString().toByteArray(Charsets.UTF_8).size
 
     private fun appendJournalRecord(operation: JSONObject) {
         try {
@@ -183,6 +384,7 @@ class GameResourceCacheIndex(private val indexFile: File) {
             entries.clear()
             fileReferenceCounts.clear()
             cachedTotalBytes = 0L
+            cachedMetadataBytes = 0L
             throw error
         }
     }
@@ -217,10 +419,14 @@ class GameResourceCacheIndex(private val indexFile: File) {
 
     private fun save() {
         indexFile.parentFile?.mkdirs()
-        val array = JSONArray()
-        entries.values.forEach { array.put(it.toJson()) }
         val temporary = File(indexFile.parentFile, "${indexFile.name}.tmp")
-        temporary.writeText(JSONObject().put("version", 1).put("entries", array).toString())
+        temporary.bufferedWriter(Charsets.UTF_8).use { writer ->
+            writer.write(SNAPSHOT_HEADER)
+            entries.values.forEach { entry ->
+                writer.write(entry.toJson().toString())
+                writer.write('\n'.code)
+            }
+        }
         atomicReplace(temporary, indexFile)
     }
 
@@ -270,6 +476,12 @@ class GameResourceCacheIndex(private val indexFile: File) {
     }
 
     companion object {
+        internal const val MAX_ENTRIES = 70_000
+        internal const val MAX_METADATA_BYTES = 40L * 1024L * 1024L
+        private const val MAX_LEGACY_SNAPSHOT_BYTES = 8L * 1024L * 1024L
+        private const val MAX_RECORD_BYTES = 8 * 1024
+        private const val MAX_LINE_BYTES = 16 * 1024
         private const val MAX_JOURNAL_BYTES = 4L * 1024L * 1024L
+        private const val SNAPSHOT_HEADER = "{\"version\":2}\n"
     }
 }

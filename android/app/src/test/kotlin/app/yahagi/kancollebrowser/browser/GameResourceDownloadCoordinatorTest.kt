@@ -3,6 +3,7 @@ package app.yahagi.kancollebrowser.browser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -26,6 +27,37 @@ class GameResourceDownloadCoordinatorTest {
         )
 
         assertFalse(fixture.coordinator.startDownload())
+        fixture.coordinator.dispose()
+    }
+
+    @Test
+    fun `full baseline sized manifest can be prepared and restored`() {
+        val stateFile = temporaryFolder.newFile("large-manifest-state.json")
+        val fixture = fixture(stateFile = stateFile)
+        val urls = List(62_226) { id -> official("/kcs2/resources/ship/full/$id.png?version=1") }
+        val lengths = List(urls.size) { 1L }
+
+        fixture.coordinator.setManifest("full", urls, urls.size.toLong(), lengths)
+        assertEquals(urls.size, fixture.coordinator.status().missingCount)
+        fixture.coordinator.dispose()
+
+        val restored = GameResourceDownloadCoordinator(
+            fixture.engine, { GameResourceCacheMode.FULL }, stateFile,
+        )
+        assertEquals(urls.size, restored.status().missingCount)
+        restored.dispose()
+    }
+
+    @Test
+    fun `oversized manifest is rejected before building JSON`() {
+        val fixture = fixture()
+        val urls = List(GameResourceCacheIndex.MAX_ENTRIES + 1) {
+            official("/kcs2/resources/same.png")
+        }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            fixture.coordinator.prepareManifest("full", urls, 1)
+        }
         fixture.coordinator.dispose()
     }
 

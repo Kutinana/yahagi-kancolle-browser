@@ -573,7 +573,9 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                             titleKey: const Key(
                               'settings-background-game-retention',
                             ),
-                            subtitle: l10n.backgroundGameRetentionDesc,
+                            subtitle:
+                                retention.errorMessage ??
+                                l10n.backgroundGameRetentionDesc,
                             value: retention.enabled,
                             onChanged: retention.setEnabled,
                           ),

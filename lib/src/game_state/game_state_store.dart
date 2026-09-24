@@ -6,7 +6,10 @@ import 'game_state.dart';
 import 'game_state_serializer.dart';
 
 class GameStateStore {
-  GameStateStore({this.saveDelay = const Duration(seconds: 5)});
+  GameStateStore({
+    this.saveDelay = const Duration(seconds: 5),
+    this.writeString,
+  });
 
   static const String _key = 'yahagi_kancolle_browser_game_state';
   static const String _sharedKey = 'game_state.shared.v1';
@@ -27,10 +30,22 @@ class GameStateStore {
   };
   static String _accountKey(int memberId) => 'account.$memberId.game_state.v1';
   final Duration saveDelay;
+  final Future<bool> Function(SharedPreferences, String, String)? writeString;
   Timer? _debounceTimer;
   final Map<int, GameState> _pendingStates = {};
   GameState? _pendingMaster;
   Future<void> _writes = Future<void>.value();
+
+  Future<void> _putString(
+    SharedPreferences prefs,
+    String key,
+    String value,
+  ) async {
+    final saved =
+        await (writeString?.call(prefs, key, value) ??
+            prefs.setString(key, value));
+    if (!saved) throw StateError('Game state cache write failed');
+  }
 
   Future<GameState> load() async {
     try {
@@ -52,16 +67,21 @@ class GameStateStore {
     try {
       final prefs = await SharedPreferences.getInstance();
       await _migrateLegacy(prefs);
-      final accountRaw = prefs.getString(_accountKey(memberId));
+      final pending = _pendingStates[memberId];
+      final accountRaw = pending == null
+          ? prefs.getString(_accountKey(memberId))
+          : jsonEncode(_personalData(pending));
       if (accountRaw == null) return GameState.empty;
       final account = jsonDecode(accountRaw) as Map<String, dynamic>;
       if (account['memberId'] != memberId) return GameState.empty;
-      final shared = jsonDecode(prefs.getString(_sharedKey) ?? '{}') as Map;
+      final shared = _pendingMaster == null
+          ? jsonDecode(prefs.getString(_sharedKey) ?? '{}') as Map
+          : jsonDecode(GameStateSerializer.serialize(_pendingMaster!)) as Map;
       return GameStateSerializer.deserialize(
         jsonEncode({...shared, ...account}),
       );
     } catch (_) {
-      return GameState.empty;
+      return _pendingStates[memberId] ?? GameState.empty;
     }
   }
 
@@ -77,19 +97,23 @@ class GameStateStore {
       // Keep the original global value as a backup, never as login identity.
       if (legacy.memberId > 0 &&
           !prefs.containsKey(_accountKey(legacy.memberId))) {
-        await prefs.setString(
+        await _putString(
+          prefs,
           _accountKey(legacy.memberId),
           jsonEncode(_personalData(legacy)),
         );
       }
       if (!prefs.containsKey(_sharedKey) && legacy.masterShips.isNotEmpty) {
-        await prefs.setString(
+        await _putString(
+          prefs,
           _sharedKey,
           GameStateSerializer.serialize(sharedGameData(legacy)),
         );
       }
     }
-    await prefs.setBool(_migrationKey, true);
+    if (!await prefs.setBool(_migrationKey, true)) {
+      throw StateError('Game state cache migration marker failed');
+    }
   }
 
   void save(GameState state) {
@@ -106,29 +130,34 @@ class GameStateStore {
     _debounceTimer = null;
     final states = Map<int, GameState>.of(_pendingStates);
     final master = _pendingMaster;
-    _pendingStates.clear();
-    _pendingMaster = null;
     _writes = _writes.catchError((Object _) {}).then((_) async {
       if (states.isEmpty && master == null) return;
       final prefs = await SharedPreferences.getInstance();
       await _migrateLegacy(prefs);
       if (master != null) {
-        await prefs.setString(
+        await _putString(
+          prefs,
           _sharedKey,
           GameStateSerializer.serialize(master),
         );
+        if (identical(_pendingMaster, master)) _pendingMaster = null;
       }
       for (final entry in states.entries) {
-        await prefs.setString(
+        await _putString(
+          prefs,
           _accountKey(entry.key),
           jsonEncode(_personalData(entry.value)),
         );
+        if (identical(_pendingStates[entry.key], entry.value)) {
+          _pendingStates.remove(entry.key);
+        }
       }
     });
     try {
       await _writes;
     } catch (_) {
       // Do not make capture depend on optional disk persistence.
+      _debounceTimer ??= Timer(saveDelay, () => unawaited(flush()));
     }
   }
 }

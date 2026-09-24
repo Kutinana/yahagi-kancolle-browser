@@ -60,7 +60,14 @@ void main() {
 
       expect(retention, findsOneWidget);
       expect(find.text('后台保持游戏'), findsOneWidget);
-      expect(find.text('进入后台时显示常驻通知以降低游戏会话被系统回收的概率，可能增加耗电。'), findsOneWidget);
+      expect(
+        find.text('游戏运行期间显示常驻通知，降低切换应用后会话被系统回收的概率，可能增加耗电。'),
+        findsOneWidget,
+      );
+
+      retentionController.reportSyncError('后台保活启动失败：系统拒绝启动');
+      await tester.pump();
+      expect(find.text('后台保活启动失败：系统拒绝启动'), findsOneWidget);
       expect(
         tester.getTopLeft(retention).dy,
         greaterThan(tester.getTopLeft(backgroundAudio).dy),

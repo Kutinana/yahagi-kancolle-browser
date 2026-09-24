@@ -462,8 +462,14 @@ abstract class AppLocalizations {
   /// No description provided for @diagnosticClearConfirmDesc.
   ///
   /// In zh, this message translates to:
-  /// **'设备上的诊断日志将被永久删除。'**
+  /// **'将删除应用内的诊断日志和临时导出副本。已另存或分享的文件需自行删除。'**
   String get diagnosticClearConfirmDesc;
+
+  /// No description provided for @diagnosticClearFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除诊断数据失败，请重试。'**
+  String get diagnosticClearFailed;
 
   /// No description provided for @diagnosticExportFailed.
   ///
@@ -2100,7 +2106,7 @@ abstract class AppLocalizations {
   /// No description provided for @backgroundGameRetentionDesc.
   ///
   /// In zh, this message translates to:
-  /// **'进入后台时显示常驻通知以降低游戏会话被系统回收的概率，可能增加耗电。'**
+  /// **'游戏运行期间显示常驻通知，降低切换应用后会话被系统回收的概率，可能增加耗电。'**
   String get backgroundGameRetentionDesc;
 
   /// No description provided for @backgroundGameRetentionNotificationTitle.
@@ -2377,6 +2383,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'需进入任务界面同步信息'**
   String get questsNeedSync;
+
+  /// No description provided for @questAwaitingConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'已达成（待确认）'**
+  String get questAwaitingConfirmation;
 
   /// No description provided for @waitingQuestData.
   ///
@@ -4566,7 +4578,7 @@ abstract class AppLocalizations {
   /// No description provided for @kcwikiReportDisabledDesc.
   ///
   /// In zh, this message translates to:
-  /// **'默认开启，当前已关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。'**
+  /// **'默认关闭。关闭时不收集、不组包、不联网，也不影响游戏和本地功能。'**
   String get kcwikiReportDisabledDesc;
 
   /// No description provided for @kcwikiReportEnabledDesc.
@@ -4584,8 +4596,14 @@ abstract class AppLocalizations {
   /// No description provided for @kcwikiReportConfirmDesc.
   ///
   /// In zh, this message translates to:
-  /// **'开启后，应用会把带路、任务前置、战斗、友军、陆航/空袭和改修记录发送到 KCWiki 的 report2 服务器。该服务器目前使用未加密的 HTTP；不会发送登录令牌、Cookie 或请求头；上传失败不会阻塞游戏功能。'**
+  /// **'开启后，应用会通过已配置的 HTTPS 地址发送带路、任务前置、战斗、友军、陆航/空袭和改修记录。不发送登录令牌、Cookie 或请求头；上传失败不会阻塞游戏功能。'**
   String get kcwikiReportConfirmDesc;
+
+  /// No description provided for @kcwikiReportUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前版本未配置安全的 HTTPS 上报地址，无法开启数据贡献。'**
+  String get kcwikiReportUnavailable;
 
   /// No description provided for @kcwikiReportEnable.
   ///
@@ -5890,6 +5908,18 @@ abstract class AppLocalizations {
   /// **'{count} 个任务已达成，请前往任务界面'**
   String questCompletionMultiNotice(int count);
 
+  /// No description provided for @questPendingConfirmationSingleNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务目标已达成（待游戏确认）：{title}'**
+  String questPendingConfirmationSingleNotice(String title);
+
+  /// No description provided for @questPendingConfirmationMultiNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个任务目标已达成（待游戏确认）'**
+  String questPendingConfirmationMultiNotice(int count);
+
   /// No description provided for @noticeDevSuccess.
   ///
   /// In zh, this message translates to:
@@ -6237,6 +6267,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已从经验追踪列表移除'**
   String get expCalcTrackDeleted;
+
+  /// No description provided for @expCalcTrackLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'追踪列表读取失败，点击重试'**
+  String get expCalcTrackLoadFailed;
+
+  /// No description provided for @expCalcTrackSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'追踪列表保存失败，请重试'**
+  String get expCalcTrackSaveFailed;
 
   /// No description provided for @expCalcFreeMode.
   ///

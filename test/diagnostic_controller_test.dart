@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -133,6 +134,178 @@ void main() {
     expect(platform.sharedPaths, hasLength(1));
     expect(await storage.readRecords().length, greaterThanOrEqualTo(2));
   });
+
+  test('clear removes generated export copies along with records', () async {
+    final root = Directory.systemTemp.createTempSync('diagnostic-clear-');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final storage = DiagnosticStorage(directory: Directory('${root.path}/log'));
+    final exportDirectory = Directory('${root.path}/export');
+    final controller = DiagnosticController(
+      settings: MemoryDiagnosticSettingsStore(false),
+      storage: storage,
+      recorder: DiagnosticRecorder(sink: storage, enabled: false),
+      exporter: DiagnosticExportService(
+        storage: storage,
+        exportDirectory: exportDirectory,
+        platform: _FakePlatform(),
+        appVersion: 'test',
+      ),
+      manageGlobalErrors: false,
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    final exported = await controller.share();
+    expect(await exported.exists(), isTrue);
+
+    await controller.clear();
+
+    expect(await exported.exists(), isFalse);
+    expect((await storage.inspect()).totalBytes, 0);
+  });
+
+  test('clear waits for an active share before deleting its source', () async {
+    final root = Directory.systemTemp.createTempSync('diagnostic-share-clear-');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final storage = DiagnosticStorage(directory: Directory('${root.path}/log'));
+    final platform = _FakePlatform()..shareGate = Completer<void>();
+    final controller = DiagnosticController(
+      settings: MemoryDiagnosticSettingsStore(false),
+      storage: storage,
+      recorder: DiagnosticRecorder(sink: storage, enabled: false),
+      exporter: DiagnosticExportService(
+        storage: storage,
+        exportDirectory: Directory('${root.path}/export'),
+        platform: platform,
+        appVersion: 'test',
+      ),
+      manageGlobalErrors: false,
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    final sharing = controller.share();
+    while (platform.sharedPaths.isEmpty) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    final source = File(platform.sharedPaths.single);
+    final clearing = controller.clear();
+    final clearedBeforeShareFinished = await Future.any<bool>([
+      clearing.then((_) => true),
+      Future<bool>.delayed(const Duration(milliseconds: 100), () => false),
+    ]);
+    expect(clearedBeforeShareFinished, isFalse);
+    expect(await source.exists(), isTrue);
+    platform.shareGate!.complete();
+    await sharing;
+    await clearing;
+    expect(await source.exists(), isFalse);
+  });
+
+  test(
+    'events during clear are discarded and setting changes wait for clear',
+    () async {
+      final root = Directory.systemTemp.createTempSync(
+        'diagnostic-clear-race-',
+      );
+      addTearDown(() => root.deleteSync(recursive: true));
+      final storage = DiagnosticStorage(
+        directory: Directory('${root.path}/log'),
+      );
+      final sink = _GatedSink(storage);
+      final recorder = DiagnosticRecorder(sink: sink, enabled: false);
+      final controller = DiagnosticController(
+        settings: MemoryDiagnosticSettingsStore(false),
+        storage: storage,
+        recorder: recorder,
+        exporter: DiagnosticExportService(
+          storage: storage,
+          exportDirectory: Directory('${root.path}/export'),
+          platform: _FakePlatform(),
+          appVersion: 'test',
+        ),
+        manageGlobalErrors: false,
+      );
+      addTearDown(controller.dispose);
+      await controller.initialize();
+      await controller.setEnabled(true);
+      sink.gate = Completer<void>();
+      final clearing = controller.clear();
+      await sink.started.future;
+      expect(recorder.enabled, isFalse);
+      recorder.record(
+        DiagnosticEvent.lifecycle(
+          occurredAt: DateTime.utc(2026),
+          state: DiagnosticLifecycleState.resumed,
+          uptimeMs: 1,
+        ),
+      );
+      final disabling = controller.setEnabled(false);
+      expect(controller.enabled, isTrue);
+      sink.gate!.complete();
+      await clearing;
+      await disabling;
+      expect(recorder.enabled, isFalse);
+      expect((await storage.inspect()).totalBytes, 0);
+    },
+  );
+
+  test(
+    'failed preference save keeps recorder state consistent through clear',
+    () async {
+      final root = Directory.systemTemp.createTempSync(
+        'diagnostic-setting-fail-',
+      );
+      addTearDown(() => root.deleteSync(recursive: true));
+      final storage = DiagnosticStorage(
+        directory: Directory('${root.path}/log'),
+      );
+      final recorder = DiagnosticRecorder(sink: storage, enabled: false);
+      final controller = DiagnosticController(
+        settings: _FailingDiagnosticSettingsStore(),
+        storage: storage,
+        recorder: recorder,
+        exporter: DiagnosticExportService(
+          storage: storage,
+          exportDirectory: Directory('${root.path}/export'),
+          platform: _FakePlatform(),
+          appVersion: 'test',
+        ),
+        manageGlobalErrors: false,
+      );
+      addTearDown(controller.dispose);
+      await controller.initialize();
+      await expectLater(controller.setEnabled(false), throwsStateError);
+      expect(controller.enabled, isTrue);
+      expect(recorder.enabled, isTrue);
+      await controller.clear();
+      expect(recorder.enabled, isTrue);
+      expect((await storage.inspect()).totalBytes, 0);
+    },
+  );
+}
+
+final class _FailingDiagnosticSettingsStore implements DiagnosticSettingsStore {
+  @override
+  Future<bool> loadEnabled() async => true;
+
+  @override
+  Future<void> saveEnabled(bool value) async =>
+      throw StateError('prefs unavailable');
+}
+
+final class _GatedSink implements DiagnosticSink {
+  _GatedSink(this.storage);
+  final DiagnosticStorage storage;
+  final started = Completer<void>();
+  Completer<void>? gate;
+
+  @override
+  Future<void> appendAll(List<DiagnosticEvent> events) async {
+    if (gate != null) {
+      if (!started.isCompleted) started.complete();
+      await gate!.future;
+    }
+    await storage.appendAll(events);
+  }
 }
 
 final class _FakePlatform implements DiagnosticPlatformPort {
@@ -141,6 +314,7 @@ final class _FakePlatform implements DiagnosticPlatformPort {
   final String? savedName;
   final List<String> savedPaths = <String>[];
   final List<String> sharedPaths = <String>[];
+  Completer<void>? shareGate;
 
   @override
   Future<DiagnosticDeviceSnapshot> deviceSnapshot() async =>
@@ -181,5 +355,8 @@ final class _FakePlatform implements DiagnosticPlatformPort {
   }
 
   @override
-  Future<void> shareJson(String path) async => sharedPaths.add(path);
+  Future<void> shareJson(String path) async {
+    sharedPaths.add(path);
+    await shareGate?.future;
+  }
 }

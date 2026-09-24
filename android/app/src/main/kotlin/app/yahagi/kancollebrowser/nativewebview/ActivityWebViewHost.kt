@@ -2,6 +2,7 @@ package app.yahagi.kancollebrowser.nativewebview
 
 import android.content.Context
 import android.graphics.Color
+import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
@@ -51,11 +52,11 @@ class ActivityWebViewHost internal constructor(
     private val eventSink: NativeGameWebViewEventSink,
     private val onPresentationStateChanged: (Boolean) -> Unit = {},
     private val webViewFactory: (Context) -> WebView = { context -> WebView(context) },
-    private val configureWebView: (WebView, WebViewClient) -> Unit = { webView, client ->
+    private val configureWebView: (WebView, WebViewClient, (Boolean) -> Unit) -> Unit = { webView, client, onPresentation ->
         NativeGameWebViewConfigurator.configure(
             webView,
             client,
-            onPresentationStateChanged,
+            onPresentation,
         )
     },
     private val webViewCleanup: NativeGameWebViewCleanup = AndroidNativeGameWebViewCleanup,
@@ -71,17 +72,18 @@ class ActivityWebViewHost internal constructor(
         eventSink = eventSink,
         onPresentationStateChanged = onPresentationStateChanged,
         webViewFactory = { factoryContext -> WebView(factoryContext) },
-        configureWebView = { webView, client ->
+        configureWebView = { webView, client, onPresentation ->
             NativeGameWebViewConfigurator.configure(
                 webView,
                 client,
-                onPresentationStateChanged,
+                onPresentation,
             )
         },
         webViewCleanup = AndroidNativeGameWebViewCleanup,
     )
 
     private val state = NativeGameWebViewHostState()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var ownedResources: OwnedWebViewResources? = null
     private var hasValidBounds = false
 
@@ -141,7 +143,14 @@ class ActivityWebViewHost internal constructor(
                 onRenderProcessGone = ::onRenderProcessGone,
             )
             createStage = NativeGameWebViewCreateStage.CONFIGURE_WEB_VIEW
-            configureWebView(createdWebView, client)
+            configureWebView(createdWebView, client) { isGame ->
+                mainHandler.post {
+                    if (state.accepts(generation) && ownedResources?.webView === createdWebView) {
+                        eventSink.presentationChanged(generation, isGame)
+                        onPresentationStateChanged(isGame)
+                    }
+                }
+            }
             if (!isCurrentCreate(resources)) {
                 rollbackCreate(resources)
                 return null

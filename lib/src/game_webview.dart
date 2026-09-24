@@ -1116,6 +1116,11 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
     if (!_isCurrentNavigation(navigationEpoch)) return;
     final action = state?.platformAction ?? GamePresentationPlatformAction.none;
     if (action == GamePresentationPlatformAction.none) return;
+    widget.toolbarController.onStageChanged(
+      state == GamePresentationState.game
+          ? GameSurfaceStage.game
+          : GameSurfaceStage.login,
+    );
     if (_webViewController.platform is AndroidWebViewController) {
       switch (action) {
         case GamePresentationPlatformAction.bind:
@@ -1405,6 +1410,7 @@ class _GameWebViewState extends State<GameWebView> with WidgetsBindingObserver {
   @override
   void dispose() {
     _disposed = true;
+    widget.toolbarController.onStageChanged(GameSurfaceStage.login);
     _startupEpoch += 1;
     _bindingEpoch += 1;
     _navigationEpoch += 1;

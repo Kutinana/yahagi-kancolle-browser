@@ -206,7 +206,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get diagnosticClearConfirmTitle => '診断ログを削除しますか？';
 
   @override
-  String get diagnosticClearConfirmDesc => '端末上の診断ログを完全に削除します。';
+  String get diagnosticClearConfirmDesc =>
+      'アプリ内の診断ログと一時的な書き出しファイルを削除します。保存または共有済みのファイルはご自身で削除してください。';
+
+  @override
+  String get diagnosticClearFailed => '診断データを削除できませんでした。再試行してください。';
 
   @override
   String get diagnosticExportFailed => '診断ファイルの書き出しに失敗しました';
@@ -1045,7 +1049,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get backgroundGameRetentionDesc =>
-      'バックグラウンドに移動したとき常駐通知を表示し、ゲームセッションがシステムに終了されにくくします。電池消費が増える場合があります。';
+      'ゲーム中は常駐通知を表示し、アプリ切り替え後にセッションが終了される可能性を減らします。電池消費が増える場合があります。';
 
   @override
   String get backgroundGameRetentionNotificationTitle => '矢矧はバックグラウンドで実行中';
@@ -1204,6 +1208,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get questsNeedSync => '任務画面を開いて情報を同期してください';
+
+  @override
+  String get questAwaitingConfirmation => '目標達成（確認待ち）';
 
   @override
   String get waitingQuestData => '任務データ待機中';
@@ -2406,7 +2413,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get kcwikiReportDisabledDesc =>
-      '初期設定はオンで、現在はオフです。オフの間は収集・整形・通信を行わず、ゲームやローカル機能に影響しません。';
+      '初期設定はオフです。オフの間は収集・整形・通信を行わず、ゲームやローカル機能に影響しません。';
 
   @override
   String get kcwikiReportEnabledDesc =>
@@ -2417,7 +2424,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get kcwikiReportConfirmDesc =>
-      '有効にすると、進路、任務前提、戦闘、友軍、基地航空／空襲、改修記録を KCWiki の report2 サーバーへ送信します。このサーバーは現在、暗号化されていない HTTP を使用します。ログイントークン、Cookie、リクエストヘッダーは送信せず、送信失敗でゲーム機能が停止することもありません。';
+      '有効にすると、設定済みの HTTPS アドレスへ進路、任務前提、戦闘、友軍、基地航空／空襲、改修記録を送信します。ログイントークン、Cookie、リクエストヘッダーは送信せず、送信失敗でゲーム機能が停止することもありません。';
+
+  @override
+  String get kcwikiReportUnavailable =>
+      '安全な HTTPS 送信先が設定されていないため、データ提供を有効にできません。';
 
   @override
   String get kcwikiReportEnable => '任意で有効化';
@@ -3159,6 +3170,16 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String questPendingConfirmationSingleNotice(String title) {
+    return '任務目標達成（ゲーム側の確認待ち）：$title';
+  }
+
+  @override
+  String questPendingConfirmationMultiNotice(int count) {
+    return '$count件の任務目標を達成（ゲーム側の確認待ち）';
+  }
+
+  @override
   String noticeDevSuccess(String name) {
     return '$name の開発に成功しました';
   }
@@ -3353,6 +3374,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get expCalcTrackDeleted => '経験値追跡リストから削除しました';
+
+  @override
+  String get expCalcTrackLoadFailed => '追跡リストの読み込みに失敗しました。再試行';
+
+  @override
+  String get expCalcTrackSaveFailed => '追跡リストを保存できませんでした。再試行してください';
 
   @override
   String get expCalcFreeMode => '自由計算（艦娘指定なし）';

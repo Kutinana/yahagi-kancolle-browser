@@ -430,12 +430,7 @@ Future<void> main() async {
   kcwikiReportDispatcher = KcwikiReportDispatcher(
     transportFactory: () => HttpKcwikiReportTransport(
       client: http.Client(),
-      baseUri: Uri.parse(
-        const String.fromEnvironment(
-          'KCWIKI_REPORT_BASE_URL',
-          defaultValue: 'http://report2.kcwiki.org:17027',
-        ),
-      ),
+      baseUri: configuredKcwikiReportEndpoint() ?? Uri(),
     ),
     onQueued: (module) => kcwikiReportController.recordQueued(
       module: module.wireName,
@@ -1003,6 +998,15 @@ class YahagiApp extends StatelessWidget {
   Widget _buildNativeActivityGameSurface(Key key) => NativeActivityGameSurface(
     key: key,
     onGenerationChanged: nativeWebViewGenerationSink,
+    onRenderProcessGone: (didCrash) => diagnosticController?.recorder.record(
+      DiagnosticEvent.fixedError(
+        occurredAt: DateTime.now(),
+        component: DiagnosticComponent.webView,
+        errorType: didCrash ? 'rendererCrash' : 'rendererKilled',
+        code: DiagnosticErrorCode.renderProcessGone,
+        webViewHost: DiagnosticWebViewHost.activityDirect,
+      ),
+    ),
     statusController: controller,
     browserController: browserController,
     toolbarController: toolbarController,
@@ -1210,6 +1214,14 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
         port:
             widget.backgroundGameRetentionPort ??
             const MethodChannelBackgroundGameRetentionPort(),
+        onFailure: (error) => widget.diagnosticController?.recorder.record(
+          DiagnosticEvent.fixedError(
+            occurredAt: DateTime.now(),
+            component: DiagnosticComponent.platform,
+            errorType: error.runtimeType.toString(),
+            code: DiagnosticErrorCode.operationFailed,
+          ),
+        ),
       );
     }
     _applyOrientationPolicy();
@@ -1568,6 +1580,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
             },
             child: QuestCompletionDrawerHost(
               controller: widget.headerNoticeController,
+              fullscreen: _gameFullscreen,
+              nativeQuestOverlay: Platform.isAndroid,
               child: QuestCompletionFeedback(
                 controller: widget.gameStateController,
                 layoutSettingsController: widget.layoutSettingsController,
@@ -2066,7 +2080,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                           Widget buildInfo({
                                             String? module,
                                           }) => _InformationPanel(
-                                            questCatalogController: widget.questCatalogController,
+                                            questCatalogController:
+                                                widget.questCatalogController,
                                             hdEditing: _hdEditing,
                                             onHdEditingChanged: (editing) =>
                                                 setState(
@@ -2197,7 +2212,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                   ? null
                                                   : (extensionAboveGame
                                                         ? 0.0
-                                                        : hdGeometry.gameHeight)) ??
+                                                        : hdGeometry
+                                                              .gameHeight)) ??
                                               (isLandscape
                                                   ? constraints.maxHeight -
                                                         topMenuExtent
@@ -2212,7 +2228,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                     ? infoPanelExtent +
                                                           dividerExtent
                                                     : 0,
-                                                top: !_gameFullscreen &&
+                                                top:
+                                                    !_gameFullscreen &&
                                                         hdGeometry != null &&
                                                         extensionAboveGame
                                                     ? hdGeometry.bottomHeight
@@ -2365,7 +2382,8 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                                   top:
                                                       (extensionAboveGame
                                                           ? 0.0
-                                                          : hdGeometry.gameHeight) +
+                                                          : hdGeometry
+                                                                .gameHeight) +
                                                       topMenuExtent,
                                                   width: hdGeometry.gameWidth,
                                                   height: math.max(
@@ -3295,7 +3313,9 @@ class _InformationPanelState extends State<_InformationPanel> {
               ),
               'quests' => PinnedQuestsSummary(
                 catalogController: widget.questCatalogController,
-                visible: widget.layoutSettingsController.moduleDisplayFields('quests'),
+                visible: widget.layoutSettingsController.moduleDisplayFields(
+                  'quests',
+                ),
                 showLogo: widget.layoutSettingsController.moduleShowLogo(
                   'quests',
                 ),

@@ -80,6 +80,25 @@ void main() {
     expect((recipes.single as Map)['api_req_fuel'], 10);
   });
 
+  test('top-level sensitive response fields never enter a report', () {
+    final reports = collector.accept(
+      _event('/kcsapi/api_req_kousyou/remodel_slotlist', <Object?>[
+        <String, Object?>{
+          'api_id': 7,
+          'api_token': 'secret-token',
+          'cookie': 'secret-cookie',
+          'api_slot_id': 55,
+        },
+      ]),
+      state,
+    );
+
+    expect(reports, hasLength(1));
+    final payload = jsonEncode(reports.single.fields);
+    expect(payload, isNot(contains('secret-token')));
+    expect(payload, isNot(contains('secret-cookie')));
+  });
+
   test('map start creates a next_way_v2 report with fleet context', () {
     final reports = collector.accept(_mapStart(), state);
 

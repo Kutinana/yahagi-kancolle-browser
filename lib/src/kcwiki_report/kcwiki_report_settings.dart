@@ -15,12 +15,13 @@ abstract interface class KcwikiReportSettingsStore {
 
 final class SharedPreferencesKcwikiReportSettingsStore
     implements KcwikiReportSettingsStore {
-  static const String _enabledKey = 'kcwiki.report.enabled.v1';
+  // Renew consent after the previous default-on, cleartext beta releases.
+  static const String _enabledKey = 'kcwiki.report.enabled.v2';
   static const String _statusKey = 'kcwiki.report.status.v1';
 
   @override
   Future<bool> loadEnabled() async =>
-      (await SharedPreferences.getInstance()).getBool(_enabledKey) ?? true;
+      (await SharedPreferences.getInstance()).getBool(_enabledKey) ?? false;
 
   @override
   Future<void> saveEnabled(bool enabled) async {
@@ -57,7 +58,7 @@ final class SharedPreferencesKcwikiReportSettingsStore
 final class MemoryKcwikiReportSettingsStore
     implements KcwikiReportSettingsStore {
   MemoryKcwikiReportSettingsStore([
-    this.enabled = true,
+    this.enabled = false,
     KcwikiReportStatus? initialStatus,
   ]) : status = initialStatus ?? const KcwikiReportStatus();
 

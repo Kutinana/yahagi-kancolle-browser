@@ -122,7 +122,7 @@ void main() {
     expect(find.text('安全边界'), findsOneWidget);
   });
 
-  testWidgets('KCWiki reporting defaults on and reenabling is confirmed', (
+  testWidgets('KCWiki reporting defaults off and opt-in is confirmed', (
     tester,
   ) async {
     final capture = await CaptureModeController.load(_MemoryCaptureModeStore());
@@ -148,21 +148,17 @@ void main() {
           prototypeStatusController: prototype,
           gameStateController: gameState,
           kcwikiReportController: kcwiki,
+          kcwikiEndpointAvailable: true,
         ),
       ),
     );
 
     final toggle = find.byKey(const Key('kcwiki-report-switch'));
     expect(toggle, findsOneWidget);
-    expect(kcwiki.enabled, isTrue);
-
-    await tester.ensureVisible(toggle);
-    await tester.tap(toggle);
-    await tester.pumpAndSettle();
     expect(kcwiki.enabled, isFalse);
     expect(store.enabled, isFalse);
-    expect(find.text('开启 KCWiki 数据贡献？'), findsNothing);
 
+    await tester.ensureVisible(toggle);
     await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(find.text('开启 KCWiki 数据贡献？'), findsOneWidget);
@@ -173,6 +169,47 @@ void main() {
     expect(kcwiki.enabled, isTrue);
     expect(store.enabled, isTrue);
   });
+
+  testWidgets(
+    'KCWiki reporting cannot enable without a verified HTTPS endpoint',
+    (tester) async {
+      final capture = await CaptureModeController.load(
+        _MemoryCaptureModeStore(),
+      );
+      final browser = GameBrowserController();
+      final gameCapture = GameCaptureController();
+      final prototype = PrototypeStatusController();
+      final gameState = GameStateController();
+      final store = MemoryKcwikiReportSettingsStore();
+      final kcwiki = await KcwikiReportController.load(store);
+      addTearDown(capture.dispose);
+      addTearDown(browser.dispose);
+      addTearDown(gameCapture.dispose);
+      addTearDown(prototype.dispose);
+      addTearDown(gameState.dispose);
+      addTearDown(kcwiki.dispose);
+      await tester.pumpWidget(
+        withTopNotice(
+          DataSettingsPage(
+            captureModeController: capture,
+            browserController: browser,
+            gameCaptureController: gameCapture,
+            prototypeStatusController: prototype,
+            gameStateController: gameState,
+            kcwikiReportController: kcwiki,
+            kcwikiEndpointAvailable: false,
+          ),
+        ),
+      );
+      final toggle = find.byKey(const Key('kcwiki-report-switch'));
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(kcwiki.enabled, isFalse);
+      expect(store.enabled, isFalse);
+      expect(find.text('当前版本未配置安全的 HTTPS 上报地址，无法开启数据贡献。'), findsOneWidget);
+    },
+  );
 
   testWidgets('KCWiki reporting shows persistent activity states', (
     tester,

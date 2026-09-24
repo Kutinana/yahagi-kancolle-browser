@@ -11,6 +11,8 @@ data class GameResourceCachedValue(
     val entry: GameResourceCacheEntry,
 )
 
+data class GameResourceCachedFile(val file: File, val entry: GameResourceCacheEntry)
+
 enum class GameResourceStoredState { MISSING, VALID, DAMAGED }
 
 data class GameResourceStoredInspection(
@@ -53,7 +55,11 @@ class GameResourceCacheStore(
     init {
         filesDirectory.mkdirs()
         temporaryDirectory.mkdirs()
-        temporaryDirectory.listFiles()?.forEach { it.delete() }
+        runCatching {
+            Files.newDirectoryStream(temporaryDirectory.toPath()).use { files ->
+                files.forEach { Files.deleteIfExists(it) }
+            }
+        }
     }
 
     @Synchronized
@@ -62,6 +68,7 @@ class GameResourceCacheStore(
         val entry = liveEntry(key, now) ?: return null
         val file = safeFile(entry.fileName) ?: return invalidate(key)
         if (!file.isFile || file.length() != entry.byteLength) return invalidate(key)
+        if (entry.byteLength > HttpUrlConnectionGameResourceFetcher.MAX_RESOURCE_BYTES) return invalidate(key)
         val bytes = runCatching { file.readBytes() }.getOrNull() ?: return invalidate(key)
         if (sha256(bytes) != entry.sha256) return invalidate(key)
         val touched = if (now - entry.lastAccessedAt >= ACCESS_TIME_WRITE_INTERVAL_MS) {
@@ -72,6 +79,34 @@ class GameResourceCacheStore(
         return GameResourceCachedValue(bytes, touched)
     }
 
+    fun readFile(key: GameResourceCacheKey): GameResourceCachedFile? {
+        // Hashing a cached file must not block unrelated WebView resource reads.
+        repeat(2) {
+            val snapshot = synchronized(this) { liveEntry(key, clock()) } ?: return null
+            val file = safeFile(snapshot.fileName)
+            val valid = file?.isFile == true && file.length() == snapshot.byteLength &&
+                snapshot.byteLength <= HttpUrlConnectionGameResourceFetcher.MAX_RESOURCE_BYTES &&
+                runCatching { sha256(file) }.getOrNull() == snapshot.sha256
+            synchronized(this) {
+                val current = liveEntry(key, clock()) ?: return null
+                if (current.fileName != snapshot.fileName || current.sha256 != snapshot.sha256 ||
+                    current.byteLength != snapshot.byteLength) return@synchronized
+                if (!valid || file == null) return invalidateFile(key)
+                val now = clock()
+                val touched = if (now - current.lastAccessedAt >= ACCESS_TIME_WRITE_INTERVAL_MS) {
+                    current.copy(lastAccessedAt = now).also(index::put)
+                } else current
+                return GameResourceCachedFile(file, touched)
+            }
+        }
+        return null
+    }
+
+    private fun invalidateFile(key: GameResourceCacheKey): GameResourceCachedFile? {
+        remove(key)
+        return null
+    }
+
     @Synchronized
     fun contains(key: GameResourceCacheKey): Boolean {
         val entry = liveEntry(key, clock()) ?: return false
@@ -79,7 +114,6 @@ class GameResourceCacheStore(
         return file.isFile && file.length() == entry.byteLength
     }
 
-    @Synchronized
     fun commit(
         key: GameResourceCacheKey,
         bytes: ByteArray,
@@ -92,7 +126,6 @@ class GameResourceCacheStore(
         commitWithEviction(key, bytes, version, mimeType, etag, lastModified, responseHeaders),
     ) { "Resource does not fit within the cache capacity" }
 
-    @Synchronized
     fun commitWithEviction(
         key: GameResourceCacheKey,
         bytes: ByteArray,
@@ -102,58 +135,105 @@ class GameResourceCacheStore(
         lastModified: String? = null,
         responseHeaders: Map<String, String> = emptyMap(),
         expectedGeneration: Long? = null,
+    ): GameResourceCacheEntry? = commitInternal(
+        key, bytes.size.toLong(), { sha256(bytes) }, { it.writeBytes(bytes) }, version,
+        mimeType, etag, lastModified, responseHeaders, expectedGeneration,
+    )
+
+    fun commitFileWithEviction(
+        key: GameResourceCacheKey,
+        source: File,
+        version: String? = null,
+        mimeType: String,
+        etag: String? = null,
+        lastModified: String? = null,
+        responseHeaders: Map<String, String> = emptyMap(),
+        expectedGeneration: Long? = null,
+    ): GameResourceCacheEntry? = commitInternal(
+        key, source.length(), { sha256(source) }, { source.copyTo(it, overwrite = true) },
+        version, mimeType, etag, lastModified, responseHeaders, expectedGeneration,
+    )
+
+    private fun commitInternal(
+        key: GameResourceCacheKey,
+        bodyLength: Long,
+        checksumOfSource: () -> String,
+        writeTemporary: (File) -> Unit,
+        version: String?,
+        mimeType: String,
+        etag: String?,
+        lastModified: String?,
+        responseHeaders: Map<String, String>,
+        expectedGeneration: Long?,
     ): GameResourceCacheEntry? {
-        if (expectedGeneration != null && expectedGeneration != generation) return null
-        val policy = policyProvider()
-        if (policy.maxIdleAgeMs != null && ++commitsSincePolicySweep >= 256) {
-            enforcePolicy()
-            commitsSincePolicySweep = 0
-        }
-        val capacity = maxBytes
-        if (bytes.size.toLong() > capacity) return null
-        val checksum = sha256(bytes)
+        if (bodyLength > HttpUrlConnectionGameResourceFetcher.MAX_RESOURCE_BYTES) return null
+        // Prepare the downloaded file outside the index lock so cache hits can proceed.
+        val checksum = checksumOfSource()
         val fileName = "$checksum.cache"
         val destination = filesDirectory.resolve(fileName)
         val temporary = temporaryDirectory.resolve("${UUID.randomUUID()}.part")
-        val previous = index.get(key)
         try {
-            temporary.writeBytes(bytes)
-            evictForReplacement(key, bytes.size.toLong(), previous?.byteLength ?: 0L, capacity)
-            if (projectedBytes(previous?.byteLength ?: 0L, bytes.size.toLong()) > capacity) {
-                return null
-            }
-            atomicReplace(temporary, destination)
-            val entry = GameResourceCacheEntry(
-                key = key.value,
-                fileName = fileName,
-                version = version,
-                mimeType = mimeType,
-                byteLength = bytes.size.toLong(),
-                etag = etag,
-                lastModified = lastModified,
-                lastAccessedAt = clock(),
-                lastValidatedAt = clock(),
-                sha256 = checksum,
-                responseHeaders = responseHeaders,
-            )
-            try {
-                index.put(entry)
-            } catch (error: Exception) {
-                orphanCleanupPending = true
-                runCatching {
-                    if (!index.isFileReferenced(fileName) && destination.exists() &&
-                        !destination.delete()) {
-                        throw IllegalStateException("Cannot remove unindexed resource cache file")
-                    }
+            writeTemporary(temporary)
+            if (temporary.length() != bodyLength) return null
+            return synchronized(this) {
+                // Clear may have run while the temporary file was being written.
+                if (expectedGeneration != null && expectedGeneration != generation) {
+                    return@synchronized null
                 }
-                throw error
+                val policy = policyProvider()
+                if (policy.maxIdleAgeMs != null && ++commitsSincePolicySweep >= 256) {
+                    enforcePolicy()
+                    commitsSincePolicySweep = 0
+                }
+                val capacity = maxBytes
+                if (bodyLength > capacity) return@synchronized null
+                val previous = index.get(key)
+                evictForReplacement(key, bodyLength, previous?.byteLength ?: 0L, capacity)
+                if (projectedBytes(previous?.byteLength ?: 0L, bodyLength) > capacity) {
+                    return@synchronized null
+                }
+                val entry = GameResourceCacheEntry(
+                    key = key.value,
+                    fileName = fileName,
+                    version = version,
+                    mimeType = mimeType,
+                    byteLength = bodyLength,
+                    etag = etag,
+                    lastModified = lastModified,
+                    lastAccessedAt = clock(),
+                    lastValidatedAt = clock(),
+                    sha256 = checksum,
+                    responseHeaders = responseHeaders,
+                )
+                while (!index.canPut(entry)) {
+                    val oldest = index.oldestEntry()?.takeIf { it.key != key.value }
+                        ?: return@synchronized null
+                    remove(GameResourceCacheKey(oldest.key))
+                }
+                if (!destination.isFile || destination.length() != bodyLength ||
+                    runCatching { sha256(destination) }.getOrNull() != checksum
+                ) atomicReplace(temporary, destination)
+                try {
+                    index.put(entry)
+                } catch (error: Exception) {
+                    orphanCleanupPending = true
+                    runCatching {
+                        if (!index.isFileReferenced(fileName) && destination.exists() &&
+                            !destination.delete()) {
+                            throw IllegalStateException("Cannot remove unindexed resource cache file")
+                        }
+                    }
+                    throw error
+                }
+                if (previous != null && previous.fileName != fileName) {
+                    deleteIfUnreferenced(previous.fileName)
+                }
+                entry
             }
-            if (previous != null && previous.fileName != fileName) {
-                deleteIfUnreferenced(previous.fileName)
-            }
-            return entry
         } finally {
-            if (temporary.exists() && !temporary.delete()) orphanCleanupPending = true
+            if (temporary.exists() && !temporary.delete()) {
+                synchronized(this) { orphanCleanupPending = true }
+            }
         }
     }
 
@@ -253,21 +333,20 @@ class GameResourceCacheStore(
     }
 
     private fun reconcileOrphanFiles() {
-        val liveFiles = index.snapshot().mapTo(hashSetOf()) { it.fileName }
-        val files = filesDirectory.listFiles()
-            ?: throw IllegalStateException("Cannot enumerate resource cache files")
-        files.forEach { file ->
-            if (file.name !in liveFiles && !file.delete()) {
-                orphanCleanupPending = true
-                throw IllegalStateException("Cannot remove an orphaned resource cache file")
+        Files.newDirectoryStream(filesDirectory.toPath()).use { files ->
+            files.forEach { path ->
+                if (!index.isFileReferenced(path.fileName.toString()) && !Files.deleteIfExists(path)) {
+                    orphanCleanupPending = true
+                    throw IllegalStateException("Cannot remove an orphaned resource cache file")
+                }
             }
         }
-        val temporaryFiles = temporaryDirectory.listFiles()
-            ?: throw IllegalStateException("Cannot enumerate temporary resource cache files")
-        temporaryFiles.forEach { file ->
-            if (!file.delete()) {
-                orphanCleanupPending = true
-                throw IllegalStateException("Cannot remove temporary resource cache file")
+        Files.newDirectoryStream(temporaryDirectory.toPath()).use { files ->
+            files.forEach { path ->
+                if (!Files.deleteIfExists(path)) {
+                    orphanCleanupPending = true
+                    throw IllegalStateException("Cannot remove temporary resource cache file")
+                }
             }
         }
         orphanCleanupPending = false
@@ -288,10 +367,12 @@ class GameResourceCacheStore(
     }
 
     private fun deleteAllChildren(directory: File) {
-        val children = directory.listFiles()
-            ?: throw IllegalStateException("Cannot enumerate resource cache directory")
-        children.forEach { child ->
-            if (!child.delete()) throw IllegalStateException("Cannot clear resource cache file")
+        Files.newDirectoryStream(directory.toPath()).use { children ->
+            children.forEach { child ->
+                if (!Files.deleteIfExists(child)) {
+                    throw IllegalStateException("Cannot clear resource cache file")
+                }
+            }
         }
     }
 
@@ -303,8 +384,8 @@ class GameResourceCacheStore(
         val entry = metadata.entry ?: return metadata
         val file = safeFile(entry.fileName)
             ?: return GameResourceStoredInspection(GameResourceStoredState.DAMAGED)
-        val bytes = runCatching { file.readBytes() }.getOrNull()
-        if (bytes == null || sha256(bytes) != entry.sha256) {
+        val checksum = runCatching { sha256(file) }.getOrNull()
+        if (checksum == null || checksum != entry.sha256) {
             return GameResourceStoredInspection(GameResourceStoredState.DAMAGED)
         }
         return metadata
@@ -330,7 +411,7 @@ class GameResourceCacheStore(
         if (expectedGeneration != null && expectedGeneration != generation) return false
         val entry = index.get(key) ?: return false
         val merged = entry.responseHeaders.toMutableMap()
-        responseHeaders.forEach { (name, value) ->
+        GameResourceCacheRules.persistedResponseHeaders(responseHeaders).forEach { (name, value) ->
             merged.keys.filter { it.equals(name, ignoreCase = true) }.forEach(merged::remove)
             merged[name] = value
         }
@@ -395,6 +476,19 @@ class GameResourceCacheStore(
 
     private fun sha256(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    private fun sha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
 
     companion object {
         const val DEFAULT_MAX_BYTES: Long = 50_000_000_000L

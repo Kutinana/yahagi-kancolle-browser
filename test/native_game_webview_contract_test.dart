@@ -111,6 +111,11 @@ void main() {
         'generationId': 1,
         'didCrash': true,
       });
+      final presentation = NativeGameWebViewEvent.decode(<String, Object?>{
+        'type': 'presentationChanged',
+        'generationId': 1,
+        'isGame': true,
+      });
       final destroyed = NativeGameWebViewEvent.decode(<String, Object?>{
         'type': 'destroyed',
         'generationId': 1,
@@ -128,6 +133,7 @@ void main() {
       expect(error.description, 'network error');
       expect(blocked.scheme, 'intent+app');
       expect(gone.didCrash, isTrue);
+      expect(presentation.type.name, 'presentationChanged');
       expect(destroyed.type, NativeGameWebViewEventType.destroyed);
     });
 

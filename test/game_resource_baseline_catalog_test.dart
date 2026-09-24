@@ -18,8 +18,9 @@ void main() {
         <Object?>['/gadget_html5/js/a.js', '?version=2', 5],
         <Object?>['/html/a.html', '', 7],
         <Object?>['/kcscontents/a.png', '', 11],
+        <Object?>['/kcs2/resources/account.json', '', 4],
       ];
-      final compressed = _manifestBytes(entries, targetBytes: 28);
+      final compressed = _manifestBytes(entries, targetBytes: 32);
 
       final manifest = GameResourceBaselineCatalog.decode(
         compressed: compressed,
@@ -84,8 +85,8 @@ void main() {
       resourceOrigin: 'https://w17k.kancolle-server.com',
     );
 
-    expect(manifest.urls, hasLength(63258));
-    expect(manifest.targetBytes, 5731130671);
+    expect(manifest.urls, hasLength(62226));
+    expect(manifest.targetBytes, 5724038135);
   });
 }
 

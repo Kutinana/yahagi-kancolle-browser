@@ -8,6 +8,7 @@ import java.util.Locale
 value class GameResourceCacheKey(val value: String) {
     companion object {
         fun from(url: String, requestHeaders: Map<String, String> = emptyMap()): GameResourceCacheKey? {
+            if (url.length > 2_048) return null
             val uri = try {
                 URI(url)
             } catch (_: Exception) {
@@ -17,13 +18,20 @@ value class GameResourceCacheKey(val value: String) {
             val path = uri.rawPath ?: return null
             val query = uri.rawQuery?.let { "?$it" }.orEmpty()
             val base = "https://${uri.host.lowercase(Locale.ROOT)}$path$query"
+            val forwarded = GameResourceCacheRules.boundedForwardedRequestHeaders(requestHeaders)
+                ?: return null
             if (GameResourceCacheRules.isShareableStaticUri(uri)) return GameResourceCacheKey(base)
-            val variant = GameResourceCacheRules.forwardedRequestHeaders(requestHeaders).entries
+            val variant = forwarded.entries
                 .sortedBy { it.key.lowercase(Locale.ROOT) }
-                .joinToString("\n") { "${it.key.lowercase(Locale.ROOT)}:${it.value}" }
             if (variant.isEmpty()) return GameResourceCacheKey(base)
-            val digest = MessageDigest.getInstance("SHA-256")
-                .digest(variant.toByteArray(Charsets.UTF_8))
+            val hasher = MessageDigest.getInstance("SHA-256")
+            variant.forEachIndexed { index, (name, value) ->
+                if (index > 0) hasher.update('\n'.code.toByte())
+                hasher.update(name.lowercase(Locale.ROOT).toByteArray(Charsets.UTF_8))
+                hasher.update(':'.code.toByte())
+                hasher.update(value.toByteArray(Charsets.UTF_8))
+            }
+            val digest = hasher.digest()
                 .joinToString("") { "%02x".format(it) }
             return GameResourceCacheKey("$base|headers=$digest")
         }

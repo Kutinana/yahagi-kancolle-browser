@@ -7,11 +7,29 @@ import 'package:yahagi_kancolle_browser/src/kcwiki_report/kcwiki_report_request.
 import 'package:yahagi_kancolle_browser/src/kcwiki_report/kcwiki_report_transport.dart';
 
 void main() {
-  test('quest uses form encoding and battle uses JSON', () async {
+  test('cleartext endpoint never receives a report', () async {
     final client = _RecordingClient();
     final transport = HttpKcwikiReportTransport(
       client: client,
       baseUri: Uri.parse('http://example.test:17027'),
+    );
+    addTearDown(transport.close);
+
+    final result = await transport.send(
+      KcwikiReportRequest.form(
+        KcwikiReportModule.quest,
+        const <String, Object?>{},
+      ),
+    );
+    expect(result.accepted, isFalse);
+    expect(client.requests, isEmpty);
+  });
+
+  test('quest uses form encoding and battle uses JSON', () async {
+    final client = _RecordingClient();
+    final transport = HttpKcwikiReportTransport(
+      client: client,
+      baseUri: Uri.parse('https://example.test:17027'),
     );
     addTearDown(transport.close);
 
@@ -46,7 +64,7 @@ void main() {
   test('non-2xx response is reported as rejected', () async {
     final transport = HttpKcwikiReportTransport(
       client: _RecordingClient(statusCode: 503),
-      baseUri: Uri.parse('http://example.test:17027'),
+      baseUri: Uri.parse('https://example.test:17027'),
     );
     addTearDown(transport.close);
 
@@ -65,7 +83,7 @@ void main() {
     final client = _RecordingClient();
     final transport = HttpKcwikiReportTransport(
       client: client,
-      baseUri: Uri.parse('http://example.test:17027'),
+      baseUri: Uri.parse('https://example.test:17027'),
       maxBodyBytes: 10,
     );
     addTearDown(transport.close);
@@ -84,7 +102,7 @@ void main() {
   test('request timeout becomes an isolated failure', () async {
     final transport = HttpKcwikiReportTransport(
       client: _RecordingClient(block: true),
-      baseUri: Uri.parse('http://example.test:17027'),
+      baseUri: Uri.parse('https://example.test:17027'),
       timeout: const Duration(milliseconds: 1),
     );
     addTearDown(transport.close);

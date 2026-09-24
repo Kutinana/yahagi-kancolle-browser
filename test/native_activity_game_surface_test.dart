@@ -33,6 +33,72 @@ import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller
 import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
 
 void main() {
+  testWidgets(
+    'native game presentation starts retention stage before background',
+    (tester) async {
+      final fixture = _SurfaceFixture();
+      addTearDown(fixture.dispose);
+      await fixture.pump(tester);
+      await tester.pump();
+
+      fixture.port.addEvent(
+        _event('pageStarted', generationId: 7, url: 'https://game.example/'),
+      );
+      await tester.pump();
+      expect(fixture.toolbarController.stage, GameSurfaceStage.login);
+
+      fixture.port.addEvent(
+        _event('presentationChanged', generationId: 7, isGame: true),
+      );
+      await tester.pump();
+      expect(fixture.toolbarController.stage, GameSurfaceStage.game);
+
+      fixture.port.addEvent(
+        _event('presentationChanged', generationId: 6, isGame: false),
+      );
+      await tester.pump();
+      expect(fixture.toolbarController.stage, GameSurfaceStage.game);
+
+      fixture.port.addEvent(
+        _event('presentationChanged', generationId: 7, isGame: false),
+      );
+      await tester.pump();
+      expect(fixture.toolbarController.stage, GameSurfaceStage.login);
+    },
+  );
+
+  testWidgets('renderer exit identifies a killed renderer for diagnostics', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    final exits = <bool>[];
+    await fixture.pump(tester, onRenderProcessGone: exits.add);
+    await tester.pump();
+    fixture.port.addEvent(
+      _event('renderProcessGone', generationId: 7, didCrash: false),
+    );
+    await tester.pump();
+    expect(exits, <bool>[false]);
+  });
+
+  testWidgets('disposing the native game surface ends retention stage', (
+    tester,
+  ) async {
+    final fixture = _SurfaceFixture();
+    addTearDown(fixture.dispose);
+    await fixture.pump(tester);
+    await tester.pump();
+    fixture.port.addEvent(
+      _event('presentationChanged', generationId: 7, isGame: true),
+    );
+    await tester.pump();
+    expect(fixture.toolbarController.stage, GameSurfaceStage.game);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(fixture.toolbarController.stage, GameSurfaceStage.login);
+  });
+
   testWidgets('DMM compatibility receives the complete native login URL', (
     tester,
   ) async {
@@ -2407,6 +2473,7 @@ NativeGameWebViewEvent _event(
   String? description,
   String? scheme,
   bool? didCrash,
+  bool? isGame,
 }) {
   return NativeGameWebViewEvent.decode(<String, Object?>{
     'type': type,
@@ -2416,6 +2483,7 @@ NativeGameWebViewEvent _event(
     'description': ?description,
     'scheme': ?scheme,
     'didCrash': ?didCrash,
+    'isGame': ?isGame,
   });
 }
 
@@ -2711,6 +2779,7 @@ final class _SurfaceFixture {
     GameSurfaceStartupOrchestrator? startupOrchestrator,
     GameFrameRateSettingsController? frameRateSettingsController,
     GameFrameRateRuntimePort Function()? frameRateRuntimePortFactory,
+    void Function(bool didCrash)? onRenderProcessGone,
   }) {
     if (tester.binding.lifecycleState != AppLifecycleState.resumed) {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
@@ -2733,6 +2802,7 @@ final class _SurfaceFixture {
             startupOrchestrator: startupOrchestrator ?? orchestrator,
             frameRateSettingsController: frameRateSettingsController,
             frameRateRuntimePortFactory: frameRateRuntimePortFactory,
+            onRenderProcessGone: onRenderProcessGone,
             previewPort: previewPort,
             previewDecoder: (bytes, _) async => MemoryImage(bytes),
             cleanupTimeout: cleanupTimeout,

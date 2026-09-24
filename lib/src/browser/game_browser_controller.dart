@@ -245,15 +245,19 @@ final class GameBrowserController extends ChangeNotifier {
   }
 
   Future<void> logoutAndClearSession() async {
-    final generation = ++_sessionResetGeneration;
-    await onSessionReset?.call();
-    if (generation != _sessionResetGeneration) return;
     final port = _readyPort();
     if (port == null) {
-      return;
+      throw StateError('WebView is not ready to clear the login session');
+    }
+    final generation = ++_sessionResetGeneration;
+    await onSessionReset?.call();
+    if (generation != _sessionResetGeneration || !identical(_port, port)) {
+      throw StateError('Logout was interrupted before session clearing was confirmed');
     }
     await port.clearSession();
-    if (generation != _sessionResetGeneration) return;
+    if (generation != _sessionResetGeneration || !identical(_port, port)) {
+      throw StateError('Logout was interrupted before session clearing was confirmed');
+    }
     _dmmRegionCompatibility.reset();
     _mode = GameBrowserMode.realWeb;
     _errorMessage = null;

@@ -6,6 +6,40 @@ import 'package:yahagi_kancolle_browser/src/browser/origin_cookie_manager_port.d
 import 'package:yahagi_kancolle_browser/src/settings/game_connector.dart';
 
 void main() {
+  test('logout reports failure when WebView is unavailable', () async {
+    var resets = 0;
+    final controller = GameBrowserController(onSessionReset: () => resets++);
+    addTearDown(controller.dispose);
+
+    await expectLater(
+      controller.logoutAndClearSession(),
+      throwsA(isA<StateError>()),
+    );
+    expect(resets, 0);
+  });
+
+  test('superseded logout cannot report success', () async {
+    final port = FakeGameBrowserPort();
+    final resets = <Completer<void>>[];
+    final controller = GameBrowserController(
+      port: port,
+      onSessionReset: () {
+        final pending = Completer<void>();
+        resets.add(pending);
+        return pending.future;
+      },
+    );
+    addTearDown(controller.dispose);
+
+    final logout = controller.logoutAndClearSession();
+    final switchHome = controller.switchHome(GameConnector.yahagi.entryUri);
+    resets[1].complete();
+    await switchHome;
+    resets[0].complete();
+    await expectLater(logout, throwsA(isA<StateError>()));
+    expect(port.clearSessionCalls, 0);
+  });
+
   test('logout invalidates account before delayed browser cleanup', () async {
     final port = FakeGameBrowserPort()
       ..clearSessionCompleter = Completer<void>();
@@ -24,6 +58,22 @@ void main() {
     expect(resets, 2);
     controller.dispose();
   });
+
+  test(
+    'logout reports failure if WebView detaches during cookie clearing',
+    () async {
+      final port = FakeGameBrowserPort()
+        ..clearSessionCompleter = Completer<void>();
+      final controller = GameBrowserController(port: port);
+      addTearDown(controller.dispose);
+      final logout = controller.logoutAndClearSession();
+      await Future<void>.delayed(Duration.zero);
+      controller.detachPort(port);
+      port.clearSessionCompleter!.complete();
+      await expectLater(logout, throwsStateError);
+      expect(port.loadedUris, isEmpty);
+    },
+  );
 
   test(
     'navigation waits for capture reset and ignores an obsolete switch',

@@ -99,6 +99,18 @@ class TopNoticeController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeByTone(TopNoticeTone tone) {
+    final oldLength = _notices.length;
+    _notices.removeWhere((notice) => notice.tone == tone);
+    if (_notices.length == oldLength) return;
+    if (_notices.isEmpty) {
+      _timer?.cancel();
+      _timer = null;
+      _batchStartedAt = null;
+    }
+    notifyListeners();
+  }
+
   void hide() {
     _timer?.cancel();
     _timer = null;

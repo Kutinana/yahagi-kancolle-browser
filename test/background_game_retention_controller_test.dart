@@ -33,7 +33,7 @@ void main() {
   });
 
   test(
-    'retains only while enabled game is active and app is backgrounded',
+    'starts retention before leaving the game and keeps it on resume',
     () async {
       final controller = await BackgroundGameRetentionController.load(
         _MemoryBackgroundGameRetentionStore(),
@@ -48,15 +48,20 @@ void main() {
       await coordinator.settle();
 
       toolbar.onStageChanged(GameSurfaceStage.game);
+      await coordinator.settle();
+      expect(port.values.last, isTrue);
+      final countBeforeBackground = port.values.length;
       await coordinator.handleLifecycleState(AppLifecycleState.paused);
       await coordinator.settle();
 
       expect(port.values.last, isTrue);
+      expect(port.values.length, countBeforeBackground);
 
       await coordinator.handleLifecycleState(AppLifecycleState.resumed);
       await coordinator.settle();
 
-      expect(port.values.last, isFalse);
+      expect(port.values.last, isTrue);
+      expect(port.values.length, countBeforeBackground);
       coordinator.dispose();
       toolbar.dispose();
       controller.dispose();
@@ -131,10 +136,39 @@ void main() {
 
     await coordinator.handleLifecycleState(AppLifecycleState.paused);
     await coordinator.handleLifecycleState(AppLifecycleState.resumed);
+    toolbar.onStageChanged(GameSurfaceStage.login);
     port.release();
     await coordinator.settle();
 
     expect(port.values.last, isFalse);
+  });
+
+  test('foreground service failure is visible and can recover', () async {
+    final controller = await BackgroundGameRetentionController.load(
+      _MemoryBackgroundGameRetentionStore(),
+    );
+    final toolbar = GameToolbarController();
+    final port = _RecordingBackgroundGameRetentionPort()..failNext = true;
+    final failures = <Object>[];
+    final coordinator = BackgroundGameRetentionCoordinator(
+      controller: controller,
+      toolbarController: toolbar,
+      port: port,
+      onFailure: failures.add,
+    );
+    await coordinator.settle();
+
+    toolbar.onStageChanged(GameSurfaceStage.game);
+    await coordinator.settle();
+    expect(controller.errorMessage, contains('foreground denied'));
+    expect(failures, hasLength(1));
+
+    toolbar.onStageChanged(GameSurfaceStage.login);
+    await coordinator.settle();
+    toolbar.onStageChanged(GameSurfaceStage.game);
+    await coordinator.settle();
+    expect(controller.errorMessage, isNull);
+    expect(port.values.last, isTrue);
   });
 }
 
@@ -157,10 +191,15 @@ final class _RecordingBackgroundGameRetentionPort
     implements BackgroundGameRetentionPort {
   final List<bool> values = <bool>[];
   bool block = false;
+  bool failNext = false;
   Completer<void>? _gate;
 
   @override
   Future<void> setRetaining(bool retaining) async {
+    if (failNext && retaining) {
+      failNext = false;
+      throw StateError('foreground denied');
+    }
     values.add(retaining);
     if (block) {
       _gate ??= Completer<void>();

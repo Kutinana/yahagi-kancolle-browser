@@ -75,7 +75,9 @@ class DiagnosticUserSection extends StatelessWidget {
             ),
             TextButton.icon(
               key: const Key('clearDiagnosticDataButton'),
-              onPressed: () => _confirmClear(context, l10n),
+              onPressed: controller.exporting
+                  ? null
+                  : () => _confirmClear(context, l10n),
               icon: const Icon(Icons.delete_outline),
               label: Text(l10n.clearDiagnosticData),
             ),
@@ -181,7 +183,18 @@ class DiagnosticUserSection extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) await controller.clear();
+    if (confirmed != true) return;
+    try {
+      await controller.clear();
+    } catch (_) {
+      if (context.mounted) {
+        TopNotice.show(
+          context,
+          message: l10n.diagnosticClearFailed,
+          tone: TopNoticeTone.error,
+        );
+      }
+    }
   }
 
   static String _formatBytes(int bytes) {
