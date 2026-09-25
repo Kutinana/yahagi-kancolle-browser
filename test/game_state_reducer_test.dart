@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/fleet_metrics.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
@@ -2145,5 +2147,102 @@ void main() {
       expect(clearedFleet.mission.missionId, 0);
       expect(state.fleets.every((fleet) => !fleet.mission.isActive), isTrue);
     });
+
+    test(
+      'expedition result clears only the specified fleet when missions match',
+      () {
+        final reducer = GameStateReducer();
+        final port =
+            (jsonDecode(portEvent.responseBody) as Map)['api_data']
+                as Map<String, dynamic>;
+        final fleets = port['api_deck_port'] as List;
+        fleets[2]['api_mission'] = List<Object?>.of(
+          fleets[1]['api_mission'] as List,
+        );
+        var state = reducer.reduce(
+          GameState.empty,
+          kcsapiEvent('/kcsapi/api_port/port', port),
+        );
+        expect(
+          state.fleets.where((fleet) => fleet.mission.missionId == 5),
+          hasLength(2),
+        );
+
+        state = reducer.reduce(
+          state,
+          kcsapiEvent(
+            '/kcsapi/api_req_mission/result',
+            const <String, Object?>{'api_clear_result': 1},
+            requestParams: const <String, Object?>{
+              'api_deck_id': '2',
+              'api_mission_id': '5',
+            },
+          ),
+        );
+
+        expect(
+          state.fleets.firstWhere((fleet) => fleet.id == 2).mission.isActive,
+          isFalse,
+        );
+        expect(
+          state.fleets.firstWhere((fleet) => fleet.id == 3).mission.isActive,
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'expedition result without fleet id keeps ambiguous missions active',
+      () {
+        final reducer = GameStateReducer();
+        final port =
+            (jsonDecode(portEvent.responseBody) as Map)['api_data']
+                as Map<String, dynamic>;
+        final fleets = port['api_deck_port'] as List;
+        fleets[2]['api_mission'] = List<Object?>.of(
+          fleets[1]['api_mission'] as List,
+        );
+        var state = reducer.reduce(
+          GameState.empty,
+          kcsapiEvent('/kcsapi/api_port/port', port),
+        );
+
+        state = reducer.reduce(
+          state,
+          kcsapiEvent(
+            '/kcsapi/api_req_mission/result',
+            const <String, Object?>{'api_clear_result': 1},
+            requestParams: const <String, Object?>{'api_mission_id': '5'},
+          ),
+        );
+
+        expect(
+          state.fleets.where((fleet) => fleet.mission.isActive),
+          hasLength(2),
+        );
+      },
+    );
+
+    test(
+      'expedition result without fleet id clears a unique matching mission',
+      () {
+        final reducer = GameStateReducer();
+        var state = reducer.reduce(GameState.empty, portEvent);
+
+        state = reducer.reduce(
+          state,
+          kcsapiEvent(
+            '/kcsapi/api_req_mission/result',
+            const <String, Object?>{'api_clear_result': 1},
+            requestParams: const <String, Object?>{'api_mission_id': '5'},
+          ),
+        );
+
+        expect(
+          state.fleets.firstWhere((fleet) => fleet.id == 2).mission.isActive,
+          isFalse,
+        );
+      },
+    );
   });
 }

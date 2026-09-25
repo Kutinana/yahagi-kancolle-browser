@@ -2871,12 +2871,23 @@ class GameStateReducer {
   ) {
     final requestedMissionId = _asInt(event.requestParams['api_mission_id']);
     final deckId = _asInt(event.requestParams['api_deck_id']);
+    final matchingMissionFleets = deckId > 0 || requestedMissionId <= 0
+        ? const <Fleet>[]
+        : state.fleets
+              .where(
+                (fleet) =>
+                    fleet.mission.isActive &&
+                    fleet.mission.missionId == requestedMissionId,
+              )
+              .toList();
+    final returnedFleetId = deckId > 0
+        ? deckId
+        : matchingMissionFleets.length == 1
+        ? matchingMissionFleets.single.id
+        : 0;
     final fleets = <Fleet>[
       for (final fleet in state.fleets)
-        if (((deckId > 0 && fleet.id == deckId) ||
-                (requestedMissionId > 0 &&
-                    fleet.mission.missionId == requestedMissionId)) &&
-            fleet.mission.isActive)
+        if (fleet.id == returnedFleetId && fleet.mission.isActive)
           Fleet(
             id: fleet.id,
             name: fleet.name,

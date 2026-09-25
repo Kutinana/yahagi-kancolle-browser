@@ -584,15 +584,17 @@ class _TimedProgress extends StatelessWidget {
               Padding(
                 key: completionKey,
                 padding: EdgeInsets.zero,
-                child: Text(
-                  '$completionLabel ${formatExpeditionCompletionTime(end, now: now)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xffa9c6d2),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                child: SecondTickBuilder(
+                  builder: (context, currentNow, _) => Text(
+                    '$completionLabel ${formatExpeditionCompletionTime(end, now: currentNow)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xffa9c6d2),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ),
