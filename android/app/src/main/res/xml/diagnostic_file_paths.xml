@@ -3,4 +3,7 @@
     <cache-path
         name="diagnostics_export"
         path="diagnostics-export/" />
+    <cache-path
+        name="record_backup_share"
+        path="record-backup-share/" />
 </paths>

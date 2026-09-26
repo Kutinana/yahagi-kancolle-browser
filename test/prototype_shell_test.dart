@@ -64,6 +64,77 @@ Future<void> _tapWorkspaceNavigationItem(
 }
 
 void main() {
+  testWidgets('backup maintenance preserves shell and restarts game surface', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final timersWereDisabled = GameStateController.disableTimerForTest;
+    GameStateController.disableTimerForTest = true;
+    addTearDown(
+      () => GameStateController.disableTimerForTest = timersWereDisabled,
+    );
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final maintenance = ValueNotifier<Widget?>(null);
+    final game = GameStateController();
+    final toolbar = GameToolbarController();
+    final capture = GameCaptureController();
+    final battle = BattleController(gameState: () => game.state);
+    final layout = await LayoutSettingsController.load(
+      _MemoryLayoutSettingsStore(),
+    );
+    addTearDown(maintenance.dispose);
+    addTearDown(game.dispose);
+    addTearDown(toolbar.dispose);
+    addTearDown(capture.dispose);
+    addTearDown(battle.dispose);
+    addTearDown(layout.dispose);
+    var surfaceDisposals = 0;
+    await tester.pumpWidget(
+      YahagiApp(
+        layoutSettingsController: layout,
+        networkSettingsController: NetworkSettingsController(
+          store: _MemoryNetworkSettingsStore(),
+        ),
+        gadgetBypassController: GadgetBypassController(
+          store: _MemoryGadgetBypassStore(),
+          port: _FakeGadgetBypassPort(),
+        ),
+        safetySettingsController: await SafetySettingsController.load(
+          MemorySafetySettingsStore(),
+        ),
+        displayModeController: await DisplayModeController.load(
+          MemoryDisplayModeStore(),
+        ),
+        controller: PrototypeStatusController(),
+        browserController: GameBrowserController(port: _NoopBrowserPort()),
+        captureModeController: await CaptureModeController.load(
+          _MemoryModeStore(),
+        ),
+        gameCaptureController: capture,
+        gameStateController: game,
+        battleController: battle,
+        audioController: await GameAudioController.load(_MemoryAudioStore()),
+        toolbarController: toolbar,
+        gameSurface: _LifecycleProbe(onDispose: () => surfaceDisposals++),
+        backupMaintenanceOverlay: maintenance,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final shellState = tester.state(find.byType(YahagiShell));
+    maintenance.value = const Scaffold(body: Text('Recovering backup'));
+    await tester.pumpAndSettle();
+    expect(tester.state(find.byType(YahagiShell)), same(shellState));
+    expect(surfaceDisposals, 1);
+    expect(find.text('Recovering backup'), findsOneWidget);
+    maintenance.value = null;
+    await tester.pumpAndSettle();
+    expect(tester.state(find.byType(YahagiShell)), same(shellState));
+    expect(find.byType(_LifecycleProbe), findsOneWidget);
+  });
+
   testWidgets('quest listener survives navigation and orientation changes', (
     tester,
   ) async {
@@ -926,6 +997,8 @@ void main() {
 
     expect(find.text('游戏模式（默认）'), findsOneWidget);
     expect(find.text('纯浏览模式'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings-tab-5')));
+    await tester.pumpAndSettle();
     expect(find.text('关于 ヤハギ', skipOffstage: false), findsWidgets);
     expect(find.text('诊断与关于', skipOffstage: false), findsNothing);
     expect(find.text('安全边界', skipOffstage: false), findsNothing);
@@ -986,11 +1059,11 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const Key('toolbox-tab-other')));
     await tester.pumpAndSettle();
-    expect(find.text('其他功能陆续开发中'), findsOneWidget);
+    expect(find.text('其他功能正在开发中'), findsOneWidget);
     expect(find.textContaining('"hqlv":77'), findsNothing);
     await tester.tap(find.byKey(const Key('toolbox-tab-export')));
     await tester.pumpAndSettle();
-    expect(find.text('其他功能陆续开发中'), findsNothing);
+    expect(find.text('其他功能正在开发中'), findsNothing);
     expect(find.textContaining('"hqlv":77'), findsOneWidget);
     expect(
       tester
@@ -1133,6 +1206,8 @@ void main() {
     expect(find.byKey(const Key('unsupported-game-surface')), findsOneWidget);
     await _tapWorkspaceNavigationItem(tester, 'settings');
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-tab-4')));
+    await tester.pumpAndSettle();
     expect(
       find.text('当前 WebView 不支持跨框架捕获', skipOffstage: false),
       findsOneWidget,
@@ -1200,6 +1275,8 @@ void main() {
     await tester.pump();
 
     await _tapWorkspaceNavigationItem(tester, 'settings');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-tab-4')));
     await tester.pumpAndSettle();
     expect(find.text('母港接口验证通过', skipOffstage: false), findsOneWidget);
     gameCaptureController.dispose();

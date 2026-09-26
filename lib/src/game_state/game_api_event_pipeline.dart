@@ -78,9 +78,11 @@ final class GameApiEventPipeline {
   int _backgroundFallbackCount = 0;
   int _sessionGeneration = 0;
   bool _awaitingLoginStart = false;
+  bool _maintenancePaused = false;
   String? _activeDocumentId;
   double? _activeDocumentStartedAt;
   final Set<String> _retiredDocumentIds = {};
+  double? _maintenanceDocumentCutoff;
 
   /// Called before leaving a login session, including while decoding an event.
   void invalidatePendingEvents({bool waitForLoginStart = false}) {
@@ -91,10 +93,41 @@ final class GameApiEventPipeline {
     _retiredDocumentIds.clear();
   }
 
+  void pauseForMaintenance() {
+    final previousDocumentId = _activeDocumentId;
+    final previousStartedAt = _activeDocumentStartedAt;
+    _maintenancePaused = true;
+    invalidatePendingEvents(waitForLoginStart: true);
+    if (previousDocumentId != null) {
+      _retiredDocumentIds.add(previousDocumentId);
+    }
+    if (previousStartedAt != null &&
+        (_maintenanceDocumentCutoff == null ||
+            previousStartedAt > _maintenanceDocumentCutoff!)) {
+      _maintenanceDocumentCutoff = previousStartedAt;
+    }
+  }
+
+  void resumeAfterMaintenance() {
+    // The game surface is recreated after this point. A delayed response from
+    // the disposed surface retains its old document-start timestamp.
+    final resumedAt = DateTime.now().millisecondsSinceEpoch.toDouble();
+    if (_maintenanceDocumentCutoff == null ||
+        resumedAt > _maintenanceDocumentCutoff!) {
+      _maintenanceDocumentCutoff = resumedAt;
+    }
+    _maintenancePaused = false;
+  }
+
   bool _acceptDocument(CapturedApiEvent event) {
     final documentId = event.captureDocumentId;
     final startedAt = event.captureDocumentStartedAtEpochMs;
-    if (documentId == _activeDocumentId) return true;
+    if (_maintenanceDocumentCutoff case final cutoff?) {
+      if (documentId == null || startedAt == null || startedAt <= cutoff) {
+        return false;
+      }
+    }
+    if (documentId != null && documentId == _activeDocumentId) return true;
     if (documentId == null || startedAt == null) {
       return _activeDocumentId == null;
     }
@@ -129,6 +162,7 @@ final class GameApiEventPipeline {
           event.captureDocumentId == _activeDocumentId);
 
   void add(CapturedApiEvent event) {
+    if (_maintenancePaused) return;
     final generation = _sessionGeneration;
     _pendingEventCount += 1;
     final queueDepth = _pendingEventCount;

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -167,6 +168,16 @@ final class RetirementLogEntry {
 
 class LogbookDatabase extends ChangeNotifier {
   static const int schemaVersion = 12;
+  static const backupTables = <String>[
+    'battle_logs',
+    'map_resource_logs',
+    'resource_logs',
+    'expedition_logs',
+    'pending_construction_logs',
+    'construction_logs',
+    'development_logs',
+    'retirement_logs',
+  ];
   static AccountSession _accountSession = AccountSession.shared;
   static final Map<int, LogbookDatabase> _accountDatabases = {};
 
@@ -200,6 +211,7 @@ class LogbookDatabase extends ChangeNotifier {
   Future<void>? _resourceWriteQueue;
   _ResourceSnapshotValues? _lastResourceValues;
   bool _resourceBaselineLoaded = false;
+  final ValueNotifier<int> backupWrites = ValueNotifier<int>(0);
   final Map<LogbookChangeCategory, ValueNotifier<int>> _changeSignals = {
     for (final category in LogbookChangeCategory.values)
       category: ValueNotifier<int>(0),
@@ -286,10 +298,238 @@ class LogbookDatabase extends ChangeNotifier {
     return await file.exists() ? file.length() : 0;
   }
 
+  /// This identity lives in the account database itself. A fresh database
+  /// must never reuse a SharedPreferences ID restored by Android Auto Backup.
+  Future<String> backupSourceId() async {
+    final db = await database;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS backup_source_identity (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        token TEXT NOT NULL
+      )
+    ''');
+    return db.transaction<String>((txn) async {
+      final existing = await txn.query(
+        'backup_source_identity',
+        columns: ['token'],
+        where: 'id = 1',
+      );
+      if (existing.isNotEmpty) return existing.single['token'] as String;
+      final random = Random.secure();
+      final token = List.generate(
+        4,
+        (_) => random.nextInt(0x100000000).toRadixString(16).padLeft(8, '0'),
+      ).join();
+      await txn.insert('backup_source_identity', {'id': 1, 'token': token});
+      return token;
+    });
+  }
+
   void _notifyChange(LogbookChangeCategory category) {
     final signal = _changeSignals[category]!;
     signal.value += 1;
     notifyListeners();
+    backupWrites.value += 1;
+  }
+
+  /// A complete, consistent logical snapshot. Pending resource writes are
+  /// drained before reading so export and cleanup cannot race them.
+  Future<Map<String, List<Map<String, Object?>>>> backupSnapshot() async {
+    await _resourceWriteQueue;
+    final db = await database;
+    final result = <String, List<Map<String, Object?>>>{};
+    await db.transaction((txn) async {
+      for (final table in backupTables) {
+        result[table] = await txn.query(
+          table,
+          orderBy: table == 'pending_construction_logs'
+              ? 'dock_id ASC'
+              : 'id ASC',
+        );
+      }
+    });
+    return result;
+  }
+
+  /// Compare and clear in one SQLite transaction. A game write after the
+  /// external backup snapshot makes this return false without deleting data.
+  Future<bool> clearAllIfSnapshotMatches(
+    Map<String, List<Map<String, Object?>>> expected,
+  ) async {
+    await _resourceWriteQueue;
+    if (expected.keys.toSet().difference(backupTables.toSet()).isNotEmpty ||
+        backupTables.any((table) => !expected.containsKey(table))) {
+      throw const FormatException('Invalid logbook tables');
+    }
+    final db = await database;
+    final cleared = await db.transaction<bool>((txn) async {
+      for (final table in backupTables) {
+        final actual = await txn.query(
+          table,
+          orderBy: table == 'pending_construction_logs'
+              ? 'dock_id ASC'
+              : 'id ASC',
+        );
+        final saved = expected[table]!;
+        if (actual.length != saved.length) return false;
+        for (var index = 0; index < actual.length; index++) {
+          if (!mapEquals(actual[index], saved[index])) return false;
+        }
+      }
+      for (final table in backupTables) {
+        await txn.delete(table);
+      }
+      return true;
+    });
+    if (cleared) {
+      _lastResourceValues = null;
+      _resourceBaselineLoaded = false;
+      _notifyAllChanges();
+    }
+    return cleared;
+  }
+
+  /// Validated snapshots are applied in one SQLite transaction. A failed row
+  /// leaves the original logbook intact.
+  Future<void> validateBackupSnapshot(
+    Map<String, List<Map<String, Object?>>> tables,
+  ) async {
+    final db = await database;
+    await _validateBackupSnapshot(db, tables);
+  }
+
+  static Future<void> _validateBackupSnapshot(
+    DatabaseExecutor executor,
+    Map<String, List<Map<String, Object?>>> tables,
+  ) async {
+    // LogbookPage adds JST (+9h) after constructing a UTC DateTime. Keep the
+    // result inside Dart's supported epoch-millisecond interval.
+    const maxDateTimeMs = 8640000000000000;
+    const jstOffsetMs = 9 * 60 * 60 * 1000;
+    // Preserve room for later AUTOINCREMENT inserts after an imported row.
+    const maxSafeAutoId = 9223372036854775807 - 1000000;
+    if (tables.keys.toSet().difference(backupTables.toSet()).isNotEmpty ||
+        backupTables.any((table) => !tables.containsKey(table))) {
+      throw const FormatException('Invalid logbook tables');
+    }
+    for (final table in backupTables) {
+      final schema = await executor.rawQuery('PRAGMA table_info($table)');
+      final columns = {
+        for (final column in schema)
+          if (column['name'] is String) column['name'] as String: column,
+      };
+      for (final row in tables[table]!) {
+        // Snapshots come from SELECT * and must preserve nullable columns as
+        // explicit nulls. An omitted key would be filled by SQLite on restore
+        // and could silently change the archive after SAF promotion.
+        if (!setEquals(row.keys.toSet(), columns.keys.toSet())) {
+          throw FormatException('Invalid columns in $table');
+        }
+        for (final entry in row.entries) {
+          final column = columns[entry.key]!;
+          final value = entry.value;
+          if (value == null) {
+            if (column['notnull'] == 1 || (column['pk'] as int? ?? 0) > 0) {
+              throw FormatException('Null ${entry.key} in $table');
+            }
+            continue;
+          }
+          final type = (column['type'] as String? ?? '').toUpperCase();
+          // Battle node status is a localized label in production writes,
+          // despite this legacy column's INTEGER affinity. SQLite stores
+          // non-numeric text losslessly, but coerces numeric strings to a
+          // number, which would change a restored archive on readback.
+          final battleNodeLabel =
+              table == 'battle_logs' &&
+              entry.key == 'node_type' &&
+              value is String &&
+              num.tryParse(value.trim()) == null;
+          if ((type == 'INTEGER' && value is! int && !battleNodeLabel) ||
+              (type == 'TEXT' && value is! String) ||
+              (type == 'REAL' && value is! num)) {
+            throw FormatException('Invalid ${entry.key} type in $table');
+          }
+          if (entry.key == 'timestamp' &&
+              value is int &&
+              (value < -maxDateTimeMs ||
+                  value > maxDateTimeMs - jstOffsetMs)) {
+            throw FormatException('Invalid timestamp in $table');
+          }
+          if (entry.key == 'id' &&
+              value is int &&
+              (value <= 0 || value >= maxSafeAutoId)) {
+            throw FormatException('Invalid row ID in $table');
+          }
+        }
+      }
+      final uniqueKeys = <List<String>>[];
+      final primary =
+          schema.where((column) => (column['pk'] as int? ?? 0) > 0).toList()
+            ..sort((a, b) => (a['pk'] as int).compareTo(b['pk'] as int));
+      if (primary.isNotEmpty) {
+        uniqueKeys.add([
+          for (final column in primary) column['name'] as String,
+        ]);
+      }
+      final indexes = await executor.rawQuery('PRAGMA index_list($table)');
+      for (final index in indexes) {
+        if (index['unique'] != 1) continue;
+        final rawName = index['name'];
+        if (rawName is! String) {
+          throw FormatException('Invalid index in $table');
+        }
+        final quotedName = rawName.replaceAll('"', '""');
+        final info = await executor.rawQuery(
+          'PRAGMA index_info("$quotedName")',
+        );
+        info.sort((a, b) => (a['seqno'] as int).compareTo(b['seqno'] as int));
+        if (info.isEmpty || info.any((entry) => entry['name'] is! String)) {
+          throw FormatException('Unsupported unique index in $table');
+        }
+        uniqueKeys.add([for (final entry in info) entry['name'] as String]);
+      }
+      for (final columns in uniqueKeys) {
+        final seen = <String>{};
+        for (final row in tables[table]!) {
+          final values = [for (final column in columns) row[column]];
+          // SQLite allows multiple NULL values in an ordinary UNIQUE index.
+          if (values.any((value) => value == null)) continue;
+          if (!seen.add(jsonEncode(values))) {
+            throw FormatException('Duplicate ${columns.join(',')} in $table');
+          }
+        }
+      }
+    }
+    final constructionIds = tables['construction_logs']!
+        .map((row) => row['id'])
+        .whereType<int>()
+        .toSet();
+    for (final row in tables['pending_construction_logs']!) {
+      if (!constructionIds.contains(row['record_id'])) {
+        throw const FormatException('Invalid pending construction reference');
+      }
+    }
+  }
+
+  Future<void> restoreSnapshot(
+    Map<String, List<Map<String, Object?>>> tables,
+  ) async {
+    await _resourceWriteQueue;
+    final db = await database;
+    await db.transaction((txn) async {
+      await _validateBackupSnapshot(txn, tables);
+      for (final table in backupTables) {
+        await txn.delete(table);
+      }
+      for (final table in backupTables) {
+        for (final row in tables[table]!) {
+          await txn.insert(table, row);
+        }
+      }
+    });
+    _lastResourceValues = null;
+    _resourceBaselineLoaded = false;
+    _notifyAllChanges();
   }
 
   void _notifyAllChanges() {
@@ -1204,6 +1444,7 @@ class LogbookDatabase extends ChangeNotifier {
       where: 'dock_id = ? AND record_id = ?',
       whereArgs: <Object?>[dockId, recordId],
     );
+    if (count > 0) _notifyChange(LogbookChangeCategory.construction);
     return count > 0;
   }
 

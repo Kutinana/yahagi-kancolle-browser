@@ -70,6 +70,7 @@ import app.yahagi.kancollebrowser.capture.ScreenshotDestination
 import app.yahagi.kancollebrowser.capture.ScreenshotOutput
 import app.yahagi.kancollebrowser.capture.ScreenshotViewCandidate
 import app.yahagi.kancollebrowser.composition.CompositionImageHandler
+import app.yahagi.kancollebrowser.backup.RecordBackupHandler
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticExportDirectoryHost
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticDirectoryPickerUi
 import app.yahagi.kancollebrowser.diagnostics.DiagnosticPickerSystemBars
@@ -203,6 +204,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
     @Volatile
     private var gameResourceCacheMode: GameResourceCacheMode = GameResourceCacheMode.TEMPORARY
     private var diagnosticPlatformHandler: DiagnosticPlatformHandler? = null
+    private var recordBackupHandler: RecordBackupHandler? = null
     private val diagnosticDirectoryPickerUi by lazy {
         DiagnosticDirectoryPickerUi(
             systemBars = object : DiagnosticPickerSystemBars {
@@ -290,6 +292,17 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        recordBackupHandler?.dispose()
+        recordBackupHandler = RecordBackupHandler(this, launch = { intent, requestCode ->
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, requestCode)
+        }).also { handler ->
+            MethodChannel(
+                flutterEngine.dartExecutor.binaryMessenger,
+                RecordBackupHandler.CHANNEL,
+            ).setMethodCallHandler(handler)
+        }
 
         gameMouseWheelChannel?.dispose()
         gameMouseWheelChannel = GameMouseWheelChannel(flutterEngine)
@@ -702,6 +715,8 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
         gameFrameReloadChannel = null
         diagnosticPlatformHandler?.dispose()
         diagnosticPlatformHandler = null
+        recordBackupHandler?.dispose()
+        recordBackupHandler = null
         fixedCanvasLayoutListener?.let { listener ->
             boundWebView?.removeOnLayoutChangeListener(listener)
         }
@@ -869,6 +884,7 @@ class MainActivity : FlutterActivity(), GadgetBypassManager.Host, DiagnosticExpo
     @Deprecated("Deprecated in Android")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (recordBackupHandler?.onActivityResult(requestCode, resultCode, data) == true) return
         if (requestCode != DIAGNOSTIC_DIRECTORY_REQUEST) return
         diagnosticDirectoryPickerUi.finish()
         diagnosticPlatformHandler?.onDirectorySelected(

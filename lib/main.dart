@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'src/widgets/app_scroll_behavior.dart';
 import 'src/settings/fleet_display_settings_section.dart';
@@ -85,6 +86,8 @@ import 'src/native_activity_game_surface.dart';
 import 'src/game_state/game_state_controller.dart';
 import 'src/game_state/game_state.dart';
 import 'src/account/account_session.dart';
+import 'src/backup/record_backup.dart';
+import 'src/localization/record_backup_strings.dart';
 import 'src/game_state/game_api_event_pipeline.dart';
 import 'src/game_state/game_state_store.dart';
 import 'src/layout/adaptive_layout.dart';
@@ -644,64 +647,256 @@ Future<void> main() async {
     timerAnchorStore: notificationTimerAnchorStore,
   );
   notificationCoordinator.start();
-  runApp(
-    YahagiApp(
-      layoutSettingsController: layoutSettingsController,
-      networkSettingsController: networkSettingsController,
-      gadgetBypassController: gadgetBypassController,
-      safetySettingsController: safetySettingsController,
-      notificationSettingsController: notificationSettingsController,
-      battlePredictionSettingsController: battlePredictionSettingsController,
-      gameFrameRateSettingsController: gameFrameRateSettingsController,
-      gameRenderingModeController: gameRenderingModeController,
-      gameConnectorController: gameConnectorController,
-      backgroundGameRetentionController: backgroundGameRetentionController,
-      displayModeController: displayModeController,
-      controller: controller,
-      browserController: browserController,
-      captureModeController: captureModeController,
-      audioController: audioController,
-      toolbarController: toolbarController,
-      toolbarDisplayController: toolbarDisplayController,
-      gameScreenshotController: gameScreenshotController,
-      gameCaptureController: gameCaptureController,
-      gameApiEventPipeline: gameApiEventPipeline,
-      kcwikiReportController: kcwikiReportController,
-      kcwikiReportConsumer: kcwikiReportConsumer,
-      gameStateController: gameStateController,
-      newShipReminderController: newShipReminderController,
-      moraleRecoveryTimerController:
-          notificationCoordinator.moraleRecoveryTimerController,
-      gameResourceCacheController: gameResourceCacheController,
-      senkaController: senkaController,
-      battleController: battleController,
-      fcdMapController: fcdMapController,
-      questCatalogController: questCatalogController,
-      sortieMapCatalogController: sortieMapCatalogController,
-      enemyCatalogController: enemyCatalogController,
-      improvementPlannerController: improvementPlannerController,
-      currentVersion: currentVersion,
-      releaseChecker: releaseChecker,
-      screenAwakeController: screenAwakeController,
-      headerNoticeController: headerNoticeController,
-      gameMouseWheelSettingsController: gameMouseWheelSettingsController,
-      gameFrameRefreshShortcutSettings: gameFrameRefreshShortcutSettings,
-      diagnosticController: diagnosticController,
-      telemetryController: telemetryController,
-      nativeWebViewGenerationSink: (value) {
-        diagnosticNativeWebViewGeneration = value;
-      },
+  RecordBackupService? backupService;
+  Object? backupStartupError;
+  if (Platform.isAndroid) {
+    backupService = RecordBackupService(
+      session: accountSession,
+      port: const AndroidBackupDocumentPort(),
+    );
+    RecordBackupService.shared = backupService;
+    try {
+      await backupService.start();
+    } catch (error) {
+      debugPrint('Record backup initialization failed: $error');
+      backupStartupError = error;
+    }
+  }
+  final backupMaintenanceOverlay = ValueNotifier<Widget?>(null);
+  final app = YahagiApp(
+    layoutSettingsController: layoutSettingsController,
+    networkSettingsController: networkSettingsController,
+    gadgetBypassController: gadgetBypassController,
+    safetySettingsController: safetySettingsController,
+    notificationSettingsController: notificationSettingsController,
+    battlePredictionSettingsController: battlePredictionSettingsController,
+    gameFrameRateSettingsController: gameFrameRateSettingsController,
+    gameRenderingModeController: gameRenderingModeController,
+    gameConnectorController: gameConnectorController,
+    backgroundGameRetentionController: backgroundGameRetentionController,
+    displayModeController: displayModeController,
+    controller: controller,
+    browserController: browserController,
+    captureModeController: captureModeController,
+    audioController: audioController,
+    toolbarController: toolbarController,
+    toolbarDisplayController: toolbarDisplayController,
+    gameScreenshotController: gameScreenshotController,
+    gameCaptureController: gameCaptureController,
+    gameApiEventPipeline: gameApiEventPipeline,
+    kcwikiReportController: kcwikiReportController,
+    kcwikiReportConsumer: kcwikiReportConsumer,
+    gameStateController: gameStateController,
+    newShipReminderController: newShipReminderController,
+    moraleRecoveryTimerController:
+        notificationCoordinator.moraleRecoveryTimerController,
+    gameResourceCacheController: gameResourceCacheController,
+    senkaController: senkaController,
+    battleController: battleController,
+    fcdMapController: fcdMapController,
+    questCatalogController: questCatalogController,
+    sortieMapCatalogController: sortieMapCatalogController,
+    enemyCatalogController: enemyCatalogController,
+    improvementPlannerController: improvementPlannerController,
+    currentVersion: currentVersion,
+    releaseChecker: releaseChecker,
+    screenAwakeController: screenAwakeController,
+    headerNoticeController: headerNoticeController,
+    gameMouseWheelSettingsController: gameMouseWheelSettingsController,
+    gameFrameRefreshShortcutSettings: gameFrameRefreshShortcutSettings,
+    diagnosticController: diagnosticController,
+    telemetryController: telemetryController,
+    backupMaintenanceOverlay: backupMaintenanceOverlay,
+    nativeWebViewGenerationSink: (value) {
+      diagnosticNativeWebViewGeneration = value;
+    },
+  );
+  void launchMainApp() {
+    runApp(app);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(fcdMapController.checkForUpdates());
+      unawaited(questCatalogController.checkForUpdates());
+      Future<void>.delayed(const Duration(seconds: 2), () {
+        if (telemetryController.enabled) {
+          unawaited(telemetryController.startIfEnabled());
+        }
+      });
+    });
+  }
+
+  backupService?.configureMaintenance(
+    begin: () async {
+      gameApiEventPipeline.pauseForMaintenance();
+      final captureInvalidation = gameCaptureController.invalidateSession();
+      backupMaintenanceOverlay.value = const _BackupMaintenanceScreen();
+      await WidgetsBinding.instance.endOfFrame;
+      await captureInvalidation;
+      await gameApiEventPipeline.idle;
+      await gameStateController.logbookIdle;
+    },
+    end: () {
+      gameApiEventPipeline.resumeAfterMaintenance();
+      backupMaintenanceOverlay.value = null;
+    },
+    blocked: (error) {
+      backupMaintenanceOverlay.value = _BackupRecoveryGate(
+        service: backupService!,
+        initialError: error,
+        onRecovered: () => backupMaintenanceOverlay.value = null,
+      );
+    },
+  );
+  if (backupService != null) {
+    WidgetsBinding.instance.addObserver(
+      _BackupLifecycleFlushObserver(
+        service: backupService,
+        pipeline: gameApiEventPipeline,
+        gameState: gameStateController,
+      ),
+    );
+  }
+
+  if (backupStartupError != null && backupService != null) {
+    runApp(
+      MaterialApp(
+        home: _BackupRecoveryGate(
+          service: backupService,
+          initialError: backupStartupError,
+          onRecovered: launchMainApp,
+        ),
+      ),
+    );
+  } else {
+    launchMainApp();
+  }
+}
+
+class _BackupLifecycleFlushObserver with WidgetsBindingObserver {
+  _BackupLifecycleFlushObserver({
+    required this.service,
+    required this.pipeline,
+    required this.gameState,
+  });
+
+  final RecordBackupService service;
+  final GameApiEventPipeline pipeline;
+  final GameStateController gameState;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.paused &&
+        state != AppLifecycleState.detached) {
+      return;
+    }
+    unawaited(_flush());
+  }
+
+  Future<void> _flush() async {
+    if (!service.hasDirectory || service.maintenanceActive) return;
+    try {
+      await pipeline.idle;
+      await gameState.logbookIdle;
+      await service.sync();
+    } catch (error) {
+      debugPrint('Backup lifecycle flush failed: $error');
+    }
+  }
+}
+
+class _BackupRecoveryGate extends StatefulWidget {
+  const _BackupRecoveryGate({
+    required this.service,
+    required this.initialError,
+    required this.onRecovered,
+  });
+
+  final RecordBackupService service;
+  final Object initialError;
+  final VoidCallback onRecovered;
+
+  @override
+  State<_BackupRecoveryGate> createState() => _BackupRecoveryGateState();
+}
+
+class _BackupRecoveryGateState extends State<_BackupRecoveryGate> {
+  late Object _error = widget.initialError;
+  bool _busy = false;
+
+  Future<void> _retry({required bool chooseFolder}) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final wasMaintenance = widget.service.maintenanceActive;
+      if (chooseFolder &&
+          !await widget.service.reselectDirectoryForRecovery()) {
+        return;
+      }
+      await widget.service.start();
+      await widget.service.recoverPendingRestores();
+      if (!wasMaintenance) widget.onRecovered();
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = RecordBackupStrings.of(context);
+    final journalCorrupt =
+        _error is FormatException ||
+        '$_error'.contains('Restore completion marker mismatch');
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(strings.recoveryPending),
+              const SizedBox(height: 12),
+              Text('$_error'),
+              const SizedBox(height: 12),
+              Text(
+                journalCorrupt
+                    ? strings.recoveryCorruptAdvice
+                    : strings.recoveryRetryAdvice,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _busy ? null : () => _retry(chooseFolder: false),
+                child: Text(strings.retryRestore),
+              ),
+              if (!journalCorrupt)
+                TextButton(
+                  onPressed: _busy ? null : () => _retry(chooseFolder: true),
+                  child: Text(strings.reselectFolder),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BackupMaintenanceScreen extends StatelessWidget {
+  const _BackupMaintenanceScreen();
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(RecordBackupStrings.of(context).restoring),
+        ],
+      ),
     ),
   );
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(fcdMapController.checkForUpdates());
-    unawaited(questCatalogController.checkForUpdates());
-    Future<void>.delayed(const Duration(seconds: 2), () {
-      if (telemetryController.enabled) {
-        unawaited(telemetryController.startIfEnabled());
-      }
-    });
-  });
 }
 
 final RouteObserver<ModalRoute<dynamic>> yahagiGameRouteObserver =
@@ -786,6 +981,7 @@ class YahagiApp extends StatelessWidget {
     this.telemetryController,
     this.gameRouteObserver,
     this.nativeWebViewGenerationSink,
+    this.backupMaintenanceOverlay,
   });
 
   final LayoutSettingsController layoutSettingsController;
@@ -833,6 +1029,7 @@ class YahagiApp extends StatelessWidget {
   final TelemetryController? telemetryController;
   final RouteObserver<ModalRoute<dynamic>>? gameRouteObserver;
   final void Function(int)? nativeWebViewGenerationSink;
+  final ValueListenable<Widget?>? backupMaintenanceOverlay;
 
   @override
   Widget build(BuildContext context) {
@@ -848,6 +1045,7 @@ class YahagiApp extends StatelessWidget {
         safetySettingsController,
         ?toolbarDisplayController,
         ?gameRenderingModeController,
+        ?backupMaintenanceOverlay,
       ]),
       builder: (context, _) {
         final routeObserver = gameRouteObserver ?? yahagiGameRouteObserver;
@@ -855,7 +1053,13 @@ class YahagiApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(boldText: true),
-            child: child ?? const SizedBox.shrink(),
+            child: Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                if (backupMaintenanceOverlay?.value case final overlay?)
+                  Positioned.fill(child: overlay),
+              ],
+            ),
           ),
           scrollBehavior: const AppScrollBehavior(),
           title: 'ヤハギ',
@@ -940,7 +1144,9 @@ class YahagiApp extends StatelessWidget {
                   showDeveloperDiagnostics: showDeveloperDiagnostics,
                   diagnosticController: diagnosticController,
                   telemetryController: telemetryController,
-                  gameSurface: _buildGameSurface(),
+                  gameSurface: backupMaintenanceOverlay?.value == null
+                      ? _buildGameSurface()
+                      : const SizedBox.shrink(),
                 ),
               ),
             ),

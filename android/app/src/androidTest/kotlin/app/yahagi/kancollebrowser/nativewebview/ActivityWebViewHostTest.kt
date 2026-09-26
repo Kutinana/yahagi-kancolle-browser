@@ -47,7 +47,7 @@ class ActivityWebViewHostTest {
             context = context,
             contentRoot = root,
             eventSink = recordingSink(events),
-            configureWebView = { webView, client ->
+            configureWebView = { webView, client, _ ->
                 initialUserAgent = webView.settings.userAgentString
                 initialCacheMode = webView.settings.cacheMode
                 initialFileAccessFromFileUrls = webView.settings.allowFileAccessFromFileURLs
@@ -162,7 +162,7 @@ class ActivityWebViewHostTest {
                     timeline += "destroyed"
                 }
             },
-            configureWebView = { webView, suppliedClient ->
+            configureWebView = { webView, suppliedClient, _ ->
                 client = suppliedClient as NativeGameWebViewClient
                 NativeGameWebViewConfigurator.configure(webView, suppliedClient)
             },
@@ -192,7 +192,7 @@ class ActivityWebViewHostTest {
             contentRoot = root,
             eventSink = recordingSink(events),
             webViewFactory = { factoryContext -> WebView(factoryContext).also(createdViews::add) },
-            configureWebView = { webView, client ->
+            configureWebView = { webView, client, _ ->
                 if (configureCount++ == 0) {
                     assertTrue((client as NativeGameWebViewClient).onRenderProcessGone(webView, null))
                 } else {
@@ -233,7 +233,7 @@ class ActivityWebViewHostTest {
                 }
             },
             webViewFactory = { factoryContext -> WebView(factoryContext).also(createdViews::add) },
-            configureWebView = { webView, client ->
+            configureWebView = { webView, client, _ ->
                 if (configureCount++ == 0) {
                     assertTrue((client as NativeGameWebViewClient).onRenderProcessGone(webView, null))
                 } else {
@@ -337,7 +337,7 @@ class ActivityWebViewHostTest {
             context = context,
             contentRoot = root,
             eventSink = recordingSink(events),
-            configureWebView = { webView, suppliedClient ->
+            configureWebView = { webView, suppliedClient, _ ->
                 client = suppliedClient as NativeGameWebViewClient
                 NativeGameWebViewConfigurator.configure(webView, suppliedClient)
                 throw IllegalStateException("configuration failure")

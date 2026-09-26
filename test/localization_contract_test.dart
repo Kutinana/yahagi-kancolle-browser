@@ -88,6 +88,7 @@ void main() {
       'lib/src/fleet/fleet_ui_strings.dart',
       'lib/src/localization/runtime_message_text.dart',
       'lib/src/localization/ui_text.dart',
+      'lib/src/localization/record_backup_strings.dart',
       'lib/src/senka/senka_catalog_localization.dart',
       'lib/src/toolbox/composition_image_strings.dart',
     };

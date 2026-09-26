@@ -320,7 +320,7 @@ void main() {
           .getTopLeft(find.byKey(const Key('cache-completeness-line')))
           .dx;
       final questDx = tester.getTopLeft(find.text('清理任务数据缓存')).dx;
-      final logbookDx = tester.getTopLeft(find.text('清理航海日志数据')).dx;
+      final logbookDx = tester.getTopLeft(find.text('清理航海日志主数据')).dx;
       final webDx = tester.getTopLeft(find.text('清理浏览器网页缓存')).dx;
 
       expect(titleDx, 20.0);

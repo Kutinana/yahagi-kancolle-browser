@@ -7,6 +7,87 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_api_decoder.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_api_event_pipeline.dart';
 
 void main() {
+  test('maintenance pause drops queued and incoming game events', () async {
+    final consumer = _RecordingConsumer();
+    final pipeline = GameApiEventPipeline(consumers: [consumer]);
+    pipeline.add(_event('/kcsapi/api_port/port', _body(1), sequence: 1));
+    pipeline.pauseForMaintenance();
+    pipeline.add(_event('/kcsapi/api_port/port', _body(1), sequence: 2));
+    await pipeline.idle;
+    expect(consumer.events, isEmpty);
+    pipeline.resumeAfterMaintenance();
+    pipeline.add(
+      _documentEvent(
+        '/kcsapi/api_start2/getData',
+        'new',
+        DateTime.now().millisecondsSinceEpoch.toDouble() + 1000,
+        3,
+      ),
+    );
+    await pipeline.idle;
+    expect(consumer.events.map((event) => event.sequence), [3]);
+  });
+  test('maintenance rejects late old and unstamped login starts', () async {
+    final consumer = _RecordingConsumer();
+    final pipeline = GameApiEventPipeline(
+      consumers: [consumer],
+      decodeEnvelope: (body) async => GameApiDecoder.decodeEnvelope(body),
+    );
+    final oldStartedAt =
+        DateTime.now().millisecondsSinceEpoch.toDouble() - 1000;
+    pipeline.add(
+      _documentEvent('/kcsapi/api_start2/getData', 'old', oldStartedAt, 1),
+    );
+    await pipeline.idle;
+
+    pipeline.pauseForMaintenance();
+    await pipeline.idle;
+    pipeline.resumeAfterMaintenance();
+    pipeline.add(
+      _documentEvent('/kcsapi/api_start2/getData', 'old', oldStartedAt, 2),
+    );
+    pipeline.add(_event('/kcsapi/api_start2/getData', _body(1), sequence: 3));
+    pipeline.add(
+      _documentEvent(
+        '/kcsapi/api_start2/getData',
+        'new',
+        DateTime.now().millisecondsSinceEpoch.toDouble() + 1000,
+        4,
+      ),
+    );
+    pipeline.add(
+      _documentEvent('/kcsapi/api_port/port', 'old', oldStartedAt, 5),
+    );
+    await pipeline.idle;
+
+    expect(consumer.events.map((event) => event.sequence), [1, 4]);
+  });
+
+  test(
+    'maintenance rejects an unknown document started before resume',
+    () async {
+      final consumer = _RecordingConsumer();
+      final pipeline = GameApiEventPipeline(
+        consumers: [consumer],
+        decodeEnvelope: (body) async => GameApiDecoder.decodeEnvelope(body),
+      );
+      final oldStartedAt =
+          DateTime.now().millisecondsSinceEpoch.toDouble() - 1000;
+      pipeline.pauseForMaintenance();
+      await pipeline.idle;
+      pipeline.resumeAfterMaintenance();
+      pipeline.add(
+        _documentEvent(
+          '/kcsapi/api_start2/getData',
+          'unknown-old',
+          oldStartedAt,
+          1,
+        ),
+      );
+      await pipeline.idle;
+      expect(consumer.events, isEmpty);
+    },
+  );
   test(
     'new game document rejects old port, unstamped events and late old start2',
     () async {

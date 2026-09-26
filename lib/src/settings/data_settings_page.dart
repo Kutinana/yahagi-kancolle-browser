@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../account/account_session.dart';
+import '../backup/record_backup.dart';
 
 import '../battle/fcd_map_controller.dart';
 import '../browser/game_browser_controller.dart';
@@ -17,10 +18,12 @@ import '../game_state/game_state_controller.dart';
 import '../improvement/improvement_dataset_update_section.dart';
 import '../improvement/improvement_planner_controller.dart';
 import '../logbook/logbook_database.dart';
+import '../localization/record_backup_strings.dart';
 import '../prototype_status_controller.dart';
 import '../quest/quest_catalog_controller.dart';
 import '../senka/senka_controller.dart';
 import '../telemetry/telemetry_controller.dart';
+import '../toolbox/composition_record_store.dart';
 import '../toolbox/sortie_map_query/sortie_map_catalog_controller.dart';
 import '../toolbox/sortie_map_query/enemy_catalog_controller.dart';
 import '../kcwiki_report/kcwiki_report_settings.dart';
@@ -36,6 +39,7 @@ import 'quest_catalog_update_section.dart';
 import 'sortie_map_catalog_update_section.dart';
 import 'enemy_catalog_update_section.dart';
 import 'settings_ui_helpers.dart';
+import 'record_backup_section.dart';
 
 class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   const DataSettingsPage({
@@ -58,6 +62,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.enemyCatalogController,
     this.improvementPlannerController,
     this.telemetryController,
+    this.backupService,
   });
 
   final CaptureModeController captureModeController;
@@ -78,6 +83,10 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final EnemyCatalogController? enemyCatalogController;
   final ImprovementPlannerController? improvementPlannerController;
   final TelemetryController? telemetryController;
+  final RecordBackupService? backupService;
+
+  RecordBackupService? get _backupService =>
+      backupService ?? RecordBackupService.shared;
 
   AccountSession get _accountSession =>
       gameStateController.accountSession ?? LogbookDatabase.accountSession;
@@ -233,6 +242,11 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 child: GameResourceCacheSection(controller: controller),
               ),
             ],
+            if (_backupService case final backup?) ...<Widget>[
+              const SizedBox(height: 24),
+              buildSectionTitle(RecordBackupStrings.of(context).section),
+              buildCard(child: RecordBackupSection(service: backup)),
+            ],
             const SizedBox(height: 24),
             buildSectionTitle(l10n.storageAndCache),
             buildCard(
@@ -291,10 +305,20 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                   const Divider(color: Color(0xff294052), height: 1),
                   buildActionTile(
                     key: const Key('settings-clear-logbook'),
-                    title: l10n.clearLogbook,
-                    subtitle: l10n.clearLogbookDesc,
+                    title: RecordBackupStrings.of(context).clearLogbook,
+                    subtitle: RecordBackupStrings.of(context).clearLogbookHint,
                     trailing: const Icon(Icons.delete_forever_outlined),
                     onTap: () => _clearLogbook(context, l10n),
+                  ),
+                  const Divider(color: Color(0xff294052), height: 1),
+                  buildActionTile(
+                    key: const Key('settings-clear-composition-records'),
+                    title: RecordBackupStrings.of(context).clearComposition,
+                    subtitle: RecordBackupStrings.of(
+                      context,
+                    ).clearCompositionHint,
+                    trailing: const Icon(Icons.delete_forever_outlined),
+                    onTap: () => _clearCompositionRecords(context, l10n),
                   ),
                   const Divider(color: Color(0xff294052), height: 1),
                   buildActionTile(
@@ -559,19 +583,48 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   ) async {
     final session = _accountSession;
     final scope = session.current;
+    final strings = RecordBackupStrings.of(context);
+    if (!scope.isKnown) {
+      TopNotice.show(
+        context,
+        message: strings.loginRequired,
+        tone: TopNoticeTone.error,
+      );
+      return;
+    }
     final database = LogbookDatabase.forAccount(scope.memberId);
+    final tables = await database.backupSnapshot();
+    if (!context.mounted || !session.isCurrent(scope)) return;
+    final count = tables.entries
+        .where((entry) => entry.key != 'pending_construction_logs')
+        .fold<int>(0, (sum, entry) => sum + entry.value.length);
+    final backedUp =
+        _backupService?.enabled == true && _backupService?.hasDirectory == true;
     final confirmed = await _confirmClear(
       context,
-      title: l10n.clearLogbookConfirmTitle,
-      description: l10n.clearLogbookConfirmDesc,
+      title: strings.clearLogbookTitle,
+      description: strings.clearLogbookDescription(count, backedUp),
       l10n: l10n,
       accountScoped: true,
     );
     if (!confirmed || !session.isCurrent(scope)) return;
     try {
-      await database.clearAll();
+      if (!session.isCurrent(scope)) return;
+      if (_backupService != null) {
+        await _backupService!.clearLogbookMain();
+      } else {
+        await database.clearAll();
+      }
     } catch (error) {
-      debugPrint('清理航海日志失败: $error');
+      debugPrint('Logbook cleanup failed: $error');
+      if (context.mounted && session.isCurrent(scope)) {
+        TopNotice.show(
+          context,
+          message: strings.clearFailed(error),
+          tone: TopNoticeTone.error,
+        );
+      }
+      return;
     }
     if (context.mounted && session.isCurrent(scope)) {
       TopNotice.show(
@@ -579,6 +632,72 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
         message: l10n.logbookCleared,
         tone: TopNoticeTone.success,
       );
+    }
+  }
+
+  Future<void> _clearCompositionRecords(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
+    final session = _accountSession;
+    final scope = session.current;
+    final strings = RecordBackupStrings.of(context);
+    if (!scope.isKnown) {
+      TopNotice.show(
+        context,
+        message: strings.loginRequired,
+        tone: TopNoticeTone.error,
+      );
+      return;
+    }
+    final store = FileCompositionRecordStore();
+    late final List<CompositionRecord> records;
+    try {
+      records = await store.load(scope.memberId);
+    } catch (error) {
+      if (context.mounted && session.isCurrent(scope)) {
+        TopNotice.show(
+          context,
+          message: strings.clearFailed(error),
+          tone: TopNoticeTone.error,
+        );
+      }
+      return;
+    }
+    if (!context.mounted || !session.isCurrent(scope)) return;
+    final backedUp =
+        _backupService?.enabled == true && _backupService?.hasDirectory == true;
+    final confirmed = await _confirmClear(
+      context,
+      title: strings.clearCompositionTitle,
+      description: strings.clearCompositionDescription(
+        records.length,
+        backedUp,
+      ),
+      l10n: l10n,
+      accountScoped: true,
+    );
+    if (!confirmed || !session.isCurrent(scope)) return;
+    try {
+      if (!session.isCurrent(scope)) return;
+      final removed = _backupService != null
+          ? await _backupService!.clearCompositionMain()
+          : await store.clearAll(scope.memberId);
+      if (context.mounted && session.isCurrent(scope)) {
+        TopNotice.show(
+          context,
+          message: strings.compositionCleared(removed),
+          tone: TopNoticeTone.success,
+        );
+      }
+    } catch (error) {
+      if (context.mounted && session.isCurrent(scope)) {
+        TopNotice.show(
+          context,
+          message: strings.clearFailed(error),
+          tone: TopNoticeTone.error,
+        );
+      }
     }
   }
 
