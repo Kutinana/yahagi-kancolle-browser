@@ -14,9 +14,9 @@ SHA-256、记录数量和别名数量，校验通过后才原子替换本地缓�
 
 内容变化时，先在生成器中提高 `revision`，再为 `build_enemy_release.py --tag` 指定新标签；
 生成器会拒绝沿用旧修订号或旧 Release 地址。发布前从仓库根目录运行
-`python -m unittest tool.test_build_enemy_release -v`。本地发布脚本需要 Python 和 Pillow
-（`python -m pip install pillow`）；同时设置
-`YAHAGI_RELEASE_CONTRACT_TEST=1` 运行 `flutter test test/data_release_contract_test.dart`。
+`python -m unittest tool.test_build_enemy_release -v` 和
+`dart run tool/verify_data_release.dart`，让真实 Dart 运行时验证发布包。
+跨语言验收会同时构建海域 ZIP，需要 Python 的 Pillow 包（`python -m pip install pillow`）。
 上传资产、推送清单后，设置 `YAHAGI_LIVE_DATA_TEST=1` 运行
 `flutter test test/data_release_live_test.dart`，验证实际下载和重启读取。
 

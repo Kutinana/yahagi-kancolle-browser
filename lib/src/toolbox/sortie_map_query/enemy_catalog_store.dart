@@ -1,8 +1,10 @@
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
+
+import 'catalog_platform_stub.dart'
+    if (dart.library.ui) 'catalog_platform_flutter.dart'
+    as catalog_platform;
 
 import 'enemy_catalog.dart';
 
@@ -13,11 +15,10 @@ final class FileEnemyCatalogStore {
   });
 
   static Future<FileEnemyCatalogStore> create() async {
-    final support = await getApplicationSupportDirectory();
+    final support = await catalog_platform.getCatalogSupportDirectory();
     return FileEnemyCatalogStore(
       cacheFile: File(path.join(support.path, 'enemy-catalog.json')),
-      bundledReader: () =>
-          rootBundle.loadString('assets/data/enemy_catalog.json'),
+      bundledReader: catalog_platform.loadEnemyCatalogAsset,
     );
   }
 

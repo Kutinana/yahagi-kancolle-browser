@@ -6,7 +6,9 @@ import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as image;
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
+import 'catalog_platform_stub.dart'
+    if (dart.library.ui) 'catalog_platform_flutter.dart'
+    as catalog_platform;
 
 import 'sortie_map_catalog_manifest.dart';
 import 'sortie_map_models.dart';
@@ -57,7 +59,7 @@ final class FileSortieMapCatalogStore implements SortieMapCatalogInstaller {
   static Future<FileSortieMapCatalogStore> create({
     required String currentAppVersion,
   }) async {
-    final support = await getApplicationSupportDirectory();
+    final support = await catalog_platform.getCatalogSupportDirectory();
     return FileSortieMapCatalogStore(
       root: Directory(path.join(support.path, 'sortie-catalog')),
       currentAppVersion: currentAppVersion,

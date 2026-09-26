@@ -28,10 +28,8 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install pillow
       - run: flutter pub get
-      - run: python -m unittest tool.test_build_sortie_release tool.test_build_enemy_release -v
-      - run: flutter test test/data_release_contract_test.dart
-        env:
-          YAHAGI_RELEASE_CONTRACT_TEST: '1'
+      - run: python -m unittest tool.test_build_sortie_release tool.test_build_enemy_release tool.test_verify_data_release -v
+      - run: dart run tool/verify_data_release.dart
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test

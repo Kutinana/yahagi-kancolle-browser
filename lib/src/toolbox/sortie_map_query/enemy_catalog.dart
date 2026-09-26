@@ -2,7 +2,9 @@
 
 import 'dart:convert';
 
-import 'package:flutter/services.dart';
+import 'catalog_platform_stub.dart'
+    if (dart.library.ui) 'catalog_platform_flutter.dart'
+    as catalog_platform;
 
 import 'sortie_map_models.dart';
 
@@ -78,11 +80,8 @@ final class EnemyCatalogData {
   }
 
   static Future<EnemyCatalogData> loadAsset() async {
-    final data = await rootBundle.load('assets/data/enemy_catalog.json');
     return EnemyCatalogData.fromJsonString(
-      utf8.decode(
-        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-      ),
+      await catalog_platform.loadEnemyCatalogAsset(),
     );
   }
 

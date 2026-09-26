@@ -40,8 +40,7 @@
    发布前从仓库根目录运行客户端契约验收：
 
    ```powershell
-   $env:YAHAGI_RELEASE_CONTRACT_TEST = '1'
-   flutter test test/data_release_contract_test.dart
+   dart run tool/verify_data_release.dart
    ```
 
 5. 先在 [资料专用仓库](https://github.com/yamatosaki/yahagi-kancolle-data) 创建清单中 `archive.tag` 对应的 GitHub Release，并上传
