@@ -22,7 +22,7 @@ void main() {
     );
     final bytes = utf8.encode(next);
     final release = Uri.parse(
-      'https://github.com/yamatosaki/yahagi-kancolle-browser/releases/download/enemy-data-20260920/enemy_catalog.json',
+      'https://github.com/yamatosaki/yahagi-kancolle-data/releases/download/enemy-data-20260920/enemy_catalog.json',
     );
     final client = MockClient((request) async {
       if (request.url.path.endsWith('/data/enemy/manifest.json')) {
@@ -78,7 +78,7 @@ void main() {
           'publishedAt': '2026-09-20T00:00:00Z',
           'minimumAppVersion': '1.0.0',
           'dataUrl':
-              'https://github.com/yamatosaki/yahagi-kancolle-browser/releases/download/enemy-data-20260920/enemy_catalog.json',
+              'https://github.com/yamatosaki/yahagi-kancolle-data/releases/download/enemy-data-20260920/enemy_catalog.json',
           'dataBytes': 3,
           'dataSha256': List.filled(64, '0').join(),
           'shipCount': 1,
@@ -120,7 +120,7 @@ void main() {
           'publishedAt': 'not-a-timestamp',
           'minimumAppVersion': '1.0.0',
           'dataUrl':
-              'https://github.com/yamatosaki/yahagi-kancolle-browser/releases/download/enemy-data-test/enemy_catalog.json',
+              'https://github.com/yamatosaki/yahagi-kancolle-data/releases/download/enemy-data-test/enemy_catalog.json',
           'dataBytes': 1,
           'dataSha256': List.filled(64, '0').join(),
           'shipCount': 0,
@@ -197,7 +197,7 @@ final class _SlowEnemyCatalogClient extends http.BaseClient {
         'publishedAt': '2026-09-20T00:00:00Z',
         'minimumAppVersion': '1.0.0',
         'dataUrl':
-            'https://github.com/yamatosaki/yahagi-kancolle-browser/releases/download/enemy-data-test/enemy_catalog.json',
+            'https://github.com/yamatosaki/yahagi-kancolle-data/releases/download/enemy-data-test/enemy_catalog.json',
         'dataBytes': catalogBytes.length,
         'dataSha256': sha256.convert(catalogBytes).toString(),
         'shipCount': 1,

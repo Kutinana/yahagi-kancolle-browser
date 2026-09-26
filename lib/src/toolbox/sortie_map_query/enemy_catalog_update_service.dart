@@ -359,7 +359,7 @@ bool _isAllowed(Uri uri) {
   if (enemyCatalogManifestSources.map(Uri.parse).contains(uri)) return true;
   return uri.host == 'github.com' &&
       uri.path.startsWith(
-        '/yamatosaki/yahagi-kancolle-browser/releases/download/',
+        '/yamatosaki/yahagi-kancolle-data/releases/download/',
       );
 }
 

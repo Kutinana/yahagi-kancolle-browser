@@ -8,7 +8,7 @@
 - `schema/`：JSON 格式约束。
 
 更新流程：替换 Excel → 运行 `tool/build_enemy_catalog.py` → 运行
-`tool/build_enemy_release.py` → 执行测试 → 创建不可变 GitHub Release 并上传
+`tool/build_enemy_release.py` → 执行测试 → 在[资料专用仓库](https://github.com/yamatosaki/yahagi-kancolle-data)创建 GitHub Release 并上传
 `enemy_catalog.json` → 提交并推送 `manifest.json`。客户端会校验版本、文件大小、
 SHA-256、记录数量和别名数量，校验通过后才原子替换本地缓存；失败时继续使用原资料。
 

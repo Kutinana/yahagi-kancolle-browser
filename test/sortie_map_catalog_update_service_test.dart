@@ -19,6 +19,10 @@ void main() {
         return http.Response(_manifest(archive, revision: 8), 200);
       }
       expect(request.url.host, 'github.com');
+      expect(
+        request.url.path,
+        startsWith('/yamatosaki/yahagi-kancolle-data/releases/download/'),
+      );
       return http.Response.bytes(archive, 200);
     });
     final service = SortieMapCatalogUpdateService(

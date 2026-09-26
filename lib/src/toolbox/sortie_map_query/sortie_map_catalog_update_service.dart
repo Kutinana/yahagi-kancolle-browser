@@ -196,7 +196,7 @@ final class SortieMapCatalogUpdateService
         uri.scheme == 'https' &&
         uri.host == 'github.com' &&
         uri.path.startsWith(
-          '/yamatosaki/yahagi-kancolle-browser/releases/download/',
+          '/yamatosaki/yahagi-kancolle-data/releases/download/',
         );
     if (uri.scheme != 'https' || (!allowedManifest && !allowedArchive)) {
       throw FormatException('Sortie update URL is not allowed: $uri');

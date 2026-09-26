@@ -4,7 +4,7 @@
   "revision": 2026092001,
   "publishedAt": "2026-09-20T00:00:00Z",
   "minimumAppVersion": "1.0.8-beta.2",
-  "dataUrl": "https://github.com/yamatosaki/yahagi-kancolle-browser/releases/download/enemy-data-20260920-r1/enemy_catalog.json",
+  "dataUrl": "https://github.com/yamatosaki/yahagi-kancolle-data/releases/download/enemy-data-20260920-r1/enemy_catalog.json",
   "dataBytes": 1841530,
   "dataSha256": "2bfb539d6456864eba2b509efe371ee91275e571670d38d1079391671e0df230",
   "shipCount": 881,

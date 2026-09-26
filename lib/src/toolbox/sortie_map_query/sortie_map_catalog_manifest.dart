@@ -104,7 +104,7 @@ final class SortieMapCatalogManifest {
 
   Uri get releaseUri => Uri.https(
     'github.com',
-    '/yamatosaki/yahagi-kancolle-browser/releases/download/'
+    '/yamatosaki/yahagi-kancolle-data/releases/download/'
         '$archiveTag/$archiveFileName',
   );
 }

@@ -31,6 +31,10 @@ class BuildEnemyReleaseTest(unittest.TestCase):
             self.assertEqual(decoded["shipCount"], 1)
             self.assertEqual(decoded["aliasCount"], 1)
             self.assertEqual(decoded["dataSha256"], result["sha256"])
+            self.assertEqual(
+                decoded["dataUrl"],
+                "https://github.com/yamatosaki/yahagi-kancolle-data/releases/download/enemy-data-v1/enemy_catalog.json",
+            )
 
     def test_rejects_malformed_catalog_and_release_identifiers(self):
         with tempfile.TemporaryDirectory() as temporary:

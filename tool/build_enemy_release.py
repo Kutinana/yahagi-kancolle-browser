@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 
 
-REPOSITORY = "yamatosaki/yahagi-kancolle-browser"
+REPOSITORY = "yamatosaki/yahagi-kancolle-data"
 TAG_PATTERN = re.compile(r"^enemy-data-[A-Za-z0-9][A-Za-z0-9._-]*$")
 VERSION_PATTERN = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"

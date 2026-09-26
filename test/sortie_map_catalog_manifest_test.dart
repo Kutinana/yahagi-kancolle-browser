@@ -14,6 +14,10 @@ void main() {
     expect(manifest.version.label, '2026.09.20');
     expect(manifest.version.revision, 2026092001);
     expect(manifest.archiveBytes, 123);
+    expect(
+      manifest.releaseUri.toString(),
+      'https://github.com/yamatosaki/yahagi-kancolle-data/releases/download/sortie-data-2026.09.20/sortie-data-2026.09.20.zip',
+    );
     expect(manifest.isCompatibleWith('1.0.8-beta.2'), isTrue);
     expect(manifest.isCompatibleWith('1.0.8-beta.1'), isFalse);
     expect(manifest.isCompatibleWith('1.0.8'), isTrue);
