@@ -18,10 +18,8 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Keep local editor settings out of the public repository.
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -83,6 +81,12 @@ design-tool.html
 fullscreen_exit_button_demo.html
 *.apk
 *.apk.sha256
+*.aab
+*.ipa
+*.db
+*.sqlite
+*.sqlite3
+*.zip
 outputs/
 backups/
 temp_fonts/
