@@ -15,6 +15,10 @@ import WebKit
   private static let gameFrameRateChannel = "app.yahagi.kancollebrowser/game_frame_rate"
   private static let battleDamageAlertChannel = "app.yahagi.kancollebrowser/battle_damage_alert"
   private static let gameFrameReloadChannel = "app.yahagi.kancollebrowser/game_frame_reload"
+  private static let notificationChannel = "app.yahagi.kancollebrowser/notification"
+  private static let compositionImageChannel = "app.yahagi.kancollebrowser/composition_image"
+  private static let diagnosticsChannel = "app.yahagi.kancollebrowser/diagnostics"
+  private static let originCookiesChannel = "app.yahagi.kancollebrowser/origin_cookies"
 
   private var gameCaptureBridge: IOSGameCaptureBridge?
   private var proxyManager: IOSWebViewProxyManager?
@@ -24,6 +28,10 @@ import WebKit
   private var battleAlertBridge: IOSBattleDamageAlertBridge?
   private var frameReloadBridge: IOSGameFrameReloadBridge?
   private var fixedCanvasScaleBridge: IOSFixedCanvasScaleBridge?
+  private var notificationBridge: IOSNotificationBridge?
+  private var compositionImageBridge: IOSCompositionImageBridge?
+  private var diagnosticsBridge: IOSDiagnosticsBridge?
+  private var originCookieBridge: IOSOriginCookieBridge?
   private var isChannelsConfigured = false
 
   override func application(
@@ -227,6 +235,42 @@ import WebKit
     self.frameReloadBridge = frameReloadBridge
     frameReloadChannel.setMethodCallHandler { [weak frameReloadBridge] call, result in
       frameReloadBridge?.handle(call, result: result)
+    }
+
+    // 11. Notification MethodChannel
+    let notifChannel = FlutterMethodChannel(
+      name: Self.notificationChannel, binaryMessenger: controller.binaryMessenger)
+    let notifBridge = IOSNotificationBridge()
+    self.notificationBridge = notifBridge
+    notifChannel.setMethodCallHandler { [weak notifBridge] call, result in
+      notifBridge?.handle(call, result: result)
+    }
+
+    // 12. Composition Image MethodChannel
+    let compChannel = FlutterMethodChannel(
+      name: Self.compositionImageChannel, binaryMessenger: controller.binaryMessenger)
+    let compBridge = IOSCompositionImageBridge()
+    self.compositionImageBridge = compBridge
+    compChannel.setMethodCallHandler { [weak compBridge] call, result in
+      compBridge?.handle(call, result: result)
+    }
+
+    // 13. Diagnostics MethodChannel
+    let diagChannel = FlutterMethodChannel(
+      name: Self.diagnosticsChannel, binaryMessenger: controller.binaryMessenger)
+    let diagBridge = IOSDiagnosticsBridge(viewController: controller)
+    self.diagnosticsBridge = diagBridge
+    diagChannel.setMethodCallHandler { [weak diagBridge] call, result in
+      diagBridge?.handle(call, result: result)
+    }
+
+    // 14. Origin Cookies MethodChannel
+    let cookieChannel = FlutterMethodChannel(
+      name: Self.originCookiesChannel, binaryMessenger: controller.binaryMessenger)
+    let cookieBridge = IOSOriginCookieBridge()
+    self.originCookieBridge = cookieBridge
+    cookieChannel.setMethodCallHandler { [weak cookieBridge] call, result in
+      cookieBridge?.handle(call, result: result)
     }
   }
 }

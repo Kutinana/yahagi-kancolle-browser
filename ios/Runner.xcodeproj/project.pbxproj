@@ -19,6 +19,10 @@
 		74858FAF1ED2DC5600515826 /* IOSBattleDamageAlertBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515826 /* IOSBattleDamageAlertBridge.swift */; };
 		74858FAF1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift */; };
 		74858FAF1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift */; };
+		74858FAF1ED2DC5600515829 /* IOSNotificationBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515829 /* IOSNotificationBridge.swift */; };
+		74858FAF1ED2DC560051582A /* IOSCompositionImageBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */; };
+		74858FAF1ED2DC560051582B /* IOSDiagnosticsBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */; };
+		74858FAF1ED2DC560051582C /* IOSOriginCookieBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582C /* IOSOriginCookieBridge.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
@@ -65,6 +69,10 @@
 		74858FAE1ED2DC5600515826 /* IOSBattleDamageAlertBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSBattleDamageAlertBridge.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSGameFrameReloadBridge.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSFixedCanvasScaleBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC5600515829 /* IOSNotificationBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSNotificationBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSCompositionImageBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSDiagnosticsBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC560051582C /* IOSOriginCookieBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSOriginCookieBridge.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
@@ -108,6 +116,10 @@
 				74858FAE1ED2DC5600515826 /* IOSBattleDamageAlertBridge.swift */,
 				74858FAE1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift */,
 				74858FAE1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift */,
+				74858FAE1ED2DC5600515829 /* IOSNotificationBridge.swift */,
+				74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */,
+				74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */,
+				74858FAE1ED2DC560051582C /* IOSOriginCookieBridge.swift */,
 			);
 			path = Bridge;
 			sourceTree = "<group>";
@@ -324,6 +336,10 @@
 				74858FAF1ED2DC5600515826 /* IOSBattleDamageAlertBridge.swift in Sources */,
 				74858FAF1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift in Sources */,
 				74858FAF1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift in Sources */,
+				74858FAF1ED2DC5600515829 /* IOSNotificationBridge.swift in Sources */,
+				74858FAF1ED2DC560051582A /* IOSCompositionImageBridge.swift in Sources */,
+				74858FAF1ED2DC560051582B /* IOSDiagnosticsBridge.swift in Sources */,
+				74858FAF1ED2DC560051582C /* IOSOriginCookieBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

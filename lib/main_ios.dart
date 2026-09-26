@@ -76,8 +76,8 @@ import 'src/new_ship/new_ship_reminder_controller.dart';
 import 'src/new_ship/new_ship_reminder_store.dart';
 import 'src/notice/game_info_notice_controller.dart';
 import 'src/notification/game_notification_coordinator.dart';
+import 'src/notification/method_channel_notification_port.dart';
 import 'src/notification/notification_models.dart';
-import 'src/notification/notification_port.dart';
 import 'src/notification/notification_timer_anchor_store.dart';
 import 'src/prototype_status_controller.dart';
 import 'src/quest/quest_catalog_controller.dart';
@@ -614,7 +614,7 @@ Future<void> main() async {
         layoutSettingsController.localeCode ??
         _localeStorageCode(WidgetsBinding.instance.platformDispatcher.locale),
     localeListenable: layoutSettingsController,
-    notificationPort: const _IOSNotificationPort(),
+    notificationPort: const MethodChannelNotificationPort(),
     initialTimerAnchors: notificationTimerAnchors,
     timerAnchorStore: notificationTimerAnchorStore,
   );
@@ -715,40 +715,6 @@ final class _IOSRawDataConsumer implements GameApiEventConsumer {
 
   @override
   Future<void> get idle => Future.value();
-}
-
-final class _IOSNotificationPort implements NotificationPort {
-  const _IOSNotificationPort();
-
-  @override
-  Future<NotificationApplyResult> applySnapshot(
-    NotificationSnapshot snapshot,
-  ) async {
-    return const NotificationApplyResult(
-      scheduledExact: 0,
-      scheduledInexact: 0,
-      canceled: 0,
-      failures: <String>[],
-    );
-  }
-
-  @override
-  Future<NotificationPlatformCapabilities> getCapabilities() async {
-    return const NotificationPlatformCapabilities(
-      notificationsGranted: false,
-      exactAlarmsGranted: false,
-      channelsEnabled: false,
-    );
-  }
-
-  @override
-  Future<bool> requestNotificationPermission() async => false;
-
-  @override
-  Future<void> requestExactAlarmPermission() async {}
-
-  @override
-  Future<void> openSystemNotificationSettings() async {}
 }
 
 /// iOS-specific app wrapper.
