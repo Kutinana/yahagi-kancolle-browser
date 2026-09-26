@@ -5,23 +5,60 @@ import argparse
 from datetime import datetime
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 
 
 REPOSITORY = "yamatosaki/yahagi-kancolle-data"
+MAX_DATA_BYTES = 4 * 1024 * 1024
+MAX_MANIFEST_BYTES = 64 * 1024
 TAG_PATTERN = re.compile(r"^enemy-data-[A-Za-z0-9][A-Za-z0-9._-]*$")
+_SEMVER_IDENTIFIER = r"(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)"
 VERSION_PATTERN = re.compile(
-    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+    rf"(?:-{_SEMVER_IDENTIFIER}(?:\.{_SEMVER_IDENTIFIER})*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
+
+
+def _reject_nonstandard_json(value: str) -> None:
+    raise ValueError(f"nonstandard JSON number: {value}")
 
 
 def _non_empty_string(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _nullable_string(value: object, name: str) -> None:
+    if value is not None and not isinstance(value, str):
+        raise ValueError(f"Enemy catalog {name} must be a nullable string")
+
+
+def _nullable_number(value: object, name: str) -> None:
+    if value is not None and value != "" and (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+    ):
+        raise ValueError(f"Enemy catalog {name} must be a nullable number")
+
+
+def _validate_stat(value: object, name: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict) or 'base' not in value:
+        raise ValueError(f"Enemy catalog {name} must have numeric base")
+    _nullable_number(value['base'], name)
+    if value['base'] is None or value['base'] == '':
+        raise ValueError(f"Enemy catalog {name} must have numeric base")
+    _nullable_number(value.get('equipped'), f'{name}.equipped')
+
+
 def _validate_catalog(catalog: object) -> tuple[list[dict], dict[str, str]]:
-    if not isinstance(catalog, dict) or catalog.get("schemaVersion") != 1:
+    if (not isinstance(catalog, dict)
+            or type(catalog.get("schemaVersion")) is not int
+            or catalog["schemaVersion"] != 1):
         raise ValueError("Enemy catalog root is invalid")
     if not all(
         _non_empty_string(catalog.get(field))
@@ -63,6 +100,12 @@ def _validate_catalog(catalog: object) -> tuple[list[dict], dict[str, str]]:
         ):
             raise ValueError("Enemy catalog ship fields are invalid")
         keys.add(key)
+        for name in ('shipType', 'speed', 'range', 'nightCutIn', 'note', 'detailsUrl'):
+            _nullable_string(ship.get(name), name)
+        for name in ('level', 'hp', 'evasion', 'antiSub', 'search', 'luck', 'aircraftCapacity'):
+            _nullable_number(ship.get(name), name)
+        for name in ('firepower', 'torpedo', 'antiAir', 'armor'):
+            _validate_stat(ship.get(name), name)
         slots: set[int] = set()
         for item in equipment:
             if not isinstance(item, dict):
@@ -83,6 +126,14 @@ def _validate_catalog(catalog: object) -> tuple[list[dict], dict[str, str]]:
             ):
                 raise ValueError("Enemy catalog equipment fields are invalid")
             slots.add(slot)
+            _nullable_string(item.get('key'), 'equipment.key')
+            _nullable_string(item.get('type'), 'equipment.type')
+            stats = item.get('stats')
+            if isinstance(stats, dict):
+                for name in ('firepower', 'torpedo', 'bombing', 'antiAir', 'antiSub',
+                             'search', 'accuracy', 'evasion', 'armor'):
+                    _nullable_number(stats.get(name), f'equipment.stats.{name}')
+                _nullable_string(stats.get('range'), 'equipment.stats.range')
     if not all(
         _non_empty_string(alias)
         and _non_empty_string(target)
@@ -105,7 +156,9 @@ def build_release(
     if not VERSION_PATTERN.fullmatch(minimum_app_version):
         raise ValueError("Minimum app version is invalid")
     raw = catalog_path.read_bytes()
-    catalog = json.loads(raw.decode("utf-8"))
+    if len(raw) > MAX_DATA_BYTES:
+        raise ValueError("Enemy catalog size exceeds client limit")
+    catalog = json.loads(raw.decode("utf-8"), parse_constant=_reject_nonstandard_json)
     ships, aliases = _validate_catalog(catalog)
     digest = hashlib.sha256(raw).hexdigest()
     manifest = {
@@ -120,11 +173,21 @@ def build_release(
         "shipCount": len(ships),
         "aliasCount": len(aliases),
     }
+    manifest_raw = (json.dumps(manifest, ensure_ascii=False, allow_nan=False, indent=2) + "\n").encode('utf-8')
+    if len(manifest_raw) > MAX_MANIFEST_BYTES:
+        raise ValueError("Enemy manifest size exceeds client limit")
+    if manifest_path.exists():
+        previous = json.loads(
+            manifest_path.read_text(encoding='utf-8'),
+            parse_constant=_reject_nonstandard_json,
+        )
+        if previous['dataSha256'] != digest:
+            if manifest['revision'] <= previous['revision']:
+                raise ValueError('Changed enemy catalog requires a higher revision')
+            if manifest['dataUrl'] == previous['dataUrl']:
+                raise ValueError('Changed enemy catalog requires a new release tag')
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    manifest_path.write_bytes(manifest_raw)
     return {"sha256": digest, "bytes": len(raw), "manifest": manifest}
 
 

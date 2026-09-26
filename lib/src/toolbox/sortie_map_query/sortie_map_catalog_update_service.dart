@@ -60,6 +60,8 @@ final class SortieMapCatalogUpdateService
     required this.installer,
     required this.appVersion,
     this.timeout = const Duration(seconds: 20),
+    this.maximumManifestDuration = const Duration(minutes: 1),
+    this.maximumArchiveDuration = const Duration(minutes: 15),
     this.maximumManifestBytes = 64 * 1024,
     this.maximumArchiveBytes = 64 * 1024 * 1024,
     this.beforeBodyRead,
@@ -69,6 +71,8 @@ final class SortieMapCatalogUpdateService
   final SortieMapCatalogInstaller installer;
   final String appVersion;
   final Duration timeout;
+  final Duration maximumManifestDuration;
+  final Duration maximumArchiveDuration;
   final int maximumManifestBytes;
   final int maximumArchiveBytes;
   final Future<void> Function(Uri uri)? beforeBodyRead;
@@ -104,7 +108,11 @@ final class SortieMapCatalogUpdateService
           'Sortie archive exceeds the download limit.',
         );
       }
-      final archive = await _get(manifest.releaseUri, maximumArchiveBytes);
+      final archive = await _get(
+        manifest.releaseUri,
+        maximumArchiveBytes,
+        maximumArchiveDuration,
+      );
       if (archive.length != manifest.archiveBytes ||
           sha256.convert(archive).toString() != manifest.archiveSha256) {
         throw const FormatException(
@@ -171,7 +179,10 @@ final class SortieMapCatalogUpdateService
     for (final value in sortieMapManifestSources) {
       final uri = Uri.parse(value);
       try {
-        return (await _get(uri, maximumManifestBytes), uri.host);
+        return (
+          await _get(uri, maximumManifestBytes, maximumManifestDuration),
+          uri.host,
+        );
       } on Object catch (error) {
         lastError = error;
       }
@@ -180,14 +191,22 @@ final class SortieMapCatalogUpdateService
         const HttpException('No sortie manifest source is available.');
   }
 
-  Future<List<int>> _get(Uri uri, int maximumBytes) async {
-    return _getWithRedirects(uri, maximumBytes, DateTime.now().add(timeout));
+  Future<List<int>> _get(
+    Uri uri,
+    int maximumBytes,
+    Duration maximumDuration,
+  ) async {
+    return _getWithRedirects(
+      uri,
+      maximumBytes,
+      DateTime.now().add(maximumDuration),
+    );
   }
 
   Future<List<int>> _getWithRedirects(
     Uri uri,
     int maximumBytes,
-    DateTime deadline,
+    DateTime overallDeadline,
   ) async {
     final allowedManifest = sortieMapManifestSources
         .map(Uri.parse)
@@ -204,7 +223,9 @@ final class SortieMapCatalogUpdateService
     var requestUri = uri;
     http.StreamedResponse? response;
     Completer<void>? responseAbort;
+    late DateTime idleDeadline;
     for (var redirects = 0; redirects <= 5; redirects++) {
+      idleDeadline = DateTime.now().add(timeout);
       final abort = Completer<void>();
       final request =
           http.AbortableRequest('GET', requestUri, abortTrigger: abort.future)
@@ -213,7 +234,7 @@ final class SortieMapCatalogUpdateService
       response = await client
           .send(request)
           .timeout(
-            _remaining(deadline),
+            _shorter(_remaining(idleDeadline), _remaining(overallDeadline)),
             onTimeout: () {
               if (!abort.isCompleted) abort.complete();
               throw TimeoutException('Sortie update request timed out.');
@@ -254,7 +275,14 @@ final class SortieMapCatalogUpdateService
       throw const FormatException('Sortie update response is too large.');
     }
     await beforeBodyRead?.call(requestUri);
-    return _readResponse(response, maximumBytes, deadline, responseAbort!);
+    return _readResponse(
+      response,
+      maximumBytes,
+      idleDeadline,
+      overallDeadline,
+      timeout,
+      responseAbort!,
+    );
   }
 }
 
@@ -283,24 +311,54 @@ Duration _remaining(DateTime deadline) {
   return value;
 }
 
+Duration _shorter(Duration first, Duration second) =>
+    first < second ? first : second;
+
 Future<Uint8List> _readResponse(
   http.StreamedResponse response,
   int maximumBytes,
-  DateTime deadline,
+  DateTime idleDeadline,
+  DateTime overallDeadline,
+  Duration idleTimeout,
   Completer<void> abort,
 ) async {
   final bytes = BytesBuilder(copy: false);
   final result = Completer<Uint8List>();
-  late StreamSubscription<List<int>> subscription;
+  StreamSubscription<List<int>>? subscription;
+  var cancelWhenSubscribed = false;
+  var sawChunk = false;
+  Timer? idleTimer;
+  Timer? overallTimer;
+  void cancelSubscription() {
+    final active = subscription;
+    if (active == null) {
+      cancelWhenSubscribed = true;
+    } else {
+      unawaited(active.cancel());
+    }
+  }
+
+  void failOnTimeout(String message) {
+    if (!result.isCompleted) result.completeError(TimeoutException(message));
+    if (!abort.isCompleted) abort.complete();
+    cancelSubscription();
+  }
+
   subscription = response.stream.listen(
     (chunk) {
       if (result.isCompleted) return;
+      sawChunk = true;
+      idleTimer?.cancel();
+      idleTimer = Timer(
+        idleTimeout,
+        () => failOnTimeout('Sortie update response stalled.'),
+      );
       if (bytes.length + chunk.length > maximumBytes) {
         result.completeError(
           const FormatException('Sortie update response is too large.'),
         );
         if (!abort.isCompleted) abort.complete();
-        unawaited(subscription.cancel());
+        cancelSubscription();
         return;
       }
       bytes.add(chunk);
@@ -313,23 +371,27 @@ Future<Uint8List> _readResponse(
     },
     cancelOnError: true,
   );
-  Timer? timer;
+  if (cancelWhenSubscribed) cancelSubscription();
   try {
-    timer = Timer(_remaining(deadline), () {
-      if (!result.isCompleted) {
-        result.completeError(
-          TimeoutException('Sortie update response timed out.'),
+    if (!result.isCompleted) {
+      if (!sawChunk) {
+        idleTimer = Timer(
+          _remaining(idleDeadline),
+          () => failOnTimeout('Sortie update response stalled.'),
         );
       }
-      if (!abort.isCompleted) abort.complete();
-      unawaited(subscription.cancel());
-    });
+      overallTimer = Timer(
+        _remaining(overallDeadline),
+        () => failOnTimeout('Sortie update response timed out.'),
+      );
+    }
     return await result.future;
   } on TimeoutException {
     if (!abort.isCompleted) abort.complete();
     rethrow;
   } finally {
-    timer?.cancel();
+    idleTimer?.cancel();
+    overallTimer?.cancel();
     await subscription.cancel();
   }
 }

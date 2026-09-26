@@ -37,6 +37,29 @@ void main() {
     expect(installer.installed, archive);
   });
 
+  test('falls back to CDN when the primary manifest is unavailable', () async {
+    final archive = <int>[1, 2, 3];
+    final installer = _Installer();
+    final client = MockClient((request) async {
+      if (request.url.host == 'raw.githubusercontent.com') {
+        return http.Response('unavailable', 503);
+      }
+      if (request.url.host == 'cdn.jsdelivr.net') {
+        return http.Response(_manifest(archive, revision: 8), 200);
+      }
+      return http.Response.bytes(archive, 200);
+    });
+    final result = await SortieMapCatalogUpdateService(
+      client: client,
+      installer: installer,
+      appVersion: '1.0.8',
+    ).checkAndUpdate(current: _catalog(7));
+
+    expect(result, isA<SortieMapCatalogUpdated>());
+    expect(result.sourceHost, 'cdn.jsdelivr.net');
+    expect(installer.installed, archive);
+  });
+
   test('does not install an archive with a mismatched digest', () async {
     final archive = <int>[1, 2, 3];
     final installer = _Installer();
@@ -139,6 +162,68 @@ void main() {
     await expectLater(client.abortObserved.future, completes);
     await expectLater(client.cancelObserved.future, completes);
   });
+
+  test(
+    'keeps downloading while a large archive continues making progress',
+    () async {
+      final archive = <int>[1, 2, 3, 4, 5, 6];
+      final installer = _Installer();
+      final client = _ProgressiveArchiveClient(
+        _manifest(archive, revision: 8),
+        archive,
+      );
+
+      final result = await SortieMapCatalogUpdateService(
+        client: client,
+        installer: installer,
+        appVersion: '1.0.8',
+        timeout: const Duration(milliseconds: 100),
+      ).checkAndUpdate(current: _catalog(7));
+
+      expect(result, isA<SortieMapCatalogUpdated>());
+      expect(installer.installed, archive);
+    },
+  );
+
+  test(
+    'a synchronous oversized first chunk is rejected as validation',
+    () async {
+      final installer = _Installer();
+      final client = _SynchronousOversizeClient(
+        _manifest(<int>[1], revision: 8),
+      );
+      final result = await SortieMapCatalogUpdateService(
+        client: client,
+        installer: installer,
+        appVersion: '1.0.8',
+        maximumArchiveBytes: 3,
+      ).checkAndUpdate(current: _catalog(7));
+
+      expect(result, isA<SortieMapCatalogUpdateFailed>());
+      expect(
+        (result as SortieMapCatalogUpdateFailed).kind,
+        SortieMapCatalogUpdateFailure.validation,
+      );
+      expect(installer.installed, isNull);
+    },
+  );
+
+  test(
+    'synchronous progress after slow headers resets the idle timeout',
+    () async {
+      const archive = <int>[1, 2];
+      final installer = _Installer();
+      final result = await SortieMapCatalogUpdateService(
+        client: _SynchronousProgressClient(_manifest(archive, revision: 8)),
+        installer: installer,
+        appVersion: '1.0.8',
+        timeout: const Duration(milliseconds: 300),
+      ).checkAndUpdate(current: _catalog(7));
+
+      expect(result, isA<SortieMapCatalogUpdated>());
+      expect(installer.installed, archive);
+    },
+  );
 
   for (final mode in _CleanupMode.values) {
     test('cancels an unconsumed ${mode.name} response body', () async {
@@ -289,6 +374,99 @@ final class _SlowArchiveClient extends http.BaseClient {
       },
     );
     return http.StreamedResponse(controller.stream, 200);
+  }
+}
+
+final class _ProgressiveArchiveClient extends http.BaseClient {
+  _ProgressiveArchiveClient(this.manifest, this.archive);
+
+  final String manifest;
+  final List<int> archive;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.host == 'raw.githubusercontent.com') {
+      return http.StreamedResponse(
+        Stream<List<int>>.value(utf8.encode(manifest)),
+        200,
+      );
+    }
+    return http.StreamedResponse(
+      Stream<List<int>>.periodic(
+        const Duration(milliseconds: 35),
+        (index) => <int>[archive[index]],
+      ).take(archive.length),
+      200,
+    );
+  }
+}
+
+final class _SynchronousOversizeClient extends http.BaseClient {
+  _SynchronousOversizeClient(this.manifest);
+
+  final String manifest;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.host == 'raw.githubusercontent.com') {
+      return http.StreamedResponse(
+        Stream<List<int>>.value(utf8.encode(manifest)),
+        200,
+      );
+    }
+    return http.StreamedResponse(
+      _ImmediateThenDelayedStream(const <int>[1, 2, 3, 4], const <int>[]),
+      200,
+    );
+  }
+}
+
+final class _SynchronousProgressClient extends http.BaseClient {
+  _SynchronousProgressClient(this.manifest);
+
+  final String manifest;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.host == 'raw.githubusercontent.com') {
+      return http.StreamedResponse(
+        Stream<List<int>>.value(utf8.encode(manifest)),
+        200,
+      );
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+    return http.StreamedResponse(
+      _ImmediateThenDelayedStream(const <int>[1], const <int>[2]),
+      200,
+    );
+  }
+}
+
+final class _ImmediateThenDelayedStream extends Stream<List<int>> {
+  _ImmediateThenDelayedStream(this.firstChunk, this.secondChunk);
+
+  final List<int> firstChunk;
+  final List<int> secondChunk;
+
+  @override
+  StreamSubscription<List<int>> listen(
+    void Function(List<int>)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    onData?.call(firstChunk);
+    return Stream<List<int>>.value(secondChunk)
+        .asyncMap((chunk) async {
+          await Future<void>.delayed(const Duration(milliseconds: 130));
+          return chunk;
+        })
+        .listen(
+          onData,
+          onError: onError,
+          onDone: onDone,
+          cancelOnError: cancelOnError,
+        );
   }
 }
 

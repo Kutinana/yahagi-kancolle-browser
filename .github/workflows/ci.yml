@@ -23,7 +23,15 @@ jobs:
           flutter-version: 3.44.8
           channel: stable
           cache: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pillow
       - run: flutter pub get
+      - run: python -m unittest tool.test_build_sortie_release tool.test_build_enemy_release -v
+      - run: flutter test test/data_release_contract_test.dart
+        env:
+          YAHAGI_RELEASE_CONTRACT_TEST: '1'
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test

@@ -54,6 +54,8 @@ final class EnemyCatalogUpdateService implements EnemyCatalogUpdateClient {
     required this.store,
     required this.appVersion,
     this.timeout = const Duration(seconds: 20),
+    this.maximumManifestDuration = const Duration(minutes: 1),
+    this.maximumDataDuration = const Duration(minutes: 5),
     this.maximumManifestBytes = 64 * 1024,
     this.maximumDataBytes = 4 * 1024 * 1024,
   });
@@ -62,6 +64,8 @@ final class EnemyCatalogUpdateService implements EnemyCatalogUpdateClient {
   final FileEnemyCatalogStore store;
   final String appVersion;
   final Duration timeout;
+  final Duration maximumManifestDuration;
+  final Duration maximumDataDuration;
   final int maximumManifestBytes;
   final int maximumDataBytes;
 
@@ -88,7 +92,11 @@ final class EnemyCatalogUpdateService implements EnemyCatalogUpdateClient {
       if (manifest.dataBytes > maximumDataBytes) {
         throw const FormatException('Enemy catalog exceeds the size limit.');
       }
-      final bytes = await _get(manifest.dataUri, maximumDataBytes);
+      final bytes = await _get(
+        manifest.dataUri,
+        maximumDataBytes,
+        maximumDataDuration,
+      );
       if (bytes.length != manifest.dataBytes ||
           sha256.convert(bytes).toString() != manifest.dataSha256) {
         throw const FormatException('Enemy catalog digest does not match.');
@@ -130,7 +138,10 @@ final class EnemyCatalogUpdateService implements EnemyCatalogUpdateClient {
     for (final source in enemyCatalogManifestSources) {
       final uri = Uri.parse(source);
       try {
-        return (await _get(uri, maximumManifestBytes), uri.host);
+        return (
+          await _get(uri, maximumManifestBytes, maximumManifestDuration),
+          uri.host,
+        );
       } on Object catch (error) {
         lastError = error;
       }
@@ -138,14 +149,22 @@ final class EnemyCatalogUpdateService implements EnemyCatalogUpdateClient {
     throw lastError ?? const HttpException('No enemy manifest is available.');
   }
 
-  Future<List<int>> _get(Uri uri, int maximumBytes) async {
-    return _getWithRedirects(uri, maximumBytes, DateTime.now().add(timeout));
+  Future<List<int>> _get(
+    Uri uri,
+    int maximumBytes,
+    Duration maximumDuration,
+  ) async {
+    return _getWithRedirects(
+      uri,
+      maximumBytes,
+      DateTime.now().add(maximumDuration),
+    );
   }
 
   Future<List<int>> _getWithRedirects(
     Uri uri,
     int maximumBytes,
-    DateTime deadline,
+    DateTime overallDeadline,
   ) async {
     if (!_isAllowed(uri)) {
       throw FormatException('Enemy update URL is not allowed: $uri');
@@ -153,7 +172,9 @@ final class EnemyCatalogUpdateService implements EnemyCatalogUpdateClient {
     var requestUri = uri;
     http.StreamedResponse? response;
     Completer<void>? responseAbort;
+    late DateTime idleDeadline;
     for (var redirects = 0; redirects <= 5; redirects++) {
+      idleDeadline = DateTime.now().add(timeout);
       final abort = Completer<void>();
       final request =
           http.AbortableRequest('GET', requestUri, abortTrigger: abort.future)
@@ -162,7 +183,10 @@ final class EnemyCatalogUpdateService implements EnemyCatalogUpdateClient {
       response = await client
           .send(request)
           .timeout(
-            _enemyRemaining(deadline),
+            _enemyShorter(
+              _enemyRemaining(idleDeadline),
+              _enemyRemaining(overallDeadline),
+            ),
             onTimeout: () {
               if (!abort.isCompleted) abort.complete();
               throw TimeoutException('Enemy update request timed out.');
@@ -200,7 +224,14 @@ final class EnemyCatalogUpdateService implements EnemyCatalogUpdateClient {
       await _discardEnemyResponse(response, responseAbort!);
       throw const FormatException('Enemy update response is too large.');
     }
-    return _readEnemyResponse(response, maximumBytes, deadline, responseAbort!);
+    return _readEnemyResponse(
+      response,
+      maximumBytes,
+      idleDeadline,
+      overallDeadline,
+      timeout,
+      responseAbort!,
+    );
   }
 }
 
@@ -229,24 +260,54 @@ Duration _enemyRemaining(DateTime deadline) {
   return value;
 }
 
+Duration _enemyShorter(Duration first, Duration second) =>
+    first < second ? first : second;
+
 Future<Uint8List> _readEnemyResponse(
   http.StreamedResponse response,
   int maximumBytes,
-  DateTime deadline,
+  DateTime idleDeadline,
+  DateTime overallDeadline,
+  Duration idleTimeout,
   Completer<void> abort,
 ) async {
   final bytes = BytesBuilder(copy: false);
   final result = Completer<Uint8List>();
-  late StreamSubscription<List<int>> subscription;
+  StreamSubscription<List<int>>? subscription;
+  var cancelWhenSubscribed = false;
+  var sawChunk = false;
+  Timer? idleTimer;
+  Timer? overallTimer;
+  void cancelSubscription() {
+    final active = subscription;
+    if (active == null) {
+      cancelWhenSubscribed = true;
+    } else {
+      unawaited(active.cancel());
+    }
+  }
+
+  void failOnTimeout(String message) {
+    if (!result.isCompleted) result.completeError(TimeoutException(message));
+    if (!abort.isCompleted) abort.complete();
+    cancelSubscription();
+  }
+
   subscription = response.stream.listen(
     (chunk) {
       if (result.isCompleted) return;
+      sawChunk = true;
+      idleTimer?.cancel();
+      idleTimer = Timer(
+        idleTimeout,
+        () => failOnTimeout('Enemy update response stalled.'),
+      );
       if (bytes.length + chunk.length > maximumBytes) {
         result.completeError(
           const FormatException('Enemy update response is too large.'),
         );
         if (!abort.isCompleted) abort.complete();
-        unawaited(subscription.cancel());
+        cancelSubscription();
         return;
       }
       bytes.add(chunk);
@@ -259,23 +320,27 @@ Future<Uint8List> _readEnemyResponse(
     },
     cancelOnError: true,
   );
-  Timer? timer;
+  if (cancelWhenSubscribed) cancelSubscription();
   try {
-    timer = Timer(_enemyRemaining(deadline), () {
-      if (!result.isCompleted) {
-        result.completeError(
-          TimeoutException('Enemy update response timed out.'),
+    if (!result.isCompleted) {
+      if (!sawChunk) {
+        idleTimer = Timer(
+          _enemyRemaining(idleDeadline),
+          () => failOnTimeout('Enemy update response stalled.'),
         );
       }
-      if (!abort.isCompleted) abort.complete();
-      unawaited(subscription.cancel());
-    });
+      overallTimer = Timer(
+        _enemyRemaining(overallDeadline),
+        () => failOnTimeout('Enemy update response timed out.'),
+      );
+    }
     return await result.future;
   } on TimeoutException {
     if (!abort.isCompleted) abort.complete();
     rethrow;
   } finally {
-    timer?.cancel();
+    idleTimer?.cancel();
+    overallTimer?.cancel();
     await subscription.cancel();
   }
 }

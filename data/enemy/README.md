@@ -12,5 +12,13 @@
 `enemy_catalog.json` → 提交并推送 `manifest.json`。客户端会校验版本、文件大小、
 SHA-256、记录数量和别名数量，校验通过后才原子替换本地缓存；失败时继续使用原资料。
 
+内容变化时，先在生成器中提高 `revision`，再为 `build_enemy_release.py --tag` 指定新标签；
+生成器会拒绝沿用旧修订号或旧 Release 地址。发布前从仓库根目录运行
+`python -m unittest tool.test_build_enemy_release -v`。本地发布脚本需要 Python 和 Pillow
+（`python -m pip install pillow`）；同时设置
+`YAHAGI_RELEASE_CONTRACT_TEST=1` 运行 `flutter test test/data_release_contract_test.dart`。
+上传资产、推送清单后，设置 `YAHAGI_LIVE_DATA_TEST=1` 运行
+`flutter test test/data_release_live_test.dart`，验证实际下载和重启读取。
+
 地图敌舰条目中的 ID 是头像 ID，不一定是精确配置 ID。生成器使用“头像 ID + 地图配置名”
 建立别名，详情卡最终解析到资料库中的具体配置记录。
