@@ -33,6 +33,13 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test
+      - name: Upload golden test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: test/failures/
+          if-no-files-found: ignore
       - run: chmod +x android/gradlew
       - run: ./android/gradlew -p android :app:testDebugUnitTest --console=plain
       - run: flutter build apk --debug
