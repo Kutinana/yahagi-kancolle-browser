@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'game_mouse_wheel_settings.dart';
@@ -13,6 +14,7 @@ class GameMouseWheelSettingsSection extends StatelessWidget
     final l10n =
         AppLocalizations.of(context) ??
         lookupAppLocalizations(const Locale('zh'));
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) => Column(
@@ -20,11 +22,13 @@ class GameMouseWheelSettingsSection extends StatelessWidget
           buildSwitchTile(
             switchKey: const Key('settings-mouse-wheel-compatibility'),
             title: l10n.mouseWheelCompatibility,
-            subtitle: l10n.mouseWheelCompatibilityDescription,
-            value: controller.enabled,
-            onChanged: controller.saving ? null : controller.setEnabled,
+            subtitle: isIOS
+                ? 'iOS 因系统底层限制，暂不支持此功能'
+                : l10n.mouseWheelCompatibilityDescription,
+            value: isIOS ? false : controller.enabled,
+            onChanged: (isIOS || controller.saving) ? null : controller.setEnabled,
           ),
-          if (controller.saveFailed)
+          if (!isIOS && controller.saveFailed)
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(l10n.mouseWheelCompatibilitySaveFailed),

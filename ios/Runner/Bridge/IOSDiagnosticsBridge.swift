@@ -27,7 +27,7 @@ final class IOSDiagnosticsBridge: NSObject {
         "screenWidthPx": Int(bounds.width * scale),
         "screenHeightPx": Int(bounds.height * scale),
         "webViewVersion": "WebKit (iOS \(UIDevice.current.systemVersion))",
-        "previousExitReason": 0,
+        "previousExitReason": "unavailable",
         "previousExitStatus": 0,
         "previousExitImportance": 0,
         "previousExitPssKb": 0,
@@ -76,12 +76,12 @@ final class IOSDiagnosticsBridge: NSObject {
         try? fileManager.removeItem(at: destURL)
         do {
           try fileManager.copyItem(at: srcURL, to: destURL)
-          result(destURL.path)
+          result(destURL.lastPathComponent)
         } catch {
-          result(path)
+          result(FlutterError(code: "save_failed", message: error.localizedDescription, details: nil))
         }
       } else {
-        result(path)
+        result(srcURL.lastPathComponent)
       }
 
     case "shareJson":
@@ -104,13 +104,18 @@ final class IOSDiagnosticsBridge: NSObject {
           return
         }
 
+        var presenter = rootVC
+        while let presented = presenter.presentedViewController, !presented.isBeingDismissed {
+          presenter = presented
+        }
+
         let activityVC = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
         if let popover = activityVC.popoverPresentationController {
-          popover.sourceView = rootVC.view
-          popover.sourceRect = CGRect(x: rootVC.view.bounds.midX, y: rootVC.view.bounds.midY, width: 0, height: 0)
+          popover.sourceView = presenter.view
+          popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 0, height: 0)
           popover.permittedArrowDirections = []
         }
-        rootVC.present(activityVC, animated: true) {
+        presenter.present(activityVC, animated: true) {
           result(nil)
         }
       }

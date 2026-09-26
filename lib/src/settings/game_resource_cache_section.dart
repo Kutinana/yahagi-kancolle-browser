@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
@@ -50,7 +51,9 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
       builder: (context, _) {
         final controller = widget.controller;
         final status = controller.status;
-        final isFullCache = controller.mode == GameResourceCacheMode.full;
+        final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+        final isFullCache =
+            !isIOS && controller.mode == GameResourceCacheMode.full;
         final hasIntegrityIssues =
             status.missingCount > 0 ||
             status.damagedCount > 0 ||
@@ -67,9 +70,12 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
             _modeTile(
               mode: GameResourceCacheMode.full,
               title: l10n.gameResourceCacheFull,
-              subtitle: l10n.gameResourceCacheFullDesc,
+              subtitle: isIOS
+                  ? 'iOS 因系统底层限制，暂不支持此功能'
+                  : l10n.gameResourceCacheFullDesc,
+              enabled: !isIOS,
             ),
-            if (!status.supported)
+            if (!isIOS && !status.supported)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
@@ -77,7 +83,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                   style: const TextStyle(color: Color(0xffffb4a9)),
                 ),
               ),
-            if (!controller.initialized || status.policyError)
+            if (!isIOS && (!controller.initialized || status.policyError))
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
@@ -85,7 +91,7 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                   style: const TextStyle(color: Color(0xffffb4a9)),
                 ),
               ),
-            if (isFullCache && controller.manifestError)
+            if (!isIOS && isFullCache && controller.manifestError)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
@@ -93,126 +99,128 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                   style: const TextStyle(color: Color(0xffffb4a9)),
                 ),
               ),
-            const Divider(color: Color(0xff294052), height: 1),
-            if (isFullCache && status.capacityBlocked)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Text(
-                  l10n.gameResourceCacheCapacityBlocked,
-                  style: const TextStyle(color: Color(0xffffb4a9)),
-                ),
-              ),
-            if (isFullCache && status.waitingForWifi)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Text(
-                  l10n.gameResourceCacheWaitingForWifi,
-                  style: const TextStyle(color: Color(0xff9bc7e4)),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 12, 12),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: <Widget>[
-                  Text(
-                    l10n.gameResourceCacheStoredSize(
-                      controller.completenessLine,
-                    ),
-                    key: const Key('cache-completeness-line'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+            if (!isIOS) ...<Widget>[
+              const Divider(color: Color(0xff294052), height: 1),
+              if (isFullCache && status.capacityBlocked)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Text(
+                    l10n.gameResourceCacheCapacityBlocked,
+                    style: const TextStyle(color: Color(0xffffb4a9)),
                   ),
-                  if (isFullCache)
-                    FilledButton.icon(
-                      key: const Key('cache-download-toggle'),
-                      onPressed: !controller.initialized || controller.busy
-                          ? null
-                          : () =>
-                                status.state ==
-                                    GameResourceCacheState.downloading
-                                ? _run(controller.pauseDownload)
-                                : _confirmDownload(l10n),
-                      icon: Icon(
-                        status.state == GameResourceCacheState.downloading
-                            ? Icons.pause
-                            : Icons.download,
-                      ),
-                      label: Text(switch (status.state) {
-                        GameResourceCacheState.downloading =>
-                          l10n.gameResourceCachePause,
-                        GameResourceCacheState.paused =>
-                          l10n.gameResourceCacheResume,
-                        _ => l10n.gameResourceCacheStart,
-                      }),
-                    ),
-                  if (isFullCache)
-                    OutlinedButton.icon(
-                      key: const Key('cache-check-integrity'),
-                      onPressed: !controller.initialized || controller.busy
-                          ? null
-                          : _checkIntegrity,
-                      icon: const Icon(Icons.fact_check_outlined),
-                      label: Text(l10n.gameResourceCacheCheck),
-                    ),
-                  if (isFullCache &&
-                      _integrityChecked &&
-                      (status.missingCount > 0 ||
-                          status.damagedCount > 0 ||
-                          status.outdatedCount > 0))
-                    OutlinedButton.icon(
-                      key: const Key('cache-repair'),
-                      onPressed: !controller.initialized || controller.busy
-                          ? null
-                          : () => _confirmRepair(l10n),
-                      icon: const Icon(Icons.build_outlined),
-                      label: Text(l10n.gameResourceCacheRepair),
-                    ),
-                  TextButton.icon(
-                    key: const Key('cache-clear'),
-                    onPressed: !controller.initialized || controller.busy
-                        ? null
-                        : () => _confirmClear(l10n),
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(l10n.gameResourceCacheClear),
-                  ),
-                ],
-              ),
-            ),
-            if (isFullCache && _integrityChecked && hasIntegrityIssues)
-              Container(
-                key: const Key('cache-integrity-result'),
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xff152d3b),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xff294f63)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              if (isFullCache && status.waitingForWifi)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Text(
+                    l10n.gameResourceCacheWaitingForWifi,
+                    style: const TextStyle(color: Color(0xff9bc7e4)),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 12, 12),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
                     Text(
-                      l10n.gameResourceCacheIntegritySummary(
-                        status.missingCount,
-                        status.damagedCount,
-                        status.outdatedCount,
+                      l10n.gameResourceCacheStoredSize(
+                        controller.completenessLine,
+                      ),
+                      key: const Key('cache-completeness-line'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (status.outdatedCount > 0) ...<Widget>[
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.gameResourceCachePendingRetained,
-                        style: const TextStyle(color: Color(0xff9bc7e4)),
+                    if (isFullCache)
+                      FilledButton.icon(
+                        key: const Key('cache-download-toggle'),
+                        onPressed: !controller.initialized || controller.busy
+                            ? null
+                            : () =>
+                                  status.state ==
+                                      GameResourceCacheState.downloading
+                                  ? _run(controller.pauseDownload)
+                                  : _confirmDownload(l10n),
+                        icon: Icon(
+                          status.state == GameResourceCacheState.downloading
+                              ? Icons.pause
+                              : Icons.download,
+                        ),
+                        label: Text(switch (status.state) {
+                          GameResourceCacheState.downloading =>
+                            l10n.gameResourceCachePause,
+                          GameResourceCacheState.paused =>
+                            l10n.gameResourceCacheResume,
+                          _ => l10n.gameResourceCacheStart,
+                        }),
                       ),
-                    ],
+                    if (isFullCache)
+                      OutlinedButton.icon(
+                        key: const Key('cache-check-integrity'),
+                        onPressed: !controller.initialized || controller.busy
+                            ? null
+                            : _checkIntegrity,
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: Text(l10n.gameResourceCacheCheck),
+                      ),
+                    if (isFullCache &&
+                        _integrityChecked &&
+                        (status.missingCount > 0 ||
+                            status.damagedCount > 0 ||
+                            status.outdatedCount > 0))
+                      OutlinedButton.icon(
+                        key: const Key('cache-repair'),
+                        onPressed: !controller.initialized || controller.busy
+                            ? null
+                            : () => _confirmRepair(l10n),
+                        icon: const Icon(Icons.build_outlined),
+                        label: Text(l10n.gameResourceCacheRepair),
+                      ),
+                    TextButton.icon(
+                      key: const Key('cache-clear'),
+                      onPressed: !controller.initialized || controller.busy
+                          ? null
+                          : () => _confirmClear(l10n),
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(l10n.gameResourceCacheClear),
+                    ),
                   ],
                 ),
               ),
+              if (isFullCache && _integrityChecked && hasIntegrityIssues)
+                Container(
+                  key: const Key('cache-integrity-result'),
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff152d3b),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xff294052)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        l10n.gameResourceCacheIntegritySummary(
+                          status.missingCount,
+                          status.damagedCount,
+                          status.outdatedCount,
+                        ),
+                      ),
+                      if (status.outdatedCount > 0) ...<Widget>[
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.gameResourceCachePendingRetained,
+                          style: const TextStyle(color: Color(0xff9bc7e4)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+            ],
           ],
         );
       },
@@ -223,13 +231,16 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
     required GameResourceCacheMode mode,
     required String title,
     required String subtitle,
+    bool enabled = true,
   }) {
-    final selected =
-        widget.controller.initialized && widget.controller.mode == mode;
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+    final selected = isIOS
+        ? mode == GameResourceCacheMode.temporary
+        : (widget.controller.initialized && widget.controller.mode == mode);
     return InkWell(
       key: Key('cache-mode-${mode.name}'),
-      onTap:
-          !widget.controller.initialized ||
+      onTap: !enabled ||
+              !widget.controller.initialized ||
               widget.controller.busy ||
               selected ||
               (!widget.controller.status.supported &&
@@ -246,9 +257,19 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(title, style: SettingsTileTypography.title),
+                  Text(
+                    title,
+                    style: SettingsTileTypography.title.copyWith(
+                      color: enabled ? null : const Color(0xff526776),
+                    ),
+                  ),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: SettingsTileTypography.description),
+                  Text(
+                    subtitle,
+                    style: SettingsTileTypography.description.copyWith(
+                      color: enabled ? null : const Color(0xff526776),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -257,9 +278,12 @@ class _GameResourceCacheSectionState extends State<GameResourceCacheSection> {
               selected
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
-              color: selected
-                  ? const Color(0xff70c7bc)
-                  : const Color(0xff8197a5),
+              color: !enabled
+                  ? const Color(0xff526776)
+                  : selected
+                      ? const Color(0xff70c7bc)
+                      : const Color(0xff8197a5),
+              size: 20,
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
@@ -498,7 +499,8 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 ),
               ),
             ],
-            if (gameRenderingModeController != null) ...<Widget>[
+            if (defaultTargetPlatform != TargetPlatform.iOS &&
+                gameRenderingModeController != null) ...<Widget>[
               const SizedBox(height: 24),
               buildSectionTitle(l10n.gameRenderingModeTitle),
               buildCard(
@@ -551,17 +553,22 @@ class ScreenSettingsPage extends StatelessWidget with SettingsUIHelpers {
                         const Divider(color: Color(0xff294052), height: 1),
                         AnimatedBuilder(
                           animation: retention,
-                          builder: (context, _) => buildSwitchTile(
-                            title: l10n.backgroundGameRetention,
-                            titleKey: const Key(
-                              'settings-background-game-retention',
-                            ),
-                            subtitle:
-                                retention.errorMessage ??
-                                l10n.backgroundGameRetentionDesc,
-                            value: retention.enabled,
-                            onChanged: retention.setEnabled,
-                          ),
+                          builder: (context, _) {
+                            final isIOS =
+                                defaultTargetPlatform == TargetPlatform.iOS;
+                            return buildSwitchTile(
+                              title: l10n.backgroundGameRetention,
+                              titleKey: const Key(
+                                'settings-background-game-retention',
+                              ),
+                              subtitle: isIOS
+                                  ? 'iOS 因系统底层限制，暂不支持此功能'
+                                  : (retention.errorMessage ??
+                                      l10n.backgroundGameRetentionDesc),
+                              value: isIOS ? false : retention.enabled,
+                              onChanged: isIOS ? null : retention.setEnabled,
+                            );
+                          },
                         ),
                       ],
                     ],

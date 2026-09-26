@@ -36,7 +36,9 @@ import 'src/bridge/captured_api_event.dart';
 import 'src/browser/gadget_bypass_controller.dart';
 import 'src/browser/gadget_bypass_store.dart';
 import 'src/browser/game_browser_controller.dart';
+import 'src/browser/game_resource_cache_channel.dart';
 import 'src/browser/game_resource_cache_controller.dart';
+import 'src/browser/game_resource_cache_store.dart';
 import 'src/browser/game_resource_manifest_builder.dart';
 import 'src/browser/game_resource_manifest_consumer.dart';
 import 'src/browser/game_screenshot_controller.dart';
@@ -94,7 +96,6 @@ import 'src/settings/display_mode_store.dart';
 import 'src/settings/game_connector.dart';
 import 'src/settings/game_connector_controller.dart';
 import 'src/settings/game_frame_rate_settings.dart';
-import 'src/settings/game_rendering_mode_controller.dart';
 import 'src/settings/layout_settings_controller.dart';
 import 'src/settings/layout_settings_store.dart';
 import 'src/settings/network_settings_controller.dart';
@@ -170,9 +171,6 @@ Future<void> main() async {
       await GameFrameRateSettingsController.load(
         SharedPreferencesGameFrameRateSettingsStore(),
       );
-  final gameRenderingModeController = await GameRenderingModeController.load(
-    SharedPreferencesGameRenderingModeStore(),
-  );
   final gameConnectorController = await GameConnectorController.load(
     SharedPreferencesGameConnectorStore(),
   );
@@ -180,6 +178,9 @@ Future<void> main() async {
       await BackgroundGameRetentionController.load(
         SharedPreferencesBackgroundGameRetentionStore(),
       );
+  if (backgroundGameRetentionController.enabled) {
+    await backgroundGameRetentionController.setEnabled(false);
+  }
   applyOrientationPolicy(
     currentWindowSize(),
     displayModeController.displayMode,
@@ -222,7 +223,9 @@ Future<void> main() async {
   final kcwikiReportController = await KcwikiReportController.load(
     SharedPreferencesKcwikiReportSettingsStore(),
   );
-  final gameResourceCacheController = GameResourceCacheController();
+  final gameResourceCacheController = GameResourceCacheController(
+    port: const _IosDisabledGameResourceCachePort(),
+  );
   await gameResourceCacheController.initialize();
   final senkaController = SenkaController(
     accountSession: accountSession,
@@ -502,6 +505,9 @@ Future<void> main() async {
   final releaseChecker = GitHubReleaseChecker();
   final gameMouseWheelSettingsController =
       await GameMouseWheelSettingsController.load();
+  if (gameMouseWheelSettingsController.enabled) {
+    await gameMouseWheelSettingsController.setEnabled(false);
+  }
   final gameFrameRefreshShortcutSettings =
       await GameFrameRefreshShortcutSettings.load();
   final screenAwakeController = await ScreenAwakeController.load(
@@ -569,7 +575,7 @@ Future<void> main() async {
     webViewHost: diagnosticWebViewHost,
     renderer: diagnosticRenderer,
     generationId: diagnosticGeneration,
-    renderingModeName: () => gameRenderingModeController.mode.storageName,
+    renderingModeName: () => 'wkWebView',
     exporter: DiagnosticExportService(
       storage: diagnosticStorage,
       exportDirectory: Directory(
@@ -629,7 +635,6 @@ Future<void> main() async {
       notificationSettingsController: notificationSettingsController,
       battlePredictionSettingsController: battlePredictionSettingsController,
       gameFrameRateSettingsController: gameFrameRateSettingsController,
-      gameRenderingModeController: gameRenderingModeController,
       gameConnectorController: gameConnectorController,
       backgroundGameRetentionController: backgroundGameRetentionController,
       displayModeController: displayModeController,
@@ -730,7 +735,6 @@ class _IOSYahagiApp extends StatefulWidget {
     this.notificationSettingsController,
     this.battlePredictionSettingsController,
     this.gameFrameRateSettingsController,
-    this.gameRenderingModeController,
     this.gameConnectorController,
     this.backgroundGameRetentionController,
     required this.displayModeController,
@@ -776,7 +780,6 @@ class _IOSYahagiApp extends StatefulWidget {
   final NotificationSettingsController? notificationSettingsController;
   final BattlePredictionSettingsController? battlePredictionSettingsController;
   final GameFrameRateSettingsController? gameFrameRateSettingsController;
-  final GameRenderingModeController? gameRenderingModeController;
   final GameConnectorController? gameConnectorController;
   final BackgroundGameRetentionController? backgroundGameRetentionController;
   final DisplayModeController displayModeController;
@@ -899,7 +902,6 @@ class _IOSYahagiAppState extends State<_IOSYahagiApp> {
       battlePredictionSettingsController:
           widget.battlePredictionSettingsController,
       gameFrameRateSettingsController: widget.gameFrameRateSettingsController,
-      gameRenderingModeController: widget.gameRenderingModeController,
       gameConnectorController: widget.gameConnectorController,
       backgroundGameRetentionController:
           widget.backgroundGameRetentionController,
@@ -933,7 +935,7 @@ class _IOSYahagiAppState extends State<_IOSYahagiApp> {
       gameInfoNoticeController: widget.gameInfoNoticeController,
       gameMouseWheelSettingsController: widget.gameMouseWheelSettingsController,
       gameFrameRefreshShortcutSettings: widget.gameFrameRefreshShortcutSettings,
-      showDeveloperDiagnostics: _developerMode,
+      showDeveloperDiagnostics: false,
       diagnosticController: widget.diagnosticController,
       telemetryController: widget.telemetryController,
       nativeWebViewGenerationSink: widget.nativeWebViewGenerationSink,
@@ -981,4 +983,38 @@ class _IOSYahagiAppState extends State<_IOSYahagiApp> {
       ),
     );
   }
+}
+
+final class _IosDisabledGameResourceCachePort
+    implements GameResourceCachePort {
+  const _IosDisabledGameResourceCachePort();
+
+  @override
+  Future<bool> configure(GameResourceCacheMode mode) async => true;
+
+  @override
+  Future<GameResourceCacheStatus> status() async =>
+      GameResourceCacheStatus.empty;
+
+  @override
+  Future<bool> setManifest(
+    GameResourceManifest manifest, {
+    bool Function()? shouldContinue,
+  }) async => false;
+
+  @override
+  Future<bool> startDownload({bool allowMetered = false}) async => false;
+
+  @override
+  Future<bool> pauseDownload() async => false;
+
+  @override
+  Future<GameResourceCacheStatus> checkIntegrity() async =>
+      GameResourceCacheStatus.empty;
+
+  @override
+  Future<bool> repair({bool allowMetered = false}) async => false;
+
+  @override
+  Future<bool> clear() async => false;
 }
