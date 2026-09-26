@@ -98,10 +98,7 @@ void main() {
         find.byKey(const Key('development-mode-calculator')),
         findsOneWidget,
       );
-      expect(
-        find.byKey(const Key('development-mode-formula')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('development-mode-formula')), findsOneWidget);
     },
   );
 }

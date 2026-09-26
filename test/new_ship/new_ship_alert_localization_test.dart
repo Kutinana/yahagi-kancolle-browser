@@ -7,10 +7,7 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('zh'));
 
     expect(l10n.newShipAlertBody('雪风'), '雪风，请不要忘记上锁');
-    expect(
-      l10n.newShipAlertBody('雪风、岛风'),
-      '雪风、岛风，请不要忘记上锁',
-    );
+    expect(l10n.newShipAlertBody('雪风、岛风'), '雪风、岛风，请不要忘记上锁');
   });
 
   test('繁体中文和日文提供对应的上锁提示', () {

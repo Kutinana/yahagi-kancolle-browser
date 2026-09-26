@@ -159,11 +159,7 @@ void main() {
         page: 75,
         rows: [
           rankingRow(rank: 746, senka: 489, nickname: '其他', magic: 96),
-          rankingEncryptedRow(
-            rank: 747,
-            encrypted: encrypted,
-            nickname: '本人',
-          ),
+          rankingEncryptedRow(rank: 747, encrypted: encrypted, nickname: '本人'),
         ],
         atJst: DateTime(2026, 8, 10, 15),
       ),

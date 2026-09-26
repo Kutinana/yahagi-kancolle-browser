@@ -184,9 +184,7 @@ class DevelopmentRecipeTable extends StatelessWidget {
         if (states.contains(WidgetState.selected)) {
           return const Color(0xff1d3d52);
         }
-        return index.isEven
-            ? const Color(0xff0b202d)
-            : const Color(0xff0e2330);
+        return index.isEven ? const Color(0xff0b202d) : const Color(0xff0e2330);
       }),
       onSelectChanged: (_) => controller.applyRecipe(recipe),
       cells: [

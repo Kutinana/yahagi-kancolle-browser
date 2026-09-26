@@ -93,9 +93,7 @@ class NewShipReminderStore {
       );
       if (raw is! List) return <PendingNewShipAcquisition>[];
       return <PendingNewShipAcquisition>[
-        for (final value in raw)
-          if (PendingNewShipAcquisition.fromJson(value) case final pending?)
-            pending,
+        for (final value in raw) ?PendingNewShipAcquisition.fromJson(value),
       ];
     } on FormatException {
       return <PendingNewShipAcquisition>[];

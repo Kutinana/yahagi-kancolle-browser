@@ -222,7 +222,7 @@ class _FleetSummaryBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (switcher != null) switcher!,
+        ?switcher,
         if (metrics != null) ...[
           if (switcher != null) const SizedBox(height: 4),
           metrics!,

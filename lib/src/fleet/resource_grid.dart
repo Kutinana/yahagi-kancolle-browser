@@ -130,12 +130,12 @@ class CompactResourceBar extends StatefulWidget {
 }
 
 class _CompactResourceBarState extends State<CompactResourceBar> {
-  static const Map<String, ({int useItemId, int rate})>
-  _furnitureBoxCoinRates = <String, ({int useItemId, int rate})>{
-    'useitem-10': (useItemId: 10, rate: 200),
-    'useitem-11': (useItemId: 11, rate: 400),
-    'useitem-12': (useItemId: 12, rate: 700),
-  };
+  static const Map<String, ({int useItemId, int rate})> _furnitureBoxCoinRates =
+      <String, ({int useItemId, int rate})>{
+        'useitem-10': (useItemId: 10, rate: 200),
+        'useitem-11': (useItemId: 11, rate: 400),
+        'useitem-12': (useItemId: 12, rate: 700),
+      };
 
   late final ScrollController _scrollController = ScrollController();
   final Set<String> _furnitureBoxCoinModeIds = <String>{};
@@ -370,7 +370,8 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                         ? () => _toggleFurnitureBoxCoinMode(id)
                         : switch (id) {
                             headerSenkaId => widget.onSenkaTap,
-                            headerAnchorageTimerId => widget.onAnchorageTimerTap,
+                            headerAnchorageTimerId =>
+                              widget.onAnchorageTimerTap,
                             headerNosakiTimerId => widget.onNosakiTimerTap,
                             headerFrameRefreshId => widget.onFrameRefreshTap,
                             _ => null,
@@ -439,10 +440,7 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
       );
     }
     if (id == headerNosakiTimerId) {
-      return _HeaderNosakiTimerSummary(
-        elapsed: _nosakiElapsed,
-        uiSize: uiSize,
-      );
+      return _HeaderNosakiTimerSummary(elapsed: _nosakiElapsed, uiSize: uiSize);
     }
     if (id == headerFrameRefreshId) {
       return _HeaderFrameRefreshPill(uiSize: uiSize);
@@ -454,8 +452,7 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     return _HeaderResourceItem(
       spec: spec,
       value: _headerResourceValue(id, spec),
-      valuePrefix:
-          id == headerFurnitureCoinId && _showTheoreticalFurnitureCoins
+      valuePrefix: id == headerFurnitureCoinId && _showTheoreticalFurnitureCoins
           ? '≈'
           : '',
       showFurnitureCoinSuffix: _furnitureBoxCoinModeIds.contains(id),
@@ -511,8 +508,7 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
     return _EditableHeaderResourceItem(
       spec: spec,
       value: _headerResourceValue(id, spec),
-      valuePrefix:
-          id == headerFurnitureCoinId && _showTheoreticalFurnitureCoins
+      valuePrefix: id == headerFurnitureCoinId && _showTheoreticalFurnitureCoins
           ? '≈'
           : '',
       showFurnitureCoinSuffix: _furnitureBoxCoinModeIds.contains(id),
@@ -607,13 +603,15 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                       itemBuilder: (context, index) {
                         final id = controller.headerResourceOrder[index];
                         if (id == headerSenkaId) {
-                           return _HeaderSenkaFilterRow(
+                          return _HeaderSenkaFilterRow(
                             senka: widget.senka,
                             rank: widget.rank,
                             visible: visible.contains(id),
                             onChanged: controller.uiLocked
                                 ? null
-                                : () => controller.toggleHeaderResourceVisible(id),
+                                : () => controller.toggleHeaderResourceVisible(
+                                    id,
+                                  ),
                           );
                         }
                         if (id == headerAnchorageTimerId) {
@@ -622,7 +620,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                             visible: visible.contains(id),
                             onChanged: controller.uiLocked
                                 ? null
-                                : () => controller.toggleHeaderResourceVisible(id),
+                                : () => controller.toggleHeaderResourceVisible(
+                                    id,
+                                  ),
                           );
                         }
                         if (id == headerNosakiTimerId) {
@@ -631,7 +631,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                             visible: visible.contains(id),
                             onChanged: controller.uiLocked
                                 ? null
-                                : () => controller.toggleHeaderResourceVisible(id),
+                                : () => controller.toggleHeaderResourceVisible(
+                                    id,
+                                  ),
                           );
                         }
                         if (id == headerFrameRefreshId) {
@@ -643,7 +645,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                             visible: visible.contains(id),
                             onChanged: controller.uiLocked
                                 ? null
-                                : () => controller.toggleHeaderResourceVisible(id),
+                                : () => controller.toggleHeaderResourceVisible(
+                                    id,
+                                  ),
                           );
                         }
                         if (id == headerShipCapacityId ||
@@ -660,7 +664,9 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                             visible: visible.contains(id),
                             onChanged: controller.uiLocked
                                 ? null
-                                : () => controller.toggleHeaderResourceVisible(id),
+                                : () => controller.toggleHeaderResourceVisible(
+                                    id,
+                                  ),
                           );
                         }
                         final spec = headerResourceById[id]!;
@@ -670,7 +676,8 @@ class _CompactResourceBarState extends State<CompactResourceBar> {
                           visible: visible.contains(id),
                           onChanged: controller.uiLocked
                               ? null
-                              : () => controller.toggleHeaderResourceVisible(id),
+                              : () =>
+                                    controller.toggleHeaderResourceVisible(id),
                         );
                       },
                     );
@@ -989,7 +996,9 @@ class _HeaderResourceItem extends StatelessWidget {
                   color: const Color(0xffdce6eb),
                   fontSize: isCompact ? 11.5 : 12.5,
                   fontWeight: FontWeight.w700,
-                  fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
                 ),
               ),
             ),

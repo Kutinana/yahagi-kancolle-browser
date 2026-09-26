@@ -1,3 +1,6 @@
+// Keep the public named constructor argument while storing it privately.
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'battle_status_effect_settings.dart';

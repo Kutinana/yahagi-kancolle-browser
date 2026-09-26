@@ -43,7 +43,13 @@ class EquipmentMechanismDisplay {
   }
 }
 
-enum MechanismTone { neutral, antiSubmarine, antiAir, specialAttack, nightAttack }
+enum MechanismTone {
+  neutral,
+  antiSubmarine,
+  antiAir,
+  specialAttack,
+  nightAttack,
+}
 
 List<EquipmentStatDisplay> equipmentStatDisplays(
   MasterSlotItem item, {

@@ -28,6 +28,7 @@ migrate_working_dir/
 **/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins-dependencies
+/devtools_options.yaml
 .pub-cache/
 .pub/
 /build/
@@ -103,6 +104,10 @@ tool/*/reports/
 test/fixtures/*
 !test/fixtures/battle_detail_ui_sample.dart
 !test/fixtures/composition_image_fixture.dart
+!test/fixtures/fleet_display_sample.dart
+!test/fixtures/kcsapi_fixtures.dart
+!test/fixtures/native_capture_session_test.cjs
+!test/fixtures/record_backup_v12_empty.yhb
 !test/fixtures/battle_detail_poi_3_0_5.json
 !test/fixtures/poi_ezexped/
 test/fixtures/poi_ezexped/*

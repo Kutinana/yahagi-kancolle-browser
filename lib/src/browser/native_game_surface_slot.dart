@@ -481,7 +481,7 @@ bool shouldRouteHideGameSurface(Route<dynamic>? route) {
     final barrierColor = route.barrierColor;
     if (barrierColor != null &&
         barrierColor != Colors.transparent &&
-        barrierColor.alpha > 0) {
+        (barrierColor.a * 255.0).round().clamp(0, 255) > 0) {
       return true;
     }
   }

@@ -59,8 +59,9 @@ final class SortieDamageControlLedger {
         <int, List<DamageControlEquipmentRef>>{
           for (final entry in _consumed.entries)
             if (entry.value.isNotEmpty)
-              entry.key:
-                  List<DamageControlEquipmentRef>.unmodifiable(entry.value),
+              entry.key: List<DamageControlEquipmentRef>.unmodifiable(
+                entry.value,
+              ),
         },
       );
 

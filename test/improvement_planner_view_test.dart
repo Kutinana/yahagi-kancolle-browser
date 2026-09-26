@@ -414,9 +414,13 @@ void main() {
     for (final day in <int>[7, 1, 2, 3, 4, 5, 6]) {
       final cell = find.byKey(Key('improvement-secretary-day-1-0-$day'));
       expect(cell, findsOneWidget);
-      final decoration = tester
-          .widget<Container>(find.descendant(of: cell, matching: find.byType(Container)))
-          .decoration! as BoxDecoration;
+      final decoration =
+          tester
+                  .widget<Container>(
+                    find.descendant(of: cell, matching: find.byType(Container)),
+                  )
+                  .decoration!
+              as BoxDecoration;
       expect(
         decoration.color,
         <int>{1, 2}.contains(day)

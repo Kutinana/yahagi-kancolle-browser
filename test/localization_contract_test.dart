@@ -91,6 +91,10 @@ void main() {
       'lib/src/localization/record_backup_strings.dart',
       'lib/src/senka/senka_catalog_localization.dart',
       'lib/src/toolbox/composition_image_strings.dart',
+      'lib/src/toolbox/exp_calc/exp_calc_strings.dart',
+      'lib/src/toolbox/sortie_map_query/sortie_map_query_strings.dart',
+      // Game equipment terms and the three-locale enemy details catalog.
+      'lib/src/toolbox/sortie_map_query/sortie_enemy_details_strings.dart',
     };
     final files = <File>[
       File('lib/main.dart'),

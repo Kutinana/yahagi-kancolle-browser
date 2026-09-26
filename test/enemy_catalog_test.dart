@@ -4,6 +4,7 @@ import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/enemy_catalog.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_enemy_details.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_models.dart';
+import 'package:yahagi_kancolle_browser/src/widgets/top_notice.dart';
 
 void main() {
   test('parses configurations and resolves a precise sortie alias', () {
@@ -118,6 +119,42 @@ void main() {
     expect(find.text('小口径主砲'), findsNothing);
     expect(find.text('火力 1'), findsNothing);
     expect(find.text('艦載機黒'), findsNothing);
+  });
+
+  testWidgets('missing precise configuration shows an error in TopNoticeHost', (
+    tester,
+  ) async {
+    final catalog = EnemyCatalogData.fromJsonString(enemyCatalogFixture);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TopNoticeHost(
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showSortieEnemyDetails(
+                  context,
+                  entry: const EnemyShipEntry(
+                    id: 1777,
+                    nameJa: '未知の新バリアント',
+                    nameZh: null,
+                  ),
+                  state: GameState.empty,
+                  catalog: catalog,
+                ),
+                child: const Text('open missing'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open missing'));
+    await tester.pump();
+
+    expect(find.byKey(topNoticeKey), findsOneWidget);
+    expect(find.text('未找到该敌舰的精确配置资料'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 

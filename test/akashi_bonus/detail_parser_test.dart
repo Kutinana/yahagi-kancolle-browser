@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_relative_lib_imports
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +13,16 @@ Document fixtureDoc(String name) => html_parser.parse(
 );
 
 void main() {
+  // Captured third-party/game master fixtures are intentionally local-only.
+  if (!(File('test/akashi_bonus/fixtures/detail_w266.html').existsSync())) {
+    test(
+      'requires local source fixtures',
+      () {},
+      skip:
+          'Add the local Akashi/game master fixtures to run this integration suite.',
+    );
+    return;
+  }
   group('parseDetailDocument', () {
     test('parses w266 identity, base stats, fits and tipbody', () {
       final r = parseDetailDocument(fixtureDoc('detail_w266.html'), 266);

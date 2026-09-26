@@ -308,7 +308,6 @@ Widget _card({
   MoraleRecoveryTimerController? moraleRecoveryTimerController,
   FleetMoraleMetricMode moraleMetricMode =
       FleetMoraleMetricMode.minimumCondition,
-  VoidCallback? onToggleMoraleMetricMode,
   DateTime Function()? clock,
   FleetShipTypeLabelMode shipTypeLabelMode =
       FleetShipTypeLabelMode.localizedName,

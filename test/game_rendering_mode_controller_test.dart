@@ -100,10 +100,7 @@ void main() {
 
       expect(result.status, GameRenderingModeChangeStatus.rolledBack);
       expect(controller.mode, GameRenderingMode.nativeActivityExperimental);
-      expect(
-        await store.load(),
-        GameRenderingMode.nativeActivityExperimental,
-      );
+      expect(await store.load(), GameRenderingMode.nativeActivityExperimental);
       expect(port.modes, <GameRenderingMode>[
         GameRenderingMode.canvasCompatibility,
         GameRenderingMode.nativeActivityExperimental,

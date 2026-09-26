@@ -9,6 +9,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart' show sha256;
 import 'package:html/dom.dart';
+
 /// A footnote reference found inside a cell (`<a class="note_super"
 /// data-tooltip-content="...">*N</a>`).
 class FootnoteRef {
@@ -34,18 +35,18 @@ class CellSegment {
   final bool isLink;
   final bool isFootnote;
   const CellSegment.text(this.text)
-      : href = null,
-        title = null,
-        isLink = false,
-        isFootnote = false;
+    : href = null,
+      title = null,
+      isLink = false,
+      isFootnote = false;
   const CellSegment.link(this.text, this.href, this.title)
-      : isLink = true,
-        isFootnote = false;
+    : isLink = true,
+      isFootnote = false;
   const CellSegment.footnote(this.text)
-      : href = null,
-        title = null,
-        isLink = false,
-        isFootnote = true;
+    : href = null,
+      title = null,
+      isLink = false,
+      isFootnote = true;
 }
 
 /// A cell after expansion. [text] is the visible text with link/footnote
@@ -94,15 +95,11 @@ class ExpandedCell {
 }
 
 class TableExpansionException extends FormatException {
-  @override
-  final String message;
   final int row;
   final int col;
-  TableExpansionException(this.message, {this.row = -1, this.col = -1})
-      : super(message);
+  TableExpansionException(super.message, {this.row = -1, this.col = -1});
   @override
-  String toString() =>
-      'TableExpansionException(row=$row, col=$col): $message';
+  String toString() => 'TableExpansionException(row=$row, col=$col): $message';
 }
 
 /// Expands [table] into a matrix without rowspan/colspan merges.
@@ -165,9 +162,10 @@ List<List<ExpandedCell?>> expandTable(Element table) {
   for (final span in openSpans) {
     if (span.remaining > 0) {
       throw TableExpansionException(
-          'rowspan overflows table (${span.remaining} rows left)',
-          row: rows.length - 1,
-          col: span.startCol);
+        'rowspan overflows table (${span.remaining} rows left)',
+        row: rows.length - 1,
+        col: span.startCol,
+      );
     }
   }
 
@@ -175,7 +173,8 @@ List<List<ExpandedCell?>> expandTable(Element table) {
   if (widths.length > 1) {
     final w = widths.join('/');
     throw TableExpansionException(
-        'inconsistent row widths after expansion ($w columns across rows)');
+      'inconsistent row widths after expansion ($w columns across rows)',
+    );
   }
   return matrix;
 }
@@ -227,19 +226,25 @@ ExpandedCell _buildCell(Element raw, int row, int col) {
           } else if (cls.contains('anchor_super')) {
             // Pure anchor: drop entirely.
           } else {
-            segments.add(CellSegment.link(_normalizeText(child.text ?? ''),
-                href, title.isNotEmpty ? title : child.text ?? ''));
+            segments.add(
+              CellSegment.link(
+                _normalizeText(child.text),
+                href,
+                title.isNotEmpty ? title : child.text,
+              ),
+            );
           }
         } else if (child.localName == 'br') {
           segments.add(const CellSegment.text('\n'));
-        } else if (child.localName == 'img' || child.localName == 'script' ||
+        } else if (child.localName == 'img' ||
+            child.localName == 'script' ||
             child.localName == 'style') {
           // skip
         } else {
           walk(child);
         }
       } else if (child is Text) {
-        segments.add(CellSegment.text(child.text ?? ''));
+        segments.add(CellSegment.text(child.text));
       } else if (child is Comment) {
         // skip
       }

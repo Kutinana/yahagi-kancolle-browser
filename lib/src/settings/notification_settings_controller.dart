@@ -5,8 +5,8 @@ class NotificationSettingsController extends ChangeNotifier {
   NotificationSettingsController({
     NotificationSettingsStore? store,
     NotificationSettings? initialSettings,
-  })  : _store = store ?? const SharedPreferencesNotificationSettingsStore(),
-        _settings = initialSettings ?? const NotificationSettings();
+  }) : _store = store ?? const SharedPreferencesNotificationSettingsStore(),
+       _settings = initialSettings ?? const NotificationSettings();
 
   final NotificationSettingsStore _store;
   NotificationSettings _settings;

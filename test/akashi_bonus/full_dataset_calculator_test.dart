@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_relative_lib_imports
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,9 +10,17 @@ import '../../tool/akashi_bonus/lib/name_resolver.dart';
 import '../../tool/akashi_bonus/lib/reference_calculator.dart';
 
 void main() {
-  final master = MasterData.fromJsonFile(
-    'test/akashi_bonus/fixtures/master_266.json',
-  );
+  // Captured third-party/game master fixtures are intentionally local-only.
+  if (!(File('test/akashi_bonus/fixtures/master_266.json').existsSync() &&
+      File('tool/wiki_bonus/cache/raw/start2.json').existsSync())) {
+    test(
+      'requires local source fixtures',
+      () {},
+      skip:
+          'Add the local Akashi/game master fixtures to run this integration suite.',
+    );
+    return;
+  }
   final (rules, _) = DatasetReader.read(
     'assets/data/equipment_fit_bonuses.json',
   );
@@ -20,8 +30,7 @@ void main() {
   );
   final calc = ReferenceCalculator(rules, master: fullMaster);
 
-  bool has41cmKA2(EquipmentPredicate p) =>
-      (p.itemIds ?? const []).contains(318);
+  bool has41cmKA2(EquipmentPredicate p) => p.itemIds.contains(318);
 
   CalcResult run(int shipId, int equipId, {int count = 1, int star = 0}) {
     return calc.compute(

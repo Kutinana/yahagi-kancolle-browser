@@ -166,7 +166,9 @@ void main() {
         expect(find.text('勋章 ×1'), findsOneWidget);
         expect(find.byKey(const Key('battle-drop-pill')), findsOneWidget);
         expect(
-          tester.getSize(find.byKey(const Key('battle-reward-items-pill'))).height,
+          tester
+              .getSize(find.byKey(const Key('battle-reward-items-pill')))
+              .height,
           lessThan(40),
         );
       },
@@ -371,16 +373,8 @@ void main() {
             .copyWith(
               masterShips: <int, MasterShip>{
                 ...state.masterShips,
-                1501: const MasterShip(
-                  id: 1501,
-                  name: '潜水ヨ級',
-                  shipTypeId: 13,
-                ),
-                1502: const MasterShip(
-                  id: 1502,
-                  name: '伊号潜水艦',
-                  shipTypeId: 14,
-                ),
+                1501: const MasterShip(id: 1501, name: '潜水ヨ級', shipTypeId: 13),
+                1502: const MasterShip(id: 1502, name: '伊号潜水艦', shipTypeId: 14),
               },
             );
         final controller = BattleController(

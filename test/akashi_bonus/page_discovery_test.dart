@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_relative_lib_imports
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,18 @@ import 'package:html/parser.dart' as html_parser;
 import '../../tool/akashi_bonus/lib/page_discovery.dart';
 
 void main() {
+  // Captured third-party/game master fixtures are intentionally local-only.
+  if (!(File(
+    'test/akashi_bonus/fixtures/homepage_equipment_fragment.html',
+  ).existsSync())) {
+    test(
+      'requires local source fixtures',
+      () {},
+      skip:
+          'Add the local Akashi/game master fixtures to run this integration suite.',
+    );
+    return;
+  }
   group('discoverWeapons', () {
     test('discovers w266 from the real homepage fragment', () {
       final html = File(

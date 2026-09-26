@@ -160,6 +160,32 @@ void main() {
     expect(image.image, isA<FileImage>());
   });
 
+  testWidgets('ShipPortrait limits cached thumbnail decode height', (
+    tester,
+  ) async {
+    final cache = _FakeShipPortraitCache(File('assets/app_icon.png'));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ShipPortrait(
+          ship: const MasterShip(
+            id: 101,
+            name: '测试舰',
+            shipTypeId: 2,
+            portraitVersion: '1',
+          ),
+          serverOrigin: 'https://example.test',
+          decodeHeight: 106,
+          cache: cache,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(image.image, isA<ResizeImage>());
+    expect((image.image as ResizeImage).height, 106);
+  });
+
   testWidgets('decode failure is evicted and retried exactly once', (
     tester,
   ) async {

@@ -5,7 +5,7 @@ import 'timer_mechanics_service.dart';
 
 class NosakiSparkleTimerTracker {
   NosakiSparkleTimerTracker({TimerMechanicsService? service})
-      : _service = service ?? TimerMechanicsService();
+    : _service = service ?? TimerMechanicsService();
 
   final TimerMechanicsService _service;
 
@@ -24,4 +24,3 @@ class NosakiSparkleTimerTracker {
     );
   }
 }
-

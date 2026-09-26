@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_relative_lib_imports
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,16 @@ import '../../tool/akashi_bonus/lib/name_resolver.dart';
 import '../../tool/akashi_bonus/lib/reference_calculator.dart';
 
 void main() {
+  // Captured third-party/game master fixtures are intentionally local-only.
+  if (!(File('test/akashi_bonus/fixtures/master_266.json').existsSync())) {
+    test(
+      'requires local source fixtures',
+      () {},
+      skip:
+          'Add the local Akashi/game master fixtures to run this integration suite.',
+    );
+    return;
+  }
   final master = MasterData.fromJsonFile(
     'test/akashi_bonus/fixtures/master_266.json',
   );

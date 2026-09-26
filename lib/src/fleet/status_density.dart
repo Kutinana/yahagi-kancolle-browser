@@ -18,12 +18,13 @@ bool isNearSquareLargeDisplay(BuildContext context) {
 bool usesCompactFleetLayout(BuildContext context, [DisplayMode? mode]) {
   final size = MediaQuery.sizeOf(context);
   final orientation = MediaQuery.orientationOf(context);
-  final effectiveMode = mode ??
+  final effectiveMode =
+      mode ??
       (orientation == Orientation.portrait
           ? DisplayMode.portrait
           : (orientation == Orientation.landscape
-              ? DisplayMode.landscape
-              : DisplayMode.auto));
+                ? DisplayMode.landscape
+                : DisplayMode.auto));
   return classifyAdaptiveWindow(size) == AdaptiveWindowClass.compact ||
       usesVerticalWorkspace(size, effectiveMode);
 }

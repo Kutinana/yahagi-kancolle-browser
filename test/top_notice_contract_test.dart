@@ -430,6 +430,9 @@ class _LayoutSettingsControllerStub extends ChangeNotifier
   bool get topNoticeEnabled => true;
 
   @override
+  bool get uiLocked => false;
+
+  @override
   int get topNoticeDurationSeconds => 5;
 
   @override

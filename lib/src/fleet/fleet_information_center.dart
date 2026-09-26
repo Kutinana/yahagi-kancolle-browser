@@ -1409,7 +1409,7 @@ class _ShipParameterDetails extends StatelessWidget {
         : null;
     final allMechanisms = <EquipmentMechanismDisplay>[
       ...shipMechanisms,
-      if (specialAttack != null) specialAttack,
+      ?specialAttack,
     ];
 
     final totalCount = stats.length + allMechanisms.length;
@@ -2784,15 +2784,10 @@ class _EquipmentDetails extends StatelessWidget {
 }
 
 class _MechanismChip extends StatelessWidget {
-  const _MechanismChip({
-    required this.mechanism,
-    this.isSpecialAttack = false,
-    this.showRate = true,
-  });
+  const _MechanismChip({required this.mechanism, this.isSpecialAttack = false});
 
   final EquipmentMechanismDisplay mechanism;
   final bool isSpecialAttack;
-  final bool showRate;
 
   @override
   Widget build(BuildContext context) {
@@ -2810,9 +2805,7 @@ class _MechanismChip extends StatelessWidget {
       MechanismTone.neutral ||
       MechanismTone.antiSubmarine => const Color(0xff8ec6e8),
     };
-    final label = showRate
-        ? mechanism.detailedShortLabel
-        : mechanism.effectiveShortLabel;
+    final label = mechanism.detailedShortLabel;
     return Material(
       color: isSpecialAttack ? const Color(0xff5a2528) : backgroundColor,
       borderRadius: BorderRadius.circular(5),

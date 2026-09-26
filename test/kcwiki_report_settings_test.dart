@@ -4,9 +4,7 @@ import 'package:yahagi_kancolle_browser/src/kcwiki_report/kcwiki_report_settings
 
 void main() {
   test('legacy default-on preference requires renewed consent', () async {
-    SharedPreferences.setMockInitialValues({
-      'kcwiki.report.enabled.v1': true,
-    });
+    SharedPreferences.setMockInitialValues({'kcwiki.report.enabled.v1': true});
     final controller = await KcwikiReportController.load(
       SharedPreferencesKcwikiReportSettingsStore(),
     );

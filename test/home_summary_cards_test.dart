@@ -409,7 +409,7 @@ void main() {
     expect(countdown, findsOneWidget);
     expect(
       find.ancestor(of: countdown, matching: find.byType(FittedBox)),
-      findsOneWidget,
+      findsWidgets,
     );
     expect(tester.widget<OperationCountdownText>(countdown).maxLines, 1);
     final dockStyle = tester.widget<OperationCountdownText>(countdown).style;
@@ -1040,17 +1040,21 @@ void main() {
     );
     addTearDown(controller.dispose);
     await controller.idle;
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('zh'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: PinnedQuestsSummary(
-        controller: controller,
-        collapsed: false,
-        onToggleCollapse: () {},
-        onOpenQuest: (_) {},
-      )),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: PinnedQuestsSummary(
+            controller: controller,
+            collapsed: false,
+            onToggleCollapse: () {},
+            onOpenQuest: (_) {},
+          ),
+        ),
+      ),
+    );
     await tester.pump();
     expect(find.text('5/5 · 已达成（待确认）'), findsOneWidget);
     expect(find.text('完成'), findsNothing);

@@ -21,10 +21,7 @@ void main() {
       expect(settings.repair, isTrue);
       expect(settings.repairPreemptSeconds, 0);
       expect(settings.anchorage, isTrue);
-      expect(
-        settings.anchorageMode,
-        AnchorageNotificationMode.twentyMinutes,
-      );
+      expect(settings.anchorageMode, AnchorageNotificationMode.twentyMinutes);
       expect(settings.construction, isTrue);
       expect(settings.constructionPreemptSeconds, 0);
       expect(settings.morale, isTrue);
@@ -45,10 +42,7 @@ void main() {
       expect(updated.expeditionPreemptSeconds, 30);
       expect(updated.constructionPreemptSeconds, 60);
       expect(updated.moralePreemptSeconds, 30);
-      expect(
-        updated.anchorageMode,
-        AnchorageNotificationMode.allRepaired,
-      );
+      expect(updated.anchorageMode, AnchorageNotificationMode.allRepaired);
     });
   });
 

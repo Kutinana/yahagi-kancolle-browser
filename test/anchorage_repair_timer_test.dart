@@ -255,33 +255,36 @@ void main() {
       expect(tracker.startedAt, confirmedAt);
     });
 
-    test('moving Akashi out of flagship does not reset or clear global timer timestamp', () {
-      final tracker = AnchorageRepairTimerTracker();
-      final startedAt = DateTime.utc(2026, 8, 6, 10);
-      tracker.observe(
-        previousState: buildAnchorageTestState(
-          facilities: 3,
-          flagshipMasterId: 501,
-        ),
-        nextState: buildAnchorageTestState(facilities: 3),
-        event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
-      );
+    test(
+      'moving Akashi out of flagship does not reset or clear global timer timestamp',
+      () {
+        final tracker = AnchorageRepairTimerTracker();
+        final startedAt = DateTime.utc(2026, 8, 6, 10);
+        tracker.observe(
+          previousState: buildAnchorageTestState(
+            facilities: 3,
+            flagshipMasterId: 501,
+          ),
+          nextState: buildAnchorageTestState(facilities: 3),
+          event: _event('/kcsapi/api_get_member/ship_deck', startedAt),
+        );
 
-      tracker.observe(
-        previousState: buildAnchorageTestState(facilities: 3),
-        nextState: buildAnchorageTestState(
-          facilities: 3,
-          flagshipMasterId: 501,
-        ),
-        event: _event(
-          '/kcsapi/api_req_hensei/change',
-          startedAt.add(const Duration(minutes: 2)),
-          requestParams: const <String, Object?>{'api_id': '1'},
-        ),
-      );
+        tracker.observe(
+          previousState: buildAnchorageTestState(facilities: 3),
+          nextState: buildAnchorageTestState(
+            facilities: 3,
+            flagshipMasterId: 501,
+          ),
+          event: _event(
+            '/kcsapi/api_req_hensei/change',
+            startedAt.add(const Duration(minutes: 2)),
+            requestParams: const <String, Object?>{'api_id': '1'},
+          ),
+        );
 
-      expect(tracker.startedAt, startedAt);
-    });
+        expect(tracker.startedAt, startedAt);
+      },
+    );
   });
 
   test('GameStateController exposes the tracked repair start time', () async {

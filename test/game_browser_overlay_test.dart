@@ -41,14 +41,9 @@ void main() {
 }
 
 class _TestApp extends StatelessWidget {
-  const _TestApp({
-    required this.controller,
-    this.persistent = false,
-    this.onGameTap,
-  });
+  const _TestApp({required this.controller, this.onGameTap});
 
   final GameToolbarController controller;
-  final bool persistent;
   final VoidCallback? onGameTap;
 
   @override
@@ -60,7 +55,7 @@ class _TestApp extends StatelessWidget {
           height: 600,
           child: GameBrowserOverlay(
             controller: controller,
-            persistent: persistent,
+            persistent: false,
             gameSurface: GestureDetector(
               key: const Key('fake-game-surface'),
               behavior: HitTestBehavior.opaque,

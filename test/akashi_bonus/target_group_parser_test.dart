@@ -1,10 +1,11 @@
+// ignore_for_file: avoid_relative_lib_imports
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:html/parser.dart' as html_parser;
 
 import '../../tool/akashi_bonus/lib/detail_parser.dart';
-import '../../tool/akashi_bonus/lib/models.dart';
 import '../../tool/akashi_bonus/lib/name_resolver.dart';
 import '../../tool/akashi_bonus/lib/rule_builder.dart';
 
@@ -55,6 +56,16 @@ Map<String, Object?> buildForFixture(
 }
 
 void main() {
+  // Captured third-party/game master fixtures are intentionally local-only.
+  if (!(File('test/akashi_bonus/fixtures/single_bonus.html').existsSync())) {
+    test(
+      'requires local source fixtures',
+      () {},
+      skip:
+          'Add the local Akashi/game master fixtures to run this integration suite.',
+    );
+    return;
+  }
   final master = testMaster();
 
   group('RuleBuilder with fixtures', () {

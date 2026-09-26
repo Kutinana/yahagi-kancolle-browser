@@ -15,10 +15,7 @@ void main() {
     final controller = await LayoutSettingsController.load(
       SharedPreferencesLayoutSettingsStore(),
     );
-    const state = GameState(
-      furnitureCoins: 183854,
-      hasFurnitureCoinData: true,
-    );
+    const state = GameState(furnitureCoins: 183854, hasFurnitureCoinData: true);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -236,8 +233,14 @@ void main() {
       find.descendant(of: small, matching: find.text('999')),
       findsOneWidget,
     );
-    expect(find.descendant(of: medium, matching: find.text('7')), findsOneWidget);
-    expect(find.descendant(of: large, matching: find.text('3')), findsOneWidget);
+    expect(
+      find.descendant(of: medium, matching: find.text('7')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: large, matching: find.text('3')),
+      findsOneWidget,
+    );
 
     await tester.tap(small);
     await tester.tap(medium);
@@ -311,7 +314,10 @@ void main() {
     await tester.tap(small);
     await tester.pump();
 
-    expect(find.descendant(of: small, matching: find.text('—')), findsOneWidget);
+    expect(
+      find.descendant(of: small, matching: find.text('—')),
+      findsOneWidget,
+    );
     expect(find.textContaining('币'), findsNothing);
     expect(tester.takeException(), isNull);
   });

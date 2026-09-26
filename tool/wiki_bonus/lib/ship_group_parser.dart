@@ -4,7 +4,6 @@
 /// (returns [ShipGroupUnresolved]) on anything unrecognized.
 library;
 
-import 'models.dart';
 import 'table_expander.dart';
 
 /// Result of parsing a 対象 cell.
@@ -126,15 +125,17 @@ const Set<String> kNationalityTermNames = <String>{
 /// Recognized glossary terms (用語集2 anchors) mapped to group definitions.
 const Map<String, GlossaryTermDef> kGlossaryTerms = <String, GlossaryTermDef>{
   '特型': GlossaryTermDef(
-      anchor: 'le765ff7',
-      kind: GlossaryKind.classGroup,
-      anchorShipName: '吹雪',
-      label: '特型駆逐艦(吹雪型)'),
+    anchor: 'le765ff7',
+    kind: GlossaryKind.classGroup,
+    anchorShipName: '吹雪',
+    label: '特型駆逐艦(吹雪型)',
+  ),
   '吹雪型': GlossaryTermDef(
-      anchor: 'le765ff7',
-      kind: GlossaryKind.classGroup,
-      anchorShipName: '吹雪',
-      label: '吹雪型駆逐艦'),
+    anchor: 'le765ff7',
+    kind: GlossaryKind.classGroup,
+    anchorShipName: '吹雪',
+    label: '吹雪型駆逐艦',
+  ),
 };
 
 enum GlossaryKind { classGroup, typeGroup, nationalityGroup }
@@ -167,8 +168,6 @@ ShipGroupParseResult parseShipGroup(ExpandedCell cell) {
 
   var parenBuf = StringBuffer();
   var inParen = false;
-  var parenIsExclusion = false;
-  var parenIsInclusion = false;
 
   var i = 0;
   while (i < segs.length) {
@@ -181,7 +180,8 @@ ShipGroupParseResult parseShipGroup(ExpandedCell cell) {
         i++;
         continue;
       }
-      final isGlossary = (s.href ?? '').contains('用語集') ||
+      final isGlossary =
+          (s.href ?? '').contains('用語集') ||
           Uri.decodeComponent(s.href ?? '').contains('用語集');
       if (isGlossary) {
         final visible = s.text.trim();
@@ -221,8 +221,6 @@ ShipGroupParseResult parseShipGroup(ExpandedCell cell) {
           buf = StringBuffer();
         }
         inParen = true;
-        parenIsExclusion = false;
-        parenIsInclusion = false;
         parenBuf = StringBuffer();
         continue;
       }
@@ -247,8 +245,7 @@ ShipGroupParseResult parseShipGroup(ExpandedCell cell) {
     i++;
   }
   if (inParen) {
-    return ShipGroupUnresolved(
-        text, 'unterminated parenthesis');
+    return ShipGroupUnresolved(text, 'unterminated parenthesis');
   }
 
   final result = spec.build();
@@ -269,8 +266,10 @@ void _consumePlainText(String t, ShipGroupSpecBuilder spec, String cellText) {
     return;
   }
   if (t.contains('全艦') || t.contains('全船')) return;
-  final parts =
-      t.split(RegExp(r'[・、\s/]+')).where((p) => p.isNotEmpty).toList();
+  final parts = t
+      .split(RegExp(r'[・、\s/]+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
   for (final part in parts) {
     if (part == '全艦' || part == '全船') continue;
     if (part == '他') {
@@ -297,7 +296,10 @@ bool _isClassSuffixRemnant(String part) {
 }
 
 void _consumeParenthetical(
-    String inner, ShipGroupSpecBuilder spec, String cellText) {
+  String inner,
+  ShipGroupSpecBuilder spec,
+  String cellText,
+) {
   if (inner.contains('以外')) {
     final name = inner.replaceAll('以外', '').trim();
     if (name.isNotEmpty) {
@@ -346,15 +348,15 @@ class ShipGroupSpecBuilder {
   bool othersExcluded = false;
 
   ShipGroupSpec build() => ShipGroupSpec(
-        shipNames: shipNames,
-        classAnchors: classAnchors,
-        shipTypeNames: shipTypeNames,
-        nationalityTerms: nationalityTerms,
-        glossaryTerms: glossaryTerms,
-        exclusions: exclusions,
-        inclusions: inclusions,
-        othersExcluded: othersExcluded,
-      );
+    shipNames: shipNames,
+    classAnchors: classAnchors,
+    shipTypeNames: shipTypeNames,
+    nationalityTerms: nationalityTerms,
+    glossaryTerms: glossaryTerms,
+    exclusions: exclusions,
+    inclusions: inclusions,
+    othersExcluded: othersExcluded,
+  );
 }
 
 /// The 装備 column of single/synergy rows: either the page's own equipment

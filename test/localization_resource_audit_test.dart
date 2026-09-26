@@ -290,6 +290,11 @@ void main() {
       'statHp',
       'topNoticeDuration10s',
       'topNoticeDuration15s',
+      // These display labels and game terms are written the same in both scripts.
+      'expCalcCardView',
+      'expCalcTableView',
+      'expCalcMap',
+      'expCalcMvp',
     };
     const reviewedJa = <String>{
       // The warning title uses shared game terminology.
@@ -360,6 +365,9 @@ void main() {
       'statFirepower',
       'statHp',
       'statTorpedo',
+      // 海域 is shared game terminology; MVP is the game's Latin abbreviation.
+      'expCalcMap',
+      'expCalcMvp',
     };
 
     Set<String> identical(String locale) {

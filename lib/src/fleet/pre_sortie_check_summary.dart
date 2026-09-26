@@ -203,9 +203,7 @@ class _PreSortieCheckSummaryState extends State<PreSortieCheckSummary> {
                   final painter = TextPainter(
                     text: TextSpan(
                       text: warning.message,
-                      style: DefaultTextStyle.of(
-                        context,
-                      ).style.merge(
+                      style: DefaultTextStyle.of(context).style.merge(
                         const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,

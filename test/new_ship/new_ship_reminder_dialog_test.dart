@@ -1,0 +1,295 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yahagi_kancolle_browser/main.dart';
+import 'package:yahagi_kancolle_browser/src/audio/game_audio_controller.dart';
+import 'package:yahagi_kancolle_browser/src/audio/game_audio_store.dart';
+import 'package:yahagi_kancolle_browser/src/battle/battle_controller.dart';
+import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
+import 'package:yahagi_kancolle_browser/src/browser/gadget_bypass_channel.dart';
+import 'package:yahagi_kancolle_browser/src/browser/gadget_bypass_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/gadget_bypass_store.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_browser_controller.dart';
+import 'package:yahagi_kancolle_browser/src/browser/game_toolbar_controller.dart';
+import 'package:yahagi_kancolle_browser/src/capture/capture_mode_controller.dart';
+import 'package:yahagi_kancolle_browser/src/capture/capture_mode_store.dart';
+import 'package:yahagi_kancolle_browser/src/capture/game_capture_controller.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_api_event_pipeline.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_api_decoder.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_state_controller.dart';
+import 'package:yahagi_kancolle_browser/src/game_state/game_state_store.dart';
+import 'package:yahagi_kancolle_browser/src/new_ship/new_ship_reminder_controller.dart';
+import 'package:yahagi_kancolle_browser/src/new_ship/new_ship_reminder_store.dart';
+import 'package:yahagi_kancolle_browser/src/prototype_status_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/display_mode_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/display_mode_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/layout_settings_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/layout_settings_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/network_settings_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/network_settings_store.dart';
+import 'package:yahagi_kancolle_browser/src/settings/safety_settings_controller.dart';
+import 'package:yahagi_kancolle_browser/src/settings/safety_settings_store.dart';
+
+import '../fixtures/kcsapi_fixtures.dart';
+
+void main() {
+  final dialog = find.byKey(const Key('new-ship-alert-dialog'));
+
+  for (final transition in <String>['start2', 'basic', 'port']) {
+    testWidgets('$transition cancels a ship dialog before its first frame', (
+      tester,
+    ) async {
+      final harness = await _mountApp(tester);
+      await harness.send(_reward(sequence: 10));
+      expect(harness.reminder.currentAlert, isNotNull);
+
+      // Do not pump: the shell has only queued its post-frame dialog callback.
+      await harness.send(_accountTransition(transition, sequence: 11));
+      expect(harness.reminder.currentAlert, isNull);
+      await tester.pumpAndSettle();
+
+      expect(dialog, findsNothing);
+    });
+
+    testWidgets('$transition closes an already visible ship dialog', (
+      tester,
+    ) async {
+      final harness = await _mountApp(tester);
+      await harness.send(_reward(sequence: 20));
+      expect(harness.reminder.currentAlert, isNotNull);
+      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(dialog, findsOneWidget);
+
+      await harness.send(_accountTransition(transition, sequence: 21));
+      expect(harness.reminder.currentAlert, isNull);
+      await tester.pumpAndSettle();
+
+      expect(dialog, findsNothing);
+    });
+  }
+
+  testWidgets('new account can show and acknowledge its own ship dialog', (
+    tester,
+  ) async {
+    final harness = await _mountApp(tester);
+    await harness.send(_reward(sequence: 30));
+    expect(harness.reminder.currentAlert, isNotNull);
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(dialog, findsOneWidget);
+
+    await harness.send(_accountTransition('basic', sequence: 31));
+    await tester.pumpAndSettle();
+    expect(dialog, findsNothing);
+    await harness.send(_reward(sequence: 32, masterId: 9));
+    expect(harness.reminder.currentAlert, isNotNull);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(dialog, findsOneWidget);
+    expect(
+      find.descendant(of: dialog, matching: find.textContaining('吹雪')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: dialog, matching: find.textContaining('三日月')),
+      findsNothing,
+    );
+    await tester.tap(
+      find.descendant(of: dialog, matching: find.byType(FilledButton)),
+    );
+    await tester.pumpAndSettle();
+    expect(dialog, findsNothing);
+    expect(harness.reminder.currentAlert, isNull);
+  });
+}
+
+Future<_Harness> _mountApp(WidgetTester tester) async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(1200, 700);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.view.resetPhysicalSize);
+  final game = GameStateController(gameStateStore: _SeededGameStateStore());
+  await game.initialize();
+  final reminder = NewShipReminderController(
+    stateProvider: () => game.state,
+    store: NewShipReminderStore(await SharedPreferences.getInstance()),
+    waitForGameState: () => game.idle,
+    onPublish: (_) {},
+  );
+  final battle = BattleController(gameState: () => game.state);
+  final layout = await LayoutSettingsController.load(
+    SharedPreferencesLayoutSettingsStore(),
+  );
+  final safety = await SafetySettingsController.load(
+    MemorySafetySettingsStore(),
+  );
+  final display = await DisplayModeController.load(MemoryDisplayModeStore());
+  final captureMode = await CaptureModeController.load(
+    SharedPreferencesCaptureModeStore(),
+  );
+  final audio = await GameAudioController.load(
+    SharedPreferencesGameAudioStore(),
+  );
+  final network = NetworkSettingsController(
+    store: SharedPreferencesNetworkSettingsStore(),
+  );
+  final gadget = GadgetBypassController(
+    store: SharedPreferencesGadgetBypassStore(),
+    port: _NoopGadgetBypassPort(),
+  );
+  final status = PrototypeStatusController();
+  final browser = GameBrowserController(port: _NoopBrowserPort());
+  final toolbar = GameToolbarController();
+  final capture = GameCaptureController();
+  addTearDown(() async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    for (final controller in <ChangeNotifier>[
+      reminder,
+      battle,
+      layout,
+      safety,
+      display,
+      captureMode,
+      audio,
+      network,
+      gadget,
+      status,
+      browser,
+      toolbar,
+      capture,
+      game,
+    ]) {
+      controller.dispose();
+    }
+  });
+  await tester.pumpWidget(
+    YahagiApp(
+      layoutSettingsController: layout,
+      networkSettingsController: network,
+      gadgetBypassController: gadget,
+      safetySettingsController: safety,
+      displayModeController: display,
+      controller: status,
+      browserController: browser,
+      captureModeController: captureMode,
+      audioController: audio,
+      toolbarController: toolbar,
+      gameCaptureController: capture,
+      gameStateController: game,
+      battleController: battle,
+      newShipReminderController: reminder,
+      gameSurface: const ColoredBox(color: Colors.black),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return _Harness(
+    reminder,
+    GameApiEventPipeline(
+      consumers: <GameApiEventConsumer>[game, reminder],
+      decodeEnvelope: (body) async => GameApiDecoder.decodeEnvelope(body),
+      settleGameState: () => game.idle,
+    ),
+  );
+}
+
+class _Harness {
+  _Harness(this.reminder, this.pipeline);
+  final NewShipReminderController reminder;
+  final GameApiEventPipeline pipeline;
+
+  Future<void> send(CapturedApiEvent event) async {
+    pipeline.add(event);
+    await pipeline.idle;
+  }
+}
+
+CapturedApiEvent _reward({required int sequence, int masterId = 7}) =>
+    kcsapiEvent('/kcsapi/api_req_quest/clearitemget', <String, Object?>{
+      'api_bounus': <Object?>[
+        <String, Object?>{
+          'api_type': 11,
+          'api_count': 1,
+          'api_item': <String, Object?>{'api_ship_id': masterId},
+        },
+      ],
+    }, sequence: sequence);
+
+CapturedApiEvent _accountTransition(String type, {required int sequence}) {
+  if (type == 'start2') {
+    return kcsapiEvent('/kcsapi/api_start2/getData', <String, Object?>{
+      'api_mst_ship': <Object?>[],
+    }, sequence: sequence);
+  }
+  final basic = <String, Object?>{'api_member_id': '2002', 'api_level': 1};
+  return kcsapiEvent(
+    type == 'port' ? '/kcsapi/api_port/port' : '/kcsapi/api_get_member/basic',
+    type == 'port'
+        ? <String, Object?>{'api_basic': basic, 'api_ship': <Object?>[]}
+        : basic,
+    sequence: sequence,
+  );
+}
+
+class _SeededGameStateStore extends GameStateStore {
+  @override
+  Future<GameState> load() async => const GameState(
+    memberId: 1001,
+    hasMasterData: true,
+    hasPortData: true,
+    masterShips: <int, MasterShip>{
+      7: MasterShip(id: 7, name: '三日月', shipTypeId: 2, sortNo: 7),
+      9: MasterShip(id: 9, name: '吹雪', shipTypeId: 2, sortNo: 9),
+    },
+  );
+
+  @override
+  void save(GameState state) {}
+}
+
+final class _NoopBrowserPort implements GameBrowserPort {
+  @override
+  Future<void> fitGameScreen() async {}
+  @override
+  Future<bool> canGoBack() async => false;
+  @override
+  Future<void> goBack() async {}
+  @override
+  Future<void> loadUri(Uri uri) async {}
+  @override
+  Future<void> reload() async {}
+  @override
+  Future<GameFrameReloadResult> reloadGameFrame() async =>
+      GameFrameReloadResult.reloaded;
+  @override
+  Future<void> showLocalHome() async {}
+  @override
+  Future<void> runJavaScript(String javascript) async {}
+  @override
+  Future<void> clearCache() async {}
+  @override
+  Future<void> clearSession() async {}
+}
+
+class _NoopGadgetBypassPort implements GadgetBypassPort {
+  @override
+  Future<bool> configure({
+    required bool enabled,
+    required String endpoint,
+  }) async => true;
+  @override
+  Future<GadgetBypassStatus> status() async =>
+      const GadgetBypassStatus(enabled: false, endpoint: '', supported: true);
+  @override
+  Future<bool> clearCache() async => true;
+  @override
+  Future<GadgetBypassDiagnoseResult> diagnose() async =>
+      const GadgetBypassDiagnoseResult(
+        w00g: GadgetBypassProbe(reachable: true, elapsedMs: 1),
+        endpoint: GadgetBypassProbe(reachable: true, elapsedMs: 1),
+        kcsapi: GadgetBypassProbe(reachable: true, elapsedMs: 1),
+      );
+}

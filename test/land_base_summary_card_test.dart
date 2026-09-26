@@ -123,13 +123,15 @@ void main() {
             find.byKey(const Key('land-base-range-chip-62-1')),
             fields.contains('range') ? findsOneWidget : findsNothing,
           );
-          for (var id = 1; id <= 4; id++)
+          for (var id = 1; id <= 4; id++) {
             expect(
               find.byKey(Key('land-base-slot-count-62-1-$id')),
               findsOneWidget,
             );
-          if (!fields.contains('portrait'))
+          }
+          if (!fields.contains('portrait')) {
             expect(find.byType(ShipHpFrame), findsNothing);
+          }
           expect(tester.takeException(), isNull, reason: '$width $mask');
         }
       }

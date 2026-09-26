@@ -523,31 +523,34 @@ void main() {
     expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
   });
 
-  test('UI display size unifies header and menu sizes and persists across reloads', () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    var controller = await LayoutSettingsController.load(
-      SharedPreferencesLayoutSettingsStore(),
-    );
-    expect(controller.uiDisplaySize, UiDisplaySize.normal);
-    expect(controller.headerUiSize, HeaderUiSize.normal);
-    expect(controller.workspaceMenuSize, WorkspaceMenuSize.normal);
+  test(
+    'UI display size unifies header and menu sizes and persists across reloads',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      var controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(controller.uiDisplaySize, UiDisplaySize.normal);
+      expect(controller.headerUiSize, HeaderUiSize.normal);
+      expect(controller.workspaceMenuSize, WorkspaceMenuSize.normal);
 
-    var notifications = 0;
-    controller.addListener(() => notifications++);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
 
-    await controller.setUiDisplaySize(UiDisplaySize.compact);
-    expect(controller.uiDisplaySize, UiDisplaySize.compact);
-    expect(controller.headerUiSize, HeaderUiSize.compact);
-    expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
-    expect(notifications, 1);
+      await controller.setUiDisplaySize(UiDisplaySize.compact);
+      expect(controller.uiDisplaySize, UiDisplaySize.compact);
+      expect(controller.headerUiSize, HeaderUiSize.compact);
+      expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
+      expect(notifications, 1);
 
-    controller = await LayoutSettingsController.load(
-      SharedPreferencesLayoutSettingsStore(),
-    );
-    expect(controller.uiDisplaySize, UiDisplaySize.compact);
-    expect(controller.headerUiSize, HeaderUiSize.compact);
-    expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
-  });
+      controller = await LayoutSettingsController.load(
+        SharedPreferencesLayoutSettingsStore(),
+      );
+      expect(controller.uiDisplaySize, UiDisplaySize.compact);
+      expect(controller.headerUiSize, HeaderUiSize.compact);
+      expect(controller.workspaceMenuSize, WorkspaceMenuSize.compact);
+    },
+  );
 
   group('UI display size migration and fallback', () {
     test('migrates legacy header-only compact setting', () async {
@@ -593,14 +596,17 @@ void main() {
       expect(controller.uiDisplaySize, UiDisplaySize.normal);
     });
 
-    test('gracefully falls back to normal on corrupted or unknown values', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        'layout_ui_display_size': 'super_giant_unknown_mode',
-      });
-      final controller = await LayoutSettingsController.load(
-        SharedPreferencesLayoutSettingsStore(),
-      );
-      expect(controller.uiDisplaySize, UiDisplaySize.normal);
-    });
+    test(
+      'gracefully falls back to normal on corrupted or unknown values',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'layout_ui_display_size': 'super_giant_unknown_mode',
+        });
+        final controller = await LayoutSettingsController.load(
+          SharedPreferencesLayoutSettingsStore(),
+        );
+        expect(controller.uiDisplaySize, UiDisplaySize.normal);
+      },
+    );
   });
 }

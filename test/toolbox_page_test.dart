@@ -17,11 +17,14 @@ void main() {
   ) async {
     await tester.pumpWidget(_testApp(const ToolboxPage(state: GameState())));
     expect(find.byType(ExpCalcPage, skipOffstage: false), findsNothing);
-    expect(find.byType(CompositionImagePage, skipOffstage: false), findsNothing);
+    expect(
+      find.byType(CompositionImagePage, skipOffstage: false),
+      findsNothing,
+    );
     final exportState = tester.state(find.byType(FleetExportPage));
-    await tester.pumpWidget(_testApp(const ToolboxPage(
-      state: GameState(), mode: ToolboxMode.other,
-    )));
+    await tester.pumpWidget(
+      _testApp(const ToolboxPage(state: GameState(), mode: ToolboxMode.other)),
+    );
     await tester.pumpWidget(_testApp(const ToolboxPage(state: GameState())));
     expect(tester.state(find.byType(FleetExportPage)), same(exportState));
   });

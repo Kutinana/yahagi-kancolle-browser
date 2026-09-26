@@ -3253,7 +3253,7 @@ void main() {
     },
   );
 
-  testWidgets('decodes owned ship portraits at thumbnail resolution', (
+  testWidgets('configures owned ship portraits at thumbnail resolution', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 2;
@@ -3275,16 +3275,10 @@ void main() {
       ),
     );
 
-    final image = tester.widget<Image>(
-      find
-          .descendant(
-            of: find.byKey(const Key('owned-ship-portrait-9001')),
-            matching: find.byType(Image),
-          )
-          .first,
+    final portrait = tester.widget<ShipPortrait>(
+      find.byKey(const Key('owned-ship-portrait-9001')),
     );
-    expect(image.image, isA<ResizeImage>());
-    expect((image.image as ResizeImage).height, 106);
+    expect(portrait.decodeHeight, 106);
     expect(tester.takeException(), isNull);
   });
 

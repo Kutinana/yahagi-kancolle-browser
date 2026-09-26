@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_relative_lib_imports
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,6 +15,17 @@ import '../../tool/akashi_bonus/lib/rule_builder.dart';
 const String fixturesDir = 'test/akashi_bonus/fixtures';
 
 void main() {
+  // Captured third-party/game master fixtures are intentionally local-only.
+  if (!(File('$fixturesDir/master_266.json').existsSync() &&
+      File('$fixturesDir/detail_w266.html').existsSync())) {
+    test(
+      'requires local source fixtures',
+      () {},
+      skip:
+          'Add the local Akashi/game master fixtures to run this integration suite.',
+    );
+    return;
+  }
   final master = MasterData.fromJsonFile('$fixturesDir/master_266.json');
 
   group('w266 end-to-end', () {

@@ -27,7 +27,9 @@ class GlobalGameTimer {
     String? lastResetReason,
     DateTime? lastObservedAt,
   }) : _anchorAt = anchorAt?.toUtc(),
+       // ignore: prefer_initializing_formals
        _knowledge = knowledge,
+       // ignore: prefer_initializing_formals
        _lastResetReason = lastResetReason,
        _lastObservedAt = lastObservedAt?.toUtc();
 

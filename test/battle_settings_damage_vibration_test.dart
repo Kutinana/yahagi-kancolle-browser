@@ -45,9 +45,10 @@ void main() {
         .widget<DropdownButton<BattleEffectDisplayScope>>(
           find.byKey(const Key('battleEffectScopeDropdown')),
         );
-    final pulseDropdownWidget = tester.widget<DropdownButton<DamagePulseFilter>>(
-      find.byKey(const Key('damagePulseFilterDropdown')),
-    );
+    final pulseDropdownWidget = tester
+        .widget<DropdownButton<DamagePulseFilter>>(
+          find.byKey(const Key('damagePulseFilterDropdown')),
+        );
     final vibrationDropdownWidget = tester
         .widget<DropdownButton<DamageVibrationFilter>>(
           find.byKey(const Key('damageVibrationFilterDropdown')),

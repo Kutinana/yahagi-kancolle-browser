@@ -322,9 +322,17 @@ void main() {
 
         final finder = find.text('第1舰队 舰娘疲劳未恢复');
         if (shouldWarn) {
-          expect(finder, findsOneWidget, reason: 'Condition $condition should trigger fatigue warning');
+          expect(
+            finder,
+            findsOneWidget,
+            reason: 'Condition $condition should trigger fatigue warning',
+          );
         } else {
-          expect(finder, findsNothing, reason: 'Condition $condition should NOT trigger fatigue warning');
+          expect(
+            finder,
+            findsNothing,
+            reason: 'Condition $condition should NOT trigger fatigue warning',
+          );
         }
       }
 

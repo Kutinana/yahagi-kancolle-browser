@@ -451,8 +451,7 @@ class LogbookDatabase extends ChangeNotifier {
           }
           if (entry.key == 'timestamp' &&
               value is int &&
-              (value < -maxDateTimeMs ||
-                  value > maxDateTimeMs - jstOffsetMs)) {
+              (value < -maxDateTimeMs || value > maxDateTimeMs - jstOffsetMs)) {
             throw FormatException('Invalid timestamp in $table');
           }
           if (entry.key == 'id' &&

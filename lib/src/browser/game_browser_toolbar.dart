@@ -66,10 +66,10 @@ class GameBrowserToolbar extends StatelessWidget {
     final toolbarHeight = isLandscapePhone
         ? 36.0
         : (persistent
-            ? 42.0
-            : browserToolbarHeight(
-                compact ? UiDisplaySize.compact : UiDisplaySize.normal,
-              ));
+              ? 42.0
+              : browserToolbarHeight(
+                  compact ? UiDisplaySize.compact : UiDisplaySize.normal,
+                ));
     final persistentActionSize = isLandscapePhone
         ? 34.0
         : (persistent ? 40.0 : 28.0);
@@ -230,11 +230,7 @@ class GameBrowserToolbar extends StatelessWidget {
     );
   }
 
-  Widget _buildLockButton(
-    AppLocalizations l10n,
-    double size,
-    double iconSize,
-  ) {
+  Widget _buildLockButton(AppLocalizations l10n, double size, double iconSize) {
     if (onToggleUiLock == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(left: 4.0),
