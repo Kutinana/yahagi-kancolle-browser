@@ -1425,11 +1425,11 @@ class GameStateReducer {
           ? shipTypes[shipTypeId]?.equipTypeIds ?? const <int>{}
           : _positiveIntKeys(shipOverrideTypes, requireEnabledValue: false);
       final antiSubRange = _optionalList(item['api_tais']);
-      final hougRange = _optionalList(item['api_houg']);
-      final raigRange = _optionalList(item['api_raig']);
-      final tykuRange = _optionalList(item['api_tyku']);
-      final soukRange = _optionalList(item['api_souk']);
-      final luckRange = _optionalList(item['api_luck']);
+      final hougRange = _modernizationRange(item['api_houg']);
+      final raigRange = _modernizationRange(item['api_raig']);
+      final tykuRange = _modernizationRange(item['api_tyku']);
+      final soukRange = _modernizationRange(item['api_souk']);
+      final luckRange = _modernizationRange(item['api_luck']);
       final taikRange = _optionalList(item['api_taik']);
       ships[id] = MasterShip(
         id: id,
@@ -1458,6 +1458,21 @@ class GameStateReducer {
         maxArmor: soukRange.length > 1 ? _asInt(soukRange[1]) : 0,
         baseLuck: luckRange.isEmpty ? 0 : _asInt(luckRange.first),
         maxLuck: luckRange.length > 1 ? _asInt(luckRange[1]) : 0,
+        powerUp:
+            item['api_powup'] is List &&
+                (item['api_powup'] as List).length >= 4 &&
+                (item['api_powup'] as List)
+                    .take(4)
+                    .every((value) => value is int)
+            ? _intList(item['api_powup'], includeNonPositive: true)
+            : const <int>[],
+        modernizationRangeIndices: {
+          if (hougRange.length >= 2) 0,
+          if (raigRange.length >= 2) 1,
+          if (tykuRange.length >= 2) 2,
+          if (soukRange.length >= 2) 3,
+          if (luckRange.length >= 2) 4,
+        },
         baseHp: taikRange.isEmpty ? 0 : _asInt(taikRange.first),
         maxHp: taikRange.length > 1 ? _asInt(taikRange[1]) : 0,
         equipTypeIds: equipTypeIds,
@@ -2687,6 +2702,21 @@ class GameStateReducer {
 
   static List<Object?> _optionalList(Object? value) {
     return value is List ? List<Object?>.from(value) : const <Object?>[];
+  }
+
+  static List<int> _modernizationRange(Object? value) {
+    if (value is! List || value.length < 2) return const <int>[];
+    int? parse(Object? part) => part is int
+        ? part
+        : part is String
+        ? int.tryParse(part)
+        : null;
+    final base = parse(value[0]);
+    final max = parse(value[1]);
+    if (base == null || max == null || base < 0 || max < 0) {
+      return const <int>[];
+    }
+    return <int>[base, max];
   }
 
   static Set<int> _positiveIntKeys(

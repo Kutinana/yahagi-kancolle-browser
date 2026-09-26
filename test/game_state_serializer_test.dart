@@ -33,7 +33,13 @@ void main() {
     const state = GameState(
       memberId: 90001,
       masterShips: <int, MasterShip>{
-        1: MasterShip(id: 1, name: '夕立', shipTypeId: 2, afterShipId: 2),
+        1: MasterShip(
+          id: 1,
+          name: '夕立',
+          shipTypeId: 2,
+          afterShipId: 2,
+          powerUp: <int>[3, 0, 1, 2],
+        ),
       },
       masterSlotItemTypes: <int, String>{1: '小口径主炮'},
     );
@@ -44,6 +50,7 @@ void main() {
 
     expect(restored.memberId, 90001);
     expect(restored.masterShips[1]?.afterShipId, 2);
+    expect(restored.masterShips[1]?.powerUp, <int>[3, 0, 1, 2]);
     expect(restored.masterSlotItemTypes[1], '小口径主炮');
   });
 
@@ -158,8 +165,10 @@ void main() {
     expect(ship.maxHp, 44);
   });
 
-  test('old MasterShip cache without modernization stats defaults to 0 safely', () {
-    const legacyJson = '''
+  test(
+    'old MasterShip cache without modernization stats defaults to 0 safely',
+    () {
+      const legacyJson = '''
     {
       "masterShips": {
         "1": {
@@ -171,23 +180,71 @@ void main() {
     }
     ''';
 
-    final restored = GameStateSerializer.deserialize(legacyJson);
-    final ship = restored.masterShips[1];
-    expect(ship, isNotNull);
-    expect(ship!.baseFirepower, 0);
-    expect(ship.maxFirepower, 0);
-    expect(ship.baseTorpedo, 0);
-    expect(ship.maxTorpedo, 0);
-    expect(ship.baseAntiAir, 0);
-    expect(ship.maxAntiAir, 0);
-    expect(ship.baseArmor, 0);
-    expect(ship.maxArmor, 0);
-    expect(ship.baseLuck, 0);
-    expect(ship.maxLuck, 0);
-    expect(ship.baseHp, 0);
-    expect(ship.maxHp, 0);
+      final restored = GameStateSerializer.deserialize(legacyJson);
+      final ship = restored.masterShips[1];
+      expect(ship, isNotNull);
+      expect(ship!.baseFirepower, 0);
+      expect(ship.maxFirepower, 0);
+      expect(ship.baseTorpedo, 0);
+      expect(ship.maxTorpedo, 0);
+      expect(ship.baseAntiAir, 0);
+      expect(ship.maxAntiAir, 0);
+      expect(ship.baseArmor, 0);
+      expect(ship.maxArmor, 0);
+      expect(ship.baseLuck, 0);
+      expect(ship.maxLuck, 0);
+      expect(ship.baseHp, 0);
+      expect(ship.maxHp, 0);
+      expect(ship.remainingModernization(1, 0), isNull);
+    },
+  );
+
+  test('present zero modernization range survives cache restart', () {
+    const state = GameState(
+      masterShips: {
+        1: MasterShip(
+          id: 1,
+          name: '戦艦',
+          shipTypeId: 9,
+          modernizationRangeIndices: {1},
+        ),
+      },
+    );
+    final restored = GameStateSerializer.deserialize(
+      GameStateSerializer.serialize(state),
+    );
+    expect(restored.masterShips[1]!.remainingModernization(1, 0), 0);
+    expect(restored.masterShips[1]!.remainingModernization(0, 0), isNull);
   });
 
+  test('malformed cached fodder powerUp stays unknown', () {
+    const cached =
+        '{"masterShips":{"2":{"name":"素材",'
+        '"shipTypeId":2,"powerUp":[1,null,0,0]}}}';
+    final restored = GameStateSerializer.deserialize(cached);
+    expect(restored.masterShips[2]!.powerUp, isEmpty);
+  });
+
+  test('malformed cached range index cannot create a false MAX', () {
+    const cached =
+        '{"masterShips":{"2":{"name":"戦艦",'
+        '"shipTypeId":9,"modernizationRangeIndices":[null]}}}';
+    final restored = GameStateSerializer.deserialize(cached);
+    expect(restored.masterShips[2]!.remainingModernization(0, 0), isNull);
+  });
+
+  test('malformed cached modernization values remain unknown', () {
+    const cached =
+        '{"masterShips":{"2":{"name":"戦艦",'
+        '"shipTypeId":9,"baseTorpedo":"bad","maxTorpedo":5,'
+        '"baseFirepower":0,"maxFirepower":"bad",'
+        '"modernizationRangeIndices":[0,1]}}}';
+    final restored = GameStateSerializer.deserialize(cached);
+    final master = restored.masterShips[2]!;
+    expect(master.remainingModernization(1, 0), isNull);
+    expect(master.remainingModernization(0, 0), isNull);
+    expect(master.modernizationRangeIndices, isEmpty);
+  });
 
   test('land-base cache keeps identity but drops sortie-only hp', () {
     const state = GameState(

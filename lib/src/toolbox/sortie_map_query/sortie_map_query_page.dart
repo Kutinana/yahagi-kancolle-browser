@@ -207,6 +207,7 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final textScaler = MediaQuery.textScalerOf(context);
         final portrait = constraints.maxHeight > constraints.maxWidth;
         final nearSquareUnfolded =
             classifyAdaptiveWindow(
@@ -218,11 +219,17 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
             nearSquareUnfolded || (portrait && constraints.maxWidth >= 720);
         final compact =
             constraints.maxWidth < 960 || constraints.maxHeight < 500;
+        final tabletLandscape =
+            !verticalWorkspace &&
+            constraints.maxWidth >= 1100 &&
+            constraints.maxHeight >= 700 &&
+            constraints.maxWidth / constraints.maxHeight <= 1.8;
         final overview = _OverviewPanel(
           map: map,
           maps: catalog.maps,
           strings: strings,
           compact: compact,
+          tabletStrip: tabletLandscape,
           onMapChanged: _selectMap,
           resolveCachedImage: widget.catalogController?.resolveCachedImage,
         );
@@ -255,81 +262,131 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
             mapAspectRatio: map.mapAspectRatio,
             compact: compact,
             hasNodes: map.nodes.isNotEmpty,
+            textScaler: textScaler,
           );
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  key: const Key('sortie-map-wide-portrait-layout'),
-                  padding: EdgeInsets.all(gap),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: topHeight,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SizedBox(width: overviewWidth, child: overview),
-                            SizedBox(width: gap),
-                            Expanded(child: route),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: gap),
-                      detail,
-                      SizedBox(height: gap),
-                    ],
+          return _scrollableContentWithAttribution(
+            key: const Key('sortie-map-wide-portrait-layout'),
+            strings: strings,
+            content: Padding(
+              padding: EdgeInsets.all(gap),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: topHeight,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(width: overviewWidth, child: overview),
+                        SizedBox(width: gap),
+                        Expanded(child: route),
+                      ],
+                    ),
                   ),
-                ),
+                  SizedBox(height: gap),
+                  detail,
+                ],
               ),
-              SizedBox(
-                height: _attributionFooterHeight,
-                child: _AttributionFooter(strings: strings),
-              ),
-            ],
+            ),
           );
         }
 
         if (verticalWorkspace) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  key: const Key('sortie-map-portrait-layout'),
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      overview,
-                      const SizedBox(height: 10),
-                      route,
-                      const SizedBox(height: 10),
-                      detail,
-                      const SizedBox(height: 10),
-                    ],
-                  ),
-                ),
+          return _scrollableContentWithAttribution(
+            key: const Key('sortie-map-portrait-layout'),
+            strings: strings,
+            content: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  overview,
+                  const SizedBox(height: 10),
+                  route,
+                  const SizedBox(height: 10),
+                  detail,
+                ],
               ),
-              SizedBox(
-                height: _attributionFooterHeight,
-                child: _AttributionFooter(strings: strings),
-              ),
-            ],
+            ),
           );
         }
 
-        final contentHeight = (constraints.maxHeight - _attributionFooterHeight)
-            .clamp(0.0, constraints.maxHeight);
-        final outerPadding = compact && contentHeight < 340
+        if (tabletLandscape) {
+          const outerPadding = 12.0;
+          const gap = 12.0;
+          const overviewHeight = 100.0;
+          final availableHeight = constraints.maxHeight;
+          final columnWidth = constraints.maxWidth - outerPadding * 2 - gap;
+          final baseDetailWidth = (constraints.maxWidth * .27).clamp(
+            290.0,
+            390.0,
+          );
+          const panelPadding = 12.0;
+          final panelChromeHeight = _routePanelDesiredHeight(
+            width: panelPadding * 2,
+            mapAspectRatio: map.mapAspectRatio,
+            compact: false,
+            hasNodes: map.nodes.isNotEmpty,
+            textScaler: textScaler,
+          );
+          final routeHeight =
+              availableHeight - outerPadding * 2 - overviewHeight - gap;
+          final overviewWidth =
+              ((routeHeight - panelChromeHeight) * map.mapAspectRatio +
+                      panelPadding * 2)
+                  .clamp(560.0, columnWidth - baseDetailWidth);
+          final detailWidth = columnWidth - overviewWidth;
+          final contentHeight =
+              (outerPadding * 2 +
+                      overviewHeight +
+                      gap +
+                      _routePanelDesiredHeight(
+                        width: overviewWidth,
+                        mapAspectRatio: map.mapAspectRatio,
+                        compact: false,
+                        hasNodes: map.nodes.isNotEmpty,
+                        textScaler: textScaler,
+                      ))
+                  .clamp(0.0, availableHeight);
+          return _scrollableContentWithAttribution(
+            key: const Key('sortie-map-tablet-scroll'),
+            strings: strings,
+            content: SizedBox(
+              height: contentHeight,
+              child: Padding(
+                padding: const EdgeInsets.all(outerPadding),
+                child: Row(
+                  key: const Key('sortie-map-tablet-layout'),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: overviewWidth,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(height: overviewHeight, child: overview),
+                          const SizedBox(height: gap),
+                          Expanded(child: route),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: gap),
+                    SizedBox(width: detailWidth, child: detail),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final availableHeight = constraints.maxHeight;
+        final outerPadding = compact && availableHeight < 340
             ? 0.0
             : compact
             ? 8.0
             : 12.0;
         final overviewWidth = (constraints.maxWidth * .20).clamp(
-          compact && contentHeight < 340
+          compact && availableHeight < 340
               ? 180.0
               : compact
               ? 170.0
@@ -347,47 +404,51 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
             overviewWidth -
             detailWidth -
             gap * 2;
-        final sharedPanelHeight = _routePanelDesiredHeight(
+        final desiredPanelHeight = _routePanelDesiredHeight(
           width: routeWidth,
           mapAspectRatio: map.mapAspectRatio,
           compact: compact,
           hasNodes: map.nodes.isNotEmpty,
-        ).clamp(0.0, contentHeight - outerPadding * 2);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              height: contentHeight,
-              child: Padding(
-                padding: EdgeInsets.all(outerPadding),
-                child: Row(
-                  key: const Key('sortie-map-wide-layout'),
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: overviewWidth,
-                      height: sharedPanelHeight,
-                      child: overview,
-                    ),
-                    SizedBox(width: gap),
-                    Expanded(
-                      child: SizedBox(height: sharedPanelHeight, child: route),
-                    ),
-                    SizedBox(width: gap),
-                    SizedBox(
-                      width: detailWidth,
-                      height: sharedPanelHeight,
-                      child: detail,
-                    ),
-                  ],
-                ),
+          textScaler: textScaler,
+        );
+        final contentHeight = (desiredPanelHeight + outerPadding * 2).clamp(
+          0.0,
+          availableHeight,
+        );
+        final sharedPanelHeight = desiredPanelHeight.clamp(
+          0.0,
+          contentHeight - outerPadding * 2,
+        );
+        return _scrollableContentWithAttribution(
+          key: const Key('sortie-map-wide-scroll'),
+          strings: strings,
+          content: SizedBox(
+            height: contentHeight,
+            child: Padding(
+              padding: EdgeInsets.all(outerPadding),
+              child: Row(
+                key: const Key('sortie-map-wide-layout'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: overviewWidth,
+                    height: sharedPanelHeight,
+                    child: overview,
+                  ),
+                  SizedBox(width: gap),
+                  Expanded(
+                    child: SizedBox(height: sharedPanelHeight, child: route),
+                  ),
+                  SizedBox(width: gap),
+                  SizedBox(
+                    width: detailWidth,
+                    height: sharedPanelHeight,
+                    child: detail,
+                  ),
+                ],
               ),
             ),
-            SizedBox(
-              height: _attributionFooterHeight,
-              child: _AttributionFooter(strings: strings),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -411,12 +472,56 @@ class _SortieMapQueryPageState extends State<SortieMapQueryPage> {
 
 const double _attributionFooterHeight = 22;
 
+Widget _scrollableContentWithAttribution({
+  required Key key,
+  required Widget content,
+  required SortieMapQueryStrings strings,
+}) {
+  return CustomScrollView(
+    key: key,
+    slivers: [
+      SliverToBoxAdapter(
+        child: Builder(
+          builder: (context) => NotificationListener<OverscrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.axis != Axis.vertical) return false;
+              final outer = Scrollable.of(context).position;
+              final target = (outer.pixels + notification.overscroll).clamp(
+                outer.minScrollExtent,
+                outer.maxScrollExtent,
+              );
+              if (target != outer.pixels) outer.jumpTo(target);
+              return false;
+            },
+            child: content,
+          ),
+        ),
+      ),
+      SliverFillRemaining(
+        hasScrollBody: false,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: _attributionFooterHeight,
+              ),
+              child: _AttributionFooter(strings: strings),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
 class _OverviewPanel extends StatelessWidget {
   const _OverviewPanel({
     required this.map,
     required this.maps,
     required this.strings,
     required this.compact,
+    required this.tabletStrip,
     required this.onMapChanged,
     this.resolveCachedImage,
   });
@@ -425,11 +530,128 @@ class _OverviewPanel extends StatelessWidget {
   final List<SortieMapInfo> maps;
   final SortieMapQueryStrings strings;
   final bool compact;
+  final bool tabletStrip;
   final ValueChanged<SortieMapInfo> onMapChanged;
   final File? Function(String)? resolveCachedImage;
 
   @override
   Widget build(BuildContext context) {
+    if (tabletStrip) {
+      return _Panel(
+        key: const Key('sortie-map-overview'),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 270,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _PanelHeading(strings.selectMap, compact: compact),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        key: const Key('sortie-map-selector'),
+                        initialValue: map.id,
+                        isExpanded: true,
+                        dropdownColor: const Color(0xff102a39),
+                        iconEnabledColor: const Color(0xffffc85a),
+                        style: const TextStyle(
+                          color: Color(0xffeef6f8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 11,
+                          ),
+                          enabledBorder: _selectorBorder,
+                          focusedBorder: _selectorBorder.copyWith(
+                            borderSide: const BorderSide(
+                              color: Color(0xffd8aa4d),
+                            ),
+                          ),
+                        ),
+                        items: [
+                          for (final item in maps)
+                            DropdownMenuItem(
+                              value: item.id,
+                              child: Text(
+                                '${item.id} ${item.nameJa}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
+                        onChanged: (id) {
+                          if (id == null || id == map.id) return;
+                          onMapChanged(
+                            maps.firstWhere((item) => item.id == id),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 150,
+                  child: AspectRatio(
+                    aspectRatio: 2.15,
+                    child: ClipRRect(
+                      key: const Key('sortie-map-cover'),
+                      borderRadius: BorderRadius.circular(6),
+                      child: ColoredBox(
+                        color: const Color(0xff07131b),
+                        child: _AssetImage(
+                          asset: map.coverAsset,
+                          file: resolveCachedImage?.call(map.coverAsset),
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${map.id} ${map.nameJa}',
+                        key: const Key('sortie-map-identity'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xffffdc88),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '${strings.difficulty}：${'★' * map.difficulty}',
+                        key: const Key('sortie-map-difficulty'),
+                        style: const TextStyle(
+                          color: Color(0xffffdc88),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final content = Padding(
       padding: EdgeInsets.all(compact ? 8 : 12),
       child: Column(
@@ -550,6 +772,7 @@ class _RoutePanel extends StatelessWidget {
         mapAspectRatio: map.mapAspectRatio,
         compact: compact,
         hasNodes: map.nodes.isNotEmpty,
+        textScaler: MediaQuery.textScalerOf(context),
       );
       final panelHeight = desiredHeight.clamp(0.0, constraints.maxHeight);
       return Align(
@@ -624,12 +847,13 @@ double _routePanelDesiredHeight({
   required double mapAspectRatio,
   required bool compact,
   required bool hasNodes,
+  required TextScaler textScaler,
 }) {
   final padding = compact ? 8.0 : 12.0;
   final gap = compact ? 6.0 : 10.0;
   final mapHeight = (width - padding * 2) / mapAspectRatio;
-  final nodeHeight = hasNodes ? 44.0 : 16.0;
-  final headingHeight = compact ? 13.0 : 16.0;
+  final nodeHeight = hasNodes ? 44.0 : textScaler.scale(16);
+  final headingHeight = textScaler.scale(compact ? 13 : 16);
   return padding * 2 + headingHeight + gap * 2 + mapHeight + nodeHeight;
 }
 

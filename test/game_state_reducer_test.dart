@@ -94,6 +94,7 @@ void main() {
               'api_name': '夕立',
               'api_stype': 2,
               'api_aftershipid': '2',
+              'api_powup': <Object?>[3, 0, 1, 2],
             },
           ],
           'api_mst_slotitem_equiptype': <Object?>[
@@ -116,6 +117,7 @@ void main() {
       );
 
       expect(state.masterShips[1]?.afterShipId, 2);
+      expect(state.masterShips[1]?.powerUp, <int>[3, 0, 1, 2]);
       expect(state.masterSlotItemTypes[1], '小口径主炮');
       expect(state.masterMapAreas[62], '反击！第三十一战队的战斗');
       expect(state.masterSlotItems[101]?.interception, 3);
@@ -123,6 +125,66 @@ void main() {
       expect(state.masterSlotItems[101]?.distance, 2);
       expect(state.masterSlotItems[101]?.resourceVersion, '4');
     });
+
+    test('start2 preserves a present zero modernization range', () {
+      final state = GameStateReducer().reduce(
+        GameState.empty,
+        kcsapiEvent('/kcsapi/api_start2/getData', <String, Object?>{
+          'api_mst_ship': <Object?>[
+            <String, Object?>{
+              'api_id': 1,
+              'api_name': '戦艦',
+              'api_stype': 9,
+              'api_raig': <int>[0, 0],
+            },
+          ],
+        }),
+      );
+
+      expect(state.masterShips[1]!.remainingModernization(1, 0), 0);
+      expect(state.masterShips[1]!.remainingModernization(0, 0), isNull);
+    });
+
+    test('start2 treats malformed modernization ranges as unknown', () {
+      final state = GameStateReducer().reduce(
+        GameState.empty,
+        kcsapiEvent('/kcsapi/api_start2/getData', <String, Object?>{
+          'api_mst_ship': <Object?>[
+            <String, Object?>{
+              'api_id': 1,
+              'api_name': '壊れた値',
+              'api_stype': 9,
+              'api_raig': <Object?>['bad', 5],
+              'api_houg': <Object?>[0, 'bad'],
+            },
+          ],
+        }),
+      );
+      final master = state.masterShips[1]!;
+      expect(master.remainingModernization(1, 0), isNull);
+      expect(master.remainingModernization(0, 0), isNull);
+      expect(master.modernizationRangeIndices, isEmpty);
+    });
+
+    test(
+      'start2 rejects malformed fodder powerUp instead of inventing zero',
+      () {
+        final state = GameStateReducer().reduce(
+          GameState.empty,
+          kcsapiEvent('/kcsapi/api_start2/getData', <String, Object?>{
+            'api_mst_ship': <Object?>[
+              <String, Object?>{
+                'api_id': 1,
+                'api_name': '素材',
+                'api_stype': 2,
+                'api_powup': <Object?>[1, null, 0, 0],
+              },
+            ],
+          }),
+        );
+        expect(state.masterShips[1]!.powerUp, isEmpty);
+      },
+    );
 
     test('start2 captures base ASW and resolved per-ship equip types', () {
       final state = GameStateReducer().reduce(

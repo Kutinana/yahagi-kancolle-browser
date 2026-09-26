@@ -165,6 +165,8 @@ class GameStateSerializer {
           'maxLuck': v.maxLuck,
           'baseHp': v.baseHp,
           'maxHp': v.maxHp,
+          'powerUp': v.powerUp,
+          'modernizationRangeIndices': v.modernizationRangeIndices.toList(),
           'equipTypeIds': v.equipTypeIds.toList(),
           'limitedEquipmentIdsByType': v.limitedEquipmentIdsByType.map(
             (typeId, equipmentIds) =>
@@ -512,6 +514,19 @@ class GameStateSerializer {
           final id = int.tryParse('${entry.key}');
           final v = entry.value;
           if (id != null && id > 0 && v is Map) {
+            final modernizationRanges = <List<int>>[
+              _cachedModernizationRange(v, 'baseFirepower', 'maxFirepower'),
+              _cachedModernizationRange(v, 'baseTorpedo', 'maxTorpedo'),
+              _cachedModernizationRange(v, 'baseAntiAir', 'maxAntiAir'),
+              _cachedModernizationRange(v, 'baseArmor', 'maxArmor'),
+              _cachedModernizationRange(v, 'baseLuck', 'maxLuck'),
+            ];
+            int base(int index) => modernizationRanges[index].isEmpty
+                ? 0
+                : modernizationRanges[index][0];
+            int max(int index) => modernizationRanges[index].isEmpty
+                ? 0
+                : modernizationRanges[index][1];
             masterShips[id] = MasterShip(
               id: id,
               name: _string(v['name']),
@@ -522,18 +537,35 @@ class GameStateSerializer {
               buildTimeMinutes: _int(v['buildTimeMinutes']) ?? 0,
               sortNo: _int(v['sortNo']) ?? 0,
               classTypeId: _int(v['classTypeId']) ?? 0,
-              baseFirepower: _int(v['baseFirepower']) ?? 0,
-              maxFirepower: _int(v['maxFirepower']) ?? 0,
-              baseTorpedo: _int(v['baseTorpedo']) ?? 0,
-              maxTorpedo: _int(v['maxTorpedo']) ?? 0,
-              baseAntiAir: _int(v['baseAntiAir']) ?? 0,
-              maxAntiAir: _int(v['maxAntiAir']) ?? 0,
-              baseArmor: _int(v['baseArmor']) ?? 0,
-              maxArmor: _int(v['maxArmor']) ?? 0,
-              baseLuck: _int(v['baseLuck']) ?? 0,
-              maxLuck: _int(v['maxLuck']) ?? 0,
+              baseFirepower: base(0),
+              maxFirepower: max(0),
+              baseTorpedo: base(1),
+              maxTorpedo: max(1),
+              baseAntiAir: base(2),
+              maxAntiAir: max(2),
+              baseArmor: base(3),
+              maxArmor: max(3),
+              baseLuck: base(4),
+              maxLuck: max(4),
               baseHp: _int(v['baseHp']) ?? 0,
               maxHp: _int(v['maxHp']) ?? 0,
+              powerUp:
+                  v['powerUp'] is List &&
+                      (v['powerUp'] as List).length >= 4 &&
+                      (v['powerUp'] as List)
+                          .take(4)
+                          .every((value) => value is int)
+                  ? _intList(v['powerUp'])
+                  : const <int>[],
+              modernizationRangeIndices: {
+                if (v['modernizationRangeIndices'] is List)
+                  for (final index in v['modernizationRangeIndices'] as List)
+                    if (index is int &&
+                        index >= 0 &&
+                        index < 5 &&
+                        modernizationRanges[index].length == 2)
+                      index,
+              },
               equipTypeIds: _positiveIntSet(v['equipTypeIds']),
               limitedEquipmentIdsByType: _positiveIntSetMap(
                 v['limitedEquipmentIdsByType'],
@@ -695,6 +727,24 @@ class GameStateSerializer {
       return int.tryParse(value);
     }
     return null;
+  }
+
+  static List<int> _cachedModernizationRange(
+    Map values,
+    String baseKey,
+    String maxKey,
+  ) {
+    int? parse(Object? value) => value is int
+        ? value
+        : value is String
+        ? int.tryParse(value)
+        : null;
+    final base = parse(values[baseKey]);
+    final max = parse(values[maxKey]);
+    if (base == null || max == null || base < 0 || max < 0) {
+      return const <int>[];
+    }
+    return <int>[base, max];
   }
 
   static String _string(Object? value) => value?.toString() ?? '';

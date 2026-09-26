@@ -93,53 +93,57 @@ CapturedApiEvent createEvent(String path, String responseJson) {
 
 void main() {
   group('Devil Review: 100+ Fuzz & Extreme Cases Bidirectional Poi Parity', () {
-    test('Poi formula vs MasterShip.remainingModernization 150+ randomized cases', () {
-      final rng = Random(42);
+    test(
+      'Poi formula vs MasterShip.remainingModernization 150+ randomized cases',
+      () {
+        final rng = Random(42);
 
-      for (var round = 0; round < 150; round++) {
-        final statIndex = rng.nextInt(5); // 0..4
-        final base = 5 + rng.nextInt(50);
-        final maxCapacity = 10 + rng.nextInt(60);
-        final maxVal = base + maxCapacity;
-        final kyouka = rng.nextInt(maxCapacity + 10); // can exceed max
+        for (var round = 0; round < 150; round++) {
+          final statIndex = rng.nextInt(5); // 0..4
+          final base = 5 + rng.nextInt(50);
+          final maxCapacity = 10 + rng.nextInt(60);
+          final maxVal = base + maxCapacity;
+          final kyouka = rng.nextInt(maxCapacity + 10); // can exceed max
 
-        final statusPair = [base, maxVal];
-        final kyoukaList = List.generate(5, (_) => 0)..[statIndex] = kyouka;
+          final statusPair = [base, maxVal];
+          final kyoukaList = List.generate(5, (_) => 0)..[statIndex] = kyouka;
 
-        final master = MasterShip(
-          id: 100,
-          name: 'FuzzShip',
-          shipTypeId: 2,
-          baseFirepower: statIndex == 0 ? base : 0,
-          maxFirepower: statIndex == 0 ? maxVal : 0,
-          baseTorpedo: statIndex == 1 ? base : 0,
-          maxTorpedo: statIndex == 1 ? maxVal : 0,
-          baseAntiAir: statIndex == 2 ? base : 0,
-          maxAntiAir: statIndex == 2 ? maxVal : 0,
-          baseArmor: statIndex == 3 ? base : 0,
-          maxArmor: statIndex == 3 ? maxVal : 0,
-          baseLuck: statIndex == 4 ? base : 0,
-          maxLuck: statIndex == 4 ? maxVal : 0,
-        );
+          final master = MasterShip(
+            id: 100,
+            name: 'FuzzShip',
+            shipTypeId: 2,
+            baseFirepower: statIndex == 0 ? base : 0,
+            maxFirepower: statIndex == 0 ? maxVal : 0,
+            baseTorpedo: statIndex == 1 ? base : 0,
+            maxTorpedo: statIndex == 1 ? maxVal : 0,
+            baseAntiAir: statIndex == 2 ? base : 0,
+            maxAntiAir: statIndex == 2 ? maxVal : 0,
+            baseArmor: statIndex == 3 ? base : 0,
+            maxArmor: statIndex == 3 ? maxVal : 0,
+            baseLuck: statIndex == 4 ? base : 0,
+            maxLuck: statIndex == 4 ? maxVal : 0,
+          );
 
-        final poiRem = poiCalcRemaining(statusPair, kyoukaList, statIndex);
-        final yahagiRem = master.remainingModernization(statIndex, kyouka);
+          final poiRem = poiCalcRemaining(statusPair, kyoukaList, statIndex);
+          final yahagiRem = master.remainingModernization(statIndex, kyouka);
 
-        expect(
-          yahagiRem,
-          equals(poiRem),
-          reason: 'Mismatch at round $round for stat $statIndex: Poi=$poiRem, Yahagi=$yahagiRem',
-        );
+          expect(
+            yahagiRem,
+            equals(poiRem),
+            reason:
+                'Mismatch at round $round for stat $statIndex: Poi=$poiRem, Yahagi=$yahagiRem',
+          );
 
-        final poiMax = poiIsMax(poiRem);
-        final yahagiMax = yahagiRem != null && yahagiRem <= 0;
-        expect(
-          yahagiMax,
-          equals(poiMax),
-          reason: 'MAX status mismatch at round $round for stat $statIndex',
-        );
-      }
-    });
+          final poiMax = poiIsMax(poiRem);
+          final yahagiMax = yahagiRem != null && yahagiRem <= 0;
+          expect(
+            yahagiMax,
+            equals(poiMax),
+            reason: 'MAX status mismatch at round $round for stat $statIndex',
+          );
+        }
+      },
+    );
 
     test('Edge case: Zero max stat (e.g. BB torpedo, Maruyu anti-air)', () {
       const bbMaster = MasterShip(
@@ -167,108 +171,118 @@ void main() {
       expect(maruyuMaster.remainingModernization(2, 0), isNull);
     });
 
-    test('Edge case: Exactly 1 point away from MAX, exactly at MAX, and overflowing MAX', () {
-      const master = MasterShip(
-        id: 1,
-        name: 'Test',
-        shipTypeId: 2,
-        baseFirepower: 20,
-        maxFirepower: 60, // capacity = 40
-      );
-
-      // 39: 1 point away
-      expect(master.remainingModernization(0, 39), equals(1));
-      expect(master.remainingModernization(0, 39)! <= 0, isFalse);
-
-      // 40: exactly MAX
-      expect(master.remainingModernization(0, 40), equals(0));
-      expect(master.remainingModernization(0, 40)! <= 0, isTrue);
-
-      // 41: over MAX
-      expect(master.remainingModernization(0, 41), equals(-1));
-      expect(master.remainingModernization(0, 41)! <= 0, isTrue);
+    test('Poi has no master remaining capacity for HP or ASW', () {
+      const master = MasterShip(id: 1, name: 'Test', shipTypeId: 2);
+      expect(master.remainingModernization(5, 2), isNull);
+      expect(master.remainingModernization(6, 9), isNull);
     });
 
-    test('Edge case: kyouka delta matches Poi when delta is zero, positive, or missing', () {
-      final before = [10, 20, 30, 40, 12, 0, 0];
-      final after = [13, 20, 35, 40, 13, 1, 3];
+    test(
+      'Edge case: Exactly 1 point away from MAX, exactly at MAX, and overflowing MAX',
+      () {
+        const master = MasterShip(
+          id: 1,
+          name: 'Test',
+          shipTypeId: 2,
+          baseFirepower: 20,
+          maxFirepower: 60, // capacity = 40
+        );
 
-      for (var i = 0; i < 7; i++) {
-        final expectedDelta = after[i] - before[i];
-        expect(poiCalcDelta(before, after, i), equals(expectedDelta));
-      }
+        // 39: 1 point away
+        expect(master.remainingModernization(0, 39), equals(1));
+        expect(master.remainingModernization(0, 39)! <= 0, isFalse);
 
-      // Truncated list safe
-      expect(poiCalcDelta([], [5], 0), equals(5));
-      expect(poiCalcDelta([5], [], 0), equals(-5));
-    });
+        // 40: exactly MAX
+        expect(master.remainingModernization(0, 40), equals(0));
+        expect(master.remainingModernization(0, 40)! <= 0, isTrue);
 
-    test('ASW equipment isolation: Sonars must NOT trigger false MAX when kyouka[6] < 9', () async {
+        // 41: over MAX
+        expect(master.remainingModernization(0, 41), equals(-1));
+        expect(master.remainingModernization(0, 41)! <= 0, isTrue);
+      },
+    );
+
+    test(
+      'Edge case: kyouka delta matches Poi when delta is zero, positive, or missing',
+      () {
+        final before = [10, 20, 30, 40, 12, 0, 0];
+        final after = [13, 20, 35, 40, 13, 1, 3];
+
+        for (var i = 0; i < 7; i++) {
+          final expectedDelta = after[i] - before[i];
+          expect(poiCalcDelta(before, after, i), equals(expectedDelta));
+        }
+
+        // Truncated list safe
+        expect(poiCalcDelta([], [5], 0), equals(5));
+        expect(poiCalcDelta([5], [], 0), equals(-5));
+      },
+    );
+
+    test(
+      'ASW equipment isolation: Sonars must NOT trigger false MAX when kyouka[6] < 9',
+      () async {
+        final store = _MockStore();
+        final layoutController = await LayoutSettingsController.load(store);
+        final topNoticeController = TopNoticeController();
+
+        // Ship: level 99 DD with 2 Type 4 Sonars (+24 ASW).
+        // Naked ASW: 70. Level 99 natural stat: 75.
+        // With sonars: 70 + 24 = 94 > 75 (maxAsw).
+        // Modernization ASW: 0 -> 1 (+1 ASW). kyouka[6] = 1 (out of 9, NOT max!).
+        const master = MasterShip(
+          id: 1,
+          name: '吹雪',
+          shipTypeId: 2,
+          baseFirepower: 10,
+          maxFirepower: 50,
+        );
+
+        final oldShip = OwnedShip(
+          id: 42,
+          masterId: 1,
+          level: 99,
+          antiSub: 94,
+          modernization: const [0, 0, 0, 0, 0, 0, 0],
+        );
+
+        final state = GameState.empty.copyWith(
+          masterShips: {1: master},
+          ships: {42: oldShip},
+        );
+
+        final controller = GameInfoNoticeController(
+          stateProvider: () => state,
+          layoutSettingsController: layoutController,
+          topNoticeController: topNoticeController,
+        );
+
+        // Response: new ASW is 95 (94 + 1), maxAsw is 75. kyouka[6] is 1.
+        controller.accept(
+          createEvent(
+            '/kcsapi/api_req_kaisou/powerup',
+            '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
+                '"api_id":42,'
+                '"api_ship_id":1,'
+                '"api_taisen":[95,75],'
+                '"api_kyouka":[0,0,0,0,0,0,1]'
+                '}}}',
+          ),
+        );
+
+        await controller.idle;
+        final msg = topNoticeController.current!.message;
+        // Poi shows the ASW gain but has no reliable remaining cap for ASW.
+        expect(msg, contains('对潜 ▲▲ 1 / ?'));
+      },
+    );
+
+    test('ASW remaining stays unknown when kyouka[6] reaches 9', () async {
       final store = _MockStore();
       final layoutController = await LayoutSettingsController.load(store);
       final topNoticeController = TopNoticeController();
 
-      // Ship: level 99 DD with 2 Type 4 Sonars (+24 ASW).
-      // Naked ASW: 70. Level 99 natural stat: 75.
-      // With sonars: 70 + 24 = 94 > 75 (maxAsw).
-      // Modernization ASW: 0 -> 1 (+1 ASW). kyouka[6] = 1 (out of 9, NOT max!).
-      const master = MasterShip(
-        id: 1,
-        name: '吹雪',
-        shipTypeId: 2,
-        baseFirepower: 10,
-        maxFirepower: 50,
-      );
-
-      final oldShip = OwnedShip(
-        id: 42,
-        masterId: 1,
-        level: 99,
-        antiSub: 94,
-        modernization: const [0, 0, 0, 0, 0, 0, 0],
-      );
-
-      final state = GameState.empty.copyWith(
-        masterShips: {1: master},
-        ships: {42: oldShip},
-      );
-
-      final controller = GameInfoNoticeController(
-        stateProvider: () => state,
-        layoutSettingsController: layoutController,
-        topNoticeController: topNoticeController,
-      );
-
-      // Response: new ASW is 95 (94 + 1), maxAsw is 75. kyouka[6] is 1.
-      controller.accept(
-        createEvent(
-          '/kcsapi/api_req_kaisou/powerup',
-          '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
-              '"api_id":42,'
-              '"api_ship_id":1,'
-              '"api_taisen":[95,75],'
-              '"api_kyouka":[0,0,0,0,0,0,1]'
-              '}}}',
-        ),
-      );
-
-      await controller.idle;
-      final msg = topNoticeController.current!.message;
-      // MUST show +1 ASW, but MUST NOT have (MAX) because kyouka[6] is only 1!
-      expect(msg, contains('对潜 ▲ 1'));
-      expect(msg, isNot(contains('对潜 ▲ 1 (MAX)')));
-    });
-
-    test('ASW MAX: Triggered when kyouka[6] reaches 9', () async {
-      final store = _MockStore();
-      final layoutController = await LayoutSettingsController.load(store);
-      final topNoticeController = TopNoticeController();
-
-      const master = MasterShip(
-        id: 1,
-        name: '吹雪',
-        shipTypeId: 2,
-      );
+      const master = MasterShip(id: 1, name: '吹雪', shipTypeId: 2);
 
       final oldShip = OwnedShip(
         id: 42,
@@ -304,10 +318,10 @@ void main() {
 
       await controller.idle;
       final msg = topNoticeController.current!.message;
-      expect(msg, contains('对潜 ▲ 1 (MAX)'));
+      expect(msg, contains('对潜 ▲▲ 1 / ?'));
     });
 
-    test('HP modernization: +1 is not MAX, +2 is MAX', () async {
+    test('HP modernization remaining is unknown at +1 and +2', () async {
       final store = _MockStore();
       final layoutController = await LayoutSettingsController.load(store);
       final topNoticeController = TopNoticeController();
@@ -339,7 +353,7 @@ void main() {
         topNoticeController: topNoticeController,
       );
 
-      // Step 1: HP 13 -> 14 (kyouka[5] = 1, NOT MAX)
+      // Step 1: HP 13 -> 14 (kyouka[5] = 1)
       controller.accept(
         createEvent(
           '/kcsapi/api_req_kaisou/powerup',
@@ -353,10 +367,9 @@ void main() {
       );
 
       await controller.idle;
-      expect(topNoticeController.current!.message, contains('耐久 ▲ 1'));
-      expect(topNoticeController.current!.message, isNot(contains('耐久 ▲ 1 (MAX)')));
+      expect(topNoticeController.current!.message, contains('耐久 ▲▲ 1 / ?'));
 
-      // Step 2: HP 14 -> 15 (kyouka[5] = 2, MAX!)
+      // Step 2: HP 14 -> 15 (kyouka[5] = 2; Poi still reports unknown)
       final shipStep2 = OwnedShip(
         id: 42,
         masterId: 1,
@@ -384,49 +397,50 @@ void main() {
       );
 
       await controller2.idle;
-      expect(topNoticeController.current!.message, contains('耐久 ▲ 1 (MAX)'));
+      expect(topNoticeController.current!.message, contains('耐久 ▲▲ 1 / ?'));
     });
 
-    test('Old save compatibility: empty oldKyouka and missing master data does not crash', () async {
-      final store = _MockStore();
-      final layoutController = await LayoutSettingsController.load(store);
-      final topNoticeController = TopNoticeController();
+    test(
+      'Old save compatibility: empty oldKyouka and missing master data does not crash',
+      () async {
+        final store = _MockStore();
+        final layoutController = await LayoutSettingsController.load(store);
+        final topNoticeController = TopNoticeController();
 
-      // Ship with empty modernization list (old save)
-      final oldShip = OwnedShip(
-        id: 99,
-        masterId: 999,
-        level: 1,
-        firepower: 20,
-        firepowerMax: 40,
-        modernization: const [],
-      );
+        // Ship with empty modernization list (old save)
+        final oldShip = OwnedShip(
+          id: 99,
+          masterId: 999,
+          level: 1,
+          firepower: 20,
+          firepowerMax: 40,
+          modernization: const [],
+        );
 
-      // State without master data for 999
-      final state = GameState.empty.copyWith(
-        ships: {99: oldShip},
-      );
+        // State without master data for 999
+        final state = GameState.empty.copyWith(ships: {99: oldShip});
 
-      final controller = GameInfoNoticeController(
-        stateProvider: () => state,
-        layoutSettingsController: layoutController,
-        topNoticeController: topNoticeController,
-      );
+        final controller = GameInfoNoticeController(
+          stateProvider: () => state,
+          layoutSettingsController: layoutController,
+          topNoticeController: topNoticeController,
+        );
 
-      // Response has empty kyouka and karyoku [40, 40]
-      controller.accept(
-        createEvent(
-          '/kcsapi/api_req_kaisou/powerup',
-          '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
-              '"api_id":99,'
-              '"api_karyoku":[40,40]'
-              '}}}',
-        ),
-      );
+        // Response has empty kyouka and karyoku [40, 40]
+        controller.accept(
+          createEvent(
+            '/kcsapi/api_req_kaisou/powerup',
+            '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
+                '"api_id":99,'
+                '"api_karyoku":[40,40]'
+                '}}}',
+          ),
+        );
 
-      await controller.idle;
-      expect(topNoticeController.current, isNotNull);
-      expect(topNoticeController.current!.message, contains('火力 ▲ 20 (MAX)'));
-    });
+        await controller.idle;
+        expect(topNoticeController.current, isNotNull);
+        expect(topNoticeController.current!.message, '近代化改修成功');
+      },
+    );
   });
 }

@@ -490,6 +490,7 @@ Future<void> main() async {
   final headerNoticeController = TopNoticeController();
   final gameInfoNoticeController = GameInfoNoticeController(
     stateProvider: () => gameStateController.state,
+    accountSession: accountSession,
     layoutSettingsController: layoutSettingsController,
     topNoticeController: headerNoticeController,
   );
@@ -702,6 +703,7 @@ Future<void> main() async {
     releaseChecker: releaseChecker,
     screenAwakeController: screenAwakeController,
     headerNoticeController: headerNoticeController,
+    gameInfoNoticeController: gameInfoNoticeController,
     gameMouseWheelSettingsController: gameMouseWheelSettingsController,
     gameFrameRefreshShortcutSettings: gameFrameRefreshShortcutSettings,
     diagnosticController: diagnosticController,
@@ -972,6 +974,7 @@ class YahagiApp extends StatelessWidget {
     this.releaseChecker,
     this.screenAwakeController,
     this.headerNoticeController,
+    this.gameInfoNoticeController,
     this.gameMouseWheelSettingsController,
     this.gameFrameRefreshShortcutSettings,
     this.toolbarDisplayController,
@@ -1020,6 +1023,7 @@ class YahagiApp extends StatelessWidget {
   final ReleaseChecker? releaseChecker;
   final ScreenAwakeController? screenAwakeController;
   final TopNoticeController? headerNoticeController;
+  final GameInfoNoticeController? gameInfoNoticeController;
   final GameMouseWheelSettingsController? gameMouseWheelSettingsController;
   final GameFrameRefreshShortcutSettings? gameFrameRefreshShortcutSettings;
   final GameToolbarDisplayController? toolbarDisplayController;
@@ -1141,6 +1145,7 @@ class YahagiApp extends StatelessWidget {
                   toolbarDisplayController: toolbarDisplayController,
                   gameScreenshotController: gameScreenshotController,
                   headerNoticeController: headerNoticeController,
+                  gameInfoNoticeController: gameInfoNoticeController,
                   showDeveloperDiagnostics: showDeveloperDiagnostics,
                   diagnosticController: diagnosticController,
                   telemetryController: telemetryController,
@@ -1313,6 +1318,7 @@ class YahagiShell extends StatefulWidget {
     this.toolbarDisplayController,
     this.gameScreenshotController,
     this.headerNoticeController,
+    this.gameInfoNoticeController,
     this.fcdMapController,
     this.questCatalogController,
     this.sortieMapCatalogController,
@@ -1363,6 +1369,7 @@ class YahagiShell extends StatefulWidget {
   final GameToolbarDisplayController? toolbarDisplayController;
   final GameScreenshotController? gameScreenshotController;
   final TopNoticeController? headerNoticeController;
+  final GameInfoNoticeController? gameInfoNoticeController;
   final bool showDeveloperDiagnostics;
   final DiagnosticController? diagnosticController;
   final TelemetryController? telemetryController;
@@ -1444,6 +1451,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
     widget.layoutSettingsController.removeListener(_onLayoutSettingsChanged);
     widget.newShipReminderController?.removeListener(_handleNewShipAlert);
     widget.kcwikiReportConsumer?.dispose();
+    widget.gameInfoNoticeController?.dispose();
     _questFilters.dispose();
     _windowMetricsRecoveryScheduler.dispose();
     _backgroundGameRetentionCoordinator?.dispose();

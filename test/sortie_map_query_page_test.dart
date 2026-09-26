@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 import 'package:yahagi_kancolle_browser/src/battle/battle_pills.dart';
@@ -11,12 +12,238 @@ import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_selection_store.dart';
 
 void main() {
-  testWidgets('large landscape uses overview, route, and detail columns', (
+  testWidgets('tablet landscape enlarges route without shrinking node detail', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1512, 960));
+
+    expect(find.byKey(const Key('sortie-map-tablet-layout')), findsOneWidget);
+    final overview = tester.getRect(
+      find.byKey(const Key('sortie-map-overview')),
+    );
+    final route = tester.getRect(find.byKey(const Key('sortie-map-route')));
+    final detail = tester.getRect(find.byKey(const Key('sortie-map-detail')));
+    final viewport = tester.getRect(
+      find.byKey(const Key('sortie-map-route-viewport')),
+    );
+    expect(overview.bottom, lessThan(route.top));
+    expect(route.right, lessThan(detail.left));
+    expect(detail.width, greaterThanOrEqualTo(390));
+    expect(viewport.width, greaterThan(900));
+    expect(overview.height, lessThan(110));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet keeps route controls visible with a taller map image', (
+    tester,
+  ) async {
+    final original = _catalog.maps.first;
+    final catalog = SortieMapCatalogData(
+      version: 1,
+      source: 'test',
+      maps: [
+        SortieMapInfo(
+          id: original.id,
+          nameJa: original.nameJa,
+          difficulty: original.difficulty,
+          coverAsset: original.coverAsset,
+          mapAsset: original.mapAsset,
+          mapAspectRatio: 5 / 3,
+          source: original.source,
+          nodes: original.nodes,
+        ),
+      ],
+    );
+    await _pumpAt(tester, const Size(1512, 850), catalog: catalog);
+
+    final overview = tester.getRect(
+      find.byKey(const Key('sortie-map-overview')),
+    );
+    final route = tester.getRect(find.byKey(const Key('sortie-map-route')));
+    final detail = tester.getRect(find.byKey(const Key('sortie-map-detail')));
+    final nodeButton = tester.getRect(
+      find.byKey(const Key('sortie-map-node-A')),
+    );
+    expect((overview.width - route.width).abs(), lessThan(1));
+    expect((detail.left - route.right - 12).abs(), lessThan(1));
+    expect(detail.width, greaterThan(390));
+    expect(nodeButton.bottom, lessThanOrEqualTo(route.bottom - 8));
+    expect(find.byKey(const Key('sortie-map-attribution')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet selector strip handles a narrow map ratio', (
+    tester,
+  ) async {
+    final original = _catalog.maps.first;
+    final catalog = SortieMapCatalogData(
+      version: 1,
+      source: 'test',
+      maps: [
+        SortieMapInfo(
+          id: original.id,
+          nameJa: original.nameJa,
+          difficulty: original.difficulty,
+          coverAsset: original.coverAsset,
+          mapAsset: original.mapAsset,
+          mapAspectRatio: 0.5,
+          source: original.source,
+          nodes: original.nodes,
+        ),
+      ],
+    );
+    await _pumpAt(tester, const Size(1512, 850), catalog: catalog);
+
+    final overview = tester.getRect(
+      find.byKey(const Key('sortie-map-overview')),
+    );
+    final route = tester.getRect(find.byKey(const Key('sortie-map-route')));
+    expect(overview.width, greaterThanOrEqualTo(560));
+    expect(overview.width, closeTo(route.width, 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet selector strip handles narrow map and high difficulty', (
+    tester,
+  ) async {
+    final original = _catalog.maps.first;
+    final catalog = SortieMapCatalogData(
+      version: 1,
+      source: 'test',
+      maps: [
+        SortieMapInfo(
+          id: original.id,
+          nameJa: original.nameJa,
+          difficulty: 13,
+          coverAsset: original.coverAsset,
+          mapAsset: original.mapAsset,
+          mapAspectRatio: 0.5,
+          source: original.source,
+          nodes: original.nodes,
+        ),
+      ],
+    );
+    await _pumpAt(
+      tester,
+      const Size(1100, 700),
+      catalog: catalog,
+      textScaler: const TextScaler.linear(2),
+    );
+
+    expect(find.byKey(const Key('sortie-map-difficulty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final scale in const [2.0, 3.0]) {
+    testWidgets('tablet selector stays usable with $scale text scale', (
+      tester,
+    ) async {
+      await _pumpAt(
+        tester,
+        const Size(1512, 850),
+        textScaler: TextScaler.linear(scale),
+      );
+
+      final selector = find.byKey(const Key('sortie-map-selector'));
+      expect(selector, findsOneWidget);
+      if (scale > 2) {
+        await tester.drag(
+          find.byKey(const Key('sortie-map-overview')),
+          const Offset(0, -100),
+        );
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(selector);
+      await tester.pumpAndSettle();
+      expect(find.text('1-2 南西諸島沖').last, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final scale in const [2.0, 3.0]) {
+    testWidgets('tablet keeps node controls visible at $scale text scale', (
+      tester,
+    ) async {
+      final original = _catalog.maps.first;
+      final catalog = SortieMapCatalogData(
+        version: 1,
+        source: 'test',
+        maps: [
+          SortieMapInfo(
+            id: original.id,
+            nameJa: original.nameJa,
+            difficulty: original.difficulty,
+            coverAsset: original.coverAsset,
+            mapAsset: original.mapAsset,
+            mapAspectRatio: 1.744360902255639,
+            source: original.source,
+            nodes: original.nodes,
+          ),
+        ],
+      );
+      await _pumpAt(
+        tester,
+        const Size(1100, 700),
+        catalog: catalog,
+        textScaler: TextScaler.linear(scale),
+      );
+
+      final route = tester.getRect(find.byKey(const Key('sortie-map-route')));
+      final node = tester.getRect(find.byKey(const Key('sortie-map-node-A')));
+      expect(node.bottom, lessThanOrEqualTo(route.bottom - 8));
+      await tester.tap(find.byKey(const Key('sortie-map-node-A')));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('tablet attribution follows map ratio changes', (tester) async {
+    final original = _catalog.maps.first;
+    SortieMapInfo map(String id, String name, double ratio) => SortieMapInfo(
+      id: id,
+      nameJa: name,
+      difficulty: original.difficulty,
+      coverAsset: original.coverAsset,
+      mapAsset: original.mapAsset,
+      mapAspectRatio: ratio,
+      source: original.source,
+      nodes: original.nodes,
+    );
+    final catalog = SortieMapCatalogData(
+      version: 1,
+      source: 'test',
+      maps: [map('1-1', '鎮守府正面海域', 5 / 3), map('1-2', '南西諸島沖', 2)],
+    );
+    await _pumpAt(tester, const Size(1512, 850), catalog: catalog);
+
+    final footer = find.byKey(const Key('sortie-map-attribution'));
+    expect(footer, findsNothing);
+    await tester.tap(find.byKey(const Key('sortie-map-selector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1-2 南西諸島沖').last);
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(footer).bottom, closeTo(846, 1));
+    expect(
+      tester.getRect(find.byKey(const Key('sortie-map-node-A'))).bottom,
+      lessThanOrEqualTo(
+        tester.getRect(find.byKey(const Key('sortie-map-route'))).bottom,
+      ),
+    );
+    await tester.tap(find.byKey(const Key('sortie-map-selector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1-1 鎮守府正面海域').last);
+    await tester.pumpAndSettle();
+    expect(footer, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet landscape keeps overview, route, and detail visible', (
     tester,
   ) async {
     await _pumpAt(tester, const Size(1240, 760));
 
-    expect(find.byKey(const Key('sortie-map-wide-layout')), findsOneWidget);
+    expect(find.byKey(const Key('sortie-map-tablet-layout')), findsOneWidget);
     expect(find.byKey(const Key('sortie-map-overview')), findsOneWidget);
     expect(find.byKey(const Key('sortie-map-route')), findsOneWidget);
     expect(find.byKey(const Key('sortie-map-detail')), findsOneWidget);
@@ -225,34 +452,34 @@ void main() {
       find.byKey(const Key('sortie-map-route-surface')),
     );
     expect(surface.elevation, greaterThan(0));
-    expect((route.height - overview.height).abs(), lessThan(1));
-    expect((route.height - detail.height).abs(), lessThan(1));
+    expect(overview.bottom, lessThan(route.top));
+    expect(route.right, lessThan(detail.left));
     expect(routeImage.fit, BoxFit.contain);
   });
 
-  testWidgets(
-    'landscape panels share one bottom edge with comfortable insets',
-    (tester) async {
-      await _pumpAt(tester, const Size(1240, 760));
+  testWidgets('tablet overview strip and route keep comfortable insets', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1240, 760));
 
-      final overview = tester.getRect(
-        find.byKey(const Key('sortie-map-overview')),
-      );
-      final route = tester.getRect(find.byKey(const Key('sortie-map-route')));
-      final detail = tester.getRect(find.byKey(const Key('sortie-map-detail')));
-      expect((overview.bottom - route.bottom).abs(), lessThan(1));
-      expect((route.bottom - detail.bottom).abs(), lessThan(1));
+    final overview = tester.getRect(
+      find.byKey(const Key('sortie-map-overview')),
+    );
+    final route = tester.getRect(find.byKey(const Key('sortie-map-route')));
+    final detail = tester.getRect(find.byKey(const Key('sortie-map-detail')));
+    expect(overview.bottom, lessThan(route.top));
+    expect(route.right, lessThan(detail.left));
+    expect(detail.bottom, greaterThanOrEqualTo(route.bottom));
 
-      final overviewHeading = tester.getRect(find.text('海域选择'));
-      final routeHeading = tester.getRect(find.text('路线图'));
-      final routeViewport = tester.getRect(
-        find.byKey(const Key('sortie-map-route-viewport')),
-      );
-      expect(overviewHeading.left - overview.left, greaterThanOrEqualTo(8));
-      expect(routeHeading.left - route.left, greaterThanOrEqualTo(8));
-      expect(routeViewport.top - routeHeading.bottom, greaterThanOrEqualTo(6));
-    },
-  );
+    final overviewHeading = tester.getRect(find.text('海域选择'));
+    final routeHeading = tester.getRect(find.text('路线图'));
+    final routeViewport = tester.getRect(
+      find.byKey(const Key('sortie-map-route-viewport')),
+    );
+    expect(overviewHeading.left - overview.left, greaterThanOrEqualTo(8));
+    expect(routeHeading.left - route.left, greaterThanOrEqualTo(8));
+    expect(routeViewport.top - routeHeading.bottom, greaterThanOrEqualTo(6));
+  });
 
   testWidgets('portrait route image matches the overview image inner width', (
     tester,
@@ -549,11 +776,14 @@ void main() {
   });
 
   testWidgets(
-    'Japanese attribution remains usable on short and portrait phones',
+    'Japanese attribution is reachable at the bottom on short and portrait phones',
     (tester) async {
       await _pumpAt(tester, const Size(796, 270), locale: const Locale('ja'));
 
       var footer = find.byKey(const Key('sortie-map-attribution'));
+      expect(tester.getRect(footer).top, greaterThanOrEqualTo(270));
+      await tester.ensureVisible(footer);
+      await tester.pumpAndSettle();
       var footerRect = tester.getRect(footer);
       expect(footerRect.top, greaterThanOrEqualTo(0));
       expect(footerRect.bottom, lessThanOrEqualTo(270));
@@ -561,7 +791,16 @@ void main() {
 
       await _pumpAt(tester, const Size(390, 844), locale: const Locale('ja'));
       footer = find.byKey(const Key('sortie-map-attribution'));
-      await tester.ensureVisible(footer);
+      await tester.scrollUntilVisible(
+        footer,
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('sortie-map-portrait-layout')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
       footerRect = tester.getRect(footer);
       expect(footerRect.top, greaterThanOrEqualTo(0));
@@ -571,23 +810,171 @@ void main() {
     },
   );
 
-  testWidgets('attribution stays pinned while portrait content scrolls', (
+  testWidgets('attribution follows portrait content to the bottom', (
     tester,
   ) async {
     await _pumpAt(tester, const Size(390, 844));
 
     final footer = find.byKey(const Key('sortie-map-attribution'));
-    final before = tester.getRect(footer);
-    expect(before.top, greaterThanOrEqualTo(822));
-    expect(before.bottom, lessThanOrEqualTo(844));
+    expect(footer, findsNothing);
 
-    await tester.drag(
-      find.byKey(const Key('sortie-map-portrait-layout')),
-      const Offset(0, -500),
+    await tester.scrollUntilVisible(
+      footer,
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('sortie-map-portrait-layout')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await tester.pumpAndSettle();
 
-    expect(tester.getRect(footer), before);
+    expect(tester.getRect(footer).top, greaterThanOrEqualTo(0));
+    expect(tester.getRect(footer).bottom, lessThanOrEqualTo(844));
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final size in const [Size(700, 1144), Size(900, 840)]) {
+    testWidgets('attribution sits at the bottom when content fits $size', (
+      tester,
+    ) async {
+      await _pumpAt(tester, size, catalog: _shortCatalog);
+
+      final footer = tester.getRect(
+        find.byKey(const Key('sortie-map-attribution')),
+      );
+      final detail = tester.getRect(find.byKey(const Key('sortie-map-detail')));
+      expect(footer.bottom, closeTo(size.height - 4, 1));
+      expect(footer.top, greaterThan(detail.bottom));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final (locale, scale) in const [
+    (Locale('ja'), 2.0),
+    (Locale('ja'), 3.0),
+    (Locale('zh', 'TW'), 3.0),
+  ]) {
+    testWidgets('attribution fits $locale at $scale text scale', (
+      tester,
+    ) async {
+      await _pumpAt(
+        tester,
+        const Size(320, 1200),
+        locale: locale,
+        catalog: _shortCatalog,
+        textScaler: TextScaler.linear(scale),
+      );
+
+      final footer = tester.getRect(
+        find.byKey(const Key('sortie-map-attribution')),
+      );
+      final text = tester.widget<Text>(
+        find.byKey(const Key('sortie-map-attribution')),
+      );
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.byKey(const Key('sortie-map-attribution')),
+      );
+      expect(
+        paragraph.getMaxIntrinsicHeight(footer.width),
+        lessThanOrEqualTo(footer.height),
+      );
+      expect(footer.bottom, lessThanOrEqualTo(1200));
+      expect(text.data, contains('kcwiki.cn'));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('attribution crosses the fit boundary without extra scrolling', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(390, 1200), catalog: _shortCatalog);
+
+    final contentBottom =
+        tester.getRect(find.byKey(const Key('sortie-map-detail'))).bottom + 10;
+    final fitHeight = contentBottom + 22;
+    final footer = find.byKey(const Key('sortie-map-attribution'));
+    final scrollable = find
+        .descendant(
+          of: find.byKey(const Key('sortie-map-portrait-layout')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    tester.view.physicalSize = Size(390, fitHeight + 1);
+    await tester.pumpAndSettle();
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      0,
+    );
+    expect(tester.getRect(footer).bottom, closeTo(fitHeight - 3, 1));
+
+    tester.view.physicalSize = Size(390, fitHeight - 1);
+    await tester.pumpAndSettle();
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      greaterThan(0),
+    );
+    await tester.drag(scrollable, const Offset(0, -100));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(footer).bottom, lessThanOrEqualTo(fitHeight - 1));
+
+    tester.view.physicalSize = const Size(390, 1200);
+    await tester.pumpAndSettle();
+    expect(tester.state<ScrollableState>(scrollable).position.pixels, 0);
+    expect(tester.getRect(footer).bottom, closeTo(1196, 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('short landscape can reach attribution by dragging a panel', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(796, 270));
+
+    final scrollable = find
+        .descendant(
+          of: find.byKey(const Key('sortie-map-wide-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    expect(tester.state<ScrollableState>(scrollable).position.pixels, 0);
+    for (var attempt = 0; attempt < 12; attempt++) {
+      await tester.drag(
+        find.byKey(const Key('sortie-map-detail')),
+        const Offset(0, -220),
+      );
+      await tester.pumpAndSettle();
+      if (tester.state<ScrollableState>(scrollable).position.pixels > 0) break;
+    }
+    expect(
+      tester.state<ScrollableState>(scrollable).position.pixels,
+      greaterThan(0),
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('sortie-map-attribution'))).bottom,
+      lessThanOrEqualTo(270),
+    );
+    for (var attempt = 0; attempt < 12; attempt++) {
+      await tester.drag(
+        find.byKey(const Key('sortie-map-detail')),
+        const Offset(0, 220),
+      );
+      await tester.pumpAndSettle();
+      if (tester.state<ScrollableState>(scrollable).position.pixels == 0) break;
+    }
+    expect(tester.state<ScrollableState>(scrollable).position.pixels, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet attribution sits at bottom when map fits', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1512, 850));
+
+    final footer = find.byKey(const Key('sortie-map-attribution'));
+    expect(tester.getRect(footer).bottom, closeTo(846, 1));
+    expect(find.byKey(const Key('sortie-map-tablet-scroll')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -605,6 +992,10 @@ void main() {
     expect(overview.right, lessThan(route.left));
     expect(route.right, lessThan(detail.left));
     expect(route.width, greaterThan(overview.width));
+    expect(
+      tester.getRect(find.byKey(const Key('sortie-map-attribution'))).bottom,
+      closeTo(984, 1),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -932,6 +1323,7 @@ Future<void> _pumpAt(
   SortieMapSelectionStore? selectionStore,
   SortieMapCatalogData catalog = _catalog,
   GameState state = const GameState(),
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -940,6 +1332,10 @@ Future<void> _pumpAt(
   await tester.pumpWidget(
     MaterialApp(
       locale: locale,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+        child: child!,
+      ),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -953,6 +1349,23 @@ Future<void> _pumpAt(
   );
   await tester.pumpAndSettle();
 }
+
+const _shortCatalog = SortieMapCatalogData(
+  version: 1,
+  source: 'test',
+  maps: [
+    SortieMapInfo(
+      id: '1-1',
+      nameJa: '鎮守府正面海域',
+      difficulty: 1,
+      coverAsset: 'missing-cover.png',
+      mapAsset: 'missing-map.png',
+      mapAspectRatio: 2,
+      source: null,
+      nodes: [],
+    ),
+  ],
+);
 
 const _catalog = SortieMapCatalogData(
   version: 1,

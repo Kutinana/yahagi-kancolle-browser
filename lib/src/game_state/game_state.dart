@@ -85,6 +85,8 @@ class MasterShip {
     this.maxLuck = 0,
     this.baseHp = 0,
     this.maxHp = 0,
+    this.powerUp = const <int>[],
+    this.modernizationRangeIndices = const <int>{},
     this.equipTypeIds = const <int>{},
     this.limitedEquipmentIdsByType = const <int, Set<int>>{},
     this.portraitFileName,
@@ -124,23 +126,43 @@ class MasterShip {
   final int maxLuck;
   final int baseHp;
   final int maxHp;
+
+  /// api_mst_ship.api_powup: firepower, torpedo, anti-air and armor fodder gains.
+  final List<int> powerUp;
+
+  /// Indices whose two-value status ranges were present in api_mst_ship.
+  /// A real [0, 0] range means MAX; absent legacy data means unknown.
+  final Set<int> modernizationRangeIndices;
   final Set<int> equipTypeIds;
   final Map<int, Set<int>> limitedEquipmentIdsByType;
   final String? portraitFileName;
   final String? portraitVersion;
 
   /// Returns the remaining capacity for modernization of the stat at index [statIndex]
-  /// (0: firepower, 1: torpedo, 2: antiAir, 3: armor, 4: luck, 5: hp, 6: asw), given current [kyouka].
-  /// Matches Poi's remaining calculation: statusPair[1] - (statusPair[0] + kyouka).
+  /// (0: firepower, 1: torpedo, 2: antiAir, 3: armor, 4: luck),
+  /// given current [kyouka]. HP and ASW have no Poi master status pair.
   int? remainingModernization(int statIndex, int kyouka) {
     return switch (statIndex) {
-      0 => (maxFirepower > 0) ? maxFirepower - (baseFirepower + kyouka) : null,
-      1 => (maxTorpedo > 0) ? maxTorpedo - (baseTorpedo + kyouka) : null,
-      2 => (maxAntiAir > 0) ? maxAntiAir - (baseAntiAir + kyouka) : null,
-      3 => (maxArmor > 0) ? maxArmor - (baseArmor + kyouka) : null,
-      4 => (maxLuck > 0) ? maxLuck - (baseLuck + kyouka) : null,
-      5 => 2 - kyouka,
-      6 => 9 - kyouka,
+      0 =>
+        (maxFirepower > 0 || modernizationRangeIndices.contains(0))
+            ? maxFirepower - (baseFirepower + kyouka)
+            : null,
+      1 =>
+        (maxTorpedo > 0 || modernizationRangeIndices.contains(1))
+            ? maxTorpedo - (baseTorpedo + kyouka)
+            : null,
+      2 =>
+        (maxAntiAir > 0 || modernizationRangeIndices.contains(2))
+            ? maxAntiAir - (baseAntiAir + kyouka)
+            : null,
+      3 =>
+        (maxArmor > 0 || modernizationRangeIndices.contains(3))
+            ? maxArmor - (baseArmor + kyouka)
+            : null,
+      4 =>
+        (maxLuck > 0 || modernizationRangeIndices.contains(4))
+            ? maxLuck - (baseLuck + kyouka)
+            : null,
       _ => null,
     };
   }
@@ -190,6 +212,8 @@ class MasterShip {
       maxLuck: maxLuck ?? this.maxLuck,
       baseHp: baseHp ?? this.baseHp,
       maxHp: maxHp ?? this.maxHp,
+      powerUp: powerUp,
+      modernizationRangeIndices: modernizationRangeIndices,
       equipTypeIds: equipTypeIds,
       limitedEquipmentIdsByType: limitedEquipmentIdsByType,
       portraitFileName: portraitFileName ?? this.portraitFileName,

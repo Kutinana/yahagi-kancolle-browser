@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../account/account_session.dart';
 import '../bridge/captured_api_event.dart';
 import '../game_state/game_api_decoder.dart';
 import '../game_state/game_api_event_pipeline.dart';
@@ -24,11 +25,30 @@ class GameInfoNoticeController implements GameApiEventConsumer {
     required this.stateProvider,
     required this.layoutSettingsController,
     required this.topNoticeController,
-  });
+    this.accountSession,
+  }) : _noticeScope = accountSession?.current {
+    accountSession?.addListener(_onAccountChanged);
+  }
 
   final GameState Function() stateProvider;
   final LayoutSettingsController layoutSettingsController;
   final TopNoticeController topNoticeController;
+  final AccountSession? accountSession;
+  AccountScope? _noticeScope;
+  bool _disposed = false;
+
+  void _onAccountChanged() {
+    final current = accountSession?.current;
+    if (identical(current, _noticeScope)) return;
+    _noticeScope = current;
+    topNoticeController.hide();
+  }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    accountSession?.removeListener(_onAccountChanged);
+  }
 
   Future<void> _queue = Future<void>.value();
 
@@ -47,17 +67,24 @@ class GameInfoNoticeController implements GameApiEventConsumer {
 
   @override
   void accept(CapturedApiEvent event) {
-    if (!layoutSettingsController.topNoticeEnabled) {
+    if (_disposed || !layoutSettingsController.topNoticeEnabled) {
       return;
     }
 
     // Immediately and synchronously capture the current state before any asynchronous
     // processing or pipeline reducers have a chance to update the state.
     final stateBefore = stateProvider();
+    final scope = accountSession?.current;
 
     _queue = _queue.then((_) async {
+      if (_disposed || (scope != null && !accountSession!.isCurrent(scope))) {
+        return;
+      }
       try {
         final rawData = GameApiDecoder.decodeEventData(event);
+        if (_disposed || (scope != null && !accountSession!.isCurrent(scope))) {
+          return;
+        }
         if (rawData is! Map<String, Object?>) return;
 
         switch (event.path) {
@@ -96,7 +123,7 @@ class GameInfoNoticeController implements GameApiEventConsumer {
     Duration appendWithin = const Duration(milliseconds: 500),
     String? replacementKey,
   }) {
-    if (!layoutSettingsController.topNoticeEnabled) return;
+    if (_disposed || !layoutSettingsController.topNoticeEnabled) return;
     topNoticeController.show(
       message: message,
       tone: tone,
@@ -130,6 +157,62 @@ class GameInfoNoticeController implements GameApiEventConsumer {
       return int.tryParse(val) ?? fallback;
     }
     return fallback;
+  }
+
+  static bool _isModernizationInt(Object? value) =>
+      (value is int && value >= 0) ||
+      (value is String && (int.tryParse(value) ?? -1) >= 0);
+
+  static List<int> _requestShipIds(Object? value) {
+    if (value is String) {
+      return value.split(',').map(int.tryParse).whereType<int>().toList();
+    }
+    if (value is List) {
+      return value.map(_asInt).where((id) => id > 0).toList();
+    }
+    return const <int>[];
+  }
+
+  /// Poi's theoretical maximum gain from the ships consumed in this request.
+  static List<int?> _modernizationMaxDeltas(
+    CapturedApiEvent event,
+    GameState state,
+  ) {
+    final totals = List<int>.filled(4, 0);
+    final rawSourceIds = event.requestParams['api_id_items'];
+    final sourceIds = _requestShipIds(rawSourceIds);
+    final requestedCount = rawSourceIds is String
+        ? rawSourceIds.split(',').length
+        : rawSourceIds is List
+        ? rawSourceIds.length
+        : 0;
+    final incompleteSourceIds =
+        sourceIds.isEmpty || sourceIds.length != requestedCount;
+    var unknownPowerUp = incompleteSourceIds;
+    var unknownLuck = incompleteSourceIds;
+    var luckFifths = 0;
+    for (final id in sourceIds) {
+      final masterId = state.ships[id]?.masterId;
+      if (masterId == null) {
+        unknownPowerUp = true;
+        unknownLuck = true;
+        continue;
+      }
+      final powerUp = state.masterShips[masterId]?.powerUp ?? const <int>[];
+      if (powerUp.length < 4) unknownPowerUp = true;
+      for (var i = 0; i < 4 && i < powerUp.length; i++) {
+        totals[i] += powerUp[i];
+      }
+      if (masterId == 163) luckFifths += 6;
+      if (masterId == 402) luckFifths += 8;
+    }
+    return [
+      for (final total in totals)
+        unknownPowerUp ? null : total + ((total + 1) ~/ 5),
+      unknownLuck ? null : (luckFifths / 5 - 0.0001).ceil(),
+      0,
+      0,
+    ];
   }
 
   void _handleDevelopment(Map<String, Object?> data, GameState state) {
@@ -235,246 +318,67 @@ class GameInfoNoticeController implements GameApiEventConsumer {
     final master = state.masterShips[masterId];
     final oldKyouka = oldShip.modernization;
 
-    final rawKaryoku = rawShip['api_karyoku'];
-    final rawRaisou = rawShip['api_raisou'];
-    final rawTaiku = rawShip['api_taiku'];
-    final rawSoukou = rawShip['api_soukou'];
-    final rawLucky = rawShip['api_lucky'];
-    final rawMaxHp = rawShip['api_maxhp'];
-    final rawTaisen = rawShip['api_taisen'];
-
-    final newFirepower = rawKaryoku is List && rawKaryoku.isNotEmpty
-        ? _asInt(rawKaryoku[0])
-        : oldShip.firepower;
-    final maxFirepower = rawKaryoku is List && rawKaryoku.length > 1
-        ? _asInt(rawKaryoku[1])
-        : oldShip.firepowerMax;
-
-    final newTorpedo = rawRaisou is List && rawRaisou.isNotEmpty
-        ? _asInt(rawRaisou[0])
-        : oldShip.torpedo;
-    final maxTorpedo = rawRaisou is List && rawRaisou.length > 1
-        ? _asInt(rawRaisou[1])
-        : oldShip.torpedoMax;
-
-    final newAntiAir = rawTaiku is List && rawTaiku.isNotEmpty
-        ? _asInt(rawTaiku[0])
-        : oldShip.antiAir;
-    final maxAntiAir = rawTaiku is List && rawTaiku.length > 1
-        ? _asInt(rawTaiku[1])
-        : oldShip.antiAirMax;
-
-    final newArmor = rawSoukou is List && rawSoukou.isNotEmpty
-        ? _asInt(rawSoukou[0])
-        : oldShip.armor;
-    final maxArmor = rawSoukou is List && rawSoukou.length > 1
-        ? _asInt(rawSoukou[1])
-        : oldShip.armorMax;
-
-    final newLuck = rawLucky is List && rawLucky.isNotEmpty
-        ? _asInt(rawLucky[0])
-        : oldShip.luck;
-    final maxLuck = rawLucky is List && rawLucky.length > 1
-        ? _asInt(rawLucky[1])
-        : oldShip.luckMax;
-
-    final int newHp;
-    final int maxHp;
-    if (rawMaxHp is List && rawMaxHp.isNotEmpty) {
-      newHp = _asInt(rawMaxHp[0]);
-      maxHp = rawMaxHp.length > 1 ? _asInt(rawMaxHp[1]) : 0;
-    } else if (rawMaxHp != null) {
-      newHp = _asInt(rawMaxHp);
-      maxHp = 0;
-    } else {
-      newHp = oldShip.maxHp;
-      maxHp = 0;
-    }
-
-    final int newAsw;
-    final int maxAsw;
-    if (rawTaisen is List && rawTaisen.isNotEmpty) {
-      newAsw = _asInt(rawTaisen[0]);
-      maxAsw = rawTaisen.length > 1 ? _asInt(rawTaisen[1]) : 0;
-    } else if (rawTaisen != null) {
-      newAsw = _asInt(rawTaisen);
-      maxAsw = 0;
-    } else {
-      newAsw = oldShip.antiSub;
-      maxAsw = 0;
-    }
-
     final rawKyouka = rawShip['api_kyouka'];
-    final kyoukaList = rawKyouka is List
+    final kyoukaList =
+        rawKyouka is List &&
+            rawKyouka.length >= 7 &&
+            rawKyouka.take(7).every(_isModernizationInt)
         ? rawKyouka.map(_asInt).toList()
         : null;
 
-    final parts = <String>[];
-
-    // Firepower (Index 0)
-    final int fpDelta;
-    final bool isFpMax;
-    if (kyoukaList != null && kyoukaList.isNotEmpty) {
-      fpDelta = oldKyouka.isNotEmpty
-          ? (kyoukaList[0] - oldKyouka[0])
-          : (newFirepower - oldShip.firepower);
-      final remaining = master?.remainingModernization(0, kyoukaList[0]);
-      isFpMax = remaining != null
-          ? remaining <= 0
-          : (maxFirepower > 0 && newFirepower >= maxFirepower);
-    } else {
-      fpDelta = newFirepower - oldShip.firepower;
-      isFpMax = maxFirepower > 0 && newFirepower >= maxFirepower;
-    }
-    if (fpDelta > 0) {
-      parts.add('${l10n.statFirepower} ▲ $fpDelta${isFpMax ? ' (MAX)' : ''}');
-    }
-
-    // Torpedo (Index 1)
-    final int tpDelta;
-    final bool isTpMax;
-    if (kyoukaList != null && kyoukaList.length > 1) {
-      tpDelta = oldKyouka.length > 1
-          ? (kyoukaList[1] - oldKyouka[1])
-          : (newTorpedo - oldShip.torpedo);
-      final remaining = master?.remainingModernization(1, kyoukaList[1]);
-      isTpMax = remaining != null
-          ? remaining <= 0
-          : (maxTorpedo > 0 && newTorpedo >= maxTorpedo);
-    } else {
-      tpDelta = newTorpedo - oldShip.torpedo;
-      isTpMax = maxTorpedo > 0 && newTorpedo >= maxTorpedo;
-    }
-    if (tpDelta > 0) {
-      parts.add('${l10n.statTorpedo} ▲ $tpDelta${isTpMax ? ' (MAX)' : ''}');
-    }
-
-    // Anti-Air (Index 2)
-    final int aaDelta;
-    final bool isAaMax;
-    if (kyoukaList != null && kyoukaList.length > 2) {
-      aaDelta = oldKyouka.length > 2
-          ? (kyoukaList[2] - oldKyouka[2])
-          : (newAntiAir - oldShip.antiAir);
-      final remaining = master?.remainingModernization(2, kyoukaList[2]);
-      isAaMax = remaining != null
-          ? remaining <= 0
-          : (maxAntiAir > 0 && newAntiAir >= maxAntiAir);
-    } else {
-      aaDelta = newAntiAir - oldShip.antiAir;
-      isAaMax = maxAntiAir > 0 && newAntiAir >= maxAntiAir;
-    }
-    if (aaDelta > 0) {
-      parts.add('${l10n.statAntiAir} ▲ $aaDelta${isAaMax ? ' (MAX)' : ''}');
-    }
-
-    // Armor (Index 3)
-    final int arDelta;
-    final bool isArMax;
-    if (kyoukaList != null && kyoukaList.length > 3) {
-      arDelta = oldKyouka.length > 3
-          ? (kyoukaList[3] - oldKyouka[3])
-          : (newArmor - oldShip.armor);
-      final remaining = master?.remainingModernization(3, kyoukaList[3]);
-      isArMax = remaining != null
-          ? remaining <= 0
-          : (maxArmor > 0 && newArmor >= maxArmor);
-    } else {
-      arDelta = newArmor - oldShip.armor;
-      isArMax = maxArmor > 0 && newArmor >= maxArmor;
-    }
-    if (arDelta > 0) {
-      parts.add('${l10n.statArmor} ▲ $arDelta${isArMax ? ' (MAX)' : ''}');
-    }
-
-    // Luck (Index 4)
-    final int luckDelta;
-    final bool isLuckMax;
-    if (kyoukaList != null && kyoukaList.length > 4) {
-      luckDelta = oldKyouka.length > 4
-          ? (kyoukaList[4] - oldKyouka[4])
-          : (newLuck - oldShip.luck);
-      final remaining = master?.remainingModernization(4, kyoukaList[4]);
-      isLuckMax = remaining != null
-          ? remaining <= 0
-          : (maxLuck > 0 && newLuck >= maxLuck);
-    } else {
-      luckDelta = newLuck - oldShip.luck;
-      isLuckMax = maxLuck > 0 && newLuck >= maxLuck;
-    }
-    if (luckDelta > 0) {
-      parts.add('${l10n.statLuck} ▲ $luckDelta${isLuckMax ? ' (MAX)' : ''}');
-    }
-
-    // HP (Index 5)
-    final int hpDelta;
-    final bool isHpMax;
-    final isMasterHpCap =
-        master != null && master.maxHp > 0 && newHp >= master.maxHp;
-    if (kyoukaList != null && kyoukaList.length > 5) {
-      hpDelta = oldKyouka.length > 5
-          ? (kyoukaList[5] - oldKyouka[5])
-          : (newHp - oldShip.maxHp);
-      final remaining = master?.remainingModernization(5, kyoukaList[5]);
-      isHpMax =
-          (remaining != null ? remaining <= 0 : kyoukaList[5] >= 2) ||
-          isMasterHpCap ||
-          (maxHp > 0 && newHp >= maxHp);
-    } else {
-      hpDelta = newHp - oldShip.maxHp;
-      isHpMax = (maxHp > 0 && newHp >= maxHp) || isMasterHpCap;
-    }
-    if (hpDelta > 0) {
-      parts.add('${l10n.statHp} ▲ $hpDelta${isHpMax ? ' (MAX)' : ''}');
-    }
-
-    // ASW (Index 6)
-    final int aswDelta;
-    final bool isAswMax;
-    if (kyoukaList != null && kyoukaList.length > 6) {
-      aswDelta = oldKyouka.length > 6
-          ? (kyoukaList[6] - oldKyouka[6])
-          : (newAsw - oldShip.antiSub);
-      final remaining = master?.remainingModernization(6, kyoukaList[6]);
-      isAswMax = remaining != null ? remaining <= 0 : kyoukaList[6] >= 9;
-    } else {
-      aswDelta = newAsw - oldShip.antiSub;
-      isAswMax = maxAsw > 0 && newAsw >= maxAsw;
-    }
-    if (aswDelta > 0) {
-      parts.add('${l10n.statAsw} ▲ $aswDelta${isAswMax ? ' (MAX)' : ''}');
-    }
-
-    if (parts.isEmpty) {
-      // No observed increase is not proof of a cap (partial responses and
-      // already-maxed individual stats are both possible).
-      // Equipment can inflate total stats to their displayed maxima. Require
-      // actual modernization values and master caps for the ordinary stats.
-      final allStatsMax =
-          master != null &&
-          kyoukaList != null &&
-          kyoukaList.length >= 7 &&
-          List.generate(5, (index) => index).every((index) {
-            final remaining = master.remainingModernization(
-              index,
-              kyoukaList[index],
-            );
-            return remaining != null && remaining <= 0;
-          }) &&
-          isHpMax &&
-          isAswMax;
+    // Poi compares api_kyouka before and after the request. The response's
+    // displayed stats include equipment bonuses, so they are not a reliable
+    // measure of modernization gains or remaining capacity.
+    if (kyoukaList != null && kyoukaList.length >= 7 && oldKyouka.length >= 7) {
+      final maxDeltas = _modernizationMaxDeltas(event, state);
+      final labels = [
+        l10n.statFirepower,
+        l10n.statTorpedo,
+        l10n.statAntiAir,
+        l10n.statArmor,
+        l10n.statLuck,
+        l10n.statHp,
+        l10n.statAsw,
+      ];
+      final details = <String>[];
+      for (var i = 0; i < labels.length; i++) {
+        final delta = kyoukaList[i] - oldKyouka[i];
+        // Poi has master ranges for the first five stats only. HP and ASW
+        // therefore have unknown remaining capacity, even when the displayed
+        // ship stat happens to equal its current maximum.
+        final remaining = i < 5
+            ? master?.remainingModernization(i, kyoukaList[i])
+            : null;
+        if (delta == 0 &&
+            !(remaining != null &&
+                remaining > 0 &&
+                maxDeltas[i] != null &&
+                maxDeltas[i] != 0)) {
+          continue;
+        }
+        final remainingText = remaining == null
+            ? '?'
+            : remaining <= 0
+            ? 'MAX'
+            : '+$remaining';
+        final arrow =
+            remaining == null ||
+                remaining <= 0 ||
+                (maxDeltas[i] != null && delta >= maxDeltas[i]!)
+            ? '▲▲'
+            : '▲';
+        details.add('${labels[i]} $arrow $delta / $remainingText');
+      }
       postNotice(
-        message: allStatsMax
-            ? l10n.noticeModSuccessMaxCap
-            : l10n.noticeModSuccess,
+        message: details.isEmpty
+            ? l10n.noticeModSuccess
+            : l10n.noticeModSuccessDetail(details.join(' · ')),
         tone: TopNoticeTone.success,
       );
-    } else {
-      postNotice(
-        message: l10n.noticeModSuccessDetail(parts.join(' · ')),
-        tone: TopNoticeTone.success,
-      );
+      return;
     }
+
+    postNotice(message: l10n.noticeModSuccess, tone: TopNoticeTone.success);
   }
 
   void _handleMarriage(

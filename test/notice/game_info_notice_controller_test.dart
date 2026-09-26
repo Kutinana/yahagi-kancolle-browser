@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yahagi_kancolle_browser/src/account/account_session.dart';
 import 'package:yahagi_kancolle_browser/src/bridge/captured_api_event.dart';
 import 'package:yahagi_kancolle_browser/src/game_state/game_state.dart';
 import 'package:yahagi_kancolle_browser/src/notice/game_info_notice_controller.dart';
@@ -733,46 +734,555 @@ void main() {
     );
   });
 
-  group('Requirement 3: Synchronous stateBefore capture (Race condition bug fix)', () {
-    test(
-      'Captures stateBefore synchronously at accept time so mutations do not zero deltas',
-      () async {
-        var dynamicState =
-            state; // Initial state: firepower=50, firepowerMax=52
+  group(
+    'Requirement 3: Synchronous stateBefore capture (Race condition bug fix)',
+    () {
+      test(
+        'Captures stateBefore synchronously at accept time so mutations do not zero deltas',
+        () async {
+          var dynamicState = state.copyWith(
+            ships: {
+              1: const OwnedShip(
+                id: 1,
+                masterId: 1,
+                level: 80,
+                modernization: [0, 0, 0, 0, 0, 0, 0],
+              ),
+            },
+          );
 
+          final controller = GameInfoNoticeController(
+            stateProvider: () => dynamicState,
+            layoutSettingsController: layoutController,
+            topNoticeController: topNoticeController,
+          );
+
+          // Fire accept()
+          controller.accept(
+            createEvent(
+              '/kcsapi/api_req_kaisou/powerup',
+              '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
+                  '"api_id":1,"api_kyouka":[2,0,0,0,0,0,0]}}}',
+            ),
+          );
+
+          // Immediately simulate pipeline reducer updating the game state before async queue runs!
+          dynamicState = dynamicState.copyWith(
+            ships: {
+              1: const OwnedShip(
+                id: 1,
+                masterId: 1,
+                level: 80,
+                modernization: [2, 0, 0, 0, 0, 0, 0],
+              ),
+            },
+          );
+
+          await controller.idle;
+          // If stateBefore was not captured synchronously, delta would be zero.
+          expect(topNoticeController.current, isNotNull);
+          expect(topNoticeController.current!.message, contains('火力 ▲▲ 2 / ?'));
+        },
+      );
+    },
+  );
+
+  group('Requirement 4 & 8: 7-dimension modernization & safe int parsing', () {
+    test(
+      'queued notice from previous account is discarded and old notice is cleared',
+      () async {
+        final session = AccountSession()..selectMember(1001);
         final controller = GameInfoNoticeController(
-          stateProvider: () => dynamicState,
+          stateProvider: () => state,
+          accountSession: session,
+          layoutSettingsController: layoutController,
+          topNoticeController: topNoticeController,
+        );
+        controller.accept(
+          createEvent(
+            '/kcsapi/api_req_kaisou/powerup',
+            '{"api_result":1,"api_data":{"api_powerup_flag":0}}',
+          ),
+        );
+        await controller.idle;
+        expect(topNoticeController.current, isNotNull);
+
+        controller.accept(
+          createEvent(
+            '/kcsapi/api_req_kaisou/powerup',
+            '{"api_result":1,"api_data":{"api_powerup_flag":1}}',
+          ),
+        );
+        session.selectMember(1002);
+        await controller.idle;
+        expect(topNoticeController.current, isNull);
+
+        controller.accept(
+          createEvent(
+            '/kcsapi/api_req_kaisou/powerup',
+            '{"api_result":1,"api_data":{"api_powerup_flag":1}}',
+          ),
+        );
+        await controller.idle;
+        expect(topNoticeController.current!.message, '近代化改修成功');
+        session.accept(
+          CapturedApiEvent(
+            path: '/kcsapi/api_get_member/basic',
+            responseBody:
+                '{"api_result":1,"api_data":{'
+                '"api_member_id":1002,"api_nickname":"同一账号"}}',
+            capturedAt: DateTime.now(),
+            source: CaptureSource.xhr,
+          ),
+        );
+        expect(topNoticeController.current!.message, '近代化改修成功');
+        controller.dispose();
+        session.selectMember(1003);
+        expect(topNoticeController.current!.message, '近代化改修成功');
+      },
+    );
+
+    test('disposed notice controller drops its queued event', () async {
+      final session = AccountSession()..selectMember(1001);
+      final controller = GameInfoNoticeController(
+        stateProvider: () => state,
+        accountSession: session,
+        layoutSettingsController: layoutController,
+        topNoticeController: topNoticeController,
+      );
+      controller.accept(
+        createEvent(
+          '/kcsapi/api_req_kaisou/powerup',
+          '{"api_result":1,"api_data":{"api_powerup_flag":0}}',
+        ),
+      );
+      controller.dispose();
+      await controller.idle;
+      expect(topNoticeController.current, isNull);
+    });
+
+    test('malformed api_kyouka does not create a negative gain', () async {
+      final before = OwnedShip(
+        id: 1,
+        masterId: 1,
+        level: 80,
+        modernization: const [30, 0, 0, 0, 0, 0, 0],
+      );
+      final controller = GameInfoNoticeController(
+        stateProvider: () => state.copyWith(ships: {1: before}),
+        layoutSettingsController: layoutController,
+        topNoticeController: topNoticeController,
+      );
+      controller.accept(
+        createEvent(
+          '/kcsapi/api_req_kaisou/powerup',
+          '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
+              '"api_id":1,"api_ship_id":1,"api_kyouka":[null,0,0,0,0,0,0]}}}',
+        ),
+      );
+      await controller.idle;
+      expect(topNoticeController.current!.message, '近代化改修成功');
+    });
+
+    test(
+      'missing api_kyouka does not invent a modernization gain from equipped stats',
+      () async {
+        final before = OwnedShip(
+          id: 1,
+          masterId: 1,
+          level: 80,
+          firepower: 50,
+          firepowerMax: 52,
+          modernization: const [],
+        );
+        final controller = GameInfoNoticeController(
+          stateProvider: () => state.copyWith(ships: {1: before}),
           layoutSettingsController: layoutController,
           topNoticeController: topNoticeController,
         );
 
-        // Fire accept()
         controller.accept(
           createEvent(
             '/kcsapi/api_req_kaisou/powerup',
-            '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{"api_id":1,"api_karyoku":[52,52]}}}',
+            '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
+                '"api_id":1,"api_karyoku":[52,52]}}}',
+          ),
+        );
+        await controller.idle;
+
+        expect(topNoticeController.current!.message, '近代化改修成功');
+      },
+    );
+
+    test('a known zero range is MAX as in Poi', () async {
+      const master = MasterShip(
+        id: 1,
+        name: '戦艦',
+        shipTypeId: 9,
+        baseTorpedo: 0,
+        maxTorpedo: 0,
+        modernizationRangeIndices: {1},
+      );
+      final before = OwnedShip(
+        id: 1,
+        masterId: 1,
+        level: 80,
+        modernization: const [0, 0, 0, 0, 0, 0, 0],
+      );
+      final controller = GameInfoNoticeController(
+        stateProvider: () =>
+            state.copyWith(masterShips: {1: master}, ships: {1: before}),
+        layoutSettingsController: layoutController,
+        topNoticeController: topNoticeController,
+      );
+
+      controller.accept(
+        createEvent(
+          '/kcsapi/api_req_kaisou/powerup',
+          '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
+              '"api_id":1,"api_ship_id":1,"api_kyouka":[0,1,0,0,0,0,0]}}}',
+        ),
+      );
+      await controller.idle;
+
+      expect(topNoticeController.current!.message, '改修成功：雷装 ▲▲ 1 / MAX');
+    });
+
+    test('missing cached fodder powerUp does not claim a full gain', () async {
+      const target = MasterShip(
+        id: 1,
+        name: '目標',
+        shipTypeId: 2,
+        baseFirepower: 12,
+        maxFirepower: 52,
+      );
+      const fodder = MasterShip(id: 2, name: '素材', shipTypeId: 2);
+      final testState = state.copyWith(
+        masterShips: {1: target, 2: fodder},
+        ships: {
+          1: const OwnedShip(
+            id: 1,
+            masterId: 1,
+            level: 50,
+            modernization: [30, 0, 0, 0, 0, 0, 0],
+          ),
+          10: const OwnedShip(id: 10, masterId: 2, level: 1),
+        },
+      );
+      final controller = GameInfoNoticeController(
+        stateProvider: () => testState,
+        layoutSettingsController: layoutController,
+        topNoticeController: topNoticeController,
+      );
+      controller.accept(
+        CapturedApiEvent(
+          path: '/kcsapi/api_req_kaisou/powerup',
+          requestParams: const {'api_id': '1', 'api_id_items': '10'},
+          responseBody:
+              'svdata={"api_result":1,"api_data":{'
+              '"api_powerup_flag":1,"api_ship":{"api_id":1,'
+              '"api_ship_id":1,"api_kyouka":[31,0,0,0,0,0,0]}}}',
+          capturedAt: DateTime.now(),
+          source: CaptureSource.xhr,
+        ),
+      );
+      await controller.idle;
+      expect(topNoticeController.current!.message, '改修成功：火力 ▲ 1 / +9');
+    });
+
+    test(
+      'missing or invalid material IDs leave maximum gain unknown',
+      () async {
+        const target = MasterShip(
+          id: 1,
+          name: '目標',
+          shipTypeId: 2,
+          baseFirepower: 12,
+          maxFirepower: 52,
+        );
+        final testState = state.copyWith(
+          masterShips: {1: target},
+          ships: {
+            1: const OwnedShip(
+              id: 1,
+              masterId: 1,
+              level: 50,
+              modernization: [30, 0, 0, 0, 0, 0, 0],
+            ),
+          },
+        );
+        final controller = GameInfoNoticeController(
+          stateProvider: () => testState,
+          layoutSettingsController: layoutController,
+          topNoticeController: topNoticeController,
+        );
+        for (final params in <Map<String, Object?>>[
+          const {'api_id': '1'},
+          const {'api_id': '1', 'api_id_items': 'bad'},
+          const {'api_id': '1', 'api_id_items': '10,bad'},
+        ]) {
+          controller.accept(
+            CapturedApiEvent(
+              path: '/kcsapi/api_req_kaisou/powerup',
+              requestParams: params,
+              responseBody:
+                  'svdata={"api_result":1,"api_data":{'
+                  '"api_powerup_flag":1,"api_ship":{"api_id":1,'
+                  '"api_ship_id":1,"api_kyouka":[31,0,0,0,0,0,0]}}}',
+              capturedAt: DateTime.now(),
+              source: CaptureSource.xhr,
+            ),
+          );
+          await controller.idle;
+          expect(topNoticeController.current!.message, '改修成功：火力 ▲ 1 / +9');
+        }
+      },
+    );
+
+    test(
+      'one material with missing master leaves gain maximum unknown',
+      () async {
+        const target = MasterShip(
+          id: 1,
+          name: '目標',
+          shipTypeId: 2,
+          baseFirepower: 12,
+          maxFirepower: 52,
+        );
+        const fodder = MasterShip(
+          id: 2,
+          name: '素材',
+          shipTypeId: 2,
+          powerUp: [1, 0, 0, 0],
+        );
+        final testState = state.copyWith(
+          masterShips: {1: target, 2: fodder},
+          ships: {
+            1: const OwnedShip(
+              id: 1,
+              masterId: 1,
+              level: 50,
+              modernization: [30, 0, 0, 0, 0, 0, 0],
+            ),
+            10: const OwnedShip(id: 10, masterId: 2, level: 1),
+            11: const OwnedShip(id: 11, masterId: 999, level: 1),
+          },
+        );
+        final controller = GameInfoNoticeController(
+          stateProvider: () => testState,
+          layoutSettingsController: layoutController,
+          topNoticeController: topNoticeController,
+        );
+        controller.accept(
+          CapturedApiEvent(
+            path: '/kcsapi/api_req_kaisou/powerup',
+            requestParams: const {'api_id': '1', 'api_id_items': '10,11'},
+            responseBody:
+                'svdata={"api_result":1,"api_data":{'
+                '"api_powerup_flag":1,"api_ship":{"api_id":1,'
+                '"api_ship_id":1,"api_kyouka":[31,0,0,0,0,0,0]}}}',
+            capturedAt: DateTime.now(),
+            source: CaptureSource.xhr,
+          ),
+        );
+        await controller.idle;
+        expect(topNoticeController.current!.message, '改修成功：火力 ▲ 1 / +9');
+      },
+    );
+
+    test(
+      'display uses modernization gain and remaining capacity with unknown material data',
+      () async {
+        const master = MasterShip(
+          id: 1,
+          name: '吹雪',
+          shipTypeId: 2,
+          baseFirepower: 12,
+          maxFirepower: 52,
+        );
+        final before = OwnedShip(
+          id: 1,
+          masterId: 1,
+          level: 80,
+          firepower: 50,
+          maxHp: 31,
+          antiSub: 80,
+          modernization: const [30, 0, 0, 0, 0, 1, 8],
+        );
+        final controller = GameInfoNoticeController(
+          stateProvider: () =>
+              state.copyWith(masterShips: {1: master}, ships: {1: before}),
+          layoutSettingsController: layoutController,
+          topNoticeController: topNoticeController,
+        );
+
+        controller.accept(
+          createEvent(
+            '/kcsapi/api_req_kaisou/powerup',
+            '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
+                '"api_id":1,"api_ship_id":1,"api_karyoku":[54,52],'
+                '"api_maxhp":32,"api_taisen":[81,80],'
+                '"api_kyouka":[33,0,0,0,0,2,9]}}}',
           ),
         );
 
-        // Immediately simulate pipeline reducer updating the game state before async queue runs!
-        dynamicState = dynamicState.copyWith(
-          ships: {
-            1: makeShip(firepower: 52), // New ship stats applied to state!
+        await controller.idle;
+        final message = topNoticeController.current!.message;
+        expect(message, contains('火力 ▲ 3 / +7'));
+        expect(message, contains('耐久 ▲▲ 1 / ?'));
+        expect(message, contains('对潜 ▲▲ 1 / ?'));
+        expect(message, isNot(contains('(MAX)')));
+      },
+    );
+
+    test('Poi displays a failed roll when fodder could raise a stat', () async {
+      const targetMaster = MasterShip(
+        id: 1,
+        name: '吹雪',
+        shipTypeId: 2,
+        baseFirepower: 12,
+        maxFirepower: 52,
+      );
+      const fodderMaster = MasterShip(
+        id: 2,
+        name: '素材舰',
+        shipTypeId: 2,
+        powerUp: [3, 0, 0, 0],
+      );
+      final testState = state.copyWith(
+        masterShips: {1: targetMaster, 2: fodderMaster},
+        ships: {
+          1: const OwnedShip(
+            id: 1,
+            masterId: 1,
+            level: 80,
+            modernization: [30, 0, 0, 0, 0, 0, 0],
+          ),
+          10: const OwnedShip(id: 10, masterId: 2, level: 1),
+        },
+      );
+      final controller = GameInfoNoticeController(
+        stateProvider: () => testState,
+        layoutSettingsController: layoutController,
+        topNoticeController: topNoticeController,
+      );
+      controller.accept(
+        CapturedApiEvent(
+          path: '/kcsapi/api_req_kaisou/powerup',
+          requestParams: const {'api_id': '1', 'api_id_items': '10'},
+          responseBody:
+              'svdata={"api_result":1,"api_data":{'
+              '"api_powerup_flag":1,"api_ship":{"api_id":1,'
+              '"api_ship_id":1,"api_kyouka":[30,0,0,0,0,0,0]}}}',
+          capturedAt: DateTime.now(),
+          source: CaptureSource.xhr,
+        ),
+      );
+
+      await controller.idle;
+      expect(topNoticeController.current!.message, '改修成功：火力 ▲ 0 / +10');
+    });
+
+    test('Poi compares gain with the fodder maximum for the arrow', () async {
+      const targetMaster = MasterShip(
+        id: 1,
+        name: '吹雪',
+        shipTypeId: 2,
+        baseFirepower: 12,
+        maxFirepower: 52,
+      );
+      const fodderMaster = MasterShip(
+        id: 2,
+        name: '素材舰',
+        shipTypeId: 2,
+        powerUp: [5, 0, 0, 0],
+      );
+      final testState = state.copyWith(
+        masterShips: {1: targetMaster, 2: fodderMaster},
+        ships: {
+          1: const OwnedShip(
+            id: 1,
+            masterId: 1,
+            level: 80,
+            modernization: [30, 0, 0, 0, 0, 0, 0],
+          ),
+          10: const OwnedShip(id: 10, masterId: 2, level: 1),
+        },
+      );
+      final controller = GameInfoNoticeController(
+        stateProvider: () => testState,
+        layoutSettingsController: layoutController,
+        topNoticeController: topNoticeController,
+      );
+      controller.accept(
+        CapturedApiEvent(
+          path: '/kcsapi/api_req_kaisou/powerup',
+          requestParams: const {'api_id': '1', 'api_id_items': '10'},
+          responseBody:
+              'svdata={"api_result":1,"api_data":{'
+              '"api_powerup_flag":1,"api_ship":{"api_id":1,'
+              '"api_ship_id":1,"api_kyouka":[35,0,0,0,0,0,0]}}}',
+          capturedAt: DateTime.now(),
+          source: CaptureSource.xhr,
+        ),
+      );
+
+      await controller.idle;
+      // Poi: 5 + floor((5 + 1) / 5) = 6, so +5 is not the full roll.
+      expect(topNoticeController.current!.message, '改修成功：火力 ▲ 5 / +5');
+    });
+
+    test(
+      'Poi calculates Maruyu luck potential from the consumed ship',
+      () async {
+        const targetMaster = MasterShip(
+          id: 1,
+          name: '吹雪',
+          shipTypeId: 2,
+          baseLuck: 12,
+          maxLuck: 50,
+        );
+        final testState = state.copyWith(
+          masterShips: {
+            1: targetMaster,
+            163: const MasterShip(id: 163, name: 'まるゆ', shipTypeId: 13),
           },
+          ships: {
+            1: const OwnedShip(
+              id: 1,
+              masterId: 1,
+              level: 80,
+              modernization: [0, 0, 0, 0, 30, 0, 0],
+            ),
+            10: const OwnedShip(id: 10, masterId: 163, level: 1),
+          },
+        );
+        final controller = GameInfoNoticeController(
+          stateProvider: () => testState,
+          layoutSettingsController: layoutController,
+          topNoticeController: topNoticeController,
+        );
+        controller.accept(
+          CapturedApiEvent(
+            path: '/kcsapi/api_req_kaisou/powerup',
+            requestParams: const {'api_id': '1', 'api_id_items': '10'},
+            responseBody:
+                'svdata={"api_result":1,"api_data":{'
+                '"api_powerup_flag":1,"api_ship":{"api_id":1,'
+                '"api_ship_id":1,"api_kyouka":[0,0,0,0,31,0,0]}}}',
+            capturedAt: DateTime.now(),
+            source: CaptureSource.xhr,
+          ),
         );
 
         await controller.idle;
-        // If stateBefore was not captured synchronously, delta would be 52 - 52 = 0!
-        // Since it was captured synchronously, delta is 52 - 50 = 2!
-        expect(topNoticeController.current, isNotNull);
-        expect(topNoticeController.current!.message, contains('火力 ▲ 2 (MAX)'));
+        // Poi: ceil(6 / 5 - 0.0001) = 2; one luck point is a single arrow.
+        expect(topNoticeController.current!.message, '改修成功：运 ▲ 1 / +7');
       },
     );
-  });
 
-  group('Requirement 4 & 8: 7-dimension modernization & safe int parsing', () {
     test(
-      'Modernization detects all 7 dimensions including HP and ASW',
+      'Modernization does not invent gains for seven displayed stats without api_kyouka',
       () async {
         final controller = GameInfoNoticeController(
           stateProvider: () => state,
@@ -799,47 +1309,40 @@ void main() {
 
         await controller.idle;
         final msg = topNoticeController.current!.message;
-        expect(msg, contains('火力 ▲ 1'));
-        expect(msg, contains('雷装 ▲ 1'));
-        expect(msg, contains('对空 ▲ 1'));
-        expect(msg, contains('装甲 ▲ 1'));
-        expect(msg, contains('运 ▲ 1'));
-        expect(msg, contains('耐久 ▲ 1'));
-        expect(msg, contains('对潜 ▲ 2'));
+        expect(msg, '近代化改修成功');
       },
     );
 
-    test('Modernization marks MAX on all stats when reached', () async {
-      final controller = GameInfoNoticeController(
-        stateProvider: () => state,
-        layoutSettingsController: layoutController,
-        topNoticeController: topNoticeController,
-      );
+    test(
+      'Modernization does not infer MAX from displayed stats alone',
+      () async {
+        final controller = GameInfoNoticeController(
+          stateProvider: () => state,
+          layoutSettingsController: layoutController,
+          topNoticeController: topNoticeController,
+        );
 
-      controller.accept(
-        createEvent(
-          '/kcsapi/api_req_kaisou/powerup',
-          '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
-              '"api_id":1,'
-              '"api_karyoku":[52,52],'
-              '"api_raisou":[89,89],'
-              '"api_taiku":[50,50],'
-              '"api_soukou":[40,40],'
-              '"api_lucky":[50,50],'
-              '"api_maxhp":[32,32],'
-              '"api_taisen":[80,80]'
-              '}}}',
-        ),
-      );
+        controller.accept(
+          createEvent(
+            '/kcsapi/api_req_kaisou/powerup',
+            '{"api_result":1,"api_data":{"api_powerup_flag":1,"api_ship":{'
+                '"api_id":1,'
+                '"api_karyoku":[52,52],'
+                '"api_raisou":[89,89],'
+                '"api_taiku":[50,50],'
+                '"api_soukou":[40,40],'
+                '"api_lucky":[50,50],'
+                '"api_maxhp":[32,32],'
+                '"api_taisen":[80,80]'
+                '}}}',
+          ),
+        );
 
-      await controller.idle;
-      final msg = topNoticeController.current!.message;
-      expect(msg, contains('火力 ▲ 2 (MAX)'));
-      expect(msg, contains('雷装 ▲ 9 (MAX)'));
-      expect(msg, contains('运 ▲ 38 (MAX)'));
-      expect(msg, contains('耐久 ▲ 2 (MAX)'));
-      expect(msg, contains('对潜 ▲ 20 (MAX)'));
-    });
+        await controller.idle;
+        final msg = topNoticeController.current!.message;
+        expect(msg, '近代化改修成功');
+      },
+    );
 
     test(
       'Modernization does not infer all stats max from equipped totals',
@@ -971,11 +1474,9 @@ void main() {
         // Firepower increased by 3 (NOT max, because 51 < 54).
         // AntiAir increased by 1 (NOT max).
         // Armor increased by 1 (MAX, because 46 == 46).
-        expect(msg, contains('火力 ▲ 3'));
-        expect(msg, isNot(contains('火力 ▲ 3 (MAX)')));
-        expect(msg, contains('对空 ▲ 1'));
-        expect(msg, isNot(contains('对空 ▲ 1 (MAX)')));
-        expect(msg, contains('装甲 ▲ 1 (MAX)'));
+        expect(msg, contains('火力 ▲ 3 / +3'));
+        expect(msg, contains('对空 ▲ 1 / +25'));
+        expect(msg, contains('装甲 ▲▲ 1 / MAX'));
       },
     );
 
@@ -1627,7 +2128,7 @@ void main() {
         await controller.idle;
         final msg = topNoticeController.current!.message;
         // Must ONLY show Torpedo delta:
-        expect(msg, equals('改修成功：雷装 ▲ 5'));
+        expect(msg, equals('改修成功：雷装 ▲ 5 / +64'));
         // Must NOT contain Firepower or MAX:
         expect(msg, isNot(contains('火力')));
         expect(msg, isNot(contains('MAX')));
@@ -1708,7 +2209,7 @@ void main() {
         );
 
         await controller.idle;
-        expect(topNoticeController.current!.message, equals('改修成功 (属性已达上限)'));
+        expect(topNoticeController.current!.message, equals('近代化改修成功'));
         expect(
           topNoticeController.current!.tone,
           equals(TopNoticeTone.success),
@@ -1735,10 +2236,7 @@ void main() {
           ),
         );
         await jaController.idle;
-        expect(
-          topNoticeController.current!.message,
-          equals('近代化改修成功：火力 ▲ 2 (MAX)'),
-        );
+        expect(topNoticeController.current!.message, equals('近代化改修に成功しました'));
 
         // Modernization max cap in ja
         final maxedShip = makeShip(firepower: 52, firepowerMax: 52);
@@ -1848,10 +2346,7 @@ void main() {
           ),
         );
         await zhHantController.idle;
-        expect(
-          topNoticeController.current!.message,
-          equals('改修成功：火力 ▲ 2 (MAX)'),
-        );
+        expect(topNoticeController.current!.message, equals('近代化改修成功'));
 
         // Modernization max cap in zh_Hant
         final zhHantMaxController = GameInfoNoticeController(
@@ -1965,7 +2460,7 @@ void main() {
         // Delta: 44 - 36 = 8. Max luck reached (remaining <= 0).
         expect(
           topNoticeController.current!.message,
-          equals('改修成功：运 ▲ 8 (MAX)'),
+          equals('改修成功：运 ▲▲ 8 / MAX'),
         );
 
         // 2. HP Modernization Overflow (e.g. kyouka[5] reaches 3):
@@ -1999,10 +2494,10 @@ void main() {
         );
 
         await hpController.idle;
-        // Delta: 3 - 1 = 2. Max HP reached (remaining = 2 - 3 = -1 <= 0).
+        // Poi does not have an HP modernization cap in its master status pairs.
         expect(
           topNoticeController.current!.message,
-          equals('改修成功：耐久 ▲ 2 (MAX)'),
+          equals('改修成功：耐久 ▲▲ 2 / ?'),
         );
 
         // 3. ASW Modernization: Overflow past 9 (e.g. 10):
@@ -2036,10 +2531,10 @@ void main() {
         );
 
         await aswController.idle;
-        // Delta: 10 - 8 = 2. Max ASW reached (9 - 10 = -1 <= 0).
+        // Poi treats ASW remaining capacity as unknown.
         expect(
           topNoticeController.current!.message,
-          equals('改修成功：对潜 ▲ 2 (MAX)'),
+          equals('改修成功：对潜 ▲▲ 2 / ?'),
         );
 
         // 4. ASW already at 9, another Kaiboukan fed (ASW delta 0):
@@ -2127,8 +2622,7 @@ void main() {
           topNoticeController: topNoticeController,
         );
 
-        // Modernization event without api_kyouka (old API fallback):
-        // Firepower reaches 52/52 (MAX). Torpedo reaches 85/89.
+        // The response lacks api_kyouka, so displayed totals cannot prove a gain.
         controller.accept(
           createEvent(
             '/kcsapi/api_req_kaisou/powerup',
@@ -2143,10 +2637,7 @@ void main() {
 
         await controller.idle;
         final msg = topNoticeController.current!.message;
-        // Firepower: 52 - 48 = 4 (MAX). Torpedo: 85 - 80 = 5.
-        expect(msg, contains('火力 ▲ 4 (MAX)'));
-        expect(msg, contains('雷装 ▲ 5'));
-        expect(msg, isNot(contains('雷装 ▲ 5 (MAX)')));
+        expect(msg, '近代化改修成功');
         expect(
           topNoticeController.current!.tone,
           equals(TopNoticeTone.success),
