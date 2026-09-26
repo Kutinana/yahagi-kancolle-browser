@@ -115,3 +115,15 @@ test/*/fixtures/
 # Local Git worktrees
 .worktrees/
 .superpowers/
+
+# Local credentials and signing material
+.env
+.env.*
+!.env.example
+**/key.properties
+*.jks
+*.keystore
+*.p12
+*.pem
+*.p8
+*.mobileprovision
