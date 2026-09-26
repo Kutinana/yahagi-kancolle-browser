@@ -18,10 +18,33 @@ class VerifyDataReleaseTest(unittest.TestCase):
         if DART is None:
             raise unittest.SkipTest('Dart SDK is not installed')
 
-    def test_rejects_tampered_tracked_sortie_manifest(self):
+    def test_local_contract_can_run_before_release_upload(self):
+        result = subprocess.run(
+            [DART, 'run', 'tool/verify_data_release.dart', '--local-only'],
+            cwd=ROOT, capture_output=True, text=True, timeout=120,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Local data release contract passed', result.stdout)
+
+    def test_rejects_tampered_published_sortie_size(self):
         with tempfile.TemporaryDirectory() as temporary:
             source = json.loads((ROOT / 'data/sortie/manifest.json').read_text(encoding='utf-8'))
             source['archive']['bytes'] += 1
+            target = Path(temporary) / 'sortie-manifest.json'
+            target.write_text(json.dumps(source), encoding='utf-8')
+
+            result = subprocess.run(
+                [DART, 'run', 'tool/verify_data_release.dart', '--sortie-manifest', str(target)],
+                cwd=ROOT, capture_output=True, text=True, timeout=120,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('Published sortie ZIP does not match tracked manifest', result.stderr)
+
+    def test_rejects_tampered_sortie_semantic_manifest(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = json.loads((ROOT / 'data/sortie/manifest.json').read_text(encoding='utf-8'))
+            source['counts']['formations'] += 1
             target = Path(temporary) / 'sortie-manifest.json'
             target.write_text(json.dumps(source), encoding='utf-8')
 

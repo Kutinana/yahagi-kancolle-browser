@@ -163,6 +163,9 @@ def _zip_info(name: str, published_at: str) -> zipfile.ZipInfo:
         name,
         date_time=(year, timestamp.month, timestamp.day, timestamp.hour, timestamp.minute, timestamp.second),
     )
+    # Keep the central directory identical to the already published Windows
+    # archive when this builder runs on Linux (including GitHub Actions).
+    info.create_system = 0
     info.compress_type = zipfile.ZIP_DEFLATED
     info.external_attr = 0o100644 << 16
     return info

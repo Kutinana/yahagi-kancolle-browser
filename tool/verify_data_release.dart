@@ -1,7 +1,9 @@
 // Builds both maintained data releases and checks them with the app's runtime
 // parsers and persistent stores. Run from the repository root with `dart run`.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/enemy_catalog.dart';
@@ -10,28 +12,40 @@ import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_
 import 'package:yahagi_kancolle_browser/src/toolbox/sortie_map_query/sortie_map_catalog_store.dart';
 
 Future<void> main(List<String> arguments) async {
-  final options = _options(arguments);
+  final localOnly = arguments.contains('--local-only');
+  if (arguments.where((value) => value == '--local-only').length > 1) {
+    throw const FormatException('Duplicate --local-only option.');
+  }
+  final options = _options(List<String>.of(arguments)..remove('--local-only'));
   final temporary = await Directory.systemTemp.createTemp(
     'yahagi-data-contract-',
   );
   try {
     final appVersion = _appVersion();
-    await _verifySortie(
+    final sortie = await _verifySortie(
       temporary,
       appVersion,
       File(options['--sortie-manifest'] ?? 'data/sortie/manifest.json'),
     );
-    await _verifyEnemy(
+    final enemy = await _verifyEnemy(
       temporary,
       File(options['--enemy-manifest'] ?? 'data/enemy/manifest.json'),
     );
-    stdout.writeln('Data release contract passed: sortie ZIP and enemy JSON.');
+    if (!localOnly) {
+      await _verifyPublishedSortie(temporary, appVersion, sortie.$1, sortie.$2);
+      await _verifyPublishedEnemy(enemy.$1, enemy.$2);
+    }
+    stdout.writeln(
+      localOnly
+          ? 'Local data release contract passed.'
+          : 'Data release contract passed: published sortie ZIP and enemy JSON.',
+    );
   } finally {
     await temporary.delete(recursive: true);
   }
 }
 
-Future<void> _verifySortie(
+Future<(SortieMapCatalogManifest, InstalledSortieMapCatalog)> _verifySortie(
   Directory temporary,
   String appVersion,
   File trackedManifestFile,
@@ -49,7 +63,7 @@ Future<void> _verifySortie(
   final trackedRaw = await trackedManifestFile.readAsString();
   final manifest = SortieMapCatalogManifest.fromJsonString(generatedRaw);
   final trackedManifest = SortieMapCatalogManifest.fromJsonString(trackedRaw);
-  if (!_sameJsonDocument(generatedRaw, trackedRaw)) {
+  if (!_sameSortieManifest(generatedRaw, trackedRaw)) {
     throw StateError('Generated sortie release differs from tracked manifest.');
   }
   final bytes = await File(
@@ -77,9 +91,13 @@ Future<void> _verifySortie(
       (await store.loadCached())?.data.maps.length != manifest.mapCount) {
     throw StateError('Generated sortie ZIP did not survive cache reload.');
   }
+  return (trackedManifest, installed);
 }
 
-Future<void> _verifyEnemy(Directory temporary, File trackedManifestFile) async {
+Future<(Map<String, dynamic>, List<int>)> _verifyEnemy(
+  Directory temporary,
+  File trackedManifestFile,
+) async {
   final trackedRaw = await trackedManifestFile.readAsString();
   final tracked = jsonDecode(trackedRaw) as Map<String, dynamic>;
   final releaseUri = Uri.parse(tracked['dataUrl'] as String);
@@ -124,6 +142,174 @@ Future<void> _verifyEnemy(Directory temporary, File trackedManifestFile) async {
           generated['dataSha256']) {
     throw StateError('Generated enemy JSON did not survive cache reload.');
   }
+  return (tracked, bytes);
+}
+
+Future<void> _verifyPublishedSortie(
+  Directory temporary,
+  String appVersion,
+  SortieMapCatalogManifest manifest,
+  InstalledSortieMapCatalog generated,
+) async {
+  final publishedBytes = await _downloadPublished(
+    manifest.releaseUri,
+    maximumBytes: 64 * 1024 * 1024,
+  );
+  if (publishedBytes.length != manifest.archiveBytes ||
+      sha256.convert(publishedBytes).toString() != manifest.archiveSha256) {
+    throw StateError('Published sortie ZIP does not match tracked manifest.');
+  }
+  final publishedStore = FileSortieMapCatalogStore(
+    root: Directory('${temporary.path}/sortie-published'),
+    currentAppVersion: appVersion,
+  );
+  final published = await publishedStore.installArchive(
+    publishedBytes,
+    expected: SortieMapCatalogInstallExpectation(
+      version: manifest.version,
+      mapCount: manifest.mapCount,
+      nodeCount: manifest.nodeCount,
+      formationCount: manifest.formationCount,
+      minimumAppVersion: manifest.minimumAppVersion,
+    ),
+  );
+  // The runtime installer bounds and validates every ZIP member before writing
+  // the exact decoded bytes to each version directory.
+  final generatedFiles = await _installedFileNames(generated);
+  final publishedFiles = await _installedFileNames(published);
+  if (generatedFiles.length != publishedFiles.length ||
+      !generatedFiles.containsAll(publishedFiles)) {
+    throw StateError('Published sortie ZIP member names differ from source.');
+  }
+  for (final name in generatedFiles) {
+    if (!_sameBytes(
+      await generated.resolve(name).readAsBytes(),
+      await published.resolve(name).readAsBytes(),
+    )) {
+      throw StateError(
+        'Published sortie ZIP member differs from source: $name',
+      );
+    }
+  }
+}
+
+Future<Set<String>> _installedFileNames(
+  InstalledSortieMapCatalog installed,
+) async {
+  final raw = await File(
+    '${installed.root.path}/.install-metadata.json',
+  ).readAsString();
+  final metadata = jsonDecode(raw) as Map<String, dynamic>;
+  return (metadata['files'] as Map<String, dynamic>).keys.toSet();
+}
+
+Future<void> _verifyPublishedEnemy(
+  Map<String, dynamic> manifest,
+  List<int> sourceBytes,
+) async {
+  final uri = Uri.parse(manifest['dataUrl'] as String);
+  final publishedBytes = await _downloadPublished(
+    uri,
+    maximumBytes: 4 * 1024 * 1024,
+  );
+  if (publishedBytes.length != manifest['dataBytes'] ||
+      sha256.convert(publishedBytes).toString() != manifest['dataSha256']) {
+    throw StateError('Published enemy JSON does not match tracked manifest.');
+  }
+  if (!_sameBytes(sourceBytes, publishedBytes)) {
+    throw StateError('Published enemy JSON differs from tracked source.');
+  }
+}
+
+bool _sameBytes(List<int> first, List<int> second) {
+  if (first.length != second.length) return false;
+  for (var index = 0; index < first.length; index++) {
+    if (first[index] != second[index]) return false;
+  }
+  return true;
+}
+
+Future<List<int>> _downloadPublished(
+  Uri uri, {
+  required int maximumBytes,
+}) async {
+  if (uri.scheme != 'https' ||
+      uri.host != 'github.com' ||
+      !uri.path.startsWith(
+        '/yamatosaki/yahagi-kancolle-data/releases/download/',
+      )) {
+    throw FormatException('Unexpected published release URL: $uri');
+  }
+  Object? lastError;
+  for (var attempt = 0; attempt < 2; attempt++) {
+    final client = HttpClient()..autoUncompress = false;
+    try {
+      return await _readPublished(
+        client,
+        uri,
+        maximumBytes,
+      ).timeout(const Duration(minutes: 5));
+    } on SocketException catch (error) {
+      lastError = error;
+    } on HttpException catch (error) {
+      lastError = error;
+    } on TimeoutException catch (error) {
+      lastError = error;
+    } finally {
+      client.close(force: true);
+    }
+  }
+  throw StateError(
+    'Published release download failed after two attempts: $lastError',
+  );
+}
+
+Future<List<int>> _readPublished(
+  HttpClient client,
+  Uri uri,
+  int maximumBytes,
+) async {
+  const allowedHosts = <String>{
+    'github.com',
+    'release-assets.githubusercontent.com',
+    'objects.githubusercontent.com',
+  };
+  var current = uri;
+  HttpClientResponse? response;
+  for (var hop = 0; hop <= 5; hop++) {
+    final request = await client.getUrl(current);
+    request.followRedirects = false;
+    response = await request.close();
+    if (response.statusCode == HttpStatus.ok) break;
+    if (!const <int>{301, 302, 303, 307, 308}.contains(response.statusCode) ||
+        hop == 5) {
+      throw HttpException('Unexpected release response', uri: current);
+    }
+    final location = response.headers.value(HttpHeaders.locationHeader);
+    if (location == null) {
+      throw HttpException('Release redirect has no location', uri: current);
+    }
+    final next = current.resolve(location);
+    if (next.scheme != 'https' || !allowedHosts.contains(next.host)) {
+      throw HttpException('Untrusted release redirect', uri: next);
+    }
+    await response.drain<void>();
+    current = next;
+  }
+  if (response == null || response.statusCode != HttpStatus.ok) {
+    throw HttpException('Release download did not complete', uri: current);
+  }
+  if (response.contentLength > maximumBytes) {
+    throw StateError('Published release exceeds download limit.');
+  }
+  final data = BytesBuilder(copy: false);
+  await for (final chunk in response.timeout(const Duration(seconds: 30))) {
+    if (data.length + chunk.length > maximumBytes) {
+      throw StateError('Published release exceeds download limit.');
+    }
+    data.add(chunk);
+  }
+  return data.takeBytes();
 }
 
 Future<void> _runPython(List<String> arguments) async {
@@ -157,6 +343,19 @@ Map<String, String> _options(List<String> arguments) {
 bool _sameJsonDocument(String first, String second) =>
     jsonEncode(_canonicalJson(jsonDecode(first))) ==
     jsonEncode(_canonicalJson(jsonDecode(second)));
+
+bool _sameSortieManifest(String generatedRaw, String trackedRaw) {
+  final generated = jsonDecode(generatedRaw) as Map<String, dynamic>;
+  final tracked = jsonDecode(trackedRaw) as Map<String, dynamic>;
+  // ZIP compression bytes vary with zlib version. Compare all semantic fields
+  // here, then bind the published digest to the real downloaded ZIP above.
+  final generatedArchive = generated['archive'] as Map<String, dynamic>;
+  final trackedArchive = tracked['archive'] as Map<String, dynamic>;
+  generatedArchive['bytes'] = trackedArchive['bytes'];
+  generatedArchive['sha256'] = trackedArchive['sha256'];
+  return jsonEncode(_canonicalJson(generated)) ==
+      jsonEncode(_canonicalJson(tracked));
+}
 
 Object? _canonicalJson(Object? value) {
   if (value is Map<String, dynamic>) {

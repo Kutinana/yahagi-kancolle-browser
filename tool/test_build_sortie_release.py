@@ -38,6 +38,42 @@ def _fixture(root: Path, *, data_version: str = '2026.09.20') -> tuple[Path, Pat
 
 
 class BuildSortieReleaseTest(unittest.TestCase):
+    def test_zip_metadata_is_windows_compatible_on_posix(self):
+        # zipfile defaults ZipInfo.create_system to 3 on POSIX, changing the
+        # central directory and the SHA-256 of an otherwise identical build.
+        with patch.object(zipfile.sys, 'platform', 'linux'):
+            info = build_sortie_release._zip_info(
+                'sortie_map_catalog.json', '2026-09-20T01:00:00Z',
+            )
+        self.assertEqual(info.create_system, 0)
+
+    def test_committed_catalog_rebuilds_platform_independent_archive_contents(self):
+        project_root = Path(__file__).resolve().parents[1]
+        published = json.loads(
+            (project_root / 'data' / 'sortie' / 'manifest.json').read_text(encoding='utf-8')
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive_path = build_release(
+                project_root / 'assets', root / 'manifest.json', root / 'dist',
+            )
+            generated = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+            self.assertEqual(generated['counts'], published['counts'])
+            self.assertEqual(generated['revision'], published['revision'])
+            with zipfile.ZipFile(archive_path) as archive:
+                members = archive.namelist()
+                self.assertEqual(len(members), 1 + 2 * generated['counts']['maps'])
+                self.assertEqual(len(members), len(set(members)))
+                self.assertIn('sortie_map_catalog.json', members)
+                self.assertTrue(all(info.create_system == 0 for info in archive.infolist()))
+                archived_catalog = json.loads(archive.read('sortie_map_catalog.json'))
+                self.assertEqual(archived_catalog['revision'], published['revision'])
+                for member in members:
+                    if member == 'sortie_map_catalog.json':
+                        continue
+                    source = project_root / 'assets' / 'images' / 'sortie_maps' / member
+                    self.assertEqual(archive.read(member), source.read_bytes(), member)
+
     def test_rejects_catalog_without_nodes(self):
         with tempfile.TemporaryDirectory() as temporary:
             assets, manifest, dist = _fixture(Path(temporary))

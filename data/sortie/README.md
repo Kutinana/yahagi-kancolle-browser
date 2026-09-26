@@ -26,7 +26,7 @@
    python -m unittest tool.test_build_sortie_map_assets -v
    ```
 
-4. 生成确定性发布包和 `manifest.json`：
+4. 生成发布包和 `manifest.json`：
 
    需要 Python 的 Pillow 包（`python -m pip install pillow`）。内容有变化时，
    必须提高 catalog 的 `revision`，并使用新的 `dataVersion`，以生成新的 Release
@@ -37,15 +37,22 @@
    python -m unittest tool.test_build_sortie_release -v
    ```
 
-   发布前从仓库根目录运行客户端契约验收：
+   上传前从仓库根目录运行本地客户端契约验收：
+
+   ```powershell
+   dart run tool/verify_data_release.dart --local-only
+   ```
+
+5. 先在 [资料专用仓库](https://github.com/yamatosaki/yahagi-kancolle-data) 创建清单中 `archive.tag` 对应的 GitHub Release，并上传
+   `data/sortie/dist/` 中名称与 `archive.fileName` 完全相同的 ZIP。压缩字节可能随
+   zlib 版本变化，必须上传与本次 `manifest.json` 配套生成的文件。上传敌舰资料资产后，
+   从仓库根目录运行完整契约验收，下载两份正式资产，核对大小、SHA-256 和全部海域 ZIP
+   成员的解压字节，再提交并推送源资料、随包快照与 `manifest.json`：
 
    ```powershell
    dart run tool/verify_data_release.dart
    ```
 
-5. 先在 [资料专用仓库](https://github.com/yamatosaki/yahagi-kancolle-data) 创建清单中 `archive.tag` 对应的 GitHub Release，并上传
-   `data/sortie/dist/` 中名称与 `archive.fileName` 完全相同的 ZIP；下载复验
-   文件大小与 SHA-256 后，再提交并推送源资料、随包快照与 `manifest.json`。
    这样客户端永远不会先读到一个尚未可下载的发布清单。
 
    推送清单后执行真实下载与安装验收：
