@@ -136,7 +136,9 @@ void main() {
     await expectLater(
       find.byKey(const Key('live-battle-card')),
       matchesGoldenFile(
-        '../docs/previews/combined-fleet-prophet-sidebar-preview.png',
+        Platform.isLinux
+            ? 'goldens/combined-fleet-prophet-sidebar-preview-linux.png'
+            : '../docs/previews/combined-fleet-prophet-sidebar-preview.png',
       ),
     );
   });
