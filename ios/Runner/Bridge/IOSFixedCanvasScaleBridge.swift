@@ -186,11 +186,6 @@ import WebKit
         }
       }
     }
-    for window in UIApplication.shared.windows {
-      if let found = findWKWebView(in: window) {
-        return found
-      }
-    }
     return nil
   }
 

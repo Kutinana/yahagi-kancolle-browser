@@ -99,7 +99,11 @@ final class IOSDiagnosticsBridge: NSObject {
 
       let fileURL = URL(fileURLWithPath: path)
       DispatchQueue.main.async { [weak self] in
-        guard let rootVC = self?.viewController ?? UIApplication.shared.windows.first?.rootViewController else {
+        let windows = UIApplication.shared.connectedScenes
+          .compactMap { $0 as? UIWindowScene }
+          .flatMap { $0.windows }
+        let fallbackWindow = windows.first(where: { $0.isKeyWindow }) ?? windows.first
+        guard let rootVC = self?.viewController ?? fallbackWindow?.rootViewController else {
           result(FlutterError(code: "no_view_controller", message: "Root view controller not found", details: nil))
           return
         }
