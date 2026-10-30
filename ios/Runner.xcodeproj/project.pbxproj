@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -23,16 +23,16 @@
 		74858FAF1ED2DC560051582A /* IOSCompositionImageBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */; };
 		74858FAF1ED2DC560051582B /* IOSDiagnosticsBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */; };
 		74858FAF1ED2DC560051582C /* IOSOriginCookieBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582C /* IOSOriginCookieBridge.swift */; };
-		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
-		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
-		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
-		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
-		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		74858FAF1ED2DC560051582D /* IOSDocumentPickerCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582D /* IOSDocumentPickerCoordinator.swift */; };
 		74858FAF1ED2DC560051582E /* IOSCustomFontBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582E /* IOSCustomFontBridge.swift */; };
 		74858FAF1ED2DC560051582F /* IOSShipSubtitleBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582F /* IOSShipSubtitleBridge.swift */; };
 		74858FAF1ED2DC5600515830 /* IOSRecordBackupBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515830 /* IOSRecordBackupBridge.swift */; };
 		74858FAF1ED2DC5600515831 /* IOSCameraGeometryBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515831 /* IOSCameraGeometryBridge.swift */; };
+		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
+		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
+		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
+		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,6 +78,11 @@
 		74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSCompositionImageBridge.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSDiagnosticsBridge.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC560051582C /* IOSOriginCookieBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSOriginCookieBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC560051582D /* IOSDocumentPickerCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSDocumentPickerCoordinator.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC560051582E /* IOSCustomFontBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSCustomFontBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC560051582F /* IOSShipSubtitleBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSShipSubtitleBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC5600515830 /* IOSRecordBackupBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSRecordBackupBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC5600515831 /* IOSCameraGeometryBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSCameraGeometryBridge.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
@@ -88,11 +93,6 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		74858FAE1ED2DC560051582D /* IOSDocumentPickerCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSDocumentPickerCoordinator.swift; sourceTree = "<group>"; };
-		74858FAE1ED2DC560051582E /* IOSCustomFontBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSCustomFontBridge.swift; sourceTree = "<group>"; };
-		74858FAE1ED2DC560051582F /* IOSShipSubtitleBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSShipSubtitleBridge.swift; sourceTree = "<group>"; };
-		74858FAE1ED2DC5600515830 /* IOSRecordBackupBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSRecordBackupBridge.swift; sourceTree = "<group>"; };
-		74858FAE1ED2DC5600515831 /* IOSCameraGeometryBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSCameraGeometryBridge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -237,7 +237,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1510;
+				LastUpgradeCheck = 2660;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
 					331C8080294A63A400263BE5 = {
@@ -417,6 +417,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -439,6 +440,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
@@ -542,6 +544,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -571,6 +574,7 @@
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -599,6 +603,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -621,6 +626,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
