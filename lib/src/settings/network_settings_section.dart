@@ -1,3 +1,4 @@
+import '../ios/ios_platform_support.dart';
 import '../theme/app_palette.dart';
 import '../localization/runtime_message_text.dart';
 import 'package:flutter/material.dart';
@@ -390,11 +391,17 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
             lookupAppLocalizations(const Locale('zh'));
         final c = widget.controller;
         final bool isProxySupported = c.isProxyOverrideSupported;
+        final isIOSLegacy = isIOSPlatform && !isProxySupported;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!isProxySupported)
+            if (isIOSLegacy)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(iosProxyUnavailableDescription(context)),
+              ),
+            if (!isProxySupported && !isIOSPlatform)
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),
@@ -427,22 +434,30 @@ class _NetworkSettingsSectionState extends State<NetworkSettingsSection> {
                   subtitle: l10n.systemNetworkDesc,
                   enabled: true,
                 ),
-                Divider(color: appColor(context, Color(0xff294052)), height: 1),
-                _networkModeTile(
-                  key: const Key('network-mode-http'),
-                  mode: NetworkMode.httpProxy,
-                  title: l10n.httpProxy,
-                  subtitle: l10n.httpProxyDesc,
-                  enabled: isProxySupported,
-                ),
-                Divider(color: appColor(context, Color(0xff294052)), height: 1),
-                _networkModeTile(
-                  key: const Key('network-mode-socks5'),
-                  mode: NetworkMode.socks5Proxy,
-                  title: l10n.socks5Proxy,
-                  subtitle: l10n.socks5ProxyDesc,
-                  enabled: isProxySupported,
-                ),
+                if (!isIOSLegacy) ...[
+                  Divider(
+                    color: appColor(context, Color(0xff294052)),
+                    height: 1,
+                  ),
+                  _networkModeTile(
+                    key: const Key('network-mode-http'),
+                    mode: NetworkMode.httpProxy,
+                    title: l10n.httpProxy,
+                    subtitle: l10n.httpProxyDesc,
+                    enabled: isProxySupported,
+                  ),
+                  Divider(
+                    color: appColor(context, Color(0xff294052)),
+                    height: 1,
+                  ),
+                  _networkModeTile(
+                    key: const Key('network-mode-socks5'),
+                    mode: NetworkMode.socks5Proxy,
+                    title: l10n.socks5Proxy,
+                    subtitle: l10n.socks5ProxyDesc,
+                    enabled: isProxySupported,
+                  ),
+                ],
               ],
             ),
 

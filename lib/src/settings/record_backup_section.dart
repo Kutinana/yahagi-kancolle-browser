@@ -2,6 +2,7 @@ import '../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 import '../backup/record_backup.dart';
+import '../ios/ios_platform_support.dart';
 import '../localization/record_backup_strings.dart';
 import '../widgets/top_notice.dart';
 import 'settings_ui_helpers.dart';
@@ -153,7 +154,9 @@ class RecordBackupSection extends StatelessWidget with SettingsUIHelpers {
           buildActionTile(
             key: const Key('settings-backup-folder'),
             title: strings.folder,
-            subtitle: strings.folderHint,
+            subtitle: isIOSPlatform
+                ? iosBackupFolderDescription(context)
+                : strings.folderHint,
             trailing: Icon(
               Icons.folder_open_outlined,
               color: appColor(

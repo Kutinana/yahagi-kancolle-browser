@@ -14,7 +14,9 @@ const MethodChannel _defaultGameFrameRateChannel = MethodChannel(
 );
 
 GameFrameRatePort createPlatformGameFrameRatePort() {
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS)) {
     return const MethodChannelGameFrameRatePort();
   }
   return const UnsupportedGameFrameRatePort();
@@ -23,7 +25,9 @@ GameFrameRatePort createPlatformGameFrameRatePort() {
 GameFrameRateRuntimePort createGameFrameRateRuntimePort(
   WebViewController controller,
 ) {
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS)) {
     return const MethodChannelGameFrameRateRuntimePort();
   }
   return WebViewGameFrameRateRuntimePort(controller);

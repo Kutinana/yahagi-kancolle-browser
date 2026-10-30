@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../ios/ios_platform_support.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../audio/game_audio_controller.dart';
@@ -63,9 +64,20 @@ class GameRuntimeSettingsPage extends StatelessWidget with SettingsUIHelpers {
         lookupAppLocalizations(const Locale('zh'));
     String text(String source) => settingsOrganizationText(context, source);
     final groups = <Widget>[
-      if (gameFrameRateSettingsController != null ||
+      if (isIOSPlatform ||
+          gameFrameRateSettingsController != null ||
           gameRenderingModeController != null)
         _section(text('settingsGroupPerformanceRendering'), [
+          if (isIOSPlatform)
+            SizedBox(
+              width: double.infinity,
+              child: buildActionTile(
+                title: l10n.gameRenderingModeTitle,
+                subtitle: iosNativeRendererDescription(context),
+              ),
+            ),
+          if (isIOSPlatform && gameFrameRateSettingsController != null)
+            _divider(context),
           if (gameFrameRateSettingsController case final frameRate?)
             GameFrameRateSettingsSection(controller: frameRate),
           if (gameRenderingModeController case final rendering?) ...[
@@ -136,29 +148,33 @@ class GameRuntimeSettingsPage extends StatelessWidget with SettingsUIHelpers {
               builder: (context, _) => buildSwitchTile(
                 title: l10n.backgroundGameRetention,
                 titleKey: const Key('settings-background-game-retention'),
-                subtitle: switch (retention.errorMessage) {
-                  final error? => runtimeMessageText(context, error),
-                  null => l10n.backgroundGameRetentionDesc,
-                },
-                value: retention.enabled,
-                onChanged: retention.setEnabled,
+                subtitle: isIOSPlatform
+                    ? iosUnsupportedDescription(context)
+                    : switch (retention.errorMessage) {
+                        final error? => runtimeMessageText(context, error),
+                        null => l10n.backgroundGameRetentionDesc,
+                      },
+                value: !isIOSPlatform && retention.enabled,
+                onChanged: isIOSPlatform ? null : retention.setEnabled,
               ),
             ),
           ],
         ]),
       if (appExitSettingsController != null ||
-          gameMouseWheelSettingsController != null ||
+          (!isIOSPlatform && gameMouseWheelSettingsController != null) ||
           gameFrameRefreshShortcutSettings != null)
         _section(l10n.operationProtectionTitle, [
           if (appExitSettingsController case final exit?)
             AppExitSettingsSection(controller: exit),
-          if (gameMouseWheelSettingsController case final wheel?) ...[
+          if (!isIOSPlatform && gameMouseWheelSettingsController != null) ...[
             if (appExitSettingsController != null) _divider(context),
-            GameMouseWheelSettingsSection(controller: wheel),
+            GameMouseWheelSettingsSection(
+              controller: gameMouseWheelSettingsController!,
+            ),
           ],
           if (gameFrameRefreshShortcutSettings case final refresh?) ...[
             if (appExitSettingsController != null ||
-                gameMouseWheelSettingsController != null)
+                (!isIOSPlatform && gameMouseWheelSettingsController != null))
               _divider(context),
             AnimatedBuilder(
               animation: refresh,

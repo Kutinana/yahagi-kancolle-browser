@@ -2,6 +2,7 @@ import '../theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../ios/ios_platform_support.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../account/account_session.dart';
@@ -70,6 +71,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
     this.shipSubtitleCatalogController,
     this.telemetryController,
     this.backupService,
+    this.additionalSections,
   });
 
   final CaptureModeController captureModeController;
@@ -93,6 +95,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
   final ShipSubtitleCatalogController? shipSubtitleCatalogController;
   final TelemetryController? telemetryController;
   final RecordBackupService? backupService;
+  final List<Widget>? additionalSections;
 
   RecordBackupService? get _backupService =>
       backupService ?? RecordBackupService.shared;
@@ -184,7 +187,15 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
               buildCard(child: Column(children: _divided(updates))),
               const SizedBox(height: 24),
             ],
-            if (gameResourceCacheController case final controller?) ...[
+            if (isIOSPlatform) ...[
+              buildSectionTitle(l10n.gameResourceCacheTitle),
+              buildCard(
+                child: IOSUnavailableSetting(
+                  title: l10n.gameResourceCacheTitle,
+                ),
+              ),
+              const SizedBox(height: 24),
+            ] else if (gameResourceCacheController case final controller?) ...[
               buildSectionTitle(l10n.gameResourceCacheTitle),
               buildCard(
                 child: AnimatedBuilder(
@@ -344,6 +355,7 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
                 ]),
               ),
             ),
+            ...?additionalSections,
             const SizedBox(height: 40),
           ],
         ),

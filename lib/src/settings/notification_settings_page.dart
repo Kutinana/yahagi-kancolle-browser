@@ -1,5 +1,6 @@
 import '../theme/app_palette.dart';
 import 'package:flutter/material.dart';
+import '../ios/ios_platform_support.dart';
 import '../../l10n/app_localizations.dart';
 import '../notification/method_channel_notification_port.dart';
 import '../notification/notification_models.dart';
@@ -126,8 +127,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                           context,
                           'settingsSystemNotificationVibration',
                         ),
-                        value: settings.vibration,
-                        onChanged: settings.master
+                        subtitle: isIOSPlatform
+                            ? iosUnsupportedDescription(context)
+                            : null,
+                        value: !isIOSPlatform && settings.vibration,
+                        onChanged: !isIOSPlatform && settings.master
                             ? (v) => controller.setVibration(v)
                             : null,
                       ),
@@ -313,8 +317,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                     children: [
                       buildSwitchTile(
                         title: l10n.notificationOngoingLive,
-                        value: settings.ongoingLive,
-                        onChanged: settings.master
+                        subtitle: isIOSPlatform
+                            ? iosUnsupportedDescription(context)
+                            : null,
+                        value: !isIOSPlatform && settings.ongoingLive,
+                        onChanged: !isIOSPlatform && settings.master
                             ? (v) => controller.setOngoingLive(v)
                             : null,
                       ),
@@ -334,21 +341,30 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                             _buildCheckItem(
                               label: l10n.notificationProgress,
                               value: settings.showProgress,
-                              enabled: settings.master && settings.ongoingLive,
+                              enabled:
+                                  !isIOSPlatform &&
+                                  settings.master &&
+                                  settings.ongoingLive,
                               onChanged: (v) =>
                                   controller.setShowProgress(v ?? true),
                             ),
                             _buildCheckItem(
                               label: l10n.notificationPercent,
                               value: settings.showPercent,
-                              enabled: settings.master && settings.ongoingLive,
+                              enabled:
+                                  !isIOSPlatform &&
+                                  settings.master &&
+                                  settings.ongoingLive,
                               onChanged: (v) =>
                                   controller.setShowPercent(v ?? true),
                             ),
                             _buildCheckItem(
                               label: l10n.notificationCountdown,
                               value: settings.showCountdown,
-                              enabled: settings.master && settings.ongoingLive,
+                              enabled:
+                                  !isIOSPlatform &&
+                                  settings.master &&
+                                  settings.ongoingLive,
                               onChanged: (v) =>
                                   controller.setShowCountdown(v ?? true),
                             ),

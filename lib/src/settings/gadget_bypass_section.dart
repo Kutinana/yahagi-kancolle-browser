@@ -1,3 +1,4 @@
+import '../ios/ios_platform_support.dart';
 import '../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
@@ -93,6 +94,12 @@ class _GadgetBypassSectionState extends State<GadgetBypassSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (isIOSPlatform) {
+      return IOSUnavailableSetting(
+        title: l10n.gadgetBypassEnable,
+        showSwitch: true,
+      );
+    }
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
