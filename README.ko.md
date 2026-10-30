@@ -35,6 +35,6 @@ Apple은 2027년 봄에 iOS 앱의 최소 지원 버전을 iOS 15.0으로 공식
 
 사용 중 문제가 발생하면 언제든지 이 저장소에 [Issue](https://github.com/Kutinana/yahagi-kancolle-browser/issues)를 제출해 주세요. 버전, 기기, OS, 재현 절차를 함께 첨부해 주시기 바랍니다. 동영상이나 GitHub에 업로드하기 어려운 첨부 파일을 보내려면 kanade@yoisaki.com으로도 연락하실 수 있습니다.
 
-이 저장소는 새로운 기능을 추가하지 않으므로, 공통 기능에 대한 질문이나 제안은 업스트림 저장소의 [교류 및 피드백](https://github.com/Kutinana/yahagi-kancolle-browser#%E4%BA%A4%E6%B5%81%E4%B8%8E%E5%8F%8D%E9%A6%88)으로 연락해 보시기 바랍니다. 공식 교류 QQ 그룹 1104904097에 가입하시기를 권장합니다.
+이 저장소는 새로운 기능을 추가하지 않으므로, 공통 기능에 대한 질문이나 제안은 업스트림 저장소의 [교류 및 피드백](https://github.com/yamatosaki/yahagi-kancolle-browser#%E4%BA%A4%E6%B5%81%E4%B8%8E%E5%8F%8D%E9%A6%88)으로 연락해 보시기 바랍니다.
 
 이 프로젝트는 업스트림 프로젝트의 비공식 파생판입니다. 데이터 처리, 개인정보 처리방침, 라이선스 등은 업스트림 저장소를 기준으로 합니다.

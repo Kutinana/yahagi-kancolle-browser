@@ -35,6 +35,6 @@ Please note that Apple will officially raise the minimum supported iOS version f
 
 If you encounter a problem while using the app, you are welcome to submit an [Issue](https://github.com/Kutinana/yahagi-kancolle-browser/issues) to this repository. Please include the app version, device, OS version, and steps to reproduce it. If you would like to send a video or another attachment that is difficult to upload to GitHub, you can also contact me at kanade@yoisaki.com.
 
-This repository does not add any new features. For questions or suggestions about shared features, please consider contacting the upstream repository through [Discussion and feedback](https://github.com/Kutinana/yahagi-kancolle-browser#%E4%BA%A4%E6%B5%81%E4%B8%8E%E5%8F%8D%E9%A6%88). We recommend joining the official QQ group: 1104904097.
+This repository does not add any new features. For questions or suggestions about shared features, please consider contacting the upstream repository through [Discussion and feedback](https://github.com/yamatosaki/yahagi-kancolle-browser#%E4%BA%A4%E6%B5%81%E4%B8%8E%E5%8F%8D%E9%A6%88).
 
 This project is an unofficial derivative of the upstream project. Please refer to the upstream repository for data handling, privacy policies, licensing, and related information.

@@ -35,6 +35,6 @@
 
 若您在使用過程中遇到問題，您可以隨時向本儲存庫提交 [Issue](https://github.com/Kutinana/yahagi-kancolle-browser/issues)，並請附上版本、裝置、系統及重現步驟。若您希望傳送影片或其他不易在 GitHub 平台上傳的附件，您也可以使用 kanade@yoisaki.com 聯絡我。
 
-本儲存庫不新增任何功能，因此若有通用功能的疑問或建議，請考慮聯絡上游儲存庫 [交流與回饋](https://github.com/Kutinana/yahagi-kancolle-browser#%E4%BA%A4%E6%B5%81%E4%B8%8E%E5%8F%8D%E9%A6%88)。推薦您加入官方交流 QQ 群組：1104904097。
+本儲存庫不新增任何功能，因此若有通用功能的疑問或建議，請考慮聯絡上游儲存庫 [交流與回饋](https://github.com/yamatosaki/yahagi-kancolle-browser#%E4%BA%A4%E6%B5%81%E4%B8%8E%E5%8F%8D%E9%A6%88)。
 
 本專案為上游專案的非官方衍生版本，資料處理、隱私權政策、License 等請以上游儲存庫為準。
