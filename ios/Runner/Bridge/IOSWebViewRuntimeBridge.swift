@@ -26,6 +26,10 @@ final class IOSWebViewRuntimeBridge: NSObject, WKScriptMessageHandler {
       generation += 1
       detach()
       result(nil)
+    case "stopLoading":
+      generation += 1
+      webView?.stopLoading()
+      result(nil)
     default: result(FlutterMethodNotImplemented)
     }
   }
@@ -65,7 +69,16 @@ final class IOSWebViewRuntimeBridge: NSObject, WKScriptMessageHandler {
       return
     }
     detach()
-    let proxy = IOSGameNavigationDelegate(delegate: delegate) { [weak self] in
+    let proxy = IOSGameNavigationDelegate(
+      delegate: delegate,
+      httpFailure: { [weak self] url, status in
+        self?.channel.invokeMethod(
+          "onMainFrameHttpError",
+          arguments: [
+            "url": url.absoluteString, "statusCode": status,
+          ])
+      }
+    ) { [weak self] in
       self?.report("webContentProcessTerminated")
     }
     let installed = WKUserScript(
@@ -132,10 +145,15 @@ final class IOSWebViewRuntimeBridge: NSObject, WKScriptMessageHandler {
 private final class IOSGameNavigationDelegate: NSObject, WKNavigationDelegate {
   private weak var delegate: WKNavigationDelegate?
   private let processTerminated: () -> Void
+  private let httpFailure: (URL, Int) -> Void
 
-  init(delegate: WKNavigationDelegate, processTerminated: @escaping () -> Void) {
+  init(
+    delegate: WKNavigationDelegate, httpFailure: @escaping (URL, Int) -> Void,
+    processTerminated: @escaping () -> Void
+  ) {
     self.delegate = delegate
     self.processTerminated = processTerminated
+    self.httpFailure = httpFailure
   }
 
   func webView(
@@ -185,6 +203,12 @@ private final class IOSGameNavigationDelegate: NSObject, WKNavigationDelegate {
     _ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
     decisionHandler: @escaping @MainActor (WKNavigationResponsePolicy) -> Void
   ) {
+    if navigationResponse.isForMainFrame,
+      let response = navigationResponse.response as? HTTPURLResponse,
+      response.statusCode >= 400, let url = response.url
+    {
+      httpFailure(url, response.statusCode)
+    }
     if delegate?.webView?(
       webView, decidePolicyFor: navigationResponse, decisionHandler: decisionHandler) == nil
     {
