@@ -36,6 +36,7 @@ import WebKit
   private var customFontBridge: IOSCustomFontBridge?
   private var shipSubtitleBridge: IOSShipSubtitleBridge?
   private var recordBackupBridge: IOSRecordBackupBridge?
+  private var webViewRuntimeBridge: IOSWebViewRuntimeBridge?
   private var isChannelsConfigured = false
 
   override func application(
@@ -77,6 +78,14 @@ import WebKit
     isChannelsConfigured = true
 
     NSLog("[AppDelegate] Setting up Flutter MethodChannels...")
+
+    let runtimeChannel = FlutterMethodChannel(
+      name: "app.yahagi.kancollebrowser/webview_runtime", binaryMessenger: controller.binaryMessenger)
+    let runtimeBridge = IOSWebViewRuntimeBridge(viewController: controller, channel: runtimeChannel)
+    webViewRuntimeBridge = runtimeBridge
+    runtimeChannel.setMethodCallHandler { call, result in
+      runtimeBridge.handle(call, result: result)
+    }
 
     // 1. Network Proxy MethodChannel
     let proxyChannel = FlutterMethodChannel(

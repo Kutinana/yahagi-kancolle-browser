@@ -39,6 +39,8 @@ import 'capture/capture_mode_controller.dart';
 import 'capture/android_game_capture_port.dart';
 import 'capture/game_capture_controller.dart';
 import 'capture/game_capture_port.dart';
+import 'diagnostics/diagnostic_event.dart';
+import 'diagnostics/diagnostic_recorder.dart';
 import 'game_webview.dart' show GameStartupState, WebViewGameBrowserPort;
 import 'prototype_status_controller.dart';
 import 'settings/network_settings_controller.dart';
@@ -60,6 +62,7 @@ class IOSGameWebView extends StatefulWidget {
     required this.toolbarController,
     required this.gameCaptureController,
     this.frameRateSettingsController,
+    this.diagnosticRecorder,
   });
 
   final NetworkSettingsController networkSettingsController;
@@ -71,6 +74,7 @@ class IOSGameWebView extends StatefulWidget {
   final GameToolbarController toolbarController;
   final GameCaptureController gameCaptureController;
   final GameFrameRateSettingsController? frameRateSettingsController;
+  final DiagnosticRecorder? diagnosticRecorder;
 
   @override
   State<IOSGameWebView> createState() => _IOSGameWebViewState();
@@ -80,6 +84,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     with WidgetsBindingObserver {
   late final WebViewController _webViewController;
   late final Future<void> _compatibilityReady;
+  late final Future<void> _webViewReady;
   late final GameCapturePort _gameCapturePort;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
 
@@ -90,7 +95,11 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   static const _audioChannel = MethodChannel(
     'app.yahagi.kancollebrowser/game_audio',
   );
+  static const _runtimeChannel = MethodChannel(
+    'app.yahagi.kancollebrowser/webview_runtime',
+  );
 
+  bool _runtimeInstalled = false;
   bool _audioPortAttached = false;
   bool _capturePortAttached = false;
   bool? _lastNativeBackgroundPlaybackEnabled;
@@ -119,100 +128,153 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
 
     _webViewController = WebViewController();
     _compatibilityReady = _configureCompatibility();
+    _runtimeChannel.setMethodCallHandler(_onRuntimeEvent);
+    _webViewReady = _configureWebView();
     widget.browserController.attachPort(
       WebViewGameBrowserPort(
         _webViewController,
         _prototypePage,
         gameFrameReloadPort: MethodChannelGameFrameReloadPort(),
         compatibilityReady: _compatibilityReady,
-        prepareForRealNavigation: _prepareCapture,
+        prepareForRealNavigation: _prepareForRealNavigation,
         synchronizeGamePresentation: _synchronizeGamePresentation,
       ),
     );
 
-    _webViewController
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xff000000))
-      ..addJavaScriptChannel(
-        'YahagiBridge',
-        onMessageReceived: (message) {
-          if (widget.browserController.mode == GameBrowserMode.localPrototype) {
-            widget.controller.onJavaScriptMessage(message.message);
+    _executeStartupSequence();
+  }
+
+  Future<void> _configureWebView() async {
+    await _webViewController.setJavaScriptMode(JavaScriptMode.unrestricted);
+    await _webViewController.setBackgroundColor(const Color(0xff000000));
+    await _webViewController.addJavaScriptChannel(
+      'YahagiBridge',
+      onMessageReceived: (message) {
+        if (mounted &&
+            widget.browserController.mode == GameBrowserMode.localPrototype) {
+          widget.controller.onJavaScriptMessage(message.message);
+        }
+      },
+    );
+    await _webViewController.addJavaScriptChannel(
+      'YahagiPresentation',
+      onMessageReceived: (message) {
+        final state = decodeGamePresentationState(message.message);
+        if (!mounted || state == null || state == GamePresentationState.pending) {
+          return;
+        }
+        _synchronizeGamePresentation().catchError((Object _) {});
+      },
+    );
+    await _webViewController.setNavigationDelegate(
+      NavigationDelegate(
+        onNavigationRequest: _onNavigationRequest,
+        onPageStarted: (url) async {
+          if (!mounted) return;
+          _frameRateRuntimeController?.onPageStarted();
+          await _prepareCapture();
+          await _injectAudioContextTracker();
+          if (!mounted) return;
+          widget.controller.onPageStarted(url);
+          widget.browserController.onPageStarted(url);
+          widget.toolbarController.onStageChanged(
+            widget.browserController.mode == GameBrowserMode.localPrototype
+                ? GameSurfaceStage.localPrototype
+                : GameSurfaceStage.login,
+          );
+          if (_startupState == GameStartupState.networkReady) {
+            setState(() => _startupState = GameStartupState.loadingGame);
           }
         },
-      )
-      ..addJavaScriptChannel(
-        'YahagiPresentation',
-        onMessageReceived: (message) {
-          final state = decodeGamePresentationState(message.message);
-          if (state == null || state == GamePresentationState.pending) return;
-          _synchronizeGamePresentation().catchError((Object _) {});
+        onPageFinished: (url) async {
+          if (!mounted) return;
+          await _frameRateRuntimeController?.onPageReady();
+          if (!mounted) return;
+          widget.controller.onPageFinished(url);
+          widget.browserController.onPageFinished(url);
+
+          // iOS-specific: inject AudioContext tracker again on page finish
+          await _injectAudioContextTracker();
+          await _synchronizeGamePresentation();
+          await _prepareCapture();
+          await _attachAudioPortOnce();
+          if (!mounted) return;
+
+          if (_startupState == GameStartupState.loadingGame) {
+            setState(() => _startupState = GameStartupState.ready);
+          }
         },
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: _onNavigationRequest,
-          onPageStarted: (url) async {
-            _frameRateRuntimeController?.onPageStarted();
-            await _prepareCapture();
-            await _injectAudioContextTracker();
-            widget.controller.onPageStarted(url);
-            widget.browserController.onPageStarted(url);
-            widget.toolbarController.onStageChanged(
-              widget.browserController.mode == GameBrowserMode.localPrototype
-                  ? GameSurfaceStage.localPrototype
-                  : GameSurfaceStage.login,
+        onWebResourceError: (error) {
+          if (!mounted) return;
+          final isForMainFrame = error.isForMainFrame ?? true;
+          if (isForMainFrame) {
+            unawaited(
+              const MethodChannel(
+                'app.yahagi.kancollebrowser/game_capture',
+              ).invokeMethod<void>('notifyCaptureInterrupted'),
             );
-            if (_startupState == GameStartupState.networkReady) {
-              setState(() => _startupState = GameStartupState.loadingGame);
-            }
-          },
-          onPageFinished: (url) async {
-            await _frameRateRuntimeController?.onPageReady();
-            widget.controller.onPageFinished(url);
-            widget.browserController.onPageFinished(url);
-
-            // iOS-specific: inject AudioContext tracker again on page finish
-            await _injectAudioContextTracker();
-            await _synchronizeGamePresentation();
-            await _prepareCapture();
-            await _attachAudioPortOnce();
-
-            if (_startupState == GameStartupState.loadingGame) {
-              setState(() => _startupState = GameStartupState.ready);
-            }
-          },
-          onWebResourceError: (error) {
-            final isForMainFrame = error.isForMainFrame ?? true;
-            if (isForMainFrame) {
-              unawaited(
-                const MethodChannel(
-                  'app.yahagi.kancollebrowser/game_capture',
-                ).invokeMethod<void>('notifyCaptureInterrupted'),
+            widget.controller.onWebResourceError(error.description);
+            if (error.description.toLowerCase().contains('ssl') ||
+                error.description.toLowerCase().contains('cert')) {
+              widget.browserController.onWebResourceError(
+                description: '安全证书错误：可能是岛风GO证书未受信任或网络被劫持。',
+                isForMainFrame: isForMainFrame,
               );
-              widget.controller.onWebResourceError(error.description);
-              if (error.description.toLowerCase().contains('ssl') ||
-                  error.description.toLowerCase().contains('cert')) {
-                widget.browserController.onWebResourceError(
-                  description: '安全证书错误：可能是岛风GO证书未受信任或网络被劫持。',
-                  isForMainFrame: isForMainFrame,
-                );
-                return;
-              }
+              return;
             }
-            widget.browserController.onWebResourceError(
-              description: error.description,
-              isForMainFrame: isForMainFrame,
-            );
-          },
-        ),
-      );
+          }
+          widget.browserController.onWebResourceError(
+            description: error.description,
+            isForMainFrame: isForMainFrame,
+          );
+        },
+      ),
+    );
+  }
 
-    _executeStartupSequence();
+  Future<void> _onRuntimeEvent(MethodCall call) async {
+    if (!mounted || call.method != 'onRuntimeEvent') return;
+    final arguments = call.arguments;
+    if (arguments is! Map) return;
+    final state = arguments['state'];
+    if (state is! String ||
+        !const <String>{
+          'pixiIOSCompatibilityV1',
+          'pixiCompatibilityHookUnavailable',
+          'webglContextLost',
+          'webglContextRestored',
+          'webglContextCreationFailed',
+          'webContentProcessTerminated',
+        }.contains(state)) {
+      return;
+    }
+    final recorder = widget.diagnosticRecorder;
+    recorder?.record(
+      DiagnosticEvent.webViewState(
+        occurredAt: DateTime.now(),
+        state: state,
+        durationMs: 0,
+      ),
+    );
+    await recorder?.flush();
+  }
+
+  Future<void> _prepareForRealNavigation() async {
+    await _webViewReady;
+    if (!mounted) return;
+    if (!_runtimeInstalled) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      await _runtimeChannel.invokeMethod<void>('prepare');
+      if (!mounted) return;
+      _runtimeInstalled = true;
+    }
+    await _prepareCapture();
   }
 
   /// iOS-specific: inject WebAudio AudioContext tracking and MediaSession clearing.
   Future<void> _injectAudioContextTracker() async {
+    if (!mounted) return;
     await _webViewController.runJavaScript('''
       (function() {
         if (window.__yahagiAudioTrackerInjected) return;
@@ -251,6 +313,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   }
 
   Future<void> _synchronizeGamePresentation() async {
+    if (!mounted) return;
     final epoch = ++_presentationSyncEpoch;
     try {
       final gameSurfaceResult = await _webViewController
@@ -294,9 +357,11 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   }
 
   Future<void> _executeStartupSequence() async {
+    if (!mounted) return;
     setState(() => _startupState = GameStartupState.applyingNetwork);
 
     await _compatibilityReady;
+    if (!mounted) return;
 
     final network = widget.networkSettingsController;
     if (!network.isProxyOverrideSupported &&
@@ -326,7 +391,18 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     setState(() => _startupState = GameStartupState.networkReady);
 
     // iOS-specific: prepare capture before initial navigation
-    await _prepareCapture();
+    try {
+      await _prepareForRealNavigation();
+    } catch (error) {
+      if (!mounted) return;
+      debugPrint('iOS WebView preparation failed: $error');
+      setState(() {
+        _startupState = GameStartupState.error;
+        _startupErrorMessage = '游戏浏览器初始化失败，请重试。';
+      });
+      return;
+    }
+    if (!mounted) return;
 
     final displayAddress = widget.browserController.displayAddress;
     final address = Uri.tryParse(displayAddress);
@@ -340,6 +416,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   }
 
   Future<void> _attachAudioPortOnce() async {
+    if (!mounted) return;
     if (_audioPortAttached) {
       return;
     }
@@ -379,6 +456,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
 
   /// iOS-enhanced: wrap capture preparation in try-catch for resilience.
   Future<void> _prepareCapture() async {
+    if (!mounted) return;
     try {
       if (!_capturePortAttached) {
         await widget.gameCaptureController.attach(
@@ -423,6 +501,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   }
 
   NavigationDecision _onNavigationRequest(NavigationRequest request) {
+    if (!mounted) return NavigationDecision.prevent;
     final uri = Uri.tryParse(request.url);
     final isLocalDocument =
         widget.browserController.mode == GameBrowserMode.localPrototype &&
@@ -565,9 +644,9 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     widget.audioController.removeListener(_onAudioControllerChanged);
     widget.captureModeController.removeListener(_onCaptureModeChanged);
     widget.networkSettingsController.removeListener(_onNetworkSettingsChanged);
-    _webViewController.setJavaScriptMode(JavaScriptMode.disabled);
-    _webViewController.loadHtmlString(
-      '<!DOCTYPE html><html><body></body></html>',
+    _runtimeChannel.setMethodCallHandler(null);
+    unawaited(
+      _runtimeChannel.invokeMethod<void>('dispose').catchError((Object _) {}),
     );
     _gameCapturePort.dispose();
     super.dispose();

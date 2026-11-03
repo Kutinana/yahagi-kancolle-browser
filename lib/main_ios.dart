@@ -1237,6 +1237,7 @@ class _IOSYahagiAppState extends State<_IOSYahagiApp> {
           toolbarController: widget.toolbarController,
           gameCaptureController: widget.gameCaptureController,
           frameRateSettingsController: widget.gameFrameRateSettingsController,
+          diagnosticRecorder: widget.diagnosticController?.recorder,
         ),
       ),
     );
