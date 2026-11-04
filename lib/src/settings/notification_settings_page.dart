@@ -1,6 +1,7 @@
 import '../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import '../ios/ios_platform_support.dart';
+import '../ios/ios_live_activity_settings_section.dart';
 import '../../l10n/app_localizations.dart';
 import '../notification/method_channel_notification_port.dart';
 import '../notification/notification_models.dart';
@@ -122,19 +123,31 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                         color: appColor(context, Color(0xff294052)),
                         height: 1,
                       ),
-                      buildSwitchTile(
-                        title: settingsOrganizationText(
-                          context,
-                          'settingsSystemNotificationVibration',
+                      if (isIOSPlatform)
+                        SizedBox(
+                          width: double.infinity,
+                          child: buildActionTile(
+                            title: settingsOrganizationText(
+                              context,
+                              'settingsSystemNotificationVibration',
+                            ),
+                            subtitle: iosNotificationHapticsDescription(context),
+                          ),
+                        )
+                      else
+                        buildSwitchTile(
+                          title: settingsOrganizationText(
+                            context,
+                            'settingsSystemNotificationVibration',
+                          ),
+                          subtitle: isIOSPlatform
+                              ? iosUnsupportedDescription(context)
+                              : null,
+                          value: !isIOSPlatform && settings.vibration,
+                          onChanged: !isIOSPlatform && settings.master
+                              ? (v) => controller.setVibration(v)
+                              : null,
                         ),
-                        subtitle: isIOSPlatform
-                            ? iosUnsupportedDescription(context)
-                            : null,
-                        value: !isIOSPlatform && settings.vibration,
-                        onChanged: !isIOSPlatform && settings.master
-                            ? (v) => controller.setVibration(v)
-                            : null,
-                      ),
                     ],
                   ),
                 ),
@@ -312,68 +325,74 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                 ),
                 const SizedBox(height: 24),
                 buildSectionTitle(l10n.notificationSectionOngoing),
-                buildCard(
-                  child: Column(
-                    children: [
-                      buildSwitchTile(
-                        title: l10n.notificationOngoingLive,
-                        subtitle: isIOSPlatform
-                            ? iosUnsupportedDescription(context)
-                            : null,
-                        value: !isIOSPlatform && settings.ongoingLive,
-                        onChanged: !isIOSPlatform && settings.master
-                            ? (v) => controller.setOngoingLive(v)
-                            : null,
-                      ),
-                      Divider(
-                        color: appColor(context, Color(0xff294052)),
-                        height: 1,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                if (isIOSPlatform)
+                  IOSLiveActivitySettingsSection(
+                    controller: controller,
+                    notificationPort: widget.notificationPort,
+                  )
+                else
+                  buildCard(
+                    child: Column(
+                      children: [
+                        buildSwitchTile(
+                          title: l10n.notificationOngoingLive,
+                          subtitle: isIOSPlatform
+                              ? iosUnsupportedDescription(context)
+                              : null,
+                          value: !isIOSPlatform && settings.ongoingLive,
+                          onChanged: !isIOSPlatform && settings.master
+                              ? (v) => controller.setOngoingLive(v)
+                              : null,
                         ),
-                        child: Wrap(
-                          alignment: WrapAlignment.spaceBetween,
-                          spacing: 8,
-                          children: [
-                            _buildCheckItem(
-                              label: l10n.notificationProgress,
-                              value: settings.showProgress,
-                              enabled:
-                                  !isIOSPlatform &&
-                                  settings.master &&
-                                  settings.ongoingLive,
-                              onChanged: (v) =>
-                                  controller.setShowProgress(v ?? true),
-                            ),
-                            _buildCheckItem(
-                              label: l10n.notificationPercent,
-                              value: settings.showPercent,
-                              enabled:
-                                  !isIOSPlatform &&
-                                  settings.master &&
-                                  settings.ongoingLive,
-                              onChanged: (v) =>
-                                  controller.setShowPercent(v ?? true),
-                            ),
-                            _buildCheckItem(
-                              label: l10n.notificationCountdown,
-                              value: settings.showCountdown,
-                              enabled:
-                                  !isIOSPlatform &&
-                                  settings.master &&
-                                  settings.ongoingLive,
-                              onChanged: (v) =>
-                                  controller.setShowCountdown(v ?? true),
-                            ),
-                          ],
+                        Divider(
+                          color: appColor(context, Color(0xff294052)),
+                          height: 1,
                         ),
-                      ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          child: Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            spacing: 8,
+                            children: [
+                              _buildCheckItem(
+                                label: l10n.notificationProgress,
+                                value: settings.showProgress,
+                                enabled:
+                                    !isIOSPlatform &&
+                                    settings.master &&
+                                    settings.ongoingLive,
+                                onChanged: (v) =>
+                                    controller.setShowProgress(v ?? true),
+                              ),
+                              _buildCheckItem(
+                                label: l10n.notificationPercent,
+                                value: settings.showPercent,
+                                enabled:
+                                    !isIOSPlatform &&
+                                    settings.master &&
+                                    settings.ongoingLive,
+                                onChanged: (v) =>
+                                    controller.setShowPercent(v ?? true),
+                              ),
+                              _buildCheckItem(
+                                label: l10n.notificationCountdown,
+                                value: settings.showCountdown,
+                                enabled:
+                                    !isIOSPlatform &&
+                                    settings.master &&
+                                    settings.ongoingLive,
+                                onChanged: (v) =>
+                                    controller.setShowCountdown(v ?? true),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
                 const SizedBox(height: 24),
 
                 if (widget.layoutSettingsController case final layout?) ...[

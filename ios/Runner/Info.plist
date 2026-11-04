@@ -48,6 +48,8 @@
 	</dict>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>需要访问相册以保存游戏截图与舰队编成图片</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>需要访问相册以保存游戏截图与舰队编成图片</string>
 	<key>UIApplicationSceneManifest</key>

@@ -5,6 +5,7 @@ import UserNotifications
 /// Adapts the shared full-snapshot notification contract to UserNotifications.
 final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
   private let center = UNUserNotificationCenter.current()
+  private let liveActivities = IOSLiveActivityBridge()
   private let alarmPrefix = "yahagi.alarm:"
   private let alertPrefix = "yahagi.alert:"
   private let deliveredKey = "yahagi.notifications.delivered.v1"
@@ -39,6 +40,8 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
           ])
         }
       }
+    case "getLiveActivitySettings", "setLiveActivitySettings":
+      liveActivities.handle(call, result: result)
     case "requestNotificationPermission":
       requestPermission(result: result)
     case "requestExactAlarmPermission":
@@ -99,6 +102,7 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
     _ snapshot: [String: Any], pending: [UNNotificationRequest],
     delivered: [UNNotification], result: @escaping FlutterResult
   ) {
+    liveActivities.applySnapshot(snapshot)
     let presentation = snapshot["presentation"] as? [String: Any] ?? [:]
     let member = (snapshot["memberId"] as? NSNumber)?.intValue ?? 0
     let enabled = presentation["enabled"] as? Bool == true && member > 0

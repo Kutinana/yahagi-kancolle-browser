@@ -34,6 +34,11 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		B10500000000000000000001 /* IOSLiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10500000000000000000011 /* IOSLiveActivityBridge.swift */; };
+		B10500000000000000000002 /* YahagiTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10500000000000000000012 /* YahagiTimerAttributes.swift */; };
+		B10500000000000000000003 /* YahagiTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10500000000000000000012 /* YahagiTimerAttributes.swift */; };
+		B10500000000000000000004 /* YahagiTimerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10500000000000000000013 /* YahagiTimerWidget.swift */; };
+		B10500000000000000000005 /* YahagiTimers.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B10500000000000000000015 /* YahagiTimers.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,6 +48,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
+		};
+		B10500000000000000000021 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B10500000000000000000030;
+			remoteInfo = YahagiTimers;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -55,6 +67,15 @@
 			files = (
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10500000000000000000022 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (B10500000000000000000005 /* YahagiTimers.appex in Embed App Extensions */, );
+			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -95,6 +116,11 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B10500000000000000000011 /* IOSLiveActivityBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSLiveActivityBridge.swift; sourceTree = "<group>"; };
+		B10500000000000000000012 /* YahagiTimerAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YahagiTimerAttributes.swift; sourceTree = "<group>"; };
+		B10500000000000000000013 /* YahagiTimerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YahagiTimerWidget.swift; sourceTree = "<group>"; };
+		B10500000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B10500000000000000000015 /* YahagiTimers.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = YahagiTimers.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,6 +130,12 @@
 			files = (
 				78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10500000000000000000023 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -129,6 +161,7 @@
 				74858FAE1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift */,
 				74858FAE1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift */,
 				74858FAE1ED2DC5600515829 /* IOSNotificationBridge.swift */,
+				B10500000000000000000011 /* IOSLiveActivityBridge.swift */,
 				74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */,
 				74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */,
 				74858FAE1ED2DC560051582C /* IOSOriginCookieBridge.swift */,
@@ -159,6 +192,7 @@
 			children = (
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
+				B10500000000000000000020 /* LiveActivity */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
 			);
@@ -168,6 +202,7 @@
 			isa = PBXGroup;
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
+				B10500000000000000000015 /* YahagiTimers.appex */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 			);
 			name = Products;
@@ -188,6 +223,16 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		B10500000000000000000020 /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				B10500000000000000000012 /* YahagiTimerAttributes.swift */,
+				B10500000000000000000013 /* YahagiTimerWidget.swift */,
+				B10500000000000000000014 /* Info.plist */,
+			);
+			path = LiveActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -219,11 +264,13 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				B10500000000000000000022 /* Embed App Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B10500000000000000000026 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -232,6 +279,21 @@
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B10500000000000000000030 /* YahagiTimers */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10500000000000000000031 /* Build configuration list for PBXNativeTarget "YahagiTimers" */;
+			buildPhases = (
+				B10500000000000000000025 /* Sources */,
+				B10500000000000000000023 /* Frameworks */,
+				B10500000000000000000024 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = YahagiTimers;
+			productName = YahagiTimers;
+			productReference = B10500000000000000000015 /* YahagiTimers.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -270,6 +332,7 @@
 			projectRoot = "";
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
+				B10500000000000000000030 /* YahagiTimers */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 			);
 		};
@@ -292,6 +355,12 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10500000000000000000024 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
@@ -355,6 +424,8 @@
 				74858FAF1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift in Sources */,
 				74858FAF1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift in Sources */,
 				74858FAF1ED2DC5600515829 /* IOSNotificationBridge.swift in Sources */,
+				B10500000000000000000001 /* IOSLiveActivityBridge.swift in Sources */,
+				B10500000000000000000002 /* YahagiTimerAttributes.swift in Sources */,
 				74858FAF1ED2DC560051582A /* IOSCompositionImageBridge.swift in Sources */,
 				74858FAF1ED2DC560051582B /* IOSDiagnosticsBridge.swift in Sources */,
 				74858FAF1ED2DC560051582C /* IOSOriginCookieBridge.swift in Sources */,
@@ -367,6 +438,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B10500000000000000000025 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10500000000000000000003 /* YahagiTimerAttributes.swift in Sources */,
+				B10500000000000000000004 /* YahagiTimerWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -374,6 +454,11 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		B10500000000000000000026 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B10500000000000000000030 /* YahagiTimers */;
+			targetProxy = B10500000000000000000021 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -692,6 +777,75 @@
 			};
 			name = Release;
 		};
+		B10500000000000000000032 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB21CF90195004384FC;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = W2SU68JKRA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.yahagi.yahagiKancolleBrowser.Timers;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B10500000000000000000033 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = W2SU68JKRA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.yahagi.yahagiKancolleBrowser.Timers;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B10500000000000000000034 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = W2SU68JKRA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LiveActivity/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.yahagi.yahagiKancolleBrowser.Timers;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -721,6 +875,16 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10500000000000000000031 /* Build configuration list for PBXNativeTarget "YahagiTimers" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10500000000000000000032 /* Debug */,
+				B10500000000000000000033 /* Release */,
+				B10500000000000000000034 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
