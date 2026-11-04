@@ -80,3 +80,15 @@ String iosNativeRendererDescription(BuildContext context) =>
         'WKWebView（系統原生）',
       _ => 'WKWebView（系统原生）',
     };
+
+String iosFrameRateUnavailableDescription(
+  BuildContext context,
+) => switch (Localizations.localeOf(context).languageCode) {
+  'en' =>
+    'Waiting for initialization. If this persists, reload the game and try again.',
+  'ko' => '초기화를 기다리는 중입니다. 이 상태가 계속되면 게임을 다시 불러와 재시도하세요.',
+  'ja' => '初期化を待っています。この状態が続く場合は、ゲームを再読み込みして再試行してください。',
+  'zh' when Localizations.localeOf(context).scriptCode == 'Hant' =>
+    '正在等待初始化。若一直停留在此狀態，請重新載入遊戲後重試。',
+  _ => '正在等待初始化。若一直停留在此状态，请刷新游戏后重试。',
+};

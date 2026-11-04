@@ -9,9 +9,14 @@ import 'settings_ui_helpers.dart';
 import '../widgets/app_segmented_style.dart';
 
 class GameFrameRateSettingsSection extends StatelessWidget {
-  const GameFrameRateSettingsSection({super.key, required this.controller});
+  const GameFrameRateSettingsSection({
+    super.key,
+    required this.controller,
+    this.unavailableDescription,
+  });
 
   final GameFrameRateSettingsController controller;
+  final String? unavailableDescription;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +65,7 @@ class GameFrameRateSettingsSection extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               controller.supported == false
-                  ? l10n.gameFrameRateUnsupported
+                  ? unavailableDescription ?? l10n.gameFrameRateUnsupported
                   : switch (controller.mode) {
                       GameFrameRateMode.automatic =>
                         l10n.gameFrameRateAutomaticDesc,

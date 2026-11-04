@@ -90,6 +90,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   late final WebViewGameBrowserPort _browserPort;
   late final GameNavigationWatchdog _navigationWatchdog;
   GameFrameRateRuntimeController? _frameRateRuntimeController;
+  int _frameRateBindingGeneration = 0;
   Timer? _readinessTimer;
   int? _readinessProbeEpoch;
   int _navigationEpoch = 0;
@@ -136,8 +137,6 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     _gameCapturePort = MethodChannelGameCapturePort();
     widget.captureModeController.addListener(_onCaptureModeChanged);
     widget.audioController.addListener(_onAudioControllerChanged);
-    unawaited(_configureFrameRate());
-
     _webViewController = WebViewController();
     _compatibilityReady = _configureCompatibility();
     _runtimeChannel.setMethodCallHandler(_onRuntimeEvent);
@@ -364,6 +363,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
       _injectAudioContextTracker,
       _attachAudioPortOnce,
       () async {
+        await _configureFrameRate();
         await _frameRateRuntimeController?.onPageReady();
       },
     ]) {
@@ -497,6 +497,14 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
           GameCaptureState.capturing,
         }.contains(widget.gameCaptureController.state)) {
       throw StateError('Game capture preparation failed');
+    }
+    // The native runtime preparation has acknowledged a mounted WKWebView.
+    // Install the document-start FPS hook now, rather than probing on the first
+    // Flutter frame when native channels or the platform view may still lag.
+    try {
+      await _configureFrameRate().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      _recordPageState('frameRatePreparationFailed');
     }
   }
 
@@ -827,6 +835,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.frameRateSettingsController !=
         widget.frameRateSettingsController) {
+      _frameRateBindingGeneration++;
       _frameRateRuntimeController?.dispose();
       _frameRateRuntimeController = null;
       unawaited(_configureFrameRate());
@@ -847,12 +856,22 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
 
   Future<void> _configureFrameRate() async {
     final controller = widget.frameRateSettingsController;
-    if (controller == null) return;
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
+    if (controller == null || !mounted || !_runtimeInstalled) return;
+    if (_frameRateRuntimeController != null && controller.supported == true) {
+      return;
+    }
+    final generation = ++_frameRateBindingGeneration;
+    bool isActive() =>
+        mounted &&
+        generation == _frameRateBindingGeneration &&
+        identical(controller, widget.frameRateSettingsController);
     try {
-      await controller.attachPort(createPlatformGameFrameRatePort());
-      if (!mounted || controller.supported != true) return;
+      final supported = await controller.attachPortForStartup(
+        MethodChannelGameFrameRatePort(isActive: isActive),
+        isActive: isActive,
+      );
+      if (!isActive() || !supported) return;
+      _frameRateRuntimeController?.dispose();
       final runtimeController = GameFrameRateRuntimeController(
         settings: controller,
         port: createGameFrameRateRuntimePort(_webViewController),
@@ -862,13 +881,15 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
       if (lifecycleState != null) {
         runtimeController.onLifecycleChanged(lifecycleState);
       }
-    } catch (error, stackTrace) {
-      debugPrint('Frame-rate runtime unavailable: $error\n$stackTrace');
+    } catch (_) {
+      // A temporary native binding failure can recover on the next navigation.
+      if (isActive()) _recordPageState('frameRatePreparationFailed');
     }
   }
 
   @override
   void dispose() {
+    _frameRateBindingGeneration++;
     _startupEpoch++;
     _navigationEpoch++;
     _readinessTimer?.cancel();

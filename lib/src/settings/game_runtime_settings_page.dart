@@ -79,7 +79,12 @@ class GameRuntimeSettingsPage extends StatelessWidget with SettingsUIHelpers {
           if (isIOSPlatform && gameFrameRateSettingsController != null)
             _divider(context),
           if (gameFrameRateSettingsController case final frameRate?)
-            GameFrameRateSettingsSection(controller: frameRate),
+            GameFrameRateSettingsSection(
+              controller: frameRate,
+              unavailableDescription: isIOSPlatform
+                  ? iosFrameRateUnavailableDescription(context)
+                  : null,
+            ),
           if (gameRenderingModeController case final rendering?) ...[
             if (gameFrameRateSettingsController != null) _divider(context),
             Padding(

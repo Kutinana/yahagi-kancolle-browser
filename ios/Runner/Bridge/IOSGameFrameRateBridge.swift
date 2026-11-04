@@ -262,7 +262,9 @@ import WebKit
 
   // MARK: - WKWebView Resolution
   private func resolveUserContentController() -> (WKUserContentController?, WKWebView?) {
-    if let wkWebView = findWKWebViewInApp() {
+    // Flutter removes an offstage game surface from the native view tree while
+    // settings are visible. Keep using that live WebView for mode changes.
+    if let wkWebView = findWKWebViewInApp() ?? attachedWebView {
       let ucc = wkWebView.configuration.userContentController
       self.contentController = ucc
       return (ucc, wkWebView)
