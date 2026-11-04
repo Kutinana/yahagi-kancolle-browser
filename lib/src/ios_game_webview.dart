@@ -34,6 +34,7 @@ import 'browser/game_page_alignment_script.dart';
 import 'browser/game_presentation_state.dart';
 import 'browser/game_toolbar_controller.dart';
 import 'browser/game_webview_compatibility.dart';
+import 'browser/game_workspace_visibility.dart';
 import 'browser/safe_page_address.dart';
 import 'capture/capture_mode.dart';
 import 'capture/capture_mode_controller.dart';
@@ -99,6 +100,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
   int? _failedNavigationEpoch;
   bool _loadingFlowActive = false;
   bool _awaitingNavigationStart = false;
+  bool _workspaceActive = true;
 
   late CaptureMode _activeCaptureMode;
   static const _scaleChannel = MethodChannel(
@@ -583,6 +585,9 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     int epoch,
   ) async {
     if (epoch != _presentationSyncEpoch || !mounted) return;
+    // A loaded document is usable even when another workspace hides its native
+    // surface. Fit it after the game workspace returns, once it has real bounds.
+    if (state == GamePresentationState.game && !_workspaceActive) return;
     final action = state?.platformAction ?? GamePresentationPlatformAction.none;
     if (action == GamePresentationPlatformAction.none) return;
 
@@ -827,6 +832,21 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
         return '正在加载游戏页面...';
       default:
         return '准备就绪...';
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = GameWorkspaceActive.of(context);
+    final returningToGame = active && !_workspaceActive;
+    _workspaceActive = active;
+    if (returningToGame) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _workspaceActive) {
+          unawaited(_synchronizeGamePresentation());
+        }
+      });
     }
   }
 

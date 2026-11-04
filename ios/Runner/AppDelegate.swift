@@ -4,7 +4,7 @@ import UIKit
 import WebKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private static let gameAudioChannel = "app.yahagi.kancollebrowser/game_audio"
   private static let gameCaptureChannel = "app.yahagi.kancollebrowser/game_capture"
   private static let scaleChannel = "app.webview/fixed_canvas_scaling"
@@ -43,8 +43,6 @@ import WebKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GeneratedPluginRegistrant.register(with: self)
-
     // Configure default AVAudioSession category
     do {
       try AVAudioSession.sharedInstance().setCategory(
@@ -54,11 +52,12 @@ import WebKit
       NSLog("[AppDelegate] Failed to set AVAudioSession category: \(error)")
     }
 
-    if let controller = window?.rootViewController as? FlutterViewController {
-      setupChannels(controller: controller)
-    }
-
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    // UIScene can create the engine before an application window exists.
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
   }
 
   private func findWKWebView(in view: UIView) -> WKWebView? {

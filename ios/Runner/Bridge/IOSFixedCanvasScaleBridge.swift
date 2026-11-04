@@ -3,24 +3,20 @@ import Foundation
 import UIKit
 import WebKit
 
-/// Native bridge for fixed canvas scaling on iOS WKWebView.
-///
-/// Communicates via `app.webview/fixed_canvas_scaling` MethodChannel.
-/// Provides native `pageZoom` scaling, viewport centering via `contentInset`,
-/// and gesture/scroll locking to guarantee stability during sidebar resize animations
-/// and avoid WebKit canvas compositing layer drops.
+/// Fits the fixed game canvas to the mounted WKWebView's current bounds.
+/// WebKit's visual viewport can lag a native resize, so use native dimensions
+/// converted by the current page scale and recalibrate on viewport updates.
 @objc public class IOSFixedCanvasScaleBridge: NSObject {
   private weak var viewController: UIViewController?
   private let channel: FlutterMethodChannel
-
   private weak var boundWebView: WKWebView?
-  private var boundsObservation: NSKeyValueObservation?
+  private var geometryReporter: IOSCanvasGeometryView?
   private var debounceWorkItem: DispatchWorkItem?
-
+  private var bindingGeneration = 0
+  private var wasPinchEnabled: Bool?
   private var isFixedCanvasActive = false
-  private var contentWidth: Int = 1200
-  private var contentHeight: Int = 720
-  private var lastAppliedScale: CGFloat?
+  private var contentWidth = 1200
+  private var contentHeight = 720
 
   @objc public init(viewController: UIViewController?, channel: FlutterMethodChannel) {
     self.viewController = viewController
@@ -32,9 +28,11 @@ import WebKit
     switch call.method {
     case "bindFixedCanvas":
       let args = call.arguments as? [String: Any]
-      let width = (args?["contentWidth"] as? Int) ?? 1200
-      let height = (args?["contentHeight"] as? Int) ?? 720
-      bindFixedCanvas(contentWidth: width, contentHeight: height, result: result)
+      contentWidth = max(1, (args?["contentWidth"] as? Int) ?? 1200)
+      contentHeight = max(1, (args?["contentHeight"] as? Int) ?? 720)
+      isFixedCanvasActive = true
+      bindingGeneration += 1
+      bind(generation: bindingGeneration, attempts: 40, result: result)
     case "releaseFixedCanvas":
       releaseFixedCanvas(result: result)
     default:
@@ -42,166 +40,181 @@ import WebKit
     }
   }
 
-  private func bindFixedCanvas(
-    contentWidth: Int,
-    contentHeight: Int,
-    result: @escaping FlutterResult
-  ) {
-    self.isFixedCanvasActive = true
-    self.contentWidth = contentWidth
-    self.contentHeight = contentHeight
-
-    guard let webView = boundWebView ?? resolveWebView() else {
-      // If the WKWebView is still mounting into the Flutter view hierarchy,
-      // retry shortly on the main runloop.
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-        guard let self = self, self.isFixedCanvasActive else { return }
-        if let delayedWebView = self.resolveWebView() {
-          self.attach(to: delayedWebView)
-          self.applyScale(to: delayedWebView, force: true)
-        }
-      }
+  private func bind(generation: Int, attempts: Int, result: @escaping FlutterResult) {
+    guard isFixedCanvasActive, generation == bindingGeneration else {
       result(nil)
       return
     }
-
+    guard let webView = resolveWebView() ?? boundWebView else {
+      guard attempts > 0 else {
+        result(FlutterError(code: "webview_not_ready", message: "Game viewport is not ready.", details: nil))
+        return
+      }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+        guard let self = self else { result(nil); return }
+        self.bind(generation: generation, attempts: attempts - 1, result: result)
+      }
+      return
+    }
     attach(to: webView)
-    applyScale(to: webView, force: true)
+    // Offstage workspaces temporarily detach the live WebView. Acknowledge
+    // the binding so page readiness does not time out while settings are open;
+    // applyScale waits for real bounds and the reporter refits on remount.
+    applyScale(to: webView)
     result(nil)
   }
 
   private func attach(to webView: WKWebView) {
-    if boundWebView !== webView {
-      boundsObservation?.invalidate()
-      boundsObservation = nil
-      boundWebView = webView
-
-      boundsObservation = webView.observe(\.bounds, options: [.new]) { [weak self] wv, _ in
-        self?.scheduleScaleUpdate(for: wv)
-      }
+    guard boundWebView !== webView else { return }
+    geometryReporter?.removeFromSuperview()
+    boundWebView = webView
+    wasPinchEnabled = webView.scrollView.pinchGestureRecognizer?.isEnabled
+    // UIKit can resize a platform view through setFrame without emitting KVO
+    // for bounds. An autoresizing child receives its actual layout completion.
+    let reporter = IOSCanvasGeometryView(frame: webView.bounds)
+    reporter.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    reporter.isHidden = true
+    reporter.isUserInteractionEnabled = false
+    reporter.onLayout = { [weak self, weak webView] in
+      guard let webView = webView else { return }
+      self?.scheduleScaleUpdate(for: webView)
     }
+    geometryReporter = reporter
+    webView.addSubview(reporter)
   }
 
   private func scheduleScaleUpdate(for webView: WKWebView) {
     guard isFixedCanvasActive else { return }
     debounceWorkItem?.cancel()
     let workItem = DispatchWorkItem { [weak self, weak webView] in
-      guard let self = self, let wv = webView, self.isFixedCanvasActive else { return }
-      self.applyScale(to: wv, force: false)
+      guard let self = self, let webView = webView else { return }
+      self.applyScale(to: webView)
     }
     debounceWorkItem = workItem
-    // Debounce by 25ms to gracefully coalesce rapid bounds updates during Flutter sidebar animations
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.025, execute: workItem)
   }
 
-  private func applyScale(to webView: WKWebView, force: Bool = false) {
-    guard isFixedCanvasActive else { return }
-
-    // Ensure solid dark background on all layers
+  private func applyScale(to webView: WKWebView) {
+    guard isFixedCanvasActive, webView === boundWebView, webView.window != nil,
+      webView.bounds.width > 0, webView.bounds.height > 0
+    else { return }
     webView.isOpaque = false
     webView.backgroundColor = .black
-    webView.scrollView.backgroundColor = .black
-
-    webView.evaluateJavaScript("""
-      (() => {
-        if (document.querySelector('#ooi-page, #ooi-game, #flashWrap')) return;
-        const frame = document.querySelector('#game_frame, #game-container');
-        if (!frame) return;
-        const width = window.visualViewport?.width || window.innerWidth;
-        const height = window.visualViewport?.height || window.innerHeight;
-        if (!(width > 0 && height > 0)) return;
-        const scale = Math.min(1, width / \(contentWidth), height / \(contentHeight));
-        let style = document.getElementById('__yahagi_ios_canvas_fit__');
-        if (!style) {
-          style = document.createElement('style');
-          style.id = '__yahagi_ios_canvas_fit__';
-          document.head.appendChild(style);
-        }
-        style.textContent = `html,body{background:#000!important;}
-          #game_frame,#game-container{
-            left:${Math.max(0, (width - \(contentWidth) * scale) / 2)}px!important;
-            top:${Math.max(0, (height - \(contentHeight) * scale) / 2)}px!important;
-            transform:scale(${scale})!important;transform-origin:0 0!important;}`;
-      })();
-      """, completionHandler: nil)
-
     let scrollView = webView.scrollView
-    scrollView.minimumZoomScale = 1.0
-    scrollView.maximumZoomScale = 1.0
-    if scrollView.zoomScale != 1.0 {
-      scrollView.setZoomScale(1.0, animated: false)
-    }
+    scrollView.backgroundColor = .black
+    // Lock the gesture, not zoomScale: WebKit owns the initial page scale and
+    // updates it asynchronously when a fold changes the available size.
+    scrollView.pinchGestureRecognizer?.isEnabled = false
     scrollView.isScrollEnabled = false
     scrollView.bounces = false
     scrollView.showsVerticalScrollIndicator = false
     scrollView.showsHorizontalScrollIndicator = false
-    if #available(iOS 11.0, *) {
-      scrollView.contentInsetAdjustmentBehavior = .never
-    }
+    scrollView.contentInsetAdjustmentBehavior = .never
     scrollView.contentInset = .zero
     if scrollView.contentOffset != .zero {
       scrollView.setContentOffset(.zero, animated: false)
     }
+
+    webView.evaluateJavaScript("""
+      (() => {
+        const key = '__yahagiIOSCanvasFit';
+        let runtime = window[key];
+        if (!runtime) {
+          const apply = () => {
+            if (document.querySelector('#ooi-page, #ooi-game, #flashWrap')) return;
+            if (!document.querySelector('#game_frame, #game-container')) return;
+            const pageScale = window.visualViewport?.scale || 1;
+            const {width: nativeWidth, height: nativeHeight, contentWidth, contentHeight} = runtime.size;
+            const width = nativeWidth / pageScale;
+            const height = nativeHeight / pageScale;
+            const scale = Math.min(width / contentWidth, height / contentHeight);
+            let style = document.getElementById('__yahagi_ios_canvas_fit__');
+            if (!style) {
+              style = document.createElement('style');
+              style.id = '__yahagi_ios_canvas_fit__';
+              (document.head || document.documentElement).appendChild(style);
+            }
+            const css = `html,body{background:#000!important;}
+              #game_frame,#game-container{
+                left:${Math.max(0, (width - contentWidth * scale) / 2)}px!important;
+                top:${Math.max(0, (height - contentHeight * scale) / 2)}px!important;
+                transform:scale(${scale})!important;transform-origin:0 0!important;}`;
+            if (style.textContent !== css) style.textContent = css;
+          };
+          const dispose = () => {
+            window.removeEventListener('resize', apply);
+            window.removeEventListener('load', apply);
+            window.visualViewport?.removeEventListener('resize', apply);
+            document.getElementById('__yahagi_ios_canvas_fit__')?.remove();
+            delete window[key];
+          };
+          runtime = {apply, dispose};
+          window[key] = runtime;
+          window.addEventListener('resize', apply);
+          window.addEventListener('load', apply);
+          window.visualViewport?.addEventListener('resize', apply);
+        }
+        runtime.size = {
+          width: \(webView.bounds.width), height: \(webView.bounds.height),
+          contentWidth: \(contentWidth), contentHeight: \(contentHeight)
+        };
+        runtime.apply();
+      })();
+      """, completionHandler: nil)
   }
 
   private func releaseFixedCanvas(result: @escaping FlutterResult) {
     isFixedCanvasActive = false
-    boundsObservation?.invalidate()
-    boundsObservation = nil
+    bindingGeneration += 1
+    geometryReporter?.removeFromSuperview()
+    geometryReporter = nil
     debounceWorkItem?.cancel()
     debounceWorkItem = nil
-    lastAppliedScale = nil
-
-    if let webView = boundWebView ?? resolveWebView() {
-      webView.evaluateJavaScript("document.getElementById('__yahagi_ios_canvas_fit__')?.remove();", completionHandler: nil)
-      if #available(iOS 14.0, *) {
-        webView.pageZoom = 1.0
-      }
+    if let webView = boundWebView {
+      webView.evaluateJavaScript("window.__yahagiIOSCanvasFit?.dispose();", completionHandler: nil)
       let scrollView = webView.scrollView
+      if let wasPinchEnabled = wasPinchEnabled {
+        scrollView.pinchGestureRecognizer?.isEnabled = wasPinchEnabled
+      }
       scrollView.contentInset = .zero
-      scrollView.minimumZoomScale = 1.0
-      scrollView.maximumZoomScale = 5.0
       scrollView.isScrollEnabled = true
       scrollView.bounces = true
       scrollView.showsVerticalScrollIndicator = true
       scrollView.showsHorizontalScrollIndicator = true
     }
-
+    wasPinchEnabled = nil
     boundWebView = nil
     result(nil)
   }
 
   private func resolveWebView() -> WKWebView? {
-    if let root = viewController?.view, let found = findWKWebView(in: root) {
-      return found
-    }
-    if #available(iOS 13.0, *) {
-      for scene in UIApplication.shared.connectedScenes {
-        if let windowScene = scene as? UIWindowScene {
-          for window in windowScene.windows {
-            if let found = findWKWebView(in: window) {
-              return found
-            }
-          }
-        }
-      }
-    }
-    return nil
+    // Stay in this Flutter scene; another screen may have its own WKWebView.
+    guard let root = viewController?.view else { return nil }
+    return findWKWebView(in: root)
   }
 
   private func findWKWebView(in view: UIView) -> WKWebView? {
-    if let wkWebView = view as? WKWebView {
-      return wkWebView
-    }
+    if let webView = view as? WKWebView { return webView }
     for subview in view.subviews {
-      if let found = findWKWebView(in: subview) {
-        return found
-      }
+      if let found = findWKWebView(in: subview) { return found }
     }
     return nil
   }
 
   public func dispose() {
     releaseFixedCanvas { _ in }
+  }
+}
+
+/// Follows the WKWebView through initial mounting, folds and sidebar resizing.
+private final class IOSCanvasGeometryView: UIView {
+  var onLayout: (() -> Void)?
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    onLayout?()
+  }
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    onLayout?()
   }
 }
