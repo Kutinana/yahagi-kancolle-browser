@@ -26,6 +26,7 @@ import 'src/backup/record_backup.dart';
 import 'src/ios/ios_backup_document_port.dart';
 import 'src/ios/ios_camera_geometry_host.dart';
 import 'src/ios/ios_custom_font_store.dart';
+import 'src/ios/ios_game_state_cache.dart';
 import 'src/localization/record_backup_strings.dart';
 import 'src/subtitles/ship_subtitle_runtime_controller.dart';
 import 'src/subtitles/ship_subtitle_settings.dart';
@@ -139,6 +140,15 @@ import 'src/subtitles/ship_subtitle_catalog_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  IOSGameStateCache? gameStateCache;
+  try {
+    gameStateCache = await IOSGameStateCache.create();
+    await gameStateCache.migratePreferences(
+      await SharedPreferences.getInstance(),
+    );
+  } on Object catch (error) {
+    debugPrint('iOS game cache migration deferred: ${error.runtimeType}');
+  }
   final accountSession = AccountSession.shared;
   LogbookDatabase.bindAccountSession(accountSession);
   late final GameApiEventPipeline gameApiEventPipeline;
@@ -225,7 +235,10 @@ Future<void> main() async {
   final questStore = SharedPreferencesQuestStore(
     accountSession: accountSession,
   );
-  final gameStateStore = GameStateStore();
+  final gameStateStore = GameStateStore(
+    readString: gameStateCache?.readString,
+    writeString: gameStateCache?.writeString,
+  );
   final questProgressDatasetStore = QuestProgressDatasetStore(
     const PreferencesQuestProgressDatasetStorage(),
   );

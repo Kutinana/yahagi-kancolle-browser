@@ -78,6 +78,22 @@ import WebKit
 
     NSLog("[AppDelegate] Setting up Flutter MethodChannels...")
 
+    let cacheChannel = FlutterMethodChannel(
+      name: "app.yahagi.kancollebrowser/game_state_cache",
+      binaryMessenger: controller.binaryMessenger)
+    cacheChannel.setMethodCallHandler { call, result in
+      guard call.method == "flushPreferences" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      // Finish the migration's pending removals without rewriting the domain.
+      // Reassigning an unchanged small domain can still trigger CFPreferences'
+      // size check against its previous oversized backing store.
+      DispatchQueue.main.async {
+        result(UserDefaults.standard.synchronize())
+      }
+    }
+
     let runtimeChannel = FlutterMethodChannel(
       name: "app.yahagi.kancollebrowser/webview_runtime", binaryMessenger: controller.binaryMessenger)
     let runtimeBridge = IOSWebViewRuntimeBridge(viewController: controller, channel: runtimeChannel)

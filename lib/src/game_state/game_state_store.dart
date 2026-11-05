@@ -9,6 +9,7 @@ class GameStateStore {
   GameStateStore({
     this.saveDelay = const Duration(seconds: 5),
     this.writeString,
+    this.readString,
   });
 
   static const String _key = 'yahagi_kancolle_browser_game_state';
@@ -17,6 +18,7 @@ class GameStateStore {
   static String _accountKey(int memberId) => 'account.$memberId.game_state.v1';
   final Duration saveDelay;
   final Future<bool> Function(SharedPreferences, String, String)? writeString;
+  final Future<String?> Function(SharedPreferences, String)? readString;
   Timer? _debounceTimer;
   final Map<int, GameState> _pendingStates = {};
   Map<String, Object?>? _pendingMaster;
@@ -38,7 +40,7 @@ class GameStateStore {
     try {
       final prefs = await SharedPreferences.getInstance();
       await _migrateLegacy(prefs);
-      final jsonStr = prefs.getString(_sharedKey);
+      final jsonStr = await _readString(prefs, _sharedKey);
       if (jsonStr != null && jsonStr.isNotEmpty) {
         return sharedGameData(GameStateSerializer.deserialize(jsonStr));
       }
@@ -56,13 +58,13 @@ class GameStateStore {
       await _migrateLegacy(prefs);
       final pending = _pendingStates[memberId];
       final accountRaw = pending == null
-          ? prefs.getString(_accountKey(memberId))
+          ? await _readString(prefs, _accountKey(memberId))
           : jsonEncode(GameStateSerializer.personalData(pending));
       if (accountRaw == null) return GameState.empty;
       final account = jsonDecode(accountRaw) as Map<String, dynamic>;
       if (account['memberId'] != memberId) return GameState.empty;
       final shared = _pendingMaster == null
-          ? jsonDecode(prefs.getString(_sharedKey) ?? '{}') as Map
+          ? jsonDecode(await _readString(prefs, _sharedKey) ?? '{}') as Map
           : _pendingMaster!;
       return GameStateSerializer.deserialize(
         jsonEncode({...shared, ...account}),
@@ -74,19 +76,20 @@ class GameStateStore {
 
   Future<void> _migrateLegacy(SharedPreferences prefs) async {
     if (prefs.getBool(_migrationKey) == true) return;
-    final raw = prefs.getString(_key);
+    final raw = await _readString(prefs, _key);
     if (raw != null) {
       final legacy = GameStateSerializer.deserialize(raw);
       // Keep the original global value as a backup, never as login identity.
       if (legacy.memberId > 0 &&
-          !prefs.containsKey(_accountKey(legacy.memberId))) {
+          await _readString(prefs, _accountKey(legacy.memberId)) == null) {
         await _putString(
           prefs,
           _accountKey(legacy.memberId),
           jsonEncode(GameStateSerializer.personalData(legacy)),
         );
       }
-      if (!prefs.containsKey(_sharedKey) && legacy.masterShips.isNotEmpty) {
+      if (await _readString(prefs, _sharedKey) == null &&
+          legacy.masterShips.isNotEmpty) {
         await _putString(
           prefs,
           _sharedKey,
@@ -98,6 +101,9 @@ class GameStateStore {
       throw StateError('Game state cache migration marker failed');
     }
   }
+
+  Future<String?> _readString(SharedPreferences prefs, String key) async =>
+      readString != null ? readString!(prefs, key) : prefs.getString(key);
 
   void save(GameState state) {
     if (state.memberId > 0) _pendingStates[state.memberId] = state;
