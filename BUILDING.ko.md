@@ -8,7 +8,7 @@
 
 현재 [CI 설정](.github/workflows/ci.yml)에서는 다음 환경을 사용합니다.
 
-- Flutter **3.44.8 stable**. Dart는 Flutter에 포함되어 있으며, 버전 제약은 `pubspec.yaml`을 참고하세요.
+- Flutter **3.47.9 stable**. Dart는 Flutter에 포함되어 있으며, 버전 제약은 `pubspec.yaml`을 참고하세요.
 - JDK **17**. Android 네이티브 테스트를 실행할 때는 `JAVA_HOME`이 JDK 17을 가리키도록 설정하세요.
 - Android SDK, 명령줄 도구, 라이선스에 동의한 빌드 구성 요소. `compileSdk`와 NDK 버전은 Flutter SDK에 따라 결정됩니다. `android/app/build.gradle.kts`를 참고하세요.
 - Git. APK 빌드에는 Python이 필요하지 않습니다. 전체 데이터 검사를 실행할 때는 Python 3과 Pillow가 추가로 필요합니다.

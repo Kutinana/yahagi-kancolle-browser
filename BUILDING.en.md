@@ -8,7 +8,7 @@ This guide is for anyone who wants to build the Android client or contribute to 
 
 The current [CI configuration](.github/workflows/ci.yml) uses:
 
-- Flutter **3.44.8 stable**. Dart is included with Flutter; see `pubspec.yaml` for the version constraint.
+- Flutter **3.47.9 stable**. Dart is included with Flutter; see `pubspec.yaml` for the version constraint.
 - JDK **17**. Set `JAVA_HOME` to JDK 17 when running the native Android tests.
 - The Android SDK, command-line tools, and build components with their licenses accepted. The Flutter SDK determines the `compileSdk` and NDK versions; see `android/app/build.gradle.kts`.
 - Git. Python is not needed to build an APK; the full data checks additionally require Python 3 and Pillow.

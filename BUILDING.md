@@ -8,7 +8,7 @@
 
 当前 [CI 配置](.github/workflows/ci.yml) 使用：
 
-- Flutter **3.44.8 stable**；Dart 随 Flutter 安装，版本约束见 `pubspec.yaml`。
+- Flutter **3.47.9 stable**；Dart 随 Flutter 安装，版本约束见 `pubspec.yaml`。
 - JDK **17**。运行 Android 原生测试时，让 `JAVA_HOME` 指向 JDK 17。
 - Android SDK、命令行工具及接受许可的构建组件。`compileSdk` 和 NDK 版本由 Flutter SDK 决定，见 `android/app/build.gradle.kts`。
 - Git。构建 APK 不需要 Python；运行完整数据校验时另需 Python 3 和 Pillow。
