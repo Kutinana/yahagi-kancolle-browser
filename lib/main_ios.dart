@@ -27,6 +27,7 @@ import 'src/ios/ios_backup_document_port.dart';
 import 'src/ios/ios_camera_geometry_host.dart';
 import 'src/ios/ios_custom_font_store.dart';
 import 'src/ios/ios_game_state_cache.dart';
+import 'src/ios/ios_telemetry.dart';
 import 'src/localization/record_backup_strings.dart';
 import 'src/subtitles/ship_subtitle_runtime_controller.dart';
 import 'src/subtitles/ship_subtitle_settings.dart';
@@ -661,6 +662,7 @@ Future<void> main() async {
     telemetryDeckAppID: '685D5F38-DD7D-48CB-896D-88642F96F92D',
     appVersion: currentVersion,
     diagnosticPlatformPort: diagnosticPlatform,
+    telemetryDeckStartFn: startIOSTelemetry,
   );
   final telemetryController = await TelemetryController.create(
     store: telemetrySettingsStore,
