@@ -3,7 +3,7 @@
 /// This is a standalone widget that provides the same functionality as the
 /// upstream [GameWebView] but adds iOS-specific enhancements:
 /// - AppLifecycleListener for background audio control
-/// - WebAudio AudioContext tracking & MediaSession clearing
+/// - Native audio policy installed in every frame before navigation
 /// - Generic WebView compatibility port (non-Android)
 /// - Early capture preparation on page start
 ///
@@ -17,12 +17,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import 'audio/game_audio_controller.dart';
-import 'audio/game_audio_port.dart';
+import 'ios/ios_game_audio_port.dart';
 import 'bridge/native_game_capture_script.dart';
 import 'browser/game_browser_controller.dart';
 import 'browser/game_frame_rate_port.dart';
@@ -139,7 +140,14 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     _gameCapturePort = MethodChannelGameCapturePort();
     widget.captureModeController.addListener(_onCaptureModeChanged);
     widget.audioController.addListener(_onAudioControllerChanged);
-    _webViewController = WebViewController();
+    // Recovery from a Flutter settings page has no web-page user gesture.
+    // Configure this before WKWebView is created so BGM and WebAudio can resume.
+    _webViewController = WebViewController.fromPlatformCreationParams(
+      WebKitWebViewControllerCreationParams(
+        allowsInlineMediaPlayback: true,
+        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+      ),
+    );
     _compatibilityReady = _configureCompatibility();
     _runtimeChannel.setMethodCallHandler(_onRuntimeEvent);
     _webViewReady = _configureWebView();
@@ -362,7 +370,6 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
 
   Future<void> _prepareOptionalPageFeatures(int epoch) async {
     for (final operation in <Future<void> Function()>[
-      _injectAudioContextTracker,
       _attachAudioPortOnce,
       () async {
         await _configureFrameRate();
@@ -491,6 +498,10 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
       if (!mounted) return;
       _runtimeInstalled = true;
     }
+    // Install the native document-start audio hook before game frames load.
+    // Attaching after page finish misses existing cross-origin AudioContexts.
+    await _attachAudioPortOnce();
+    if (!mounted) return;
     await _prepareCapture();
     if (mounted &&
         widget.captureModeController.mode.installsGameBridge &&
@@ -508,46 +519,6 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     } catch (_) {
       _recordPageState('frameRatePreparationFailed');
     }
-  }
-
-  /// iOS-specific: inject WebAudio AudioContext tracking and MediaSession clearing.
-  Future<void> _injectAudioContextTracker() async {
-    if (!mounted) return;
-    await _webViewController.runJavaScript('''
-      (function() {
-        if (window.__yahagiAudioTrackerInjected) return;
-        window.__yahagiAudioTrackerInjected = true;
-        window.__yahagiAudioContexts = window.__yahagiAudioContexts || [];
-        var OrigAC = window.AudioContext || window.webkitAudioContext;
-        if (OrigAC) {
-          var WrappedAC = function(a, b, c) {
-            var instance;
-            if (arguments.length === 0) {
-              instance = new OrigAC();
-            } else if (arguments.length === 1) {
-              instance = new OrigAC(a);
-            } else if (arguments.length === 2) {
-              instance = new OrigAC(a, b);
-            } else {
-              instance = new OrigAC(a, b, c);
-            }
-            window.__yahagiAudioContexts.push(instance);
-            return instance;
-          };
-          WrappedAC.prototype = OrigAC.prototype;
-          if (window.AudioContext) window.AudioContext = WrappedAC;
-          if (window.webkitAudioContext) window.webkitAudioContext = WrappedAC;
-        }
-        try {
-          if (navigator.mediaSession) {
-            navigator.mediaSession.metadata = null;
-            ['play', 'pause', 'stop', 'previoustrack', 'nexttrack', 'seekto', 'seekbackward', 'seekforward'].forEach(function(act) {
-              try { navigator.mediaSession.setActionHandler(act, null); } catch(e){}
-            });
-          }
-        } catch(e){}
-      })();
-    ''');
   }
 
   Future<GamePresentationState?> _synchronizeGamePresentation({
@@ -663,12 +634,24 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
       return;
     }
     _audioPortAttached = true;
-    await widget.audioController.attachPort(MethodChannelGameAudioPort());
+    await widget.audioController.attachPort(
+      IOSGameAudioPort(widget.audioController),
+    );
     await _syncNativeBackgroundPlaybackSetting();
+    await _refreshNativeAudioPolicy();
   }
 
   void _onAudioControllerChanged() {
     _syncNativeBackgroundPlaybackSetting();
+  }
+
+  Future<void> _refreshNativeAudioPolicy() async {
+    if (!_audioPortAttached) return;
+    try {
+      await _audioChannel.invokeMethod<void>('refreshPolicy');
+    } on PlatformException catch (error) {
+      debugPrint('恢复 iOS 游戏声音策略失败：$error');
+    }
   }
 
   Future<void> _syncNativeBackgroundPlaybackSetting() async {
@@ -844,6 +827,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     if (returningToGame) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _workspaceActive) {
+          unawaited(_refreshNativeAudioPolicy());
           unawaited(_synchronizeGamePresentation());
         }
       });
@@ -868,6 +852,7 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
     _navigationWatchdog.setForeground(foreground);
     if (foreground) {
       _scheduleReadinessProbe(_navigationEpoch, Duration.zero);
+      unawaited(_refreshNativeAudioPolicy());
     } else {
       _readinessTimer?.cancel();
     }

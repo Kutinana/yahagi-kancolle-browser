@@ -5,17 +5,23 @@ import MediaPlayer
 import WebKit
 
 /// Swift native audio controller for WKWebView game audio.
-@objc public class IOSGameAudioPort: NSObject {
+@objc public class IOSGameAudioPort: NSObject, WKScriptMessageHandler {
+  private static let messageName = "YahagiGameAudioReady"
   private weak var viewController: UIViewController?
   private weak var webView: WKWebView?
   private var isUserMuted: Bool = false
   private var isBackgrounded: Bool = false
   private var isBackgroundPlaybackEnabled: Bool = false
+  private weak var mediaPlaybackWebView: WKWebView?
+  private var isMediaPlaybackSuspended = false
+  private var isMediaPlaybackTransitionInFlight = false
+  private var policyRevision = 0
 
   @objc public init(viewController: UIViewController? = nil, webView: WKWebView? = nil) {
     self.viewController = viewController
     self.webView = webView
     super.init()
+    isBackgrounded = !isAppForeground
     setupNotificationObservers()
   }
 
@@ -42,6 +48,24 @@ import WebKit
       name: UIApplication.didBecomeActiveNotification,
       object: nil
     )
+    // Flutter's window uses UIScene; scene activation can precede the legacy
+    // UIApplication state update consumed by a Dart lifecycle callback.
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(handleAppWillResignActive),
+      name: UIScene.willDeactivateNotification, object: nil)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(handleAppDidEnterBackground),
+      name: UIScene.didEnterBackgroundNotification, object: nil)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(handleAppDidBecomeActive),
+      name: UIScene.didActivateNotification, object: nil)
+  }
+
+  private var isAppForeground: Bool {
+    if let scene = viewController?.viewIfLoaded?.window?.windowScene {
+      return scene.activationState == .foregroundActive
+    }
+    return UIApplication.shared.applicationState == .active
   }
 
   @objc private func handleAppWillResignActive() {
@@ -68,8 +92,10 @@ import WebKit
           FlutterError(code: "invalid_argument", message: "muted must be a boolean", details: nil))
         return
       }
-      self.isUserMuted = muted
       setMuted(muted, result: result)
+    case "refreshPolicy":
+      applyBackgroundState(!isAppForeground)
+      result(nil)
     case "setBackground":
       guard let args = call.arguments as? [String: Any],
         let background = args["background"] as? Bool
@@ -91,15 +117,6 @@ import WebKit
         return
       }
       self.isBackgroundPlaybackEnabled = enabled
-      if enabled {
-        do {
-          try AVAudioSession.sharedInstance().setCategory(
-            .playback, mode: .default, options: [.mixWithOthers])
-          try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-          NSLog("[IOSGameAudioPort] Setting playback category failed: \(error)")
-        }
-      }
       applyBackgroundState(isBackgrounded)
       result(nil)
     default:
@@ -142,143 +159,171 @@ import WebKit
     return nil
   }
 
-  private var isUserScriptInjected = false
+  private weak var scriptWebView: WKWebView?
+  private var userScript: WKUserScript?
 
   private func ensureUserScriptInjected(targetWebView: WKWebView) {
-    guard !isUserScriptInjected else { return }
-    isUserScriptInjected = true
+    guard scriptWebView !== targetWebView else { return }
+    if let previous = scriptWebView {
+      let content = previous.configuration.userContentController
+      content.removeScriptMessageHandler(forName: Self.messageName)
+      if let installed = userScript {
+        let others = content.userScripts.filter { $0 !== installed }
+        content.removeAllUserScripts()
+        others.forEach { content.addUserScript($0) }
+      }
+    }
+    scriptWebView = targetWebView
     let scriptSource = """
       (function() {
           if (window.__yahagiAudioScriptInjected) return;
           window.__yahagiAudioScriptInjected = true;
-
-          window.__yahagiAudioContexts = window.__yahagiAudioContexts || [];
-          var OrigAC = window.AudioContext || window.webkitAudioContext;
-          if (OrigAC) {
-              var WrappedAC = function(a, b, c) {
-                  var instance;
-                  if (arguments.length === 0) instance = new OrigAC();
-                  else if (arguments.length === 1) instance = new OrigAC(a);
-                  else if (arguments.length === 2) instance = new OrigAC(a, b);
-                  else instance = new OrigAC(a, b, c);
-                  window.__yahagiAudioContexts.push(instance);
-                  return instance;
-              };
-              WrappedAC.prototype = OrigAC.prototype;
-              if (window.AudioContext) window.AudioContext = WrappedAC;
-              if (window.webkitAudioContext) window.webkitAudioContext = WrappedAC;
+          var canRecoverAudio = false;
+          var backgroundPlaybackEnabled = false;
+          var revision = -1;
+          var visibilityEpoch = 0;
+          var contexts = new Map();
+          var NativeAudioContext = window.AudioContext || window.webkitAudioContext;
+          var nativeResume = NativeAudioContext && NativeAudioContext.prototype.resume;
+          var nativeSuspend = NativeAudioContext && NativeAudioContext.prototype.suspend;
+          function requestPolicy() {
+              window.webkit.messageHandlers.YahagiGameAudioReady.postMessage({visibilityEpoch: visibilityEpoch});
           }
-
-          window.__yahagiPausedSoundInstances =
-              window.__yahagiPausedSoundInstances || new WeakSet();
-          window.__yahagiPausedMediaElements =
-              window.__yahagiPausedMediaElements || new WeakSet();
-
-          function setSoundInstancePaused(instance, paused) {
-              try {
-                  if ('paused' in instance) {
-                      instance.paused = paused;
-                      return true;
-                  }
-                  if (typeof instance.setPaused === 'function') {
-                      instance.setPaused(paused);
-                      return true;
-                  }
-                  if (paused && typeof instance.pause === 'function') {
-                      instance.pause();
-                      return true;
-                  }
-                  if (!paused && typeof instance.resume === 'function') {
-                      instance.resume();
-                      return true;
-                  }
-              } catch(e) {}
-              return false;
-          }
-
-          window.addEventListener('message', function(evt) {
-              if (evt.data && evt.data.type === 'YAHAGI_AUDIO_CONTROL') {
-                  var isBg = evt.data.isBackground;
-                  try {
-                      if (window.createjs && window.createjs.Sound) {
-                          window.createjs.Sound.muted = isBg;
-                          if (typeof window.createjs.Sound.setMuted === 'function') window.createjs.Sound.setMuted(isBg);
-                          if (typeof window.createjs.Sound.setVolume === 'function') {
-                              if (isBg) {
-                                  try { window.createjs.Sound._savedVol = window.createjs.Sound.getVolume ? window.createjs.Sound.getVolume() : 1; } catch(e){}
-                                  window.createjs.Sound.setVolume(0);
-                              } else {
-                                  var vol = window.createjs.Sound._savedVol !== undefined ? window.createjs.Sound._savedVol : 1;
-                                  window.createjs.Sound.setVolume(vol);
-                              }
-                          }
-                          if (window.createjs.Sound._instances && Array.isArray(window.createjs.Sound._instances)) {
-                              window.createjs.Sound._instances.forEach(function(inst) {
-                                  if (inst) {
-                                      try { inst.muted = isBg; } catch(e){}
-                                      if (isBg) {
-                                          if (!inst.paused && setSoundInstancePaused(inst, true)) {
-                                              window.__yahagiPausedSoundInstances.add(inst);
-                                          }
-                                      } else if (window.__yahagiPausedSoundInstances.has(inst)) {
-                                          setSoundInstancePaused(inst, false);
-                                          window.__yahagiPausedSoundInstances.delete(inst);
-                                      }
-                                  }
-                              });
-                          }
-                      }
-                  } catch(e){}
-                  try {
-                      if (window.createjs && window.createjs.WebAudioPlugin) {
-                          if (window.createjs.WebAudioPlugin.context && typeof window.createjs.WebAudioPlugin.context[isBg ? 'suspend' : 'resume'] === 'function') {
-                              window.createjs.WebAudioPlugin.context[isBg ? 'suspend' : 'resume']();
-                          }
-                          if (window.createjs.WebAudioPlugin._masterGainNode && window.createjs.WebAudioPlugin._masterGainNode.gain) {
-                              window.createjs.WebAudioPlugin._masterGainNode.gain.value = isBg ? 0 : 1;
-                          }
-                      }
-                  } catch(e){}
-                  try {
-                      if (window.Howler) {
-                          window.Howler.mute(isBg);
-                          if (window.Howler.ctx && typeof window.Howler.ctx[isBg ? 'suspend' : 'resume'] === 'function') {
-                              window.Howler.ctx[isBg ? 'suspend' : 'resume']();
-                          }
-                      }
-                  } catch(e){}
-                  try {
-                      var ctxList = window.__yahagiAudioContexts || [];
-                      for (var k in window) {
-                          try {
-                              if (window[k] && (window[k] instanceof AudioContext || (window.webkitAudioContext && window[k] instanceof webkitAudioContext))) {
-                                  if (ctxList.indexOf(window[k]) === -1) ctxList.push(window[k]);
-                              }
-                          } catch(e){}
-                      }
-                      ctxList.forEach(function(ctx) {
-                          if (ctx && typeof ctx[isBg ? 'suspend' : 'resume'] === 'function') {
-                              ctx[isBg ? 'suspend' : 'resume']();
-                          }
-                      });
-                  } catch(e){}
-                  try {
-                      var media = document.querySelectorAll('audio, video');
-                      media.forEach(function(m) {
-                          m.muted = isBg;
-                          if (isBg) {
-                              if (!m.paused && !m.ended) {
-                                  window.__yahagiPausedMediaElements.add(m);
-                                  try { m.pause(); } catch(e){}
-                              }
-                          } else if (window.__yahagiPausedMediaElements.has(m)) {
-                              window.__yahagiPausedMediaElements.delete(m);
-                              try { m.play().catch(function(){}); } catch(e){}
-                          }
-                      });
-                  } catch(e){}
+          function settle(ctx, state) {
+              if (ctx.state === 'closed') {
+                  var error = new DOMException('AudioContext is closed', 'InvalidStateError');
+                  state.resumes.splice(0).forEach(function(waiter) { waiter.reject(error); });
+                  state.suspends.splice(0).forEach(function(waiter) { waiter.reject(error); });
+                  contexts.delete(ctx);
+                  return;
               }
+              var howler = window.Howler;
+              if (!canRecoverAudio && ctx.state === 'suspended' && howler && howler.ctx === ctx && howler.state === 'running') {
+                  // Native suspension bypasses Howler's idle suspension. Keep its
+                  // state aligned so new sounds wait for resume instead of starting
+                  // their end timers against a context that cannot render yet.
+                  howler.state = 'suspended';
+              }
+              if (canRecoverAudio && ctx.state === 'running') {
+                  state.resumes.splice(0).forEach(function(waiter) { waiter.resolve(); });
+              }
+              if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+                  state.suspends.splice(0).forEach(function(waiter) { waiter.resolve(); });
+              }
+          }
+          function track(ctx) {
+              if (!contexts.has(ctx)) {
+                  contexts.set(ctx, {wanted: ctx.state === 'running', resumes: [], suspends: [], resumeRevision: -1, suspendRevision: -1});
+                  ctx.addEventListener('statechange', function() {
+                      var state = contexts.get(ctx);
+                      if (!state) return;
+                      if (ctx.state === 'running') {
+                          state.resumeRevision = -1;
+                          state.suspendRevision = -1;
+                      }
+                      if (ctx.state === 'interrupted' && document.hidden && !backgroundPlaybackEnabled) {
+                          canRecoverAudio = false;
+                          requestPolicy();
+                      }
+                      reconcile(ctx, state);
+                  });
+              }
+              return contexts.get(ctx);
+          }
+          function reconcile(ctx, state) {
+              settle(ctx, state);
+              if (ctx.state === 'closed') return;
+              if (!canRecoverAudio || !state.wanted) {
+                  // An interrupted context is already stopped. Suspending it again
+                  // can leave WebKit's promise pending indefinitely on real devices.
+                  if (ctx.state === 'running' && state.suspendRevision !== revision) {
+                      state.suspendRevision = revision;
+                      nativeSuspend.call(ctx).then(function() { settle(ctx, state); }, function() { settle(ctx, state); });
+                  }
+                  return;
+              }
+              if (ctx.state !== 'running' && state.resumeRevision !== revision) {
+                  state.resumeRevision = revision;
+                  // State changes also settle the game's promises. Never serialize
+                  // foreground recovery behind an earlier WebKit suspend/resume.
+                  nativeResume.call(ctx).then(function() { settle(ctx, state); }, function() { settle(ctx, state); });
+              }
+          }
+          if (NativeAudioContext) {
+              NativeAudioContext.prototype.resume = function() {
+                  var ctx = this;
+                  var state = track(ctx);
+                  state.wanted = true;
+                  state.resumeRevision = -1;
+                  return new Promise(function(resolve, reject) {
+                      state.resumes.push({resolve: resolve, reject: reject});
+                      reconcile(ctx, state);
+                  });
+              };
+              NativeAudioContext.prototype.suspend = function() {
+                  var ctx = this;
+                  var state = track(ctx);
+                  state.wanted = false;
+                  state.suspendRevision = -1;
+                  return new Promise(function(resolve, reject) {
+                      state.suspends.push({resolve: resolve, reject: reject});
+                      reconcile(ctx, state);
+                  });
+              };
+              var GuardedAudioContext = new Proxy(NativeAudioContext, {
+                  construct: function(target, args, newTarget) {
+                      var ctx = Reflect.construct(target, args, newTarget);
+                      reconcile(ctx, track(ctx));
+                      return ctx;
+                  }
+              });
+              if (window.AudioContext === NativeAudioContext) window.AudioContext = GuardedAudioContext;
+              if (window.webkitAudioContext === NativeAudioContext) window.webkitAudioContext = GuardedAudioContext;
+          }
+          function applyPolicy(force) {
+              var howler = window.Howler;
+              if (howler && howler.ctx) {
+                  track(howler.ctx);
+                  // Let Howler release its own play locks and queued voice/SFX.
+                  // Resuming the context directly does not emit Howler's resume event.
+                  if (canRecoverAudio && typeof howler._autoResume === 'function' && howler._howls && howler._howls.some(function(howl) {
+                      return howl._webAudio && (howl.playing() || howl._playLock);
+                  })) howler._autoResume();
+              }
+              contexts.forEach(function(state, ctx) {
+                  if (force) state.resumeRevision = -1;
+                  reconcile(ctx, state);
+              });
+          }
+          window.addEventListener('message', function(evt) {
+              if (!evt.data || evt.data.type !== 'YAHAGI_AUDIO_POLICY' || evt.data.revision < revision) return;
+              revision = evt.data.revision;
+              // Offstage games can be hidden while the app is in the foreground.
+              if (evt.data.canRecoverAudio && document.hidden && !evt.data.backgroundPlaybackEnabled && evt.data.visibilityEpoch !== visibilityEpoch) {
+                  requestPolicy();
+                  return;
+              }
+              canRecoverAudio = !!evt.data.canRecoverAudio;
+              backgroundPlaybackEnabled = !!evt.data.backgroundPlaybackEnabled;
+              try {
+                  if (navigator.audioSession) {
+                      var type = canRecoverAudio || backgroundPlaybackEnabled ? 'playback' : 'auto';
+                      if (navigator.audioSession.type !== type) navigator.audioSession.type = type;
+                  }
+              } catch(e){}
+              applyPolicy(true);
           });
+          document.addEventListener('visibilitychange', function() {
+              visibilityEpoch += 1;
+              if (!backgroundPlaybackEnabled) canRecoverAudio = false;
+              applyPolicy(false);
+              requestPolicy();
+          });
+          window.addEventListener('pageshow', requestPolicy);
+          ['pointerdown', 'touchend', 'keydown'].forEach(function(type) {
+              window.addEventListener(type, function() { applyPolicy(true); }, {capture: true, passive: true});
+          });
+          requestPolicy();
       })();
       """
     let userScript = WKUserScript(
@@ -286,80 +331,83 @@ import WebKit
       injectionTime: .atDocumentStart,
       forMainFrameOnly: false
     )
-    targetWebView.configuration.userContentController.addUserScript(userScript)
+    let content = targetWebView.configuration.userContentController
+    content.add(self, name: Self.messageName)
+    content.addUserScript(userScript)
+    self.userScript = userScript
     targetWebView.evaluateJavaScript(scriptSource, completionHandler: nil)
+  }
+
+  public func userContentController(
+    _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
+  ) {
+    guard message.name == Self.messageName,
+      let body = message.body as? [String: Any],
+      let visibilityEpoch = body["visibilityEpoch"] as? Int,
+      let target = scriptWebView, message.webView === target
+    else { return }
+    target.callAsyncJavaScript(
+      "window.postMessage({type: 'YAHAGI_AUDIO_POLICY', backgroundPlaybackEnabled: backgroundPlaybackEnabled, canRecoverAudio: canRecoverAudio, revision: revision, visibilityEpoch: visibilityEpoch}, '*');",
+      arguments: [
+        "backgroundPlaybackEnabled": isBackgroundPlaybackEnabled,
+        "canRecoverAudio": canRecoverAudio,
+        "revision": policyRevision,
+        "visibilityEpoch": visibilityEpoch,
+      ], in: message.frameInfo, in: .page, completionHandler: nil)
   }
 
   public func applyBackgroundState(_ isBackground: Bool) {
     self.isBackgrounded = isBackground
-    let targetWebView = findWKWebViewInApp()
-
-    if isBackgroundPlaybackEnabled {
-      do {
-        try AVAudioSession.sharedInstance().setCategory(
-          .playback, mode: .default, options: [.mixWithOthers])
-        try AVAudioSession.sharedInstance().setActive(true)
-      } catch {
-        NSLog("[IOSGameAudioPort] Activating playback AVAudioSession failed: \(error)")
+    do {
+      let session = AVAudioSession.sharedInstance()
+      let category: AVAudioSession.Category =
+        isBackground && !isBackgroundPlaybackEnabled ? .ambient : .playback
+      // Foreground game audio uses media playback regardless of the background
+      // preference. Only a blocked background session leaves that category.
+      if session.category != category {
+        try session.setCategory(category, mode: .default, options: [.mixWithOthers])
       }
-    } else {
-      if isBackground {
-        do {
-          MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-          try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        } catch {
-          NSLog("[IOSGameAudioPort] Deactivating AVAudioSession failed: \(error)")
-        }
-      } else {
-        do {
-          MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-          try AVAudioSession.sharedInstance().setCategory(
-            .ambient, mode: .default, options: [.mixWithOthers])
-          try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-          NSLog("[IOSGameAudioPort] Activating AVAudioSession failed: \(error)")
-        }
+      if !isBackgroundPlaybackEnabled {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
       }
+      // Activate the session before asking WebKit to resume. WebKit owns
+      // playback suspension; separately deactivating the session adds a second
+      // interruption that can outlive the page's suspension.
+      if !isBackground || isBackgroundPlaybackEnabled {
+        try session.setActive(true)
+      }
+    } catch {
+      NSLog("[IOSGameAudioPort] Applying AVAudioSession policy failed: \(error)")
     }
-
-    if let webViewInstance = targetWebView {
-      ensureUserScriptInjected(targetWebView: webViewInstance)
-
-      let effectiveBg = isBackground && !isBackgroundPlaybackEnabled
-      let broadcastJS = """
-        (function() {
-            var isBg = \(effectiveBg ? "true" : "false");
-
-            function notifyFrame(win) {
-                try {
-                    win.postMessage({ type: 'YAHAGI_AUDIO_CONTROL', isBackground: isBg }, '*');
-                } catch(e){}
-                try {
-                    for (var i = 0; i < win.frames.length; i++) {
-                        try { notifyFrame(win.frames[i]); } catch(e){}
-                    }
-                } catch(e){}
-            }
-
-            notifyFrame(window);
-        })();
-        """
-      webViewInstance.evaluateJavaScript(broadcastJS, completionHandler: nil)
-    }
+    applyEffectiveMuteState()
   }
 
   private func setMuted(_ muted: Bool, result: @escaping FlutterResult) {
     self.isUserMuted = muted
+    applyEffectiveMuteState()
+    result(nil)
+  }
+
+  private var canRecoverAudio: Bool {
+    !isUserMuted && !(isBackgrounded && !isBackgroundPlaybackEnabled)
+      && !isMediaPlaybackSuspended && !isMediaPlaybackTransitionInFlight
+  }
+
+  private func applyEffectiveMuteState() {
     let targetWebView = findWKWebViewInApp()
 
     if let webViewInstance = targetWebView {
       ensureUserScriptInjected(targetWebView: webViewInstance)
-      let effectiveMuteState = muted || (isBackgrounded && !isBackgroundPlaybackEnabled)
+      if mediaPlaybackWebView !== webViewInstance {
+        mediaPlaybackWebView = webViewInstance
+        isMediaPlaybackSuspended = false
+        isMediaPlaybackTransitionInFlight = false
+      }
+      policyRevision += 1
       let broadcastJS = """
         (function() {
-            var isBg = \(effectiveMuteState ? "true" : "false");
             function notifyFrame(win) {
-                try { win.postMessage({ type: 'YAHAGI_AUDIO_CONTROL', isBackground: isBg }, '*'); } catch(e){}
+                try { win.postMessage({ type: 'YAHAGI_AUDIO_POLICY', backgroundPlaybackEnabled: \(isBackgroundPlaybackEnabled ? "true" : "false"), canRecoverAudio: \(canRecoverAudio ? "true" : "false"), revision: \(policyRevision) }, '*'); } catch(e){}
                 try {
                     for (var i = 0; i < win.frames.length; i++) {
                         try { notifyFrame(win.frames[i]); } catch(e){}
@@ -370,8 +418,24 @@ import WebKit
         })();
         """
       webViewInstance.evaluateJavaScript(broadcastJS, completionHandler: nil)
-    }
 
-    result(nil)
+      // WebKit owns HTML media suspension; the frame hook separately gates
+      // WebAudio contexts that can start new sources while this is suspended.
+      let shouldSuspend = isUserMuted || (isBackgrounded && !isBackgroundPlaybackEnabled)
+      guard !isMediaPlaybackTransitionInFlight, isMediaPlaybackSuspended != shouldSuspend else {
+        return
+      }
+      isMediaPlaybackTransitionInFlight = true
+      webViewInstance.setAllMediaPlaybackSuspended(shouldSuspend) { [weak self, weak webViewInstance] in
+        guard let self = self, let target = webViewInstance,
+          self.mediaPlaybackWebView === target
+        else { return }
+        self.isMediaPlaybackSuspended = shouldSuspend
+        self.isMediaPlaybackTransitionInFlight = false
+        // Lifecycle and Flutter mute changes can arrive while WebKit is still
+        // completing the previous request. Reconcile the latest target now.
+        self.applyEffectiveMuteState()
+      }
+    }
   }
 }

@@ -45,6 +45,7 @@ import 'src/bridge/captured_api_event.dart';
 import 'src/browser/gadget_bypass_controller.dart';
 import 'src/browser/gadget_bypass_store.dart';
 import 'src/browser/game_browser_controller.dart';
+import 'src/browser/game_workspace_visibility.dart';
 import 'src/browser/game_resource_cache_channel.dart';
 import 'src/browser/game_resource_cache_controller.dart';
 import 'src/browser/game_resource_cache_store.dart';
@@ -754,7 +755,7 @@ Future<void> main() async {
   var mainAppLaunched = false;
   void launchMainApp() {
     mainAppLaunched = true;
-    runApp(app);
+    runApp(GameWorkspaceSurfacePolicy(keepInWindow: true, child: app));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(fcdMapController.checkForUpdates());
       unawaited(questCatalogController.checkForUpdates());

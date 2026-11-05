@@ -2814,7 +2814,7 @@ class _YahagiShellState extends State<YahagiShell> with WidgetsBindingObserver {
                                   active: _workspaceIndex == 0,
                                   child: TickerMode(
                                     enabled: _workspaceIndex == 0,
-                                    child: Offstage(
+                                    child: GameWorkspaceOffstage(
                                       offstage: _workspaceIndex != 0,
                                       child: LayoutBuilder(
                                         key: const Key('game-workspace'),
