@@ -27,6 +27,7 @@ import 'src/ios/ios_backup_document_port.dart';
 import 'src/ios/ios_camera_geometry_host.dart';
 import 'src/ios/ios_custom_font_store.dart';
 import 'src/ios/ios_game_state_cache.dart';
+import 'src/ios/ios_split_screen_host.dart';
 import 'src/ios/ios_telemetry.dart';
 import 'src/localization/record_backup_strings.dart';
 import 'src/subtitles/ship_subtitle_runtime_controller.dart';
@@ -1158,7 +1159,7 @@ class _IOSYahagiAppState extends State<_IOSYahagiApp> {
   @override
   Widget build(BuildContext context) {
     final rawController = widget.rawDataServerController;
-    return IOSCameraGeometryHost(
+    return _withWindowGeometry(
       child: YahagiApp(
         layoutSettingsController: widget.layoutSettingsController,
         networkSettingsController: widget.networkSettingsController,
@@ -1258,6 +1259,13 @@ class _IOSYahagiAppState extends State<_IOSYahagiApp> {
       ),
     );
   }
+
+  Widget _withWindowGeometry({required Widget child}) => IOSCameraGeometryHost(
+    child: IOSSplitScreenHost(
+      displayModeController: widget.displayModeController,
+      child: child,
+    ),
+  );
 }
 
 final class _IosDisabledGameResourceCachePort implements GameResourceCachePort {

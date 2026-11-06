@@ -33,6 +33,7 @@ import WebKit
   private var diagnosticsBridge: IOSDiagnosticsBridge?
   private var originCookieBridge: IOSOriginCookieBridge?
   private var cameraGeometryBridge: IOSCameraGeometryBridge?
+  private var splitScreenBridge: IOSSplitScreenBridge?
   private var customFontBridge: IOSCustomFontBridge?
   private var shipSubtitleBridge: IOSShipSubtitleBridge?
   private var recordBackupBridge: IOSRecordBackupBridge?
@@ -309,6 +310,12 @@ import WebKit
     let cameraGeometry = IOSCameraGeometryBridge(viewController: controller, channel: cameraChannel)
     cameraGeometryBridge = cameraGeometry
     cameraChannel.setMethodCallHandler { call, result in cameraGeometry.handle(call, result: result) }
+
+    let splitChannel = FlutterMethodChannel(
+      name: "app.yahagi.kancollebrowser/split_screen", binaryMessenger: controller.binaryMessenger)
+    let splitBridge = IOSSplitScreenBridge(viewController: controller, channel: splitChannel)
+    splitScreenBridge = splitBridge
+    splitChannel.setMethodCallHandler { call, result in splitBridge.handle(call, result: result) }
 
     let documentPicker = IOSDocumentPickerCoordinator(viewController: controller)
     let fontChannel = FlutterMethodChannel(
