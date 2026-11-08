@@ -179,6 +179,7 @@ import WebKit
           if (window.__yahagiAudioScriptInjected) return;
           window.__yahagiAudioScriptInjected = true;
           var canRecoverAudio = false;
+          var isUserMuted = true;
           var backgroundPlaybackEnabled = false;
           var revision = -1;
           var visibilityEpoch = 0;
@@ -186,6 +187,39 @@ import WebKit
           var NativeAudioContext = window.AudioContext || window.webkitAudioContext;
           var nativeResume = NativeAudioContext && NativeAudioContext.prototype.resume;
           var nativeSuspend = NativeAudioContext && NativeAudioContext.prototype.suspend;
+          var nativeConnect = window.AudioNode && AudioNode.prototype.connect;
+          var nativeDisconnect = window.AudioNode && AudioNode.prototype.disconnect;
+          var mediaMutes = new WeakMap();
+          var mediaElements = new Set();
+          var mediaPrototype = window.HTMLMediaElement && HTMLMediaElement.prototype;
+          var nativeMediaMute = mediaPrototype && Object.getOwnPropertyDescriptor(mediaPrototype, 'muted');
+          function trackMedia(media) {
+              if (!mediaMutes.has(media)) {
+                  mediaMutes.set(media, nativeMediaMute.get.call(media));
+                  mediaElements.add(new WeakRef(media));
+              }
+              nativeMediaMute.set.call(media, isUserMuted || mediaMutes.get(media));
+          }
+          if (nativeMediaMute && nativeMediaMute.get && nativeMediaMute.set) {
+              Object.defineProperty(mediaPrototype, 'muted', {
+                  configurable: nativeMediaMute.configurable,
+                  enumerable: nativeMediaMute.enumerable,
+                  get: nativeMediaMute.get,
+                  set: function(muted) {
+                      trackMedia(this);
+                      mediaMutes.set(this, !!muted);
+                      nativeMediaMute.set.call(this, isUserMuted || !!muted);
+                  }
+              });
+              var nativePlay = mediaPrototype.play;
+              mediaPrototype.play = function() {
+                  trackMedia(this);
+                  return nativePlay.apply(this, arguments);
+              };
+              document.addEventListener('play', function(evt) {
+                  if (evt.target instanceof HTMLMediaElement) trackMedia(evt.target);
+              }, true);
+          }
           function requestPolicy() {
               window.webkit.messageHandlers.YahagiGameAudioReady.postMessage({visibilityEpoch: visibilityEpoch});
           }
@@ -213,7 +247,14 @@ import WebKit
           }
           function track(ctx) {
               if (!contexts.has(ctx)) {
-                  contexts.set(ctx, {wanted: ctx.state === 'running', resumes: [], suspends: [], resumeRevision: -1, suspendRevision: -1});
+                  // Mute the output without stopping the audio clock. Login and
+                  // scene transitions can depend on resume/play/end callbacks.
+                  var output = ctx.state !== 'closed' ? ctx.createGain() : null;
+                  if (output) {
+                      output.gain.value = isUserMuted ? 0 : 1;
+                      nativeConnect.call(output, ctx.destination);
+                  }
+                  contexts.set(ctx, {output: output, wanted: ctx.state === 'running', resumes: [], suspends: [], resumeRevision: -1, suspendRevision: -1});
                   ctx.addEventListener('statechange', function() {
                       var state = contexts.get(ctx);
                       if (!state) return;
@@ -250,6 +291,27 @@ import WebKit
               }
           }
           if (NativeAudioContext) {
+              AudioNode.prototype.connect = function(destination) {
+                  if (this.context instanceof NativeAudioContext && destination === this.context.destination) {
+                      var state = track(this.context);
+                      if (state.output) {
+                          var args = Array.prototype.slice.call(arguments);
+                          args[0] = state.output;
+                          nativeConnect.apply(this, args);
+                          return destination;
+                      }
+                  }
+                  return nativeConnect.apply(this, arguments);
+              };
+              AudioNode.prototype.disconnect = function(destination) {
+                  var state = contexts.get(this.context);
+                  if (state && state.output && destination === this.context.destination) {
+                      var args = Array.prototype.slice.call(arguments);
+                      args[0] = state.output;
+                      return nativeDisconnect.apply(this, args);
+                  }
+                  return nativeDisconnect.apply(this, arguments);
+              };
               NativeAudioContext.prototype.resume = function() {
                   var ctx = this;
                   var state = track(ctx);
@@ -281,6 +343,14 @@ import WebKit
               if (window.webkitAudioContext === NativeAudioContext) window.webkitAudioContext = GuardedAudioContext;
           }
           function applyPolicy(force) {
+              contexts.forEach(function(state) {
+                  if (state.output) state.output.gain.value = isUserMuted ? 0 : 1;
+              });
+              mediaElements.forEach(function(reference) {
+                  var media = reference.deref();
+                  if (media) trackMedia(media);
+                  else mediaElements.delete(reference);
+              });
               var howler = window.Howler;
               if (howler && howler.ctx) {
                   track(howler.ctx);
@@ -304,6 +374,7 @@ import WebKit
                   return;
               }
               canRecoverAudio = !!evt.data.canRecoverAudio;
+              isUserMuted = !!evt.data.isUserMuted;
               backgroundPlaybackEnabled = !!evt.data.backgroundPlaybackEnabled;
               try {
                   if (navigator.audioSession) {
@@ -347,10 +418,11 @@ import WebKit
       let target = scriptWebView, message.webView === target
     else { return }
     target.callAsyncJavaScript(
-      "window.postMessage({type: 'YAHAGI_AUDIO_POLICY', backgroundPlaybackEnabled: backgroundPlaybackEnabled, canRecoverAudio: canRecoverAudio, revision: revision, visibilityEpoch: visibilityEpoch}, '*');",
+      "window.postMessage({type: 'YAHAGI_AUDIO_POLICY', backgroundPlaybackEnabled: backgroundPlaybackEnabled, canRecoverAudio: canRecoverAudio, isUserMuted: isUserMuted, revision: revision, visibilityEpoch: visibilityEpoch}, '*');",
       arguments: [
         "backgroundPlaybackEnabled": isBackgroundPlaybackEnabled,
         "canRecoverAudio": canRecoverAudio,
+        "isUserMuted": isUserMuted,
         "revision": policyRevision,
         "visibilityEpoch": visibilityEpoch,
       ], in: message.frameInfo, in: .page, completionHandler: nil)
@@ -389,7 +461,7 @@ import WebKit
   }
 
   private var canRecoverAudio: Bool {
-    !isUserMuted && !(isBackgrounded && !isBackgroundPlaybackEnabled)
+    !(isBackgrounded && !isBackgroundPlaybackEnabled)
       && !isMediaPlaybackSuspended && !isMediaPlaybackTransitionInFlight
   }
 
@@ -407,7 +479,7 @@ import WebKit
       let broadcastJS = """
         (function() {
             function notifyFrame(win) {
-                try { win.postMessage({ type: 'YAHAGI_AUDIO_POLICY', backgroundPlaybackEnabled: \(isBackgroundPlaybackEnabled ? "true" : "false"), canRecoverAudio: \(canRecoverAudio ? "true" : "false"), revision: \(policyRevision) }, '*'); } catch(e){}
+                try { win.postMessage({ type: 'YAHAGI_AUDIO_POLICY', backgroundPlaybackEnabled: \(isBackgroundPlaybackEnabled ? "true" : "false"), canRecoverAudio: \(canRecoverAudio ? "true" : "false"), isUserMuted: \(isUserMuted ? "true" : "false"), revision: \(policyRevision) }, '*'); } catch(e){}
                 try {
                     for (var i = 0; i < win.frames.length; i++) {
                         try { notifyFrame(win.frames[i]); } catch(e){}
@@ -421,7 +493,8 @@ import WebKit
 
       // WebKit owns HTML media suspension; the frame hook separately gates
       // WebAudio contexts that can start new sources while this is suspended.
-      let shouldSuspend = isUserMuted || (isBackgrounded && !isBackgroundPlaybackEnabled)
+      // User mute must leave playback and its completion callbacks running.
+      let shouldSuspend = isBackgrounded && !isBackgroundPlaybackEnabled
       guard !isMediaPlaybackTransitionInFlight, isMediaPlaybackSuspended != shouldSuspend else {
         return
       }
