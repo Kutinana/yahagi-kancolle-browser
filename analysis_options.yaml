@@ -22,6 +22,7 @@ analyzer:
     - check_url.dart
     - test_cipher.dart
     - test_dmg_urls.dart
+    - third_party/webview_flutter_wkwebview/**
 
 linter:
   # The lint rules applied to this project can be customized in the

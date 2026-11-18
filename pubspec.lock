@@ -781,10 +781,9 @@ packages:
   webview_flutter_wkwebview:
     dependency: "direct main"
     description:
-      name: webview_flutter_wkwebview
-      sha256: acac45e0a8d7beb1d0805521f44842f406c46eb5a69410f53d935e3c62138afc
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/webview_flutter_wkwebview"
+      relative: true
+    source: path
     version: "3.27.2"
   win32:
     dependency: transitive
