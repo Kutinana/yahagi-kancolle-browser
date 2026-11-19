@@ -1,6 +1,8 @@
 # iOS 构建说明
 
-当前使用 Flutter 3.47.9 stable / Dart 3.13，应用最低系统版本保持 iOS 15.0。
+当前使用 Flutter 3.50.0 stable / Dart 3.14，应用最低系统版本为 iOS 15.0。
+Build 37 在 iPadOS 16.5.1 上出现 Impeller 创建 Metal 渲染通道时的崩溃。
+升级引擎带入了 Metal 缓冲区复用和渲染资源缓存的修正，仍需在原机验证。
 
 ```sh
 flutter pub get
