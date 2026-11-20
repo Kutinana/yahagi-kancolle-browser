@@ -378,7 +378,10 @@ import WebKit
               backgroundPlaybackEnabled = !!evt.data.backgroundPlaybackEnabled;
               try {
                   if (navigator.audioSession) {
-                      var type = canRecoverAudio || backgroundPlaybackEnabled ? 'playback' : 'auto';
+                      // WebKit manages its own session. Keep it mixable while
+                      // muted, even as WebAudio continues rendering for callbacks.
+                      var type = isUserMuted ? 'ambient' :
+                          (canRecoverAudio || backgroundPlaybackEnabled ? 'playback' : 'auto');
                       if (navigator.audioSession.type !== type) navigator.audioSession.type = type;
                   }
               } catch(e){}
@@ -430,32 +433,36 @@ import WebKit
 
   public func applyBackgroundState(_ isBackground: Bool) {
     self.isBackgrounded = isBackground
+    applyAudioSessionPolicy()
+    applyEffectiveMuteState()
+  }
+
+  private func applyAudioSessionPolicy() {
+    let usesPlayback = !isUserMuted && (!isBackgrounded || isBackgroundPlaybackEnabled)
     do {
       let session = AVAudioSession.sharedInstance()
-      let category: AVAudioSession.Category =
-        isBackground && !isBackgroundPlaybackEnabled ? .ambient : .playback
-      // Foreground game audio uses media playback regardless of the background
-      // preference. Only a blocked background session leaves that category.
-      if session.category != category {
-        try session.setCategory(category, mode: .default, options: [.mixWithOthers])
+      let category: AVAudioSession.Category = usesPlayback ? .playback : .ambient
+      if session.category != category || !session.categoryOptions.contains(.mixWithOthers) {
+        // The ambient category mixes automatically.
+        try session.setCategory(category, mode: .default, options: usesPlayback ? [.mixWithOthers] : [])
       }
-      if !isBackgroundPlaybackEnabled {
+      if isUserMuted || !isBackgroundPlaybackEnabled {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
       }
       // Activate the session before asking WebKit to resume. WebKit owns
       // playback suspension; separately deactivating the session adds a second
       // interruption that can outlive the page's suspension.
-      if !isBackground || isBackgroundPlaybackEnabled {
+      if usesPlayback {
         try session.setActive(true)
       }
     } catch {
       NSLog("[IOSGameAudioPort] Applying AVAudioSession policy failed: \(error)")
     }
-    applyEffectiveMuteState()
   }
 
   private func setMuted(_ muted: Bool, result: @escaping FlutterResult) {
     self.isUserMuted = muted
+    applyAudioSessionPolicy()
     applyEffectiveMuteState()
     result(nil)
   }

@@ -33,6 +33,16 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- iPadOS 16.5.1 crashed while Impeller encoded frames behind WKWebView.
+	     Use system-managed drawables and 8-bit Flutter render targets on iPad. -->
+	<key>FLTUseFlutterMetalLayer</key>
+	<true/>
+	<key>FLTUseFlutterMetalLayer~ipad</key>
+	<false/>
+	<key>FLTEnableWideGamut</key>
+	<true/>
+	<key>FLTEnableWideGamut~ipad</key>
+	<false/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
