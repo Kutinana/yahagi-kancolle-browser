@@ -37,6 +37,8 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Yahagi can ring a system alarm when an expedition, repair, or construction finishes.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

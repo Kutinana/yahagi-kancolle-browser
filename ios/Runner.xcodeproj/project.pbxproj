@@ -20,6 +20,7 @@
 		74858FAF1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift */; };
 		74858FAF1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift */; };
 		74858FAF1ED2DC5600515829 /* IOSNotificationBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515829 /* IOSNotificationBridge.swift */; };
+		74858FAF1ED2DC5600515840 /* IOSAlarmPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515840 /* IOSAlarmPreview.swift */; };
 		74858FAF1ED2DC560051582A /* IOSCompositionImageBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */; };
 		74858FAF1ED2DC560051582B /* IOSDiagnosticsBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */; };
 		74858FAF1ED2DC560051582C /* IOSOriginCookieBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC560051582C /* IOSOriginCookieBridge.swift */; };
@@ -34,6 +35,7 @@
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
+		CC0000021CF9000F007C1111 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = CC0000011CF9000F007C1111 /* InfoPlist.xcstrings */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		B10500000000000000000001 /* IOSLiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10500000000000000000011 /* IOSLiveActivityBridge.swift */; };
 		B10500000000000000000002 /* YahagiTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10500000000000000000012 /* YahagiTimerAttributes.swift */; };
@@ -98,6 +100,7 @@
 		74858FAE1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSGameFrameReloadBridge.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSFixedCanvasScaleBridge.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515829 /* IOSNotificationBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSNotificationBridge.swift; sourceTree = "<group>"; };
+		74858FAE1ED2DC5600515840 /* IOSAlarmPreview.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSAlarmPreview.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSCompositionImageBridge.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSDiagnosticsBridge.swift; sourceTree = "<group>"; };
 		74858FAE1ED2DC560051582C /* IOSOriginCookieBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IOSOriginCookieBridge.swift; sourceTree = "<group>"; };
@@ -116,6 +119,7 @@
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97C146FB1CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CC0000011CF9000F007C1111 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B10500000000000000000011 /* IOSLiveActivityBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSLiveActivityBridge.swift; sourceTree = "<group>"; };
@@ -163,6 +167,7 @@
 				74858FAE1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift */,
 				74858FAE1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift */,
 				74858FAE1ED2DC5600515829 /* IOSNotificationBridge.swift */,
+				74858FAE1ED2DC5600515840 /* IOSAlarmPreview.swift */,
 				B10500000000000000000011 /* IOSLiveActivityBridge.swift */,
 				74858FAE1ED2DC560051582A /* IOSCompositionImageBridge.swift */,
 				74858FAE1ED2DC560051582B /* IOSDiagnosticsBridge.swift */,
@@ -217,6 +222,7 @@
 				74858FAD1ED2DC5600515820 /* Bridge */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
+				CC0000011CF9000F007C1111 /* InfoPlist.xcstrings */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
 				97C147021CF9000F007C117D /* Info.plist */,
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
@@ -356,6 +362,7 @@
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
+				CC0000021CF9000F007C1111 /* InfoPlist.xcstrings in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -427,6 +434,7 @@
 				74858FAF1ED2DC5600515827 /* IOSGameFrameReloadBridge.swift in Sources */,
 				74858FAF1ED2DC5600515828 /* IOSFixedCanvasScaleBridge.swift in Sources */,
 				74858FAF1ED2DC5600515829 /* IOSNotificationBridge.swift in Sources */,
+				74858FAF1ED2DC5600515840 /* IOSAlarmPreview.swift in Sources */,
 				B10500000000000000000001 /* IOSLiveActivityBridge.swift in Sources */,
 				B10500000000000000000002 /* YahagiTimerAttributes.swift in Sources */,
 				74858FAF1ED2DC560051582A /* IOSCompositionImageBridge.swift in Sources */,

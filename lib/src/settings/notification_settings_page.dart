@@ -1,6 +1,7 @@
 import '../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import '../ios/ios_platform_support.dart';
+import '../ios/ios_alarm_preview_setting.dart';
 import '../ios/ios_live_activity_settings_section.dart';
 import '../../l10n/app_localizations.dart';
 import '../notification/method_channel_notification_port.dart';
@@ -152,6 +153,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                           onChanged: !isIOSPlatform && settings.master
                               ? (v) => controller.setVibration(v)
                               : null,
+                        ),
+                      if (isIOSPlatform)
+                        IOSAlarmPreviewSetting(
+                          audible: settings.master && settings.sound,
                         ),
                     ],
                   ),

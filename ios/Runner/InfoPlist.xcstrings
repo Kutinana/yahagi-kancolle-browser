@@ -1,0 +1,41 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSAlarmKitUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yahagi can ring a system alarm when an expedition, repair, or construction finishes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许矢矧在远征、入渠修理或建造完成时使用系统闹钟提醒你。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許矢矧在遠征、入渠修理或建造完成時使用系統鬧鐘提醒你。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遠征、入渠修理、建造が完了したときに、システムアラームでお知らせします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원정, 입거 수리 또는 건조가 끝날 때 시스템 알람으로 알려 줍니다."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
