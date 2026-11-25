@@ -54,6 +54,13 @@ dependencies:
   device_info_plus: 13.2.0
   telemetrydecksdk: ^4.0.0
 
+# Keep the upstream SDK and plugin versions while carrying the two iOS native fixes.
+dependency_overrides:
+  device_info_plus:
+    path: third_party/device_info_plus
+  webview_flutter_wkwebview:
+    path: third_party/webview_flutter_wkwebview
+
 dev_dependencies:
   webview_flutter_platform_interface: ^2.15.1
   flutter_test:

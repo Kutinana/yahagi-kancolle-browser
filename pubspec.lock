@@ -100,10 +100,9 @@ packages:
   device_info_plus:
     dependency: "direct main"
     description:
-      name: device_info_plus
-      sha256: "0891702f96b2e465fe567b7ec448380e6b1c14f60af552a8536d9f583b6b8442"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/device_info_plus"
+      relative: true
+    source: path
     version: "13.2.0"
   device_info_plus_platform_interface:
     dependency: transitive
@@ -781,10 +780,9 @@ packages:
   webview_flutter_wkwebview:
     dependency: "direct main"
     description:
-      name: webview_flutter_wkwebview
-      sha256: c879dd64b87c452aa84381b244d5469da57ba7e8cca6884c7b1e0d406372c12d
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/webview_flutter_wkwebview"
+      relative: true
+    source: path
     version: "3.26.0"
   win32:
     dependency: transitive
