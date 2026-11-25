@@ -10,6 +10,8 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
   private let alertPrefix = "yahagi.alert:"
   private let deliveredKey = "yahagi.notifications.delivered.v1"
   private var snapshots: [([String: Any], FlutterResult)] = []
+  private var latestSnapshot: [String: Any]?
+  private var alarmAuthorization = false
   private var applying = false
   private var requestingPermission = false
   private var permissionReplies: [FlutterResult] = []
@@ -17,6 +19,11 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
   override init() {
     super.init()
     center.delegate = self
+    if #available(iOS 26.0, *) {
+      alarmAuthorization = IOSAlarmPreview.authorized
+      NotificationCenter.default.addObserver(self, selector: #selector(refreshAlarmAuthorization),
+        name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
   }
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -28,6 +35,7 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
         result(FlutterError(code: "invalid_argument", message: "Invalid notification snapshot", details: nil))
         return
       }
+      latestSnapshot = snapshot
       snapshots.append((snapshot, result))
       applyNextSnapshot()
     case "getCapabilities":
@@ -39,6 +47,31 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
           ])
         }
       }
+    case "getAlarmPreview", "setAlarmPreview":
+      guard #available(iOS 26.0, *) else { result(["supported": false]); return }
+      if call.method == "getAlarmPreview" { result(IOSAlarmPreview.settings()); return }
+      guard let enabled = call.arguments as? Bool else {
+        result(FlutterError(code: "invalid_argument", message: "Expected a switch value", details: nil))
+        return
+      }
+      Task { @MainActor in
+        do {
+          try await IOSAlarmPreview.setEnabled(enabled)
+          self.alarmAuthorization = IOSAlarmPreview.authorized
+          self.replayTimers { error in
+            var settings = IOSAlarmPreview.settings()
+            settings["syncFailed"] = error != nil
+            result(settings)
+          }
+        } catch {
+          result(FlutterError(code: "alarm_authorization", message: error.localizedDescription, details: nil))
+        }
+      }
+    case "openAlarmPreviewSettings":
+      if #available(iOS 26.0, *), let url = URL(string: UIApplication.openSettingsURLString) {
+        UIApplication.shared.open(url)
+      }
+      result(nil)
     case "getLiveActivitySettings", "setLiveActivitySettings":
       liveActivities.handle(call, result: result)
     case "requestNotificationPermission":
@@ -59,6 +92,25 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+
+  @objc private func refreshAlarmAuthorization() {
+    guard #available(iOS 26.0, *), alarmAuthorization != IOSAlarmPreview.authorized else { return }
+    alarmAuthorization = IOSAlarmPreview.authorized
+    replayTimers { _ in }
+  }
+
+  private func replayTimers(completion: @escaping (FlutterError?) -> Void) {
+    guard var snapshot = latestSnapshot else { completion(nil); return }
+    snapshot["immediateAlerts"] = []
+    snapshots.append((snapshot, { response in
+      if let failures = (response as? [String: Any])?["failures"] as? [String], !failures.isEmpty {
+        completion(FlutterError(code: "timer_delivery", message: failures.joined(separator: ", "), details: nil))
+      } else {
+        completion(response as? FlutterError)
+      }
+    }))
+    applyNextSnapshot()
   }
 
   private func isGranted(_ status: UNAuthorizationStatus) -> Bool {
@@ -96,17 +148,17 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
     let (snapshot, result) = snapshots.removeFirst()
     center.getPendingNotificationRequests { pending in
       self.center.getDeliveredNotifications { delivered in
-        DispatchQueue.main.async {
-          self.apply(snapshot, pending: pending, delivered: delivered, result: result)
+        Task { @MainActor in
+          await self.apply(snapshot, pending: pending, delivered: delivered, result: result)
         }
       }
     }
   }
 
-  private func apply(
+  @MainActor private func apply(
     _ snapshot: [String: Any], pending: [UNNotificationRequest],
     delivered: [UNNotification], result: @escaping FlutterResult
-  ) {
+  ) async {
     liveActivities.applySnapshot(snapshot)
     let presentation = snapshot["presentation"] as? [String: Any] ?? [:]
     let member = (snapshot["memberId"] as? NSNumber)?.intValue ?? 0
@@ -118,6 +170,7 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
     let alarms = enabled ? snapshot["alarms"] as? [[String: Any]] ?? [] : []
     let alerts = enabled ? snapshot["immediateAlerts"] as? [[String: Any]] ?? [] : []
     var requests: [UNNotificationRequest] = []
+    var completionAlarms: [IOSCompletionAlarm] = []
     var immediateKeys: [String: String] = [:]
     var desiredAlarmIDs = Set<String>()
     var history = UserDefaults.standard.dictionary(forKey: deliveredKey) as? [String: Double] ?? [:]
@@ -131,6 +184,11 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
       else { continue }
       let id = memberAlarmPrefix + key
       guard desiredAlarmIDs.insert(id).inserted else { continue }
+      if alarm["stage"] as? String == "complete",
+        let kind = alarm["type"] as? String, ["expedition", "repair", "construction"].contains(kind) {
+        completionAlarms.append(IOSCompletionAlarm(identifier: id,
+          date: Date(timeIntervalSince1970: fireAt / 1000), title: content.title))
+      }
       let trigger = UNTimeIntervalNotificationTrigger(
         timeInterval: max(1, (fireAt - now) / 1000), repeats: false)
       requests.append(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
@@ -147,6 +205,23 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
       requests.append(UNNotificationRequest(identifier: id, content: content, trigger: nil))
     }
 
+    var failures: [String] = []
+    var systemAlarms = Set<String>()
+    if #available(iOS 26.0, *) {
+      do {
+        systemAlarms = try await IOSAlarmPreview.reconcile(timers: completionAlarms,
+          member: member, audible: enabled && sound, locale: presentation["localeCode"] as? String ?? "zh")
+        requests.removeAll { systemAlarms.contains($0.identifier) }
+        desiredAlarmIDs.subtract(systemAlarms)
+      } catch {
+        // Keep the current delivery route for these completions until the coordinator retries.
+        // Independent alerts and early reminders can still be delivered in this snapshot.
+        let uncertain = Set(completionAlarms.map(\.identifier))
+        requests.removeAll { uncertain.contains($0.identifier) }
+        failures.append("AlarmKit: \(error.localizedDescription)")
+      }
+    }
+
     // Snapshots describe the complete desired state, rather than cancellation deltas.
     let canceled = pending.map(\.identifier).filter {
       ($0.hasPrefix(alarmPrefix) && !desiredAlarmIDs.contains($0)) ||
@@ -158,8 +233,7 @@ final class IOSNotificationBridge: NSObject, UNUserNotificationCenterDelegate {
         (!enabled || (!$0.hasPrefix(memberAlarmPrefix) && !$0.hasPrefix(memberAlertPrefix)))
     }
     center.removeDeliveredNotifications(withIdentifiers: staleDelivered)
-    var scheduled = 0
-    var failures: [String] = []
+    var scheduled = systemAlarms.count
     let group = DispatchGroup()
     for request in requests {
       group.enter()
