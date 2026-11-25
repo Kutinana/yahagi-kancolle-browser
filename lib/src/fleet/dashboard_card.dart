@@ -91,35 +91,20 @@ class DashboardCard extends StatelessWidget {
             else if (!tabbed)
               LayoutBuilder(
                 builder: (context, constraints) {
-                  // English titles are long, but the flat header ellipsizes them
-                  // instead of wrapping so the collapse button never leaves view.
                   if (flat) {
                     return SizedBox(
                       key: const Key('dashboard-card-header'),
                       height: DashboardEditingScope.isEditing(context)
                           ? flatEditRowHeight
                           : flatHeaderHeight,
-                      child: _flatHeader(context),
+                      child:
+                          Localizations.localeOf(context).languageCode == 'en'
+                          ? _englishHeader(context, flat: true)
+                          : _flatHeader(context),
                     );
                   }
-                  if (Localizations.maybeLocaleOf(context)?.languageCode ==
-                          'en' &&
-                      (constraints.maxWidth < 400 ||
-                          MediaQuery.textScalerOf(context).scale(14) > 14)) {
-                    final header = _englishHeader(context);
-                    if (constraints.maxWidth < 220) {
-                      return SingleChildScrollView(
-                        // Cards keep their own state in the slot their
-                        // PageStorageKey derives; an unkeyed scroll view would
-                        // restore that value as its offset and throw.
-                        key: const PageStorageKey(
-                          'dashboard-card-header-scroll',
-                        ),
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(width: 220, child: header),
-                      );
-                    }
-                    return header;
+                  if (Localizations.localeOf(context).languageCode == 'en') {
+                    return _englishHeader(context);
                   }
                   return FittedBox(
                     fit: BoxFit.scaleDown,
@@ -342,46 +327,62 @@ class DashboardCard extends StatelessWidget {
     fontSize: flat ? flatRowFontSize : 14,
   );
 
-  Widget _englishHeader(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
+  // Keep English labels and mode selectors on one line. Only their content
+  // scales down; the settings and collapse controls retain their hit areas.
+  Widget _englishHeader(BuildContext context, {bool flat = false}) => Row(
     children: [
-      Row(
-        children: [
-          if (showLogo) ...[
-            IconTheme(
-              data: IconThemeData(
-                size: 16,
-                color: appColor(context, Color(0xffd4a85f)),
-              ),
-              child: icon,
-            ),
-            if (showTitle) const SizedBox(width: 6),
-          ],
-          Expanded(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
+      if (showLogo) ...[
+        IconTheme(
+          data: IconThemeData(
+            size: flat ? 13 : 16,
+            color: appColor(context, const Color(0xffd4a85f)),
+          ),
+          child: icon,
+        ),
+        const SizedBox(width: 6),
+      ],
+      Expanded(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (showTitle)
-                  Text(title, style: appTextStyle(context, _titleStyle(false))),
-                if (!collapsed && titleBadge != null) titleBadge!,
+                  Text(
+                    title,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: appTextStyle(context, _titleStyle(flat)),
+                  ),
+                if (!collapsed && titleBadge != null) ...[
+                  if (showTitle) const SizedBox(width: 8),
+                  titleBadge!,
+                ],
+                if (!collapsed && trailing != null) ...[
+                  if (showTitle || titleBadge != null) const SizedBox(width: 8),
+                  trailing!,
+                ],
               ],
             ),
           ),
-          ?headerAction,
-          _collapseButton(context),
-        ],
-      ),
-      if (!collapsed && trailing != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: SingleChildScrollView(
-            key: const PageStorageKey('dashboard-card-trailing-scroll'),
-            scrollDirection: Axis.horizontal,
-            child: trailing!,
-          ),
         ),
+      ),
+      ?headerAction,
+      if (flat) ...[
+        if (!DashboardEditingScope.isEditing(context) &&
+            !DashboardPresentationScope.isTabbed(context))
+          FlatCollapseChevron(
+            key: collapseButtonKey,
+            collapsed: collapsed,
+            label: _collapseLabel(context),
+            onTap: onToggleCollapse,
+            width: _flatChevronWidth,
+          ),
+      ] else
+        _collapseButton(context),
     ],
   );
 

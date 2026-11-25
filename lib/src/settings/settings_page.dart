@@ -93,6 +93,7 @@ class SettingsPage extends StatefulWidget {
     this.isBattleActive = false,
     this.diagnosticController,
     this.telemetryController,
+    this.additionalDataSections,
     this.onEditHeaderResources,
     this.onEditDashboardLayout,
     this.onEditHdLayout,
@@ -142,6 +143,7 @@ class SettingsPage extends StatefulWidget {
   final DiagnosticController? diagnosticController;
   final TelemetryController? telemetryController;
 
+  final List<Widget>? additionalDataSections;
   final VoidCallback? onEditHeaderResources;
   final VoidCallback? onEditDashboardLayout;
   final VoidCallback? onEditHdLayout;
@@ -231,6 +233,7 @@ class _SettingsPageState extends State<SettingsPage> {
           improvementPlannerController: settings.improvementPlannerController,
           shipSubtitleCatalogController: settings.shipSubtitleCatalogController,
           telemetryController: settings.telemetryController,
+          additionalSections: settings.additionalDataSections,
         ),
         AboutSupportSettingsPage(
           currentVersion: settings.currentVersion,
