@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../account/account_session.dart';
+import '../ios/ios_platform_support.dart';
 import '../game_state/game_state_controller.dart';
 import '../logbook/logbook_database.dart';
 import '../widgets/top_notice.dart';
@@ -67,8 +68,12 @@ class NetworkSettingsPageNew extends StatelessWidget with SettingsUIHelpers {
               child: NetworkSettingsSection(
                 controller: networkSettingsController,
                 onApplySuccess: () {
-                  // Reload game page
-                  browserController.reload();
+                  // iOS proxy changes can cancel the current login redirect.
+                  if (isIOSPlatform) {
+                    browserController.goHome();
+                  } else {
+                    browserController.reload();
+                  }
                 },
               ),
             ),

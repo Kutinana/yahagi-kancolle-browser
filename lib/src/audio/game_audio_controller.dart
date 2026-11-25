@@ -47,10 +47,10 @@ final class GameAudioController extends ChangeNotifier {
   String? _mutePreferenceErrorMessage;
 
   bool get isMuted => _isMuted;
+  bool get requestedMuted => _pendingMuted ?? _isMuted;
   bool get backgroundPlaybackEnabled => _backgroundPlaybackEnabled;
   bool get effectiveMuted =>
-      (_pendingMuted ?? _isMuted) ||
-      (_isBackgrounded && !_backgroundPlaybackEnabled);
+      requestedMuted || (_isBackgrounded && !_backgroundPlaybackEnabled);
   bool get isBusy => _isBusy;
   GameAudioAvailability get availability => _availability;
   String? get errorMessage {

@@ -1,3 +1,4 @@
+import '../../ios/ios_platform_support.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/app_segmented_style.dart';
 import '../../widgets/top_notice.dart';
@@ -296,7 +297,9 @@ class _GameModsPageState extends State<GameModsPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          c.errorCode == null
+                          isIOSPlatform
+                              ? iosGameModsDescription(context)
+                              : c.errorCode == null
                               ? s.unsupported
                               : s.reason(c.errorCode),
                           textAlign: TextAlign.center,

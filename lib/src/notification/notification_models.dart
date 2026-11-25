@@ -240,6 +240,7 @@ class NotificationApplyResult {
 class NotificationPlatformCapabilities {
   const NotificationPlatformCapabilities({
     required this.notificationsGranted,
+    this.canRequestNotifications = false,
     required this.exactAlarmsGranted,
     required this.channelsEnabled,
   });
@@ -247,12 +248,14 @@ class NotificationPlatformCapabilities {
   factory NotificationPlatformCapabilities.fromMap(Map<Object?, Object?> map) {
     return NotificationPlatformCapabilities(
       notificationsGranted: map['notificationsGranted'] == true,
+      canRequestNotifications: map['canRequestNotifications'] == true,
       exactAlarmsGranted: map['exactAlarmsGranted'] == true,
       channelsEnabled: map['channelsEnabled'] == true,
     );
   }
 
   final bool notificationsGranted;
+  final bool canRequestNotifications;
   final bool exactAlarmsGranted;
   final bool channelsEnabled;
 
@@ -260,12 +263,17 @@ class NotificationPlatformCapabilities {
   bool operator ==(Object other) =>
       other is NotificationPlatformCapabilities &&
       notificationsGranted == other.notificationsGranted &&
+      canRequestNotifications == other.canRequestNotifications &&
       exactAlarmsGranted == other.exactAlarmsGranted &&
       channelsEnabled == other.channelsEnabled;
 
   @override
-  int get hashCode =>
-      Object.hash(notificationsGranted, exactAlarmsGranted, channelsEnabled);
+  int get hashCode => Object.hash(
+    notificationsGranted,
+    canRequestNotifications,
+    exactAlarmsGranted,
+    channelsEnabled,
+  );
 }
 
 int _intValue(Object? value) => value is num ? value.toInt() : 0;

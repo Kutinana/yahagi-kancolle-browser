@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -42,9 +43,19 @@ List<DeviceOrientation> preferredOrientationsFor(Size size, DisplayMode mode) {
   }
 }
 
-/// 自动模式按窗口类别选择方向轴；手动模式覆盖自动判断。
+/// 自动模式选择方向轴；手动模式覆盖自动判断。
 void applyOrientationPolicy(Size size, [DisplayMode mode = DisplayMode.auto]) {
-  final orientations = preferredOrientationsFor(size, mode);
+  // iOS 分屏只改变窗口大小，不应把平板或展开内屏误判为普通手机。
+  // 排布仍使用窗口尺寸；自动方向策略使用当前 FlutterView 所属屏幕。
+  var orientationSize = size;
+  if (mode == DisplayMode.auto &&
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.iOS) {
+    final display =
+        WidgetsBinding.instance.platformDispatcher.views.first.display;
+    orientationSize = display.size / display.devicePixelRatio;
+  }
+  final orientations = preferredOrientationsFor(orientationSize, mode);
   if (mode == _lastMode && _sameOrientations(orientations, _lastOrientations)) {
     return;
   }

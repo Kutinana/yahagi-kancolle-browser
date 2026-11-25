@@ -1,5 +1,6 @@
 import '../theme/app_palette.dart';
 import 'package:flutter/material.dart';
+import '../ios/ios_platform_support.dart';
 import '../../l10n/app_localizations.dart';
 import '../notification/method_channel_notification_port.dart';
 import '../notification/notification_models.dart';
@@ -124,16 +125,33 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                         color: appColor(context, Color(0xff294052)),
                         height: 1,
                       ),
-                      buildSwitchTile(
-                        title: settingsOrganizationText(
-                          context,
-                          'settingsSystemNotificationVibration',
+                      if (isIOSPlatform)
+                        SizedBox(
+                          width: double.infinity,
+                          child: buildActionTile(
+                            title: settingsOrganizationText(
+                              context,
+                              'settingsSystemNotificationVibration',
+                            ),
+                            subtitle: iosNotificationHapticsDescription(
+                              context,
+                            ),
+                          ),
+                        )
+                      else
+                        buildSwitchTile(
+                          title: settingsOrganizationText(
+                            context,
+                            'settingsSystemNotificationVibration',
+                          ),
+                          subtitle: isIOSPlatform
+                              ? iosUnsupportedDescription(context)
+                              : null,
+                          value: !isIOSPlatform && settings.vibration,
+                          onChanged: !isIOSPlatform && settings.master
+                              ? (v) => controller.setVibration(v)
+                              : null,
                         ),
-                        value: settings.vibration,
-                        onChanged: settings.master
-                            ? (v) => controller.setVibration(v)
-                            : null,
-                      ),
                     ],
                   ),
                 ),
@@ -310,65 +328,67 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   ),
                 ),
                 const SizedBox(height: 24),
-                buildSectionTitle(l10n.notificationSectionOngoing),
-                buildCard(
-                  child: Column(
-                    children: [
-                      buildSwitchTile(
-                        title: l10n.notificationOngoingLive,
-                        switchKey: const Key(
-                          'notification-ongoing-live-switch',
+                if (!isIOSPlatform) ...[
+                  buildSectionTitle(l10n.notificationSectionOngoing),
+                  buildCard(
+                    child: Column(
+                      children: [
+                        buildSwitchTile(
+                          title: l10n.notificationOngoingLive,
+                          switchKey: const Key(
+                            'notification-ongoing-live-switch',
+                          ),
+                          value: settings.ongoingLive,
+                          onChanged: settings.master
+                              ? controller.setOngoingLive
+                              : null,
                         ),
-                        value: settings.ongoingLive,
-                        onChanged: settings.master
-                            ? controller.setOngoingLive
-                            : null,
-                      ),
-                      Divider(
-                        color: appColor(context, Color(0xff294052)),
-                        height: 1,
-                      ),
-                      buildSwitchTile(
-                        title: l10n.notificationProgress,
-                        switchKey: const Key(
-                          'notification-show-progress-switch',
+                        Divider(
+                          color: appColor(context, Color(0xff294052)),
+                          height: 1,
                         ),
-                        value: settings.showProgress,
-                        onChanged: ongoingOptionsEnabled
-                            ? controller.setShowProgress
-                            : null,
-                      ),
-                      Divider(
-                        color: appColor(context, Color(0xff294052)),
-                        height: 1,
-                      ),
-                      buildSwitchTile(
-                        title: l10n.notificationPercent,
-                        switchKey: const Key(
-                          'notification-show-percent-switch',
+                        buildSwitchTile(
+                          title: l10n.notificationProgress,
+                          switchKey: const Key(
+                            'notification-show-progress-switch',
+                          ),
+                          value: settings.showProgress,
+                          onChanged: ongoingOptionsEnabled
+                              ? controller.setShowProgress
+                              : null,
                         ),
-                        value: settings.showPercent,
-                        onChanged: ongoingOptionsEnabled
-                            ? controller.setShowPercent
-                            : null,
-                      ),
-                      Divider(
-                        color: appColor(context, Color(0xff294052)),
-                        height: 1,
-                      ),
-                      buildSwitchTile(
-                        title: l10n.notificationCountdown,
-                        switchKey: const Key(
-                          'notification-show-countdown-switch',
+                        Divider(
+                          color: appColor(context, Color(0xff294052)),
+                          height: 1,
                         ),
-                        value: settings.showCountdown,
-                        onChanged: ongoingOptionsEnabled
-                            ? controller.setShowCountdown
-                            : null,
-                      ),
-                    ],
+                        buildSwitchTile(
+                          title: l10n.notificationPercent,
+                          switchKey: const Key(
+                            'notification-show-percent-switch',
+                          ),
+                          value: settings.showPercent,
+                          onChanged: ongoingOptionsEnabled
+                              ? controller.setShowPercent
+                              : null,
+                        ),
+                        Divider(
+                          color: appColor(context, Color(0xff294052)),
+                          height: 1,
+                        ),
+                        buildSwitchTile(
+                          title: l10n.notificationCountdown,
+                          switchKey: const Key(
+                            'notification-show-countdown-switch',
+                          ),
+                          value: settings.showCountdown,
+                          onChanged: ongoingOptionsEnabled
+                              ? controller.setShowCountdown
+                              : null,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
                 if (widget.layoutSettingsController case final layout?) ...[
                   const SizedBox(height: 24),
                   TopNoticeSettingsSection(controller: layout),
@@ -387,6 +407,34 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
       future: _capabilities,
       builder: (context, snapshot) {
         final capabilities = snapshot.data;
+        if (isIOSPlatform) {
+          final title = switch (capabilities?.notificationsGranted) {
+            true => l10n.notificationPermissionGranted,
+            false => l10n.notificationPermissionDenied,
+            null =>
+              snapshot.hasError
+                  ? l10n.developmentRetry
+                  : l10n.notificationSectionSystem,
+          };
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildSectionTitle(l10n.notificationSectionSystem),
+              buildCard(
+                child: buildActionTile(
+                  title: title,
+                  subtitle: iosNotificationDeliveryDescription(context),
+                  enabled: capabilities != null || snapshot.hasError,
+                  onTap: capabilities == null
+                      ? () => setState(_refreshCapabilities)
+                      : capabilities.canRequestNotifications
+                      ? _requestNotificationPermission
+                      : widget.notificationPort.openSystemNotificationSettings,
+                ),
+              ),
+            ],
+          );
+        }
         final notificationsGranted = capabilities?.notificationsGranted == true;
         final exactAlarmsGranted = capabilities?.exactAlarmsGranted == true;
         final channelsEnabled = capabilities?.channelsEnabled == true;
