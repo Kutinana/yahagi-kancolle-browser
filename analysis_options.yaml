@@ -24,6 +24,8 @@ analyzer:
     - test_dmg_urls.dart
     - third_party/device_info_plus/**
     - third_party/webview_flutter_wkwebview/**
+    - android/**
+    - ios/**
 
 linter:
   # The lint rules applied to this project can be customized in the

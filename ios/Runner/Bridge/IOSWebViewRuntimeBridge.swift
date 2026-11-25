@@ -3,11 +3,13 @@ import UIKit
 import WebKit
 
 /// Installs iOS-only WebKit safeguards before the first real navigation.
-final class IOSWebViewRuntimeBridge {
+final class IOSWebViewRuntimeBridge: NSObject, WKScriptMessageHandler {
+  private static let messageName = "YahagiWebViewRuntime"
   private weak var viewController: UIViewController?
   private weak var webView: WKWebView?
   private let channel: FlutterMethodChannel
   private var navigationDelegate: IOSGameNavigationDelegate?
+  private var script: WKUserScript?
   private var generation = 0
 
   init(viewController: UIViewController, channel: FlutterMethodChannel) {
@@ -56,6 +58,16 @@ final class IOSWebViewRuntimeBridge {
       result(nil)
       return
     }
+    let key = FlutterDartProject.lookupKey(forAsset: "assets/scripts/ios_webgl_compatibility.js")
+    guard let url = Bundle.main.url(forResource: key, withExtension: nil),
+      let source = try? String(contentsOf: url, encoding: .utf8)
+    else {
+      result(
+        FlutterError(
+          code: "script_unavailable", message: "WebView compatibility script is missing.",
+          details: nil))
+      return
+    }
     detach()
     let proxy = IOSGameNavigationDelegate(
       delegate: delegate,
@@ -69,6 +81,12 @@ final class IOSWebViewRuntimeBridge {
     ) { [weak self] in
       self?.report("webContentProcessTerminated")
     }
+    let installed = WKUserScript(
+      source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+    let content = target.configuration.userContentController
+    content.add(self, name: Self.messageName)
+    content.addUserScript(installed)
+    script = installed
     navigationDelegate = proxy
     webView = target
     target.navigationDelegate = proxy
@@ -81,9 +99,31 @@ final class IOSWebViewRuntimeBridge {
       // navigation/authentication callbacks while the Dart engine is stopping.
       target.stopLoading()
       if target.navigationDelegate === navigationDelegate { target.navigationDelegate = nil }
+      let content = target.configuration.userContentController
+      content.removeScriptMessageHandler(forName: Self.messageName)
+      if let script = script {
+        let others = content.userScripts.filter { $0 !== script }
+        content.removeAllUserScripts()
+        others.forEach { content.addUserScript($0) }
+      }
     }
     webView = nil
     navigationDelegate = nil
+    script = nil
+  }
+
+  func userContentController(
+    _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
+  ) {
+    guard message.webView === webView,
+      let body = message.body as? [String: String],
+      let state = body["state"],
+      [
+        "pixiIOSCompatibilityV1", "pixiCompatibilityHookUnavailable", "webglContextLost",
+        "webglContextRestored", "webglContextCreationFailed",
+      ].contains(state)
+    else { return }
+    report(state)
   }
 
   private func report(_ state: String) {

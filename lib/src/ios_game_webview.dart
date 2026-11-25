@@ -552,8 +552,17 @@ class _IOSGameWebViewState extends State<IOSGameWebView>
       return;
     }
     if (call.method != 'onRuntimeEvent') return;
-    if (arguments['state'] == 'webContentProcessTerminated') {
-      _recordPageState('webContentProcessTerminated');
+    final state = arguments['state'];
+    if (state is String &&
+        const {
+          'pixiIOSCompatibilityV1',
+          'pixiCompatibilityHookUnavailable',
+          'webglContextLost',
+          'webglContextRestored',
+          'webglContextCreationFailed',
+          'webContentProcessTerminated',
+        }.contains(state)) {
+      _recordPageState(state);
     }
   }
 
