@@ -2,6 +2,7 @@ import '../theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../ios/ios_platform_support.dart';
 import 'package:yahagi_kancolle_browser/l10n/app_localizations.dart';
 
 import '../account/account_session.dart';
@@ -152,7 +153,16 @@ class DataSettingsPage extends StatelessWidget with SettingsUIHelpers {
               buildCard(child: Column(children: _divided(updates))),
               const SizedBox(height: 24),
             ],
-            if (gameResourceCacheController case final controller?) ...[
+            if (isIOSPlatform) ...[
+              buildSectionTitle(l10n.gameResourceCacheTitle),
+              buildCard(
+                child: IOSUnavailableSetting(
+                  title: l10n.gameResourceCacheTitle,
+                  description: iosGameResourceCacheDescription(context),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ] else if (gameResourceCacheController case final controller?) ...[
               buildSectionTitle(l10n.gameResourceCacheTitle),
               buildCard(
                 child: GameResourceCacheSection(controller: controller),
