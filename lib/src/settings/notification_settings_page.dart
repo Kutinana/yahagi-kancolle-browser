@@ -1,6 +1,7 @@
 import '../theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import '../ios/ios_platform_support.dart';
+import '../ios/ios_live_activity_settings_section.dart';
 import '../../l10n/app_localizations.dart';
 import '../notification/method_channel_notification_port.dart';
 import '../notification/notification_models.dart';
@@ -328,8 +329,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   ),
                 ),
                 const SizedBox(height: 24),
-                if (!isIOSPlatform) ...[
-                  buildSectionTitle(l10n.notificationSectionOngoing),
+                buildSectionTitle(l10n.notificationSectionOngoing),
+                if (isIOSPlatform)
+                  IOSLiveActivitySettingsSection(
+                    controller: controller,
+                    notificationPort: widget.notificationPort,
+                  )
+                else
                   buildCard(
                     child: Column(
                       children: [
@@ -388,7 +394,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                       ],
                     ),
                   ),
-                ],
                 if (widget.layoutSettingsController case final layout?) ...[
                   const SizedBox(height: 24),
                   TopNoticeSettingsSection(controller: layout),
