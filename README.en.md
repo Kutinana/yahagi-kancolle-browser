@@ -35,6 +35,8 @@ Visit [GitHub Releases](https://github.com/yamatosaki/yahagi-kancolle-browser/re
 | Android | The main version maintained by this project. Download and install the APK from the releases page. |
 | iOS | A third-party port by [Kutinana](https://github.com/Kutinana). Download the IPA from the [releases page](https://github.com/yamatosaki/yahagi-kancolle-browser/releases) to sideload it, or install through the [TestFlight public beta](https://testflight.apple.com/join/WWU4StEm). See the relevant release notes for installation instructions, supported features, and maintenance status. |
 
+The iOS fork supports iOS 15 and later. In-app proxies require iOS 17. WebKit manages the game resource cache. [Fork releases](https://github.com/Kutinana/yahagi-kancolle-browser/releases) · [Report an iOS issue](https://github.com/Kutinana/yahagi-kancolle-browser/issues) · [iOS build notes](ios/README.md)
+
 To use the TestFlight public beta, install Apple's official TestFlight app first. Available places and validity periods are as shown on the invitation page or in TestFlight.
 
 When updating on Android, follow the release notes and install over the existing app where possible. Before uninstalling, clearing app data, or changing devices, export any logbook and fleet records you want to keep.

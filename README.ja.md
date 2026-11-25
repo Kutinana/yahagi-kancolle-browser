@@ -35,6 +35,8 @@
 | Android | 本プロジェクトが主に保守しているバージョンです。リリースページから APK をダウンロードしてインストールしてください。 |
 | iOS | [Kutinana](https://github.com/Kutinana) 氏によるサードパーティー移植版です。[リリースページ](https://github.com/yamatosaki/yahagi-kancolle-browser/releases)から IPA をダウンロードしてサイドロードするほか、[TestFlight 公開テスト](https://testflight.apple.com/join/WWU4StEm)からもインストールできます。インストール方法、対応機能、保守状況は、各バージョンのリリース説明をご確認ください。 |
 
+iOS 移植版は iOS 15 以降に対応しています。アプリ内プロキシは iOS 17 以降で利用でき、ゲームのキャッシュは WebKit が管理します。 [移植版のリリース](https://github.com/Kutinana/yahagi-kancolle-browser/releases) · [iOS の不具合報告](https://github.com/Kutinana/yahagi-kancolle-browser/issues) · [iOS ビルド手順](ios/README.md)
+
 TestFlight 公開テストを利用するには、先に Apple 公式の TestFlight アプリをインストールしてください。募集枠と有効期限は、招待ページまたは TestFlight の表示をご確認ください。
 
 Android 版を更新する際は、リリース説明に従って上書きインストールしてください。アプリのアンインストール、アプリデータの消去、端末の変更を行う前に、残しておきたい航海日誌と編成記録をエクスポートしてください。
