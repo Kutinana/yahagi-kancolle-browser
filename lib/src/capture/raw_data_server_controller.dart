@@ -67,7 +67,9 @@ final class RawDataServerController extends ChangeNotifier {
   Future<File?> get _targetFile async {
     final baseDirPath =
         _documentsDirPath ?? (await getApplicationDocumentsDirectory()).path;
-    final legacyFile = File(p.join(baseDirPath, 'raw_data', 'api_start2_raw.json'));
+    final legacyFile = File(
+      p.join(baseDirPath, 'raw_data', 'api_start2_raw.json'),
+    );
     if (await legacyFile.exists()) {
       return legacyFile;
     }
@@ -119,7 +121,9 @@ final class RawDataServerController extends ChangeNotifier {
       }
       final baseDirPath =
           _documentsDirPath ?? (await getApplicationDocumentsDirectory()).path;
-      final legacyFile = File(p.join(baseDirPath, 'raw_data', 'api_start2_raw.json'));
+      final legacyFile = File(
+        p.join(baseDirPath, 'raw_data', 'api_start2_raw.json'),
+      );
       if (await legacyFile.exists()) {
         await legacyFile.delete();
       }

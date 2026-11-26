@@ -129,11 +129,16 @@ String iosGameModsDescription(
   _ => 'iOS 版暂未支持游戏资源替换，因此无法安装模组或通过 ZIP 更新。',
 };
 
-String iosNotificationHapticsDescription(BuildContext context) =>
-    switch (Localizations.localeOf(context)) {
-      Locale(languageCode: 'en') => 'Notification vibration follows the system haptics policy. Adjust it in iOS Settings → Sounds & Haptics.',
-      Locale(languageCode: 'ja') => '通知の振動はシステムの触覚設定に従います。iOS の「設定 → サウンドと触覚」で調整できます。',
-      Locale(languageCode: 'ko') => '알림 진동은 시스템 햅틱 설정을 따릅니다. iOS의 “설정 → 사운드 및 햅틱”에서 조정할 수 있습니다.',
-      Locale(languageCode: 'zh', scriptCode: 'Hant') => '通知震動由系統觸覺回饋策略控制，可在 iOS「設定 → 聲音與觸覺回饋」中調整。',
-      _ => '通知震动由系统触感策略控制，可在 iOS“设置 → 声音与触感”中调整。',
-    };
+String iosNotificationHapticsDescription(
+  BuildContext context,
+) => switch (Localizations.localeOf(context)) {
+  Locale(languageCode: 'en') =>
+    'Notification vibration follows the system haptics policy. Adjust it in iOS Settings → Sounds & Haptics.',
+  Locale(languageCode: 'ja') =>
+    '通知の振動はシステムの触覚設定に従います。iOS の「設定 → サウンドと触覚」で調整できます。',
+  Locale(languageCode: 'ko') =>
+    '알림 진동은 시스템 햅틱 설정을 따릅니다. iOS의 “설정 → 사운드 및 햅틱”에서 조정할 수 있습니다.',
+  Locale(languageCode: 'zh', scriptCode: 'Hant') =>
+    '通知震動由系統觸覺回饋策略控制，可在 iOS「設定 → 聲音與觸覺回饋」中調整。',
+  _ => '通知震动由系统触感策略控制，可在 iOS“设置 → 声音与触感”中调整。',
+};

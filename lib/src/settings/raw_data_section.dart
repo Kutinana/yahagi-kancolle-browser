@@ -57,7 +57,10 @@ class RawDataSection extends StatelessWidget {
         return Column(
           children: [
             ListTile(
-              title: const Text('全量图鉴原始数据 (Master Data)', style: TextStyle(fontSize: 15)),
+              title: const Text(
+                '全量图鉴原始数据 (Master Data)',
+                style: TextStyle(fontSize: 15),
+              ),
               subtitle: Text(
                 hasFile
                     ? '已捕获 api_start2 ($fileSize)\n捕获时间: $lastTimeStr'
