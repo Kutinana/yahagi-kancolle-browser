@@ -25,6 +25,8 @@ An .ipa file is an iOS application package. This project is not available on the
 
 - **In-app proxies:** iOS 17 and later expose the underlying APIs for configuring a dedicated HTTP/SOCKS5 proxy within the app. iOS 15–16 do not support this feature and can only use the system network (a global proxy).
 
+- **System alarms (preview)** appear in notification settings on iOS and iPadOS 26 or later. With reminder sounds enabled and alarm permission granted, AlarmKit can ring when an expedition, dock repair, or construction finishes, even in Silent mode or during Focus. Early reminders and completion reminders on older systems use ordinary notifications.
+
 - **Mods and caching:** iOS cannot provide full game resource caching or game mods.
 
 - **Background operation:** iOS cannot keep the game running in the background in the same way as Android foreground services, so the corresponding setting is unavailable. Notifications and background audio are still affected by system permissions and the app's running state.
