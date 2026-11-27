@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 # Public release sequence: 1.10, 1.11, 1.12; Flutter keeps the zero patch.
 # User-facing version: 1.10. Every distributed build increments the code.
-version: 1.10.0+50
+version: 1.10.0+51
 
 environment:
   sdk: ^3.12.2
